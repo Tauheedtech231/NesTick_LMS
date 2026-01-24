@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
 import { ChevronDown } from "lucide-react";
@@ -50,8 +50,8 @@ const HeroSlider = () => {
     return { firstHalf, secondHalf };
   };
 
-  // Animate slide transition with staggered elements
-  const animateSlideTransition = (nextSlide: number) => {
+  // Animate slide transition with staggered elements - using useCallback
+  const animateSlideTransition = useCallback((nextSlide: number) => {
     if (isAnimating) return;
     setIsAnimating(true);
 
@@ -141,31 +141,37 @@ const HeroSlider = () => {
         duration: 0.6,
         ease: "power2.out"
       }, "-=0.4");
-  };
+  }, [isAnimating]);
 
-  // Auto Slide Transition
+  // Auto Slide Transition - Fixed useEffect dependency
   useEffect(() => {
     const interval = setInterval(() => {
       const next = (current + 1) % slides.length;
       animateSlideTransition(next);
     }, 6000);
+    
     return () => clearInterval(interval);
-  }, [current, isAnimating]);
+  }, [current, animateSlideTransition]); // Added animateSlideTransition to dependencies
 
   // Background Parallax
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
+      if (!bgRef.current) return;
+      
       const { innerWidth, innerHeight } = window;
       const x = (e.clientX / innerWidth - 0.5) * 25;
       const y = (e.clientY / innerHeight - 0.5) * 25;
       gsap.to(bgRef.current, { x, y, duration: 1, ease: "power2.out" });
     };
+    
     window.addEventListener("mousemove", handleMove);
     return () => window.removeEventListener("mousemove", handleMove);
   }, []);
 
   // Initial animation on mount
   useEffect(() => {
+    if (!subtitleRef.current || !titleRef.current || !descriptionRef.current || !buttonRef.current) return;
+    
     gsap.fromTo(
       [subtitleRef.current, titleRef.current, descriptionRef.current, buttonRef.current],
       { y: 30, opacity: 0 },
@@ -190,6 +196,7 @@ const HeroSlider = () => {
           fill
           className="object-cover"
           priority
+          sizes="100vw"
         />
         {/* Gradient overlay for better text visibility */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
@@ -259,12 +266,13 @@ const HeroSlider = () => {
                 : "bg-white/50 hover:bg-white/80"
             }`}
             aria-label={`Go to slide ${index + 1}`}
+            disabled={isAnimating}
           />
         ))}
       </div>
 
       {/* Custom animations in style tag */}
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes float {
           0%, 100% {
             transform: translateY(0);

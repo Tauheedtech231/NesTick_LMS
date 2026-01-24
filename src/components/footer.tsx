@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaChevronDown, FaChevronUp } from "react-icons/fa";
-import { IoMail, IoCall, IoLocation, IoTime } from "react-icons/io5";
+import { IoMail, IoCall,  IoTime } from "react-icons/io5";
 
 export default function Footer() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
