@@ -6,19 +6,17 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { 
   Star, 
   Clock, 
-  Users, 
   Search, 
-  BookOpen, 
-  Code,
-  Palette,
-  Database,
-  Briefcase,
-  Settings,
-  Book,
   Filter,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Award,
+  Shield,
+  Flame,
+  Zap,
+  Heart,
+  MessageSquare
 } from "lucide-react";
 
 // Register GSAP plugins
@@ -26,190 +24,137 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// Course data with categories
+// MANSOL HAB courses data (real data only)
 const coursesData = [
-  // Development
   {
     id: 1,
-    title: "Full Stack Web Development",
-    description: "Master HTML, CSS, JavaScript, React, Node.js and build real-world projects",
-    category: "Development",
-    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "12 weeks",
+    title: "IOSH: Institution of Occupational Safety and Health",
+    description: "International safety certification recognized worldwide for workplace safety professionals",
+    category: "Safety Certification",
+    duration: "4 weeks",
     level: "Intermediate",
-    students: 2540,
-    rating: 4.8,
-    price: "$199",
-    instructor: "Sarah Johnson",
-    featured: true
+    rating: null,
+    originalPrice: "Rs44,000",
+    currentPrice: "Rs40,000",
+    discount: "Rs4,000 OFF",
+    instructor: "Masol Hab",
+    featured: true,
+    certification: "International"
   },
   {
     id: 2,
-    title: "Python & Django Mastery",
-    description: "Learn Python programming and Django framework for web applications",
-    category: "Development",
-    image: "https://images.unsplash.com/photo-1526379879527-8559ecfcaec0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "10 weeks",
+    title: "Basic First Aid Training",
+    description: "Essential first aid skills for workplace and home emergency situations",
+    category: "First Aid",
+    duration: "2 weeks",
     level: "Beginner",
-    students: 1870,
-    rating: 4.6,
-    price: "$149",
-    instructor: "Mike Chen",
-    featured: false
+    rating: null,
+    originalPrice: "Rs20,000",
+    currentPrice: "Rs18,000",
+    discount: "Rs2,000 OFF",
+    instructor: "Masol Hab",
+    featured: false,
+    certification: "National"
   },
   {
     id: 3,
-    title: "React Native Mobile Development",
-    description: "Build cross-platform mobile apps with React Native and JavaScript",
-    category: "Development",
-    image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Integrated Safety & Compliance Training (7 in 1)",
+    description: "Comprehensive safety training covering 7 critical areas of workplace compliance",
+    category: "Safety Compliance",
     duration: "8 weeks",
-    level: "Intermediate",
-    students: 1620,
-    rating: 4.7,
-    price: "$179",
-    instructor: "Alex Rodriguez",
-    featured: true
+    level: "Advanced",
+    rating: null,
+    originalPrice: "Rs165,000",
+    currentPrice: "Rs140,000",
+    discount: "Rs25,000 OFF",
+    instructor: "Masol Hab",
+    featured: true,
+    certification: "International"
   },
-  // Design
   {
     id: 4,
-    title: "UI/UX Design Fundamentals",
-    description: "Learn user-centered design principles and create stunning interfaces",
-    category: "Design",
-    image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=2064&q=80",
-    duration: "6 weeks",
+    title: "Basic Orientation of Safety & Health (BOSH)",
+    description: "Fundamental occupational safety training for workplace compliance and awareness",
+    category: "Safety Foundation",
+    duration: "3 weeks",
     level: "Beginner",
-    students: 2310,
-    rating: 4.9,
-    price: "$129",
-    instructor: "Emma Wilson",
-    featured: false
+    rating: null,
+    originalPrice: "Rs20,000",
+    currentPrice: "Rs16,000",
+    discount: "Rs4,000 OFF",
+    instructor: "Masol Hab",
+    featured: false,
+    certification: "National"
   },
   {
     id: 5,
-    title: "Adobe Creative Suite Pro",
-    description: "Master Photoshop, Illustrator, and After Effects for professional design",
-    category: "Design",
-    image: "https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80",
-    duration: "8 weeks",
-    level: "Advanced",
-    students: 1450,
-    rating: 4.8,
-    price: "$229",
-    instructor: "David Kim",
-    featured: true
+    title: "Fire Safety – OSHAcademy (USA)",
+    description: "USA certified fire safety training program for industrial and commercial settings",
+    category: "Fire Safety",
+    duration: "3 weeks",
+    level: "Intermediate",
+    rating: 5.0,
+    originalPrice: "Rs20,000",
+    currentPrice: "Rs18,000",
+    discount: "Rs2,000 OFF",
+    instructor: "Masol Hab",
+    featured: true,
+    certification: "USA Certified"
   },
-  // Data Science
   {
     id: 6,
-    title: "Machine Learning Fundamentals",
-    description: "Introduction to ML algorithms, data preprocessing, and model deployment",
-    category: "Data Science",
-    image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "14 weeks",
+    title: "OSHA – General Industry 30 Hrs (USA)",
+    description: "30-hour OSHA general industry safety training with international certification",
+    category: "OSHA Training",
+    duration: "6 weeks",
     level: "Intermediate",
-    students: 1980,
     rating: 4.7,
-    price: "$249",
-    instructor: "Dr. Lisa Wang",
-    featured: false
+    originalPrice: "Rs50,000",
+    currentPrice: "Rs40,000",
+    discount: "Rs10,000 OFF",
+    instructor: "Masol Hab",
+    featured: false,
+    certification: "USA Certified"
   },
   {
     id: 7,
-    title: "Data Analysis with Python",
-    description: "Learn Pandas, NumPy, and data visualization for insightful analysis",
-    category: "Data Science",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "8 weeks",
-    level: "Beginner",
-    students: 1760,
-    rating: 4.5,
-    price: "$159",
-    instructor: "Robert Brown",
-    featured: false
+    title: "Hole Watcher – OSHAcademy (USA)",
+    description: "Specialized training for confined space safety and hole watching procedures",
+    category: "Safety Specialization",
+    duration: "2 weeks",
+    level: "Intermediate",
+    rating: null,
+    originalPrice: "Rs20,000",
+    currentPrice: "Rs18,000",
+    discount: "Rs2,000 OFF",
+    instructor: "Masol Hab",
+    featured: false,
+    certification: "USA Certified"
   },
-  // Business
   {
     id: 8,
-    title: "Digital Marketing Strategy",
-    description: "Comprehensive digital marketing course covering SEO, social media, and analytics",
-    category: "Business",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2015&q=80",
-    duration: "6 weeks",
-    level: "Beginner",
-    students: 2890,
-    rating: 4.6,
-    price: "$139",
-    instructor: "Sophia Martinez",
-    featured: true
-  },
-  {
-    id: 9,
-    title: "Business Analytics",
-    description: "Transform data into business insights and make data-driven decisions",
-    category: "Business",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "10 weeks",
-    level: "Intermediate",
-    students: 1670,
-    rating: 4.8,
-    price: "$189",
-    instructor: "James Wilson",
-    featured: false
-  },
-  // IT & Software
-  {
-    id: 10,
-    title: "AWS Cloud Practitioner",
-    description: "Master AWS cloud services and prepare for certification",
-    category: "IT & Software",
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2072&q=80",
-    duration: "8 weeks",
-    level: "Intermediate",
-    students: 1540,
-    rating: 4.7,
-    price: "$199",
-    instructor: "Thomas Lee",
-    featured: false
-  },
-  {
-    id: 11,
-    title: "Cybersecurity Fundamentals",
-    description: "Learn essential cybersecurity concepts and threat protection",
-    category: "IT & Software",
-    image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-    duration: "12 weeks",
-    level: "Beginner",
-    students: 1980,
-    rating: 4.9,
-    price: "$179",
-    instructor: "Maria Garcia",
-    featured: true
-  },
-  {
-    id: 12,
-    title: "DevOps Engineering",
-    description: "CI/CD, Docker, Kubernetes, and infrastructure as code",
-    category: "IT & Software",
-    image: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80",
-    duration: "14 weeks",
+    title: "Permit to Work System – OSHAcademy (USA)",
+    description: "Complete PTW system implementation training for high-risk work environments",
+    category: "Safety Systems",
+    duration: "3 weeks",
     level: "Advanced",
-    students: 1320,
     rating: 4.8,
-    price: "$279",
-    instructor: "Daniel Taylor",
-    featured: false
+    originalPrice: "Rs25,000",
+    currentPrice: "Rs20,000",
+    discount: "Rs5,000 OFF",
+    instructor: "Masol Hab",
+    featured: true,
+    certification: "USA Certified"
   }
 ];
 
 const categories = [
-  { name: "All", icon: Book, count: coursesData.length, color: "from-gray-600 to-gray-800" },
-  { name: "Development", icon: Code, count: coursesData.filter(c => c.category === "Development").length, color: "from-blue-500 to-blue-700" },
-  { name: "Design", icon: Palette, count: coursesData.filter(c => c.category === "Design").length, color: "from-pink-500 to-pink-700" },
-  { name: "Data Science", icon: Database, count: coursesData.filter(c => c.category === "Data Science").length, color: "from-green-500 to-green-700" },
-  { name: "Business", icon: Briefcase, count: coursesData.filter(c => c.category === "Business").length, color: "from-purple-500 to-purple-700" },
-  { name: "IT & Software", icon: Settings, count: coursesData.filter(c => c.category === "IT & Software").length, color: "from-orange-500 to-orange-700" }
+  { name: "All", count: coursesData.length, icon: Shield, color: "from-gray-600 to-gray-800" },
+  { name: "Safety Certification", count: 2, icon: Award, color: "from-[#6B21A8] to-purple-600" },
+  { name: "First Aid", count: 1, icon: Heart, color: "from-[#DA2F6B] to-pink-600" },
+  { name: "Fire Safety", count: 1, icon: Flame, color: "from-orange-500 to-orange-600" },
+  { name: "OSHA Training", count: 3, icon: Shield, color: "from-blue-500 to-blue-600" },
+  { name: "Safety Systems", count: 1, icon: Award, color: "from-green-500 to-green-600" },
 ];
 
 const levels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
@@ -226,6 +171,8 @@ const PopularCourses = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const mobileSliderRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const waveRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Filter courses based on category, level, and search
   useEffect(() => {
@@ -242,46 +189,201 @@ const PopularCourses = () => {
     if (searchQuery) {
       filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+        course.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     setFilteredCourses(filtered);
   }, [activeCategory, activeLevel, searchQuery]);
 
-  // GSAP animations for cards
+  // Optimized GSAP animations with scroll-based effects
   useEffect(() => {
-    const cards = cardsRef.current.filter(Boolean);
-    
-    cards.forEach((card, index) => {
-      if (!card) return;
+    const ctx = gsap.context(() => {
+      // Section entrance animation with fade in
+      gsap.fromTo(sectionRef.current, 
+        { opacity: 0 },
+        {
+          opacity: 1,
+          duration: 1.2,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            toggleActions: "play none none none",
+          },
+        }
+      );
 
-      gsap.set(card, {
-        opacity: 0,
-        y: 30,
-        scale: 0.95
-      });
+      // Heading wave animation from left with character stagger
+      if (headingRef.current) {
+        const headingText = headingRef.current.textContent || '';
+        headingRef.current.innerHTML = '';
+        
+        // Create spans for each character
+        headingText.split('').forEach((char, index) => {
+          const span = document.createElement('span');
+          span.className = 'inline-block';
+          span.textContent = char === ' ' ? '\u00A0' : char;
+          span.style.opacity = '0';
+          span.style.transform = 'translateX(-30px) rotateY(90deg)';
+          
+          headingRef.current?.appendChild(span);
+          
+          // Animate each character with wave effect
+          gsap.to(span, {
+            opacity: 1,
+            x: 0,
+            rotationY: 0,
+            duration: 0.6,
+            delay: index * 0.05,
+            ease: "back.out(1.7)",
+            scrollTrigger: {
+              trigger: headingRef.current,
+              start: "top 85%",
+              toggleActions: "play none none none",
+            }
+          });
+        });
+      }
 
-      ScrollTrigger.create({
-        trigger: card,
-        start: "top 85%",
-        onEnter: () => {
-          gsap.to(card, {
+      // Subtitle animation with slide in
+      const subtitle = document.querySelector('.section-subtitle');
+      if (subtitle) {
+        gsap.fromTo(subtitle,
+          { opacity: 0, y: 20 },
+          {
             opacity: 1,
             y: 0,
-            scale: 1,
-            duration: 0.5,
-            ease: "back.out(1.7)",
-            delay: index * 0.1
+            duration: 0.8,
+            delay: 0.3,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: subtitle,
+              start: "top 90%",
+              toggleActions: "play none none none",
+            }
+          }
+        );
+      }
+
+      // Cards animation with optimized scroll triggers
+      const cards = cardsRef.current.filter(Boolean);
+      
+      cards.forEach((card, index) => {
+        if (!card) return;
+
+        // Set initial state
+        gsap.set(card, {
+          opacity: 0,
+          y: 80,
+          scale: 0.9,
+          rotationY: 5
+        });
+
+        // Create scroll trigger for each card
+        ScrollTrigger.create({
+          trigger: card,
+          start: "top 90%",
+          onEnter: () => {
+            gsap.to(card, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              rotationY: 0,
+              duration: 0.8,
+              delay: index * 0.08,
+              ease: "power3.out"
+            });
+          },
+          once: true
+        });
+
+        // Add hover effect animation
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            y: -8,
+            scale: 1.02,
+            duration: 0.3,
+            ease: "power2.out"
           });
-        },
-        once: true
+        });
+
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            y: 0,
+            scale: 1,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        });
       });
+
+      // Categories animation with staggered effect
+      const categoryButtons = document.querySelectorAll('.category-btn');
+      gsap.fromTo(categoryButtons,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.5,
+          stagger: 0.1,
+          ease: "back.out(1.7)",
+          scrollTrigger: {
+            trigger: '.category-btn',
+            start: "top 90%",
+            toggleActions: "play none none none",
+          },
+        }
+      );
+
+      // Wave animation with parallax effect
+      if (waveRef.current) {
+        gsap.to(waveRef.current, {
+          y: 40,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 1.5,
+          }
+        });
+
+        // Add subtle pulse animation to wave
+        gsap.to(waveRef.current, {
+          scale: 1.02,
+          repeat: -1,
+          yoyo: true,
+          duration: 3,
+          ease: "sine.inOut"
+        });
+      }
+
+      // Background elements parallax
+      const bgElements = document.querySelectorAll('.bg-element');
+      bgElements.forEach((el, i) => {
+        gsap.to(el, {
+          y: i % 2 === 0 ? 30 : -30,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 1,
+          }
+        });
+      });
+
     });
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      ctx.revert();
+      // Cleanup event listeners
+      const cards = cardsRef.current.filter(Boolean);
+      cards.forEach(card => {
+        if (card) {
+          card.removeEventListener('mouseenter', () => {});
+          card.removeEventListener('mouseleave', () => {});
+        }
+      });
     };
   }, [filteredCourses]);
 
@@ -317,39 +419,44 @@ const PopularCourses = () => {
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      Development: "from-blue-500 to-blue-600",
-      Design: "from-pink-500 to-pink-600",
-      "Data Science": "from-green-500 to-green-600",
-      Business: "from-purple-500 to-purple-600",
-      "IT & Software": "from-orange-500 to-orange-600"
+      "Safety Certification": "from-[#6B21A8] to-purple-600",
+      "First Aid": "from-[#DA2F6B] to-pink-600",
+      "Fire Safety": "from-orange-500 to-orange-600",
+      "Safety Compliance": "from-green-500 to-green-600",
+      "Safety Foundation": "from-blue-500 to-blue-600",
+      "OSHA Training": "from-indigo-500 to-indigo-600",
+      "Safety Specialization": "from-teal-500 to-teal-600",
+      "Safety Systems": "from-cyan-500 to-cyan-600"
     };
-    return colors[category as keyof typeof colors] || "from-gray-500 to-gray-600";
+    return colors[category as keyof typeof colors] || "from-[#6B21A8] to-purple-600";
   };
 
   const getLevelColor = (level: string) => {
     const colors = {
-      Beginner: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
-      Intermediate: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
-      Advanced: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
+      Beginner: "bg-green-100 text-green-800 border border-green-200",
+      Intermediate: "bg-blue-100 text-blue-800 border border-blue-200",
+      Advanced: "bg-purple-100 text-purple-800 border border-purple-200"
     };
     return colors[level as keyof typeof colors];
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number | null) => {
+    if (!rating) return null;
+    
     return (
       <div className="flex items-center gap-1">
         {[...Array(5)].map((_, i) => (
           <Star
             key={i}
-            size={12}
+            size={14}
             className={`${
               i < Math.floor(rating) 
                 ? 'fill-amber-400 text-amber-400' 
-                : 'text-gray-300 dark:text-gray-600'
+                : 'text-gray-300'
             }`}
           />
         ))}
-        <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">({rating})</span>
+        <span className="text-sm text-gray-600 ml-1">({rating})</span>
       </div>
     );
   };
@@ -361,102 +468,134 @@ const PopularCourses = () => {
     setIsFilterOpen(false);
   };
 
+  // Course images based on category
+  const getCourseImage = (category: string) => {
+    const images = {
+      "Safety Certification": "/abc.jpg",
+      "First Aid": "/basic_first_aid.jpg",
+      "Fire Safety": "/integrated_safety.jpg",
+      "Safety Compliance": "/Bosh.jpg",
+      "Safety Foundation": "/OSHA.png",
+      "OSHA Training": "/Hole_watcher.jpg",
+      
+    };
+    return images[category as keyof typeof images] || "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=500&q=80";
+  };
+
   return (
     <section 
       ref={sectionRef}
-      className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 py-6 px-3 sm:px-4 lg:px-6 overflow-hidden"
+      className="relative min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white py-12 px-3 sm:px-4 lg:px-6 overflow-hidden"
     >
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200/30 dark:bg-purple-900/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      {/* Animated Wave Background */}
+      <div ref={waveRef} className="absolute top-0 left-0 right-0 h-40 overflow-hidden opacity-10 z-0">
+        <svg 
+          className="w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 1440 320"
+          preserveAspectRatio="none"
+        >
+          <path 
+            fill="#6B21A8"
+            d="M0,0 Q180,100 360,0 T720,0 T1080,100 T1440,0 L1440,320 L0,320 Z"
+          />
+        </svg>
+      </div>
+
+      {/* Background Elements with parallax */}
+      <div className="bg-element absolute top-0 left-0 w-72 h-72 bg-[#6B21A8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="bg-element absolute bottom-0 right-0 w-96 h-96 bg-[#DA2F6B]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
       
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Welcome Message */}
         {showWelcomeMessage && (
-          <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-500 rounded-lg shadow-sm p-3 mb-6">
+          <div className="bg-white border-l-4 border-[#6B21A8] rounded-lg shadow-sm p-4 mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                <BookOpen size={14} className="text-blue-600" />
+              <div className="w-8 h-8 bg-[#6B21A8]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Award size={16} className="text-[#6B21A8]" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900 dark:text-white text-sm">Welcome to Our Courses!</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Discover your perfect course. Tap on any category to explore.
+                <p className="font-semibold text-[#1F2937] text-base">Welcome to MANSOL HAB Trainings!</p>
+                <p className="text-sm text-[#4B5563]">
+                  Explore our professional safety courses and certifications
                 </p>
               </div>
               <button 
                 onClick={() => setShowWelcomeMessage(false)}
-                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             </div>
           </div>
         )}
 
-        {/* Header Section */}
-        <div className="text-center mb-6">
-         
-         
-         <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-  Explore{" "}
-  <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-    Courses
-  </span>
-</h1>
-
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-4">
-            Choose your learning path from our carefully curated courses
+        {/* Header Section with increased font size */}
+        <div className="text-center mb-10">
+          <span className="text-[#DA2F6B] font-semibold text-base uppercase tracking-wider mb-3 block section-subtitle">
+            Professional Safety Training
+          </span>
+          
+          {/* Main Heading with wave animation */}
+          <h1 
+            ref={headingRef}
+            className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1F2937] mb-6"
+          >
+             Our Courses
+          </h1>
+          
+          <p className="text-lg text-[#4B5563] max-w-3xl mx-auto mb-8 leading-relaxed">
+            Complete International Certifications for professional development and career advancement
           </p>
 
-          {/* Search Bar and Filter Button */}
-          <div className="max-w-2xl mx-auto mb-4">
-            <div className="flex gap-2">
+          {/* Search Bar and Filter Button with increased size */}
+          <div className="max-w-3xl mx-auto mb-8">
+            <div className="flex gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#4B5563]" size={20} />
                 <input
                   type="text"
-                  placeholder="Search courses..."
+                  placeholder="Search safety courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm"
+                  className="w-full pl-12 pr-6 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-3 focus:ring-[#6B21A8] focus:border-transparent transition-all duration-300 text-base"
                 />
               </div>
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center gap-2 text-sm"
+                className="px-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-2 text-base text-[#1F2937] hover:bg-gray-50"
               >
-                <Filter size={16} />
+                <Filter size={20} />
                 <span className="hidden sm:inline">Filter</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Filter Panel */}
+        {/* Filter Panel with increased font size */}
         {isFilterOpen && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-[#1F2937] text-lg">Filters</h3>
               <button 
                 onClick={() => setIsFilterOpen(false)}
-                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
               >
-                <X size={16} />
+                <X size={20} />
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Level</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-base font-medium text-[#1F2937] mb-3">Level</label>
+                <div className="flex flex-wrap gap-3">
                   {levels.map((level) => (
                     <button
                       key={level}
                       onClick={() => setActiveLevel(level)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${
+                      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
                         activeLevel === level
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          ? "bg-[#6B21A8] text-white shadow-lg"
+                          : "bg-gray-100 text-[#4B5563] hover:bg-gray-200"
                       }`}
                     >
                       {level}
@@ -464,16 +603,16 @@ const PopularCourses = () => {
                   ))}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="flex-1 py-3 border-2 border-gray-300 text-[#4B5563] rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
                 >
                   Reset
                 </button>
                 <button
                   onClick={() => setIsFilterOpen(false)}
-                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="flex-1 py-3 bg-[#6B21A8] text-white rounded-lg text-base font-medium hover:bg-[#5B1890] transition-colors shadow-lg"
                 >
                   Apply
                 </button>
@@ -482,32 +621,31 @@ const PopularCourses = () => {
           </div>
         )}
 
-        {/* Mobile Category Slider with Navigation */}
-        <div className="md:hidden mb-6 relative">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Categories</h3>
-            <div className="flex gap-1">
+        {/* Mobile Category Slider */}
+        <div className="md:hidden mb-8 relative">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-[#1F2937] text-base">Categories</h3>
+            <div className="flex gap-2">
               <button
                 onClick={prevSlide}
                 disabled={mobileSliderIndex === 0}
-                className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50"
+                className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={18} />
               </button>
               <button
                 onClick={nextSlide}
                 disabled={mobileSliderIndex === categories.length - 1}
-                className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-50"
+                className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
               >
-                <ChevronRight size={14} />
+                <ChevronRight size={18} />
               </button>
             </div>
           </div>
           
           <div
             ref={mobileSliderRef}
-            className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-3"
           >
             {categories.map((category) => {
               const IconComponent = category.icon;
@@ -515,18 +653,18 @@ const PopularCourses = () => {
                 <button
                   key={category.name}
                   onClick={() => setActiveCategory(category.name)}
-                  className={`flex-shrink-0 flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-300 border snap-center min-w-[80px] ${
+                  className={`category-btn flex-shrink-0 flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-300 border snap-center w-[120px] ${
                     activeCategory === category.name
-                      ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-sm`
-                      : "bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                      ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-lg`
+                      : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-md"
                   }`}
                 >
-                  <IconComponent size={20} className="mb-1" />
-                  <span className="font-medium text-xs text-center">{category.name}</span>
-                  <span className={`text-xs mt-0.5 ${
+                  <IconComponent size={24} className="mb-2" />
+                  <span className="font-medium text-sm text-center">{category.name}</span>
+                  <span className={`text-xs mt-1 ${
                     activeCategory === category.name 
-                      ? "text-blue-100" 
-                      : "text-gray-500 dark:text-gray-400"
+                      ? "text-white/80" 
+                      : "text-[#4B5563]"
                   }`}>
                     {category.count}
                   </span>
@@ -537,25 +675,25 @@ const PopularCourses = () => {
         </div>
 
         {/* Desktop Category Grid */}
-        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
           {categories.map((category) => {
             const IconComponent = category.icon;
             return (
               <button
                 key={category.name}
                 onClick={() => setActiveCategory(category.name)}
-                className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-300 border ${
+                className={`category-btn flex flex-col items-center justify-center p-5 rounded-xl transition-all duration-300 border ${
                   activeCategory === category.name
-                    ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-sm`
-                    : "bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-500"
+                    ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-xl`
+                    : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-lg"
                 }`}
               >
-                <IconComponent size={24} className="mb-2" />
-                <span className="font-semibold text-xs text-center">{category.name}</span>
-                <span className={`text-xs mt-1 ${
+                <IconComponent size={28} className="mb-3" />
+                <span className="font-semibold text-sm text-center leading-tight">{category.name}</span>
+                <span className={`text-sm mt-1.5 ${
                   activeCategory === category.name 
-                    ? "text-blue-100" 
-                    : "text-gray-500 dark:text-gray-400"
+                    ? "text-white/80" 
+                    : "text-[#4B5563]"
                 }`}>
                   {category.count}
                 </span>
@@ -564,108 +702,141 @@ const PopularCourses = () => {
           })}
         </div>
 
-        {/* Results Info */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-semibold text-gray-900 dark:text-white">{filteredCourses.length}</span> courses found
+        {/* Results Info with increased font size */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+          <div className="text-base text-[#4B5563]">
+            <span className="font-semibold text-[#1F2937]">{filteredCourses.length}</span> courses found
             {searchQuery && (
-              <span> for <span className="font-medium">{searchQuery}</span>&quot;</span>
+              <span> for <span className="font-medium text-[#DA2F6B]">{searchQuery}</span></span>
             )}
             {activeLevel !== "All Levels" && (
-              <span> • <span className="font-medium">{activeLevel}</span></span>
+              <span> • <span className="font-medium text-[#6B21A8]">{activeLevel}</span></span>
             )}
           </div>
           {(activeCategory !== "All" || activeLevel !== "All Levels" || searchQuery) && (
             <button
               onClick={resetFilters}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              className="text-sm text-[#6B21A8] hover:text-[#5B1890] font-medium"
             >
               Clear filters
             </button>
           )}
         </div>
 
-        {/* Courses Grid - Compact Cards */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        {/* Courses Grid with FIXED CARD HEIGHT */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCourses.map((course, index) => (
             <div
               key={course.id}
               ref={(el) => addToCardsRef(el, index)}
-              className="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200/50 dark:border-gray-700/50 hover:-translate-y-0.5"
+              className="group bg-white rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#6B21A8]/40 transform-gpu flex flex-col h-full"
+              style={{ minWidth: "280px" }}
             >
               {/* Featured Badge */}
               {course.featured && (
-                <div className="absolute top-2 left-2 z-20">
-                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-xs">
+                <div className="absolute top-3 left-3 z-20">
+                  <span className="bg-gradient-to-r from-[#F59E0B] to-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-xl flex items-center gap-1.5">
+                    <Zap size={12} />
                     Featured
                   </span>
                 </div>
               )}
 
+              {/* Discount Badge */}
+              {course.discount && (
+                <div className="absolute top-3 right-3 z-20">
+                  <span className="bg-gradient-to-r from-[#10B981] to-emerald-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-xl">
+                    {course.discount}
+                  </span>
+                </div>
+              )}
+
               {/* Course Image */}
-              <div className="relative h-32 sm:h-36 overflow-hidden">
+              <div className="relative h-44 flex-shrink-0 overflow-hidden">
                 <Image
-                  src={course.image}
+                  src={getCourseImage(course.category)}
                   alt={course.title}
                   fill
-                  className="object-cover transform group-hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  className="object-cover transform group-hover:scale-110 transition-transform duration-700"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 
                 {/* Category Badge */}
-                <div className="absolute bottom-2 left-2">
-                  <span className={`bg-gradient-to-r ${getCategoryColor(course.category)} text-white px-2 py-1 rounded-md text-xs font-medium`}>
+                <div className="absolute bottom-3 left-3">
+                  <span className={`bg-gradient-to-r ${getCategoryColor(course.category)} text-white px-3 py-2 rounded-lg text-xs font-bold shadow-xl`}>
                     {course.category}
+                  </span>
+                </div>
+
+                {/* Certification Badge */}
+                <div className="absolute bottom-3 right-3">
+                  <span className="bg-white/95 backdrop-blur-sm text-[#6B21A8] px-3 py-1.5 rounded-lg text-xs font-bold border border-[#6B21A8]/30">
+                    {course.certification}
                   </span>
                 </div>
               </div>
 
-              {/* Course Content */}
-              <div className="p-3">
-                {/* Level and Price */}
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getLevelColor(course.level)}`}>
+              {/* Course Content - FLEXIBLE GROWING SECTION */}
+              <div className="flex flex-col flex-1 p-5">
+                {/* Level */}
+                <div className="mb-3">
+                  <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${getLevelColor(course.level)}`}>
                     {course.level}
                   </span>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white">
-                    {course.price}
-                  </div>
                 </div>
 
                 {/* Course Title */}
-                <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 line-clamp-2 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="font-bold text-[#1F2937] text-lg mb-3 line-clamp-2 leading-tight group-hover:text-[#6B21A8] transition-colors">
                   {course.title}
                 </h3>
 
-                {/* Instructor */}
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  By <span className="font-medium text-gray-700 dark:text-gray-300">{course.instructor}</span>
-                </p>
-
                 {/* Description */}
-                <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed mb-2 line-clamp-2">
+                <p className="text-[#4B5563] text-sm leading-relaxed mb-4 line-clamp-2">
                   {course.description}
                 </p>
 
-                {/* Course Stats */}
-                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {/* Course Details */}
+                <div className="space-y-3 mb-5 flex-1">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      <span>{course.duration}</span>
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#6B21A8] to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      MH
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users size={12} />
-                      <span>{(course.students / 1000).toFixed(1)}k</span>
+                    <div className="text-sm text-[#4B5563]">
+                      By <span className="font-semibold text-[#1F2937]">{course.instructor}</span>
                     </div>
                   </div>
-                  {renderStars(course.rating)}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[#4B5563] text-sm">
+                      <Clock size={16} className="text-[#6B21A8]" />
+                      <span className="font-medium">{course.duration}</span>
+                    </div>
+                    {renderStars(course.rating)}
+                  </div>
                 </div>
 
-                {/* CTA Button */}
-                <button className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg text-xs transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md active:scale-95">
-                  Enroll Now
+                {/* Price Section */}
+                <div className="mb-5">
+                  <div className="flex items-end gap-3">
+                    <div className="text-xl font-bold text-[#1F2937]">{course.currentPrice}</div>
+                    <div className="text-sm text-[#4B5563] line-through">{course.originalPrice}</div>
+                  </div>
+                </div>
+
+                {/* CTA Button - FIXED AT BOTTOM */}
+                <button
+                  onClick={() => {
+                    const contactSection = document.getElementById("contact");
+                    contactSection?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="w-full py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#7C3AED] hover:from-[#5B1890] hover:to-[#6D28D9] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-[1.02] shadow-xl hover:shadow-2xl active:scale-95 group flex items-center justify-center gap-3"
+                >
+                  <MessageSquare size={18} />
+                  Inquiry Now
+                  <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -674,31 +845,22 @@ const PopularCourses = () => {
 
         {/* Empty State */}
         {filteredCourses.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Search size={24} className="text-gray-400" />
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-gradient-to-r from-[#6B21A8]/10 to-[#DA2F6B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Search size={28} className="text-[#6B21A8]" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">No courses found</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 max-w-sm mx-auto">
+            <h3 className="text-xl font-bold text-[#1F2937] mb-3">No courses found</h3>
+            <p className="text-[#4B5563] text-base mb-8 max-w-md mx-auto">
               {searchQuery 
-                ? `No courses match "${searchQuery}". Try adjusting your search.`
-                : "No courses available with current filters."
+                ? `No safety courses match "${searchQuery}". Try a different search term.`
+                : "No courses available with current filters. Please try different filters."
               }
             </p>
             <button
               onClick={resetFilters}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors duration-300"
+              className="px-6 py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] hover:from-[#5B1890] hover:to-[#C81E5A] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-105 shadow-xl"
             >
-              View All Courses
-            </button>
-          </div>
-        )}
-
-        {/* Load More Button for large screens */}
-        {filteredCourses.length > 0 && filteredCourses.length >= 8 && (
-          <div className="text-center mt-8">
-            <button className="px-6 py-2.5 border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-medium rounded-lg text-sm transition-all duration-300 transform hover:scale-105">
-              Load More Courses
+              View All Safety Courses
             </button>
           </div>
         )}

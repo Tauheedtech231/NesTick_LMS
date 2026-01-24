@@ -1,210 +1,393 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { FaGraduationCap, FaCalendarAlt, FaBook } from 'react-icons/fa';
-import { MdOutlineWorkspacePremium } from 'react-icons/md';
-import { GiTeacher } from 'react-icons/gi';
-// removed unused imports RiUserStarLine, BiTask
 
 gsap.registerPlugin(ScrollTrigger);
 
-const stats = [
+const statsData = [
   { 
-    label: 'Success Stories', 
-    value: 168, 
-    icon: <FaGraduationCap className="text-blue-500" />,
-    description: 'Students achieved their career goals'
+    label: 'Community Members', 
+    value: 165489,
+    description: 'Active community of safety professionals'
   },
   { 
-    label: 'Trusted Tutors', 
-    value: 678, 
-    icon: <GiTeacher className="text-blue-500" />,
-    description: 'Expert instructors guiding students'
+    label: 'International Courses', 
+    value: 200,
+    description: 'Globally recognized certification programs'
   },
   { 
-    label: 'Scheduled Events', 
-    value: 347, 
-    icon: <FaCalendarAlt className="text-blue-500" />,
-    description: 'Live sessions & workshops conducted'
+    label: 'Registered Members', 
+    value: 2000000,
+    description: 'Professionals trained worldwide'
   },
   { 
-    label: 'Available Courses', 
-    value: 1912, 
-    icon: <FaBook className="text-blue-500" />,
-    description: 'Comprehensive learning materials'
+    label: 'Awards Won', 
+    value: 578,
+    description: 'Recognition for excellence in safety education'
   },
 ];
 
 export default function OurImpact() {
-  const statsRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  const yearRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+  
+  // Create refs for each stat dynamically
+  const statRef1 = useRef<HTMLDivElement>(null);
+  const statRef2 = useRef<HTMLDivElement>(null);
+  const statRef3 = useRef<HTMLDivElement>(null);
+  const statRef4 = useRef<HTMLDivElement>(null);
+  
+  const [animatedValues, setAnimatedValues] = useState(statsData.map(() => 0));
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Section entrance animation
-      gsap.fromTo(sectionRef.current, 
-        { opacity: 0, y: 50 },
+      // Clear any existing animations
+      gsap.set([
+        headingRef.current, 
+        descriptionRef.current, 
+        statRef1.current,
+        statRef2.current,
+        statRef3.current,
+        statRef4.current,
+        yearRef.current,
+        contactRef.current
+      ], { clearProps: "all" });
+
+      // Background fade in
+      gsap.fromTo(sectionRef.current,
+        { opacity: 0 },
         {
           opacity: 1,
-          y: 0,
           duration: 1,
-          ease: 'power3.out',
+          ease: 'power2.out',
           scrollTrigger: {
             trigger: sectionRef.current,
             start: 'top 80%',
-            toggleActions: 'play none none none',
+            toggleActions: 'play none none reverse',
           },
         }
       );
 
-      // Animate counters
-      stats.forEach((_, idx) => {
-        const counter = statsRef.current?.querySelectorAll('.counter')[idx];
-        if (counter) {
-          gsap.fromTo(
-            counter,
-            { innerText: 0 },
+      // Heading slide in from left
+      gsap.fromTo(headingRef.current,
+        {
+          x: -100,
+          opacity: 0
+        },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: headingRef.current,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse'
+          }
+        }
+      );
+
+      // Description slide in from right
+      gsap.fromTo(descriptionRef.current,
+        {
+          x: 100,
+          opacity: 0
+        },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 1,
+          ease: 'power3.out',
+          delay: 0.2,
+          scrollTrigger: {
+            trigger: descriptionRef.current,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse'
+          }
+        }
+      );
+
+      // Stats staggered slide in with counter animations
+      const statRefs = [statRef1, statRef2, statRef3, statRef4];
+      
+      statRefs.forEach((statRef, idx) => {
+        if (statRef.current) {
+          // Alternate left/right slide based on index
+          const fromX = idx % 2 === 0 ? -80 : 80;
+          
+          gsap.fromTo(statRef.current,
             {
-              innerText: stats[idx].value,
-              duration: 2.5,
-              snap: { innerText: 1 },
-              ease: 'power2.out',
+              x: fromX,
+              opacity: 0,
+              scale: 0.9
+            },
+            {
+              x: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 1,
+              ease: 'power3.out',
+              delay: idx * 0.1,
               scrollTrigger: {
-                trigger: counter,
-                start: 'top 85%',
-                toggleActions: 'play none none none',
-              },
+                trigger: statRef.current,
+                start: 'top 90%',
+                toggleActions: 'play none none reverse'
+              }
             }
           );
+
+          // Counter animation for each stat
+          const statValue = statsData[idx].value;
+          const target = { value: 0 };
+          
+          gsap.to(target, {
+            value: statValue,
+            duration: 2.5,
+            ease: 'power2.out',
+            onUpdate: () => {
+              setAnimatedValues(prev => {
+                const newValues = [...prev];
+                newValues[idx] = Math.floor(target.value);
+                return newValues;
+              });
+            },
+            scrollTrigger: {
+              trigger: statRef.current,
+              start: 'top 90%',
+              toggleActions: 'play none none reverse'
+            }
+          });
         }
       });
 
-      // Animate cards with staggered animation
-      gsap.fromTo('.impact-card',
-        { 
-          y: 60,
-          opacity: 0,
-          scale: 0.9
+      // Years experience slide in from bottom
+      gsap.fromTo(yearRef.current,
+        {
+          y: 50,
+          opacity: 0
         },
         {
           y: 0,
           opacity: 1,
-          scale: 1,
-          duration: 0.8,
-          stagger: 0.15,
-          ease: 'back.out(1.7)',
+          duration: 1,
+          ease: 'power3.out',
           scrollTrigger: {
-            trigger: '.impact-card',
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-          },
+            trigger: yearRef.current,
+            start: 'top 90%',
+            toggleActions: 'play none none reverse'
+          }
         }
       );
 
-      // Icon animation
-      gsap.fromTo('.impact-icon',
-        { 
-          rotationY: 180,
-          opacity: 0,
-          scale: 0.5
+      // Contact info slide in from top
+      gsap.fromTo(contactRef.current,
+        {
+          y: -50,
+          opacity: 0
         },
         {
-          rotationY: 0,
+          y: 0,
           opacity: 1,
-          scale: 1,
           duration: 1,
-          stagger: 0.1,
-          ease: 'back.out(1.7)',
+          ease: 'power3.out',
           scrollTrigger: {
-            trigger: '.impact-card',
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-          },
+            trigger: contactRef.current,
+            start: 'top 90%',
+            toggleActions: 'play none none reverse'
+          }
         }
       );
 
-    }, statsRef);
+    }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
+  // Format large numbers
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(0) + 'K';
+    }
+    return num.toLocaleString();
+  };
+
   return (
     <section 
       ref={sectionRef}
-      className="relative py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 overflow-hidden"
+      className="relative py-20 px-4 sm:px-6 lg:px-8 bg-[#1F2937] overflow-hidden"
     >
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200/30 dark:bg-purple-900/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-12 md:mb-16">
-          {/* Subtitle */}
-          <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-full text-sm font-medium mb-4">
-            <MdOutlineWorkspacePremium className="text-lg" />
-            <span>Our Achievements</span>
-          </div>
-
+        <div className="text-center mb-16">
           {/* Main Heading */}
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            Our <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Impact</span>
+          <h2 
+            ref={headingRef}
+            className="text-4xl md:text-5xl font-bold text-white mb-6 opacity-0"
+          >
+            About <span className="text-[#6B21A8]">MANSOL HAB</span>
           </h2>
           
           {/* Description */}
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of students who have transformed their careers through our comprehensive learning platform
-          </p>
+          <div 
+            ref={descriptionRef}
+            className="max-w-3xl mx-auto opacity-0"
+          >
+            <p className="text-lg text-gray-300 mb-6 leading-relaxed">
+              MANSOL HAB Trainings is a premier educational institution dedicated to providing top-quality 
+              safety education that empowers professionals to excel in their careers and evolve into 
+              responsible, capable safety experts.
+            </p>
+            <p className="text-lg text-gray-300 leading-relaxed">
+              Our modern training approach and expert faculty create a vibrant learning environment 
+              for global safety standards. Since 2005, we have been shaping the future of safety 
+              professionals worldwide.
+            </p>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div 
-          ref={statsRef} 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-        >
-          {stats.map((stat, idx) => (
+        {/* Stats Display */}
+        <div className="relative">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div
-              key={idx}
-              className="impact-card group bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 border border-gray-200/50 dark:border-gray-700/50 hover:-translate-y-2"
+              ref={statRef1}
+              className="relative group opacity-0"
             >
-              {/* Icon Container */}
-              <div className="impact-icon mb-4 flex justify-center">
-                <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                  <div className="text-2xl">
-                    {stat.icon}
+              {/* Simple number display */}
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="text-4xl md:text-5xl font-bold text-white">
+                    {formatNumber(animatedValues[0])}
                   </div>
-                </div>
-              </div>
-
-              {/* Counter */}
-              <div className="text-center mb-2">
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white counter">
-                  0
-                </div>
-                <div className="text-lg md:text-xl font-semibold text-blue-600 dark:text-blue-400">
-                  +
+                  <div className="text-2xl font-semibold mt-2 text-[#DA2F6B]">+</div>
                 </div>
               </div>
 
               {/* Label */}
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
-                {stat.label}
+              <h3 className="text-lg font-semibold text-white text-center mb-3">
+                {statsData[0].label}
               </h3>
 
               {/* Description */}
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center leading-relaxed">
-                {stat.description}
+              <p className="text-sm text-gray-400 text-center">
+                {statsData[0].description}
               </p>
 
-              {/* Animated Border Bottom */}
-              <div className="mt-4 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+              {/* Simple divider */}
+              <div className="mt-6 h-0.5 w-12 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-          ))}
+
+            <div
+              ref={statRef2}
+              className="relative group opacity-0"
+            >
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="text-4xl md:text-5xl font-bold text-white">
+                    {formatNumber(animatedValues[1])}
+                  </div>
+                  <div className="text-2xl font-semibold mt-2 text-[#DA2F6B]">+</div>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-semibold text-white text-center mb-3">
+                {statsData[1].label}
+              </h3>
+
+              <p className="text-sm text-gray-400 text-center">
+                {statsData[1].description}
+              </p>
+
+              <div className="mt-6 h-0.5 w-12 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+
+            <div
+              ref={statRef3}
+              className="relative group opacity-0"
+            >
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="text-4xl md:text-5xl font-bold text-white">
+                    {formatNumber(animatedValues[2])}
+                  </div>
+                  <div className="text-2xl font-semibold mt-2 text-[#DA2F6B]">+</div>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-semibold text-white text-center mb-3">
+                {statsData[2].label}
+              </h3>
+
+              <p className="text-sm text-gray-400 text-center">
+                {statsData[2].description}
+              </p>
+
+              <div className="mt-6 h-0.5 w-12 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+
+            <div
+              ref={statRef4}
+              className="relative group opacity-0"
+            >
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="text-4xl md:text-5xl font-bold text-white">
+                    {formatNumber(animatedValues[3])}
+                  </div>
+                  <div className="text-2xl font-semibold mt-2 text-[#DA2F6B]">+</div>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-semibold text-white text-center mb-3">
+                {statsData[3].label}
+              </h3>
+
+              <p className="text-sm text-gray-400 text-center">
+                {statsData[3].description}
+              </p>
+
+              <div className="mt-6 h-0.5 w-12 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+          </div>
         </div>
 
-     
+        {/* Years of Experience */}
+        <div 
+          ref={yearRef}
+          className="mt-20 text-center opacity-0"
+        >
+          <div className="inline-block border border-gray-700 rounded-lg px-8 py-6">
+            <div className="text-2xl font-bold text-white mb-2">
+              Since <span className="text-[#F59E0B]">2005</span>
+            </div>
+            <div className="text-gray-400">
+              18+ Years of Excellence in Safety Education
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Info */}
+        <div 
+          ref={contactRef}
+          className="mt-16 text-center border-t border-gray-800 pt-10 opacity-0"
+        >
+          <div className="text-gray-400">
+            <p className="mb-4">For more information about our programs and certifications</p>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <div className="text-white font-medium">Call: <span className="text-[#6B21A8]">03224700200</span></div>
+              <div className="text-gray-400 hidden sm:block">•</div>
+              <div className="text-white font-medium">Email: <span className="text-[#6B21A8]">info@mansolhab.com</span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

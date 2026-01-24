@@ -1,11 +1,13 @@
 "use client"
 
-import PopularCourses from '@/components/courses'
+import dynamic from "next/dynamic"
 import Footer from '@/components/footer'
-import HeroSlider from '@/components/herosection'
-
 import OurImpact from '@/components/ourimpact'
-import TopTutorsPage from '@/components/tutors'
+import ContactForm from '@/components/query'
+
+const HeroSlider = dynamic(() => import('@/components/herosection'), { ssr: false })
+const TutorSlider = dynamic(() => import('@/components/tutors'), { ssr: false })
+const PopularCourses = dynamic(() => import('@/components/courses'), { ssr: false })
 
 export default function Page() {
   return (
@@ -13,7 +15,8 @@ export default function Page() {
       <HeroSlider />
       <OurImpact />
       <PopularCourses />
-      <TopTutorsPage/>
+      <TutorSlider/>
+      <ContactForm/>
       <Footer/>
     </>
   )
