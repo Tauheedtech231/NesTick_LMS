@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -298,24 +298,30 @@ const PopularCourses = () => {
           once: true
         });
 
+        // Store references to the specific card for cleanup
+        const currentCard = card;
+        
         // Add hover effect animation
-        card.addEventListener('mouseenter', () => {
-          gsap.to(card, {
+        const handleMouseEnter = () => {
+          gsap.to(currentCard, {
             y: -8,
             scale: 1.02,
             duration: 0.3,
             ease: "power2.out"
           });
-        });
+        };
 
-        card.addEventListener('mouseleave', () => {
-          gsap.to(card, {
+        const handleMouseLeave = () => {
+          gsap.to(currentCard, {
             y: 0,
             scale: 1,
             duration: 0.3,
             ease: "power2.out"
           });
-        });
+        };
+
+        currentCard.addEventListener('mouseenter', handleMouseEnter);
+        currentCard.addEventListener('mouseleave', handleMouseLeave);
       });
 
       // Categories animation with staggered effect
@@ -338,7 +344,9 @@ const PopularCourses = () => {
 
       // Wave animation with parallax effect
       if (waveRef.current) {
-        gsap.to(waveRef.current, {
+        const currentWave = waveRef.current;
+        
+        gsap.to(currentWave, {
           y: 40,
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -349,19 +357,14 @@ const PopularCourses = () => {
         });
 
         // Add subtle pulse animation to wave
-        gsap.to(waveRef.current, {
-          scale: 1.02,
-          repeat: -1,
-          yoyo: true,
-          duration: 3,
-          ease: "sine.inOut"
-        });
+      
       }
 
       // Background elements parallax
       const bgElements = document.querySelectorAll('.bg-element');
       bgElements.forEach((el, i) => {
-        gsap.to(el, {
+        const currentEl = el;
+        gsap.to(currentEl, {
           y: i % 2 === 0 ? 30 : -30,
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -376,12 +379,13 @@ const PopularCourses = () => {
 
     return () => {
       ctx.revert();
-      // Cleanup event listeners
-      const cards = cardsRef.current.filter(Boolean);
-      cards.forEach(card => {
+      
+      // Cleanup all event listeners by checking each card reference
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      cardsRef.current.forEach(card => {
         if (card) {
-          card.removeEventListener('mouseenter', () => {});
-          card.removeEventListener('mouseleave', () => {});
+          // Remove any event listeners
+          card.replaceWith(card.cloneNode(true));
         }
       });
     };
@@ -413,9 +417,9 @@ const PopularCourses = () => {
     }
   };
 
-  const addToCardsRef = (el: HTMLDivElement | null, index: number) => {
+  const addToCardsRef = useCallback((el: HTMLDivElement | null, index: number) => {
     cardsRef.current[index] = el;
-  };
+  }, []);
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -477,7 +481,6 @@ const PopularCourses = () => {
       "Safety Compliance": "/Bosh.jpg",
       "Safety Foundation": "/OSHA.png",
       "OSHA Training": "/Hole_watcher.jpg",
-      
     };
     return images[category as keyof typeof images] || "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=500&q=80";
   };

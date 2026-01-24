@@ -87,6 +87,7 @@ export default function TutorSlider() {
   const [current, setCurrent] = useState(0);
   const [selectedTutor, setSelectedTutor] = useState(tutors[0]);
   const [showInfoPopup, setShowInfoPopup] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [intervalRef, setIntervalRef] = useState<NodeJS.Timeout | null>(null);
 
   // Auto slide function
