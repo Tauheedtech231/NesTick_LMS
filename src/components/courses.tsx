@@ -164,6 +164,7 @@ const PopularCourses = () => {
   const [activeLevel, setActiveLevel] = useState("All Levels");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCourses, setFilteredCourses] = useState(coursesData);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
@@ -220,7 +221,7 @@ const PopularCourses = () => {
 
       // Heading character animation
       if (headingRef.current) {
-        const headingText = "Our Courses";
+        
         const chars = headingCharsRef.current;
         
         chars.forEach((char, index) => {
@@ -370,6 +371,7 @@ const PopularCourses = () => {
       cardsAnimations.forEach(cleanup => cleanup());
       setCardsAnimations([]);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredCourses]);
 
   // Hide welcome message after 5 seconds
@@ -388,7 +390,7 @@ const PopularCourses = () => {
       headingRef.current.innerHTML = '';
       headingCharsRef.current = [];
       
-      headingText.split('').forEach((char, index) => {
+      headingText.split('').forEach((char) => {
         const span = document.createElement('span');
         span.className = 'inline-block';
         span.textContent = char === ' ' ? '\u00A0' : char;
@@ -422,19 +424,7 @@ const PopularCourses = () => {
     cardsRef.current[index] = el;
   }, []);
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      "Safety Certification": "from-[#6B21A8] to-purple-600",
-      "First Aid": "from-[#DA2F6B] to-pink-600",
-      "Fire Safety": "from-orange-500 to-orange-600",
-      "Safety Compliance": "from-green-500 to-green-600",
-      "Safety Foundation": "from-blue-500 to-blue-600",
-      "OSHA Training": "from-indigo-500 to-indigo-600",
-      "Safety Specialization": "from-teal-500 to-teal-600",
-      "Safety Systems": "from-cyan-500 to-cyan-600"
-    };
-    return colors[category as keyof typeof colors] || "from-[#6B21A8] to-purple-600";
-  };
+
 
   const getLevelColor = (level: string) => {
     const colors = {
@@ -514,27 +504,7 @@ const PopularCourses = () => {
       
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Welcome Message */}
-        {showWelcomeMessage && (
-          <div className="bg-white border-l-4 border-[#6B21A8] rounded-lg shadow-sm p-4 mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#6B21A8]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <Award size={16} className="text-[#6B21A8]" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-[#1F2937] text-base">Welcome to MANSOL HAB Trainings!</p>
-                <p className="text-sm text-[#4B5563]">
-                  Explore our professional safety courses and certifications
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowWelcomeMessage(false)}
-                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+       
 
         {/* Header Section */}
         <div className="text-center mb-10">

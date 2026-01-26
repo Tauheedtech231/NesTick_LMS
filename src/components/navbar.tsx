@@ -38,19 +38,18 @@ const navItems = [
       },
       { 
         title: 'Professional Certifications', 
-        href: '/courses/certifications',
+        href: '#courses',
         description: 'Industry-recognized credentials'
       }
     ]
   },
- 
   {
     title: 'About Us',
-    href: '#about'
+    href: '/lms/about'
   },
   {
     title: 'Contact',
-    href: '#contact'
+    href: '/lms/contact'
   }
 ];
 
@@ -105,7 +104,6 @@ interface User {
 }
 
 export default function Navbar() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -142,15 +140,39 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // FIXED: GSAP Hover Animation - Only animate for Home to Contact items
+  // Scroll to section function
+  const scrollToSection = useCallback((sectionId: string) => {
+    if (sectionId.startsWith('#')) {
+      const element = document.querySelector(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        // Close mobile menu if open
+        if (mobileMenuOpen) {
+          closeMobileMenu();
+        }
+      }
+    } else {
+      router.push(sectionId);
+    }
+  }, [mobileMenuOpen, router]);
+
+  // Handle navigation for desktop
+  const handleDesktopNavClick = useCallback((href: string) => {
+    scrollToSection(href);
+  }, [scrollToSection]);
+
+  // Handle navigation for mobile
+  const handleMobileNavClick = useCallback((href: string) => {
+    scrollToSection(href);
+  }, [scrollToSection]);
+
+  // GSAP Hover Animation
   const handleHover = useCallback((index: number) => {
     setActiveIndex(index);
     if (hoverRef.current) {
-      const itemsCount = navItems.length; // Total items (5)
-      const totalWidth = 100; // 100% width for full container
-      const itemWidth = totalWidth / itemsCount; // Each item gets 20% width (100/5)
-      
-      // Calculate exact position based on item index
+      const itemsCount = navItems.length;
+      const totalWidth = 100;
+      const itemWidth = totalWidth / itemsCount;
       const leftPosition = index * itemWidth;
       
       gsap.to(hoverRef.current, {
@@ -187,7 +209,6 @@ export default function Navbar() {
   // Mobile login click handler
   const handleMobileLoginClick = useCallback(() => {
     if (currentUser) {
-      // If user is logged in, logout button is shown, no dropdown needed
       setMobileLoginDropdownOpen(false);
     } else {
       setMobileLoginDropdownOpen(!mobileLoginDropdownOpen);
@@ -216,7 +237,6 @@ export default function Navbar() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close login dropdown
       if (
         loginDropdownRef.current && 
         !loginDropdownRef.current.contains(event.target as Node) &&
@@ -226,7 +246,6 @@ export default function Navbar() {
         setLoginDropdownOpen(false);
       }
 
-      // Close user dropdown
       if (
         userDropdownRef.current && 
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -255,9 +274,8 @@ export default function Navbar() {
     setMobileSubMenuOpen(mobileSubMenuOpen === index ? null : index);
   }, [mobileSubMenuOpen]);
 
-  // FIXED: Initialize GSAP timeline for mobile menu with proper cleanup
+  // Initialize GSAP timeline
   useEffect(() => {
-    // Cleanup previous timeline
     if (menuTimeline.current) {
       menuTimeline.current.kill();
     }
@@ -274,12 +292,11 @@ export default function Navbar() {
     };
   }, []);
 
-  // FIXED: Animate mobile menu sub-items
+  // Animate mobile sub-menu
   const animateMobileSubMenu = useCallback((index: number, open: boolean) => {
     const subMenu = document.getElementById(`mobile-submenu-${index}`);
     if (subMenu) {
       if (open) {
-        // Calculate height based on content
         const contentHeight = subMenu.scrollHeight;
         gsap.to(subMenu, {
           height: contentHeight,
@@ -302,10 +319,9 @@ export default function Navbar() {
     }
   }, []);
 
-  // FIXED: Toggle mobile menu with proper animation
+  // Toggle mobile menu
   const toggleMobileMenu = useCallback(() => {
     if (mobileMenuOpen) {
-      // Close menu
       if (mobileMenuRef.current) {
         gsap.to(mobileMenuRef.current, {
           height: 0,
@@ -323,15 +339,12 @@ export default function Navbar() {
         });
       }
     } else {
-      // Open menu
       setMobileMenuOpen(true);
       setTimeout(() => {
         if (mobileMenuRef.current) {
-          // First set to auto to get content height
           mobileMenuRef.current.style.height = 'auto';
           const contentHeight = mobileMenuRef.current.scrollHeight;
           
-          // Animate from 0 to content height
           gsap.fromTo(mobileMenuRef.current, 
             { height: 0, opacity: 0 },
             { 
@@ -342,7 +355,6 @@ export default function Navbar() {
             }
           );
           
-          // Animate menu items
           gsap.fromTo(mobileMenuRef.current.querySelectorAll('.mobile-menu-item'), 
             { opacity: 0, y: -10 },
             { 
@@ -358,7 +370,7 @@ export default function Navbar() {
     }
   }, [mobileMenuOpen]);
 
-  // FIXED: Close mobile menu with proper animation
+  // Close mobile menu
   const closeMobileMenu = useCallback(() => {
     if (mobileMenuRef.current) {
       gsap.to(mobileMenuRef.current, {
@@ -378,12 +390,6 @@ export default function Navbar() {
     }
   }, []);
 
-  // Handle mobile menu item click
-  const handleMobileItemClick = useCallback((href: string) => {
-    closeMobileMenu();
-    router.push(href);
-  }, [closeMobileMenu, router]);
-
   // Get user role icon
   const getUserIcon = useCallback(() => {
     if (!currentUser) return HiUserCircle;
@@ -399,7 +405,7 @@ export default function Navbar() {
   // Get user display name
   const getUserDisplayName = useCallback(() => {
     if (!currentUser) return '';
-    return currentUser.name.split(' ')[0]; // Show only first name
+    return currentUser.name.split(' ')[0];
   }, [currentUser]);
 
   // Effect for mobile sub-menu animation
@@ -407,7 +413,6 @@ export default function Navbar() {
     if (mobileSubMenuOpen !== null) {
       animateMobileSubMenu(mobileSubMenuOpen, true);
     } else {
-      // Close all sub-menus
       navItems.forEach((_, index) => {
         animateMobileSubMenu(index, false);
       });
@@ -448,7 +453,8 @@ export default function Navbar() {
                       <button
                         onMouseEnter={() => handleHover(idx)}
                         onMouseLeave={handleLeave}
-                        className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium group"
+                        onClick={() => handleDesktopNavClick('#courses')}
+                        className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium group cursor-pointer"
                       >
                         <span className="text-sm">{item.title}</span>
                         <HiChevronDown className="w-4 h-4 transform group-hover:rotate-180 transition-transform duration-200" />
@@ -460,10 +466,10 @@ export default function Navbar() {
                            onMouseLeave={handleLeave}>
                         <div className="p-2 space-y-1">
                           {item.subItems.map((sub, sidx) => (
-                            <Link
+                            <button
                               key={sidx}
-                              href={sub.href}
-                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#6B21A8]/5 transition-all duration-200 group"
+                              onClick={() => handleDesktopNavClick(sub.href)}
+                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#6B21A8]/5 transition-all duration-200 group w-full text-left cursor-pointer"
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-800 group-hover:text-[#6B21A8] text-sm">
@@ -473,25 +479,25 @@ export default function Navbar() {
                                   {sub.description}
                                 </div>
                               </div>
-                            </Link>
+                            </button>
                           ))}
                         </div>
                       </div>
                     </>
                   ) : (
-                    <Link
-                      href={item.href!}
+                    <button
+                      onClick={() => handleDesktopNavClick(item.href!)}
                       onMouseEnter={() => handleHover(idx)}
                       onMouseLeave={handleLeave}
-                      className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium text-sm"
+                      className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium text-sm cursor-pointer"
                     >
                       <span>{item.title}</span>
-                    </Link>
+                    </button>
                   )}
                 </li>
               ))}
 
-              {/* FIXED: GSAP Hover Bottom Line - Now properly sized for each item */}
+              {/* GSAP Hover Bottom Line */}
               <div
                 ref={hoverRef}
                 className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] rounded-full shadow-lg"
@@ -597,7 +603,6 @@ export default function Navbar() {
                   onClick={handleLoginClick}
                   className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium hover:from-[#5B1890] hover:to-[#C81E5A] transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
-                  
                   <span className="text-md">Login</span>
                   <HiChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${
                     loginDropdownOpen ? 'rotate-180' : ''
@@ -650,7 +655,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* FIXED: Mobile Menu - Now properly showing content */}
+        {/* Mobile Menu */}
         <div
           ref={mobileMenuRef}
           className="lg:hidden absolute right-4 mt-2 overflow-hidden bg-white rounded-xl shadow-2xl border border-gray-200 z-40"
@@ -663,7 +668,7 @@ export default function Navbar() {
             overflowY: 'auto'
           }}
         >
-          {/* Cross Icon inside mobile menu slider */}
+          {/* Cross Icon */}
           <div className="flex justify-end p-4 border-b border-gray-200">
             <button
               onClick={closeMobileMenu}
@@ -736,7 +741,7 @@ export default function Navbar() {
                       />
                     </button>
                     
-                    {/* Mobile Sub-menu with smooth animation */}
+                    {/* Mobile Sub-menu */}
                     <div
                       id={`mobile-submenu-${idx}`}
                       className="overflow-hidden"
@@ -748,13 +753,12 @@ export default function Navbar() {
                     >
                       <div className="pl-4 space-y-1 border-l-2 border-[#DA2F6B]/20 ml-2 mt-1 pb-1">
                         {item.subItems.map((sub, sidx) => (
-                          <Link
+                          <button
                             key={sidx}
-                            href={sub.href}
-                            onClick={() => handleMobileItemClick(sub.href)}
+                            onClick={() => handleMobileNavClick(sub.href)}
                             onMouseEnter={() => handleMobileHover(100 + sidx)}
                             onMouseLeave={handleMobileLeave}
-                            className={`flex items-center justify-between py-2.5 text-gray-600 transition-all duration-200 text-sm group ${
+                            className={`flex items-center justify-between py-2.5 text-gray-600 transition-all duration-200 text-sm group w-full text-left ${
                               mobileHoverIndex === 100 + sidx 
                                 ? 'text-[#DA2F6B]' 
                                 : ''
@@ -766,110 +770,106 @@ export default function Navbar() {
                               }`} />
                               <span>{sub.title}</span>
                             </div>
-                          </Link>
+                          </button>
                         ))}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <Link
-                    href={item.href!}
-                    onClick={() => handleMobileItemClick(item.href!)}
+                  <button
+                    onClick={() => handleMobileNavClick(item.href!)}
                     onMouseEnter={() => handleMobileHover(idx)}
                     onMouseLeave={handleMobileLeave}
-                    className={`flex items-center space-x-3 px-3 py-3 text-gray-800 font-medium transition-all duration-200 border-b-2 text-base ${
+                    className={`flex items-center space-x-3 px-3 py-3 text-gray-800 font-medium transition-all duration-200 border-b-2 text-base w-full text-left ${
                       mobileHoverIndex === idx 
                         ? 'border-[#DA2F6B] bg-[#DA2F6B]/5 text-[#DA2F6B]' 
                         : 'border-transparent'
                     }`}
                   >
                     <span>{item.title}</span>
-                  </Link>
+                  </button>
                 )}
               </div>
             ))}
             
-            {/* FIXED: Mobile Login/User Section - Now properly shows dropdown */}
+            {/* Mobile Login/User Section */}
             <div className="mobile-menu-item mt-4 px-3 relative">
-  {currentUser ? (
-    // Logged-in: Dashboard links + Logout
-    <>
-      {/* Dashboard Links */}
-      <div className="mb-4 space-y-1">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
-          Dashboard
-        </div>
-        {dashboardItems[currentUser.role]?.map((item, idx) => (
-          <Link
-            key={idx}
-            href={item.href}
-            onClick={closeMobileMenu}
-            onMouseEnter={() => handleMobileHover(-10 - idx)}
-            onMouseLeave={handleMobileLeave}
-            className={`flex items-center space-x-3 py-2.5 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
-              mobileHoverIndex === -10 - idx ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' : ''
-            }`}
-          >
-            <item.icon className="w-4 h-4" />
-            <span>{item.title}</span>
-          </Link>
-        ))}
-      </div>
+              {currentUser ? (
+                <>
+                  {/* Dashboard Links */}
+                  <div className="mb-4 space-y-1">
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
+                      Dashboard
+                    </div>
+                    {dashboardItems[currentUser.role]?.map((item, idx) => (
+                      <Link
+                        key={idx}
+                        href={item.href}
+                        onClick={closeMobileMenu}
+                        onMouseEnter={() => handleMobileHover(-10 - idx)}
+                        onMouseLeave={handleMobileLeave}
+                        className={`flex items-center space-x-3 py-2.5 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
+                          mobileHoverIndex === -10 - idx ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' : ''
+                        }`}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    ))}
+                  </div>
 
-      {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        onMouseEnter={() => handleMobileHover(-100)}
-        onMouseLeave={handleMobileLeave}
-        className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
-          mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
-        }`}
-      >
-        <HiLogout className="w-4 h-4" />
-        <span>Logout</span>
-      </button>
-    </>
-  ) : (
-    // Guest: Login with dropdown
-    <div className="relative w-full">
-      {/* Main Login Button */}
-      <button
-        onClick={() => setMobileLoginDropdownOpen(prev => !prev)}
-        className="flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95"
-      >
-        <span>Login</span>
-        <HiChevronDown
-          className={`w-4 h-4 transform transition-transform duration-300 ${
-            mobileLoginDropdownOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
+                  {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    onMouseEnter={() => handleMobileHover(-100)}
+                    onMouseLeave={handleMobileLeave}
+                    className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
+                      mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
+                    }`}
+                  >
+                    <HiLogout className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <div className="relative w-full">
+                  {/* Main Login Button */}
+                  <button
+                    onClick={() => setMobileLoginDropdownOpen(prev => !prev)}
+                    className="flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95"
+                  >
+                    <span>Login</span>
+                    <HiChevronDown
+                      className={`w-4 h-4 transform transition-transform duration-300 ${
+                        mobileLoginDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
 
-      {/* Dropdown */}
-      <div
-        className={`absolute top-full left-0 w-full mt-1 overflow-hidden transition-all duration-300 ease-in-out z-50 ${
-          mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="space-y-1 border border-[#6B21A8]/20 rounded-lg p-2 bg-gray-50 shadow-lg">
-          {loginItems.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleLoginTypeSelect(item.href)}
-              className="flex items-center justify-between w-full py-2.5 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm hover:bg-[#DA2F6B]/5 hover:text-[#DA2F6B]"
-            >
-              <div className="flex-1 text-left">
-                <div className="font-medium text-gray-800">{item.title}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )}
-</div>
-
+                  {/* Dropdown */}
+                  <div
+                    className={`absolute top-full left-0 w-full mt-1 overflow-hidden transition-all duration-300 ease-in-out z-50 ${
+                      mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="space-y-1 border border-[#6B21A8]/20 rounded-lg p-2 bg-gray-50 shadow-lg">
+                      {loginItems.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleLoginTypeSelect(item.href)}
+                          className="flex items-center justify-between w-full py-2.5 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm hover:bg-[#DA2F6B]/5 hover:text-[#DA2F6B] w-full text-left"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-800">{item.title}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
