@@ -167,12 +167,14 @@ const PopularCourses = () => {
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
+  const [cardsAnimations, setCardsAnimations] = useState<(() => void)[]>([]);
   
   const sectionRef = useRef<HTMLElement>(null);
   const mobileSliderRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const waveRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const headingCharsRef = useRef<HTMLSpanElement[]>([]);
 
   // Filter courses based on category, level, and search
   useEffect(() => {
@@ -196,57 +198,54 @@ const PopularCourses = () => {
     setFilteredCourses(filtered);
   }, [activeCategory, activeLevel, searchQuery]);
 
-  // Optimized GSAP animations with scroll-based effects
+  // Optimized GSAP animations with proper cleanup
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Section entrance animation with fade in
-      gsap.fromTo(sectionRef.current, 
-        { opacity: 0 },
-        {
-          opacity: 1,
-          duration: 1.2,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 80%",
-            toggleActions: "play none none none",
-          },
-        }
-      );
-
-      // Heading wave animation from left with character stagger
-      if (headingRef.current) {
-        const headingText = headingRef.current.textContent || '';
-        headingRef.current.innerHTML = '';
-        
-        // Create spans for each character
-        headingText.split('').forEach((char, index) => {
-          const span = document.createElement('span');
-          span.className = 'inline-block';
-          span.textContent = char === ' ' ? '\u00A0' : char;
-          span.style.opacity = '0';
-          span.style.transform = 'translateX(-30px) rotateY(90deg)';
-          
-          headingRef.current?.appendChild(span);
-          
-          // Animate each character with wave effect
-          gsap.to(span, {
+      // Section entrance animation
+      if (sectionRef.current) {
+        gsap.fromTo(sectionRef.current, 
+          { opacity: 0 },
+          {
             opacity: 1,
-            x: 0,
-            rotationY: 0,
-            duration: 0.6,
-            delay: index * 0.05,
-            ease: "back.out(1.7)",
+            duration: 1.2,
+            ease: "power3.out",
             scrollTrigger: {
-              trigger: headingRef.current,
-              start: "top 85%",
+              trigger: sectionRef.current,
+              start: "top 80%",
               toggleActions: "play none none none",
-            }
-          });
+            },
+          }
+        );
+      }
+
+      // Heading character animation
+      if (headingRef.current) {
+        const headingText = "Our Courses";
+        const chars = headingCharsRef.current;
+        
+        chars.forEach((char, index) => {
+          if (char) {
+            gsap.fromTo(char,
+              { opacity: 0, x: -30, rotationY: 90 },
+              {
+                opacity: 1,
+                x: 0,
+                rotationY: 0,
+                duration: 0.6,
+                delay: index * 0.05,
+                ease: "back.out(1.7)",
+                scrollTrigger: {
+                  trigger: headingRef.current,
+                  start: "top 85%",
+                  toggleActions: "play none none none",
+                }
+              }
+            );
+          }
         });
       }
 
-      // Subtitle animation with slide in
+      // Subtitle animation
       const subtitle = document.querySelector('.section-subtitle');
       if (subtitle) {
         gsap.fromTo(subtitle,
@@ -266,13 +265,14 @@ const PopularCourses = () => {
         );
       }
 
-      // Cards animation with optimized scroll triggers
+      // Cards animations
       const cards = cardsRef.current.filter(Boolean);
-      
+      const newAnimations: (() => void)[] = [];
+
       cards.forEach((card, index) => {
         if (!card) return;
 
-        // Set initial state
+        // Initial state
         gsap.set(card, {
           opacity: 0,
           y: 80,
@@ -280,7 +280,7 @@ const PopularCourses = () => {
           rotationY: 5
         });
 
-        // Create scroll trigger for each card
+        // Scroll animation
         ScrollTrigger.create({
           trigger: card,
           start: "top 90%",
@@ -298,12 +298,9 @@ const PopularCourses = () => {
           once: true
         });
 
-        // Store references to the specific card for cleanup
-        const currentCard = card;
-        
-        // Add hover effect animation
+        // Hover animations with cleanup function
         const handleMouseEnter = () => {
-          gsap.to(currentCard, {
+          gsap.to(card, {
             y: -8,
             scale: 1.02,
             duration: 0.3,
@@ -312,7 +309,7 @@ const PopularCourses = () => {
         };
 
         const handleMouseLeave = () => {
-          gsap.to(currentCard, {
+          gsap.to(card, {
             y: 0,
             scale: 1,
             duration: 0.3,
@@ -320,11 +317,19 @@ const PopularCourses = () => {
           });
         };
 
-        currentCard.addEventListener('mouseenter', handleMouseEnter);
-        currentCard.addEventListener('mouseleave', handleMouseLeave);
+        card.addEventListener('mouseenter', handleMouseEnter);
+        card.addEventListener('mouseleave', handleMouseLeave);
+
+        // Store cleanup function
+        newAnimations.push(() => {
+          card.removeEventListener('mouseenter', handleMouseEnter);
+          card.removeEventListener('mouseleave', handleMouseLeave);
+        });
       });
 
-      // Categories animation with staggered effect
+      setCardsAnimations(newAnimations);
+
+      // Categories animation
       const categoryButtons = document.querySelectorAll('.category-btn');
       gsap.fromTo(categoryButtons,
         { opacity: 0, y: 30 },
@@ -342,11 +347,9 @@ const PopularCourses = () => {
         }
       );
 
-      // Wave animation with parallax effect
+      // Wave animation
       if (waveRef.current) {
-        const currentWave = waveRef.current;
-        
-        gsap.to(currentWave, {
+        gsap.to(waveRef.current, {
           y: 40,
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -355,39 +358,17 @@ const PopularCourses = () => {
             scrub: 1.5,
           }
         });
-
-        // Add subtle pulse animation to wave
-      
       }
 
-      // Background elements parallax
-      const bgElements = document.querySelectorAll('.bg-element');
-      bgElements.forEach((el, i) => {
-        const currentEl = el;
-        gsap.to(currentEl, {
-          y: i % 2 === 0 ? 30 : -30,
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: 1,
-          }
-        });
-      });
-
-    });
+    }, sectionRef); // Context scope
 
     return () => {
+      // Cleanup all animations
       ctx.revert();
       
-      // Cleanup all event listeners by checking each card reference
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      cardsRef.current.forEach(card => {
-        if (card) {
-          // Remove any event listeners
-          card.replaceWith(card.cloneNode(true));
-        }
-      });
+      // Cleanup card event listeners
+      cardsAnimations.forEach(cleanup => cleanup());
+      setCardsAnimations([]);
     };
   }, [filteredCourses]);
 
@@ -398,6 +379,26 @@ const PopularCourses = () => {
     }, 5000);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Initialize heading characters refs
+  useEffect(() => {
+    if (headingRef.current) {
+      const headingText = "Our Courses";
+      headingRef.current.innerHTML = '';
+      headingCharsRef.current = [];
+      
+      headingText.split('').forEach((char, index) => {
+        const span = document.createElement('span');
+        span.className = 'inline-block';
+        span.textContent = char === ' ' ? '\u00A0' : char;
+        span.style.opacity = '0';
+        span.style.transform = 'translateX(-30px) rotateY(90deg)';
+        
+        headingRef.current?.appendChild(span);
+        headingCharsRef.current.push(span);
+      });
+    }
   }, []);
 
   // Mobile slider navigation
@@ -481,8 +482,10 @@ const PopularCourses = () => {
       "Safety Compliance": "/Bosh.jpg",
       "Safety Foundation": "/OSHA.png",
       "OSHA Training": "/Hole_watcher.jpg",
+      "Safety Specialization": "/Hole_watcher.jpg",
+      "Safety Systems": "/Hole_watcher.jpg"
     };
-    return images[category as keyof typeof images] || "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=500&q=80";
+    return images[category as keyof typeof images] || "/abc.jpg";
   };
 
   return (
@@ -505,9 +508,9 @@ const PopularCourses = () => {
         </svg>
       </div>
 
-      {/* Background Elements with parallax */}
-      <div className="bg-element absolute top-0 left-0 w-72 h-72 bg-[#6B21A8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="bg-element absolute bottom-0 right-0 w-96 h-96 bg-[#DA2F6B]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-[#6B21A8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#DA2F6B]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
       
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Welcome Message */}
@@ -533,25 +536,23 @@ const PopularCourses = () => {
           </div>
         )}
 
-        {/* Header Section with increased font size */}
+        {/* Header Section */}
         <div className="text-center mb-10">
           <span className="text-[#DA2F6B] font-semibold text-base uppercase tracking-wider mb-3 block section-subtitle">
             Professional Safety Training
           </span>
           
-          {/* Main Heading with wave animation */}
+          {/* Main Heading with character animation */}
           <h1 
             ref={headingRef}
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1F2937] mb-6"
-          >
-             Our Courses
-          </h1>
+          />
           
           <p className="text-lg text-[#4B5563] max-w-3xl mx-auto mb-8 leading-relaxed">
             Complete International Certifications for professional development and career advancement
           </p>
 
-          {/* Search Bar and Filter Button with increased size */}
+          {/* Search Bar and Filter Button */}
           <div className="max-w-3xl mx-auto mb-8">
             <div className="flex gap-3">
               <div className="flex-1 relative">
@@ -575,7 +576,7 @@ const PopularCourses = () => {
           </div>
         </div>
 
-        {/* Filter Panel with increased font size */}
+        {/* Filter Panel */}
         {isFilterOpen && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -649,6 +650,7 @@ const PopularCourses = () => {
           <div
             ref={mobileSliderRef}
             className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-3"
+            style={{ scrollBehavior: 'smooth' }}
           >
             {categories.map((category) => {
               const IconComponent = category.icon;
@@ -705,7 +707,7 @@ const PopularCourses = () => {
           })}
         </div>
 
-        {/* Results Info with increased font size */}
+        {/* Results Info */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <div className="text-base text-[#4B5563]">
             <span className="font-semibold text-[#1F2937]">{filteredCourses.length}</span> courses found
@@ -726,34 +728,15 @@ const PopularCourses = () => {
           )}
         </div>
 
-        {/* Courses Grid with FIXED CARD HEIGHT */}
+        {/* Courses Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCourses.map((course, index) => (
             <div
               key={course.id}
               ref={(el) => addToCardsRef(el, index)}
-              className="group bg-white rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#6B21A8]/40 transform-gpu flex flex-col h-full"
+              className="group bg-white rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#6B21A8]/40 transform-gpu flex flex-col h-full min-h-[480px]"
               style={{ minWidth: "280px" }}
             >
-              {/* Featured Badge */}
-              {course.featured && (
-                <div className="absolute top-3 left-3 z-20">
-                  <span className="bg-gradient-to-r from-[#F59E0B] to-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-xl flex items-center gap-1.5">
-                    <Zap size={12} />
-                    Featured
-                  </span>
-                </div>
-              )}
-
-              {/* Discount Badge */}
-              {course.discount && (
-                <div className="absolute top-3 right-3 z-20">
-                  <span className="bg-gradient-to-r from-[#10B981] to-emerald-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-xl">
-                    {course.discount}
-                  </span>
-                </div>
-              )}
-
               {/* Course Image */}
               <div className="relative h-44 flex-shrink-0 overflow-hidden">
                 <Image
@@ -762,25 +745,12 @@ const PopularCourses = () => {
                   fill
                   className="object-cover transform group-hover:scale-110 transition-transform duration-700"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  priority={index < 4}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                
-                {/* Category Badge */}
-                <div className="absolute bottom-3 left-3">
-                  <span className={`bg-gradient-to-r ${getCategoryColor(course.category)} text-white px-3 py-2 rounded-lg text-xs font-bold shadow-xl`}>
-                    {course.category}
-                  </span>
-                </div>
-
-                {/* Certification Badge */}
-                <div className="absolute bottom-3 right-3">
-                  <span className="bg-white/95 backdrop-blur-sm text-[#6B21A8] px-3 py-1.5 rounded-lg text-xs font-bold border border-[#6B21A8]/30">
-                    {course.certification}
-                  </span>
-                </div>
+                <div className="absolute inset-0" />
               </div>
 
-              {/* Course Content - FLEXIBLE GROWING SECTION */}
+              {/* Course Content */}
               <div className="flex flex-col flex-1 p-5">
                 {/* Level */}
                 <div className="mb-3">
@@ -827,7 +797,7 @@ const PopularCourses = () => {
                   </div>
                 </div>
 
-                {/* CTA Button - FIXED AT BOTTOM */}
+                {/* CTA Button */}
                 <button
                   onClick={() => {
                     const contactSection = document.getElementById("contact");

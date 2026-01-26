@@ -5,7 +5,7 @@ import Footer from "@/components/footer"
 import OurImpact from "@/components/ourimpact"
 import ContactForm from "@/components/query"
 
-// ✅ Professional skeleton for Hero (prevents late rendering issue)
+//Professional skeleton for Hero (prevents late rendering issue)
 const HeroSlider = dynamic(
   () => import("@/components/herosection"),
   {
@@ -18,7 +18,7 @@ const HeroSlider = dynamic(
   }
 )
 
-// ✅ Optional but recommended for consistency
+
 const PopularCourses = dynamic(
   () => import("@/components/courses"),
   {
