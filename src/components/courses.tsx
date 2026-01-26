@@ -16,7 +16,13 @@ import {
   Flame,
   Zap,
   Heart,
-  MessageSquare
+  MessageSquare,
+  User,
+  Mail,
+  Phone,
+  FileText,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 
 // Register GSAP plugins
@@ -39,7 +45,14 @@ const coursesData = [
     discount: "Rs4,000 OFF",
     instructor: "Masol Hab",
     featured: true,
-    certification: "International"
+    certification: "International",
+    creditHours: "40 hours",
+    entryRequirements: [
+      "Minimum 18 years of age",
+      "Basic English proficiency",
+      "High school diploma or equivalent",
+      "Workplace safety interest"
+    ]
   },
   {
     id: 2,
@@ -54,7 +67,13 @@ const coursesData = [
     discount: "Rs2,000 OFF",
     instructor: "Masol Hab",
     featured: false,
-    certification: "National"
+    certification: "National",
+    creditHours: "20 hours",
+    entryRequirements: [
+      "No prior experience required",
+      "Minimum 16 years of age",
+      "Basic literacy skills"
+    ]
   },
   {
     id: 3,
@@ -69,7 +88,14 @@ const coursesData = [
     discount: "Rs25,000 OFF",
     instructor: "Masol Hab",
     featured: true,
-    certification: "International"
+    certification: "International",
+    creditHours: "120 hours",
+    entryRequirements: [
+      "2+ years safety experience",
+      "OSHA or similar certification",
+      "Supervisory role experience",
+      "Advanced English proficiency"
+    ]
   },
   {
     id: 4,
@@ -84,7 +110,14 @@ const coursesData = [
     discount: "Rs4,000 OFF",
     instructor: "Masol Hab",
     featured: false,
-    certification: "National"
+    certification: "National",
+    creditHours: "30 hours",
+    entryRequirements: [
+      "New safety professionals",
+      "Construction workers",
+      "Industrial employees",
+      "No prior certification needed"
+    ]
   },
   {
     id: 5,
@@ -99,7 +132,14 @@ const coursesData = [
     discount: "Rs2,000 OFF",
     instructor: "Masol Hab",
     featured: true,
-    certification: "USA Certified"
+    certification: "USA Certified",
+    creditHours: "30 hours",
+    entryRequirements: [
+      "Building management staff",
+      "Fire safety officers",
+      "Industrial supervisors",
+      "Basic safety knowledge"
+    ]
   },
   {
     id: 6,
@@ -114,7 +154,14 @@ const coursesData = [
     discount: "Rs10,000 OFF",
     instructor: "Masol Hab",
     featured: false,
-    certification: "USA Certified"
+    certification: "USA Certified",
+    creditHours: "30 hours",
+    entryRequirements: [
+      "General industry workers",
+      "Safety committee members",
+      "Entry-level safety personnel",
+      "High school education"
+    ]
   },
   {
     id: 7,
@@ -129,7 +176,14 @@ const coursesData = [
     discount: "Rs2,000 OFF",
     instructor: "Masol Hab",
     featured: false,
-    certification: "USA Certified"
+    certification: "USA Certified",
+    creditHours: "20 hours",
+    entryRequirements: [
+      "Confined space workers",
+      "Construction supervisors",
+      "Industrial maintenance staff",
+      "Safety observer certification"
+    ]
   },
   {
     id: 8,
@@ -144,7 +198,14 @@ const coursesData = [
     discount: "Rs5,000 OFF",
     instructor: "Masol Hab",
     featured: true,
-    certification: "USA Certified"
+    certification: "USA Certified",
+    creditHours: "30 hours",
+    entryRequirements: [
+      "Safety managers",
+      "Project supervisors",
+      "High-risk industry workers",
+      "Previous safety training"
+    ]
   }
 ];
 
@@ -159,16 +220,325 @@ const categories = [
 
 const levels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
+// Inquiry Modal Component
+interface InquiryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  course: typeof coursesData[0];
+}
+
+// Inquiry Modal Component - Clean Form Only
+interface InquiryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  course: typeof coursesData[0];
+}
+
+const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      gsap.fromTo(modalRef.current,
+        { opacity: 0, scale: 0.9, y: 50 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }
+      );
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setErrorMessage("Name is required");
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setErrorMessage("Email is required");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setErrorMessage("Please enter a valid email address");
+      return false;
+    }
+    if (formData.phone && !/^[0-9+\-\s()]+$/.test(formData.phone)) {
+      setErrorMessage("Please enter a valid phone number");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSubmitStatus("idle");
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const inquiryData = {
+        ...formData,
+        courseName: course.title,
+        duration: course.duration,
+        creditHours: course.creditHours,
+        fee: course.currentPrice,
+        entryRequirements: course.entryRequirements?.join("\n") || "Not specified",
+      };
+
+      const response = await fetch("/api/sendInquiry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(inquiryData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitStatus("success");
+        setFormData({ name: "", email: "", phone: "", message: "" });
+        
+        // Auto close after success
+        setTimeout(() => {
+          onClose();
+          setSubmitStatus("idle");
+        }, 2000);
+      } else {
+        setSubmitStatus("error");
+        setErrorMessage(result.message || "Failed to send inquiry");
+      }
+    } catch (error) {
+      setSubmitStatus("error");
+      setErrorMessage("Network error. Please try again.");
+      console.error("Inquiry submission error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal Container */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div 
+          ref={modalRef}
+          className="relative w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X size={24} />
+          </button>
+
+          {/* Content */}
+          <div className="p-6 md:p-8">
+            {/* Modal Header */}
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Course Inquiry Form</h2>
+              <p className="text-gray-600">Fill out the form below to inquire about</p>
+              <p className="text-gray-800 font-medium mt-1">{course.title}</p>
+            </div>
+
+            {/* Status Messages */}
+            {submitStatus === "success" && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3 text-green-800">
+                  <CheckCircle size={24} className="text-green-600" />
+                  <div>
+                    <div className="font-semibold">Inquiry Sent Successfully!</div>
+                    <div className="text-sm">Our team will contact you within 24-48 hours.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {submitStatus === "error" && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-3 text-red-800">
+                  <AlertCircle size={24} className="text-red-600" />
+                  <div>
+                    <div className="font-semibold">Submission Failed</div>
+                    <div className="text-sm">{errorMessage}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Course Details */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <FileText size={20} className="text-gray-700" />
+                Course Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-600">Duration</div>
+                  <div className="font-medium text-gray-900">{course.duration}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-600">Fee</div>
+                  <div className="font-bold text-gray-900">{course.currentPrice}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter your full name"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+                    required
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter your email"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+                    required
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Enter your phone number"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+                  />
+                </div>
+
+                {/* Message */}
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Message / Questions
+                  </label>
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about your interest in this course or any specific questions you have..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all resize-none text-gray-900 placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {errorMessage && submitStatus === "idle" && (
+                <div className="text-red-600 text-sm flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle size={16} />
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 bg-gradient-to-r from-[#F59E0B] to-[#F59E0B]/90 text-white font-semibold rounded-lg hover:from-[#D97706] hover:to-[#D97706]/90 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending Inquiry...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare size={20} />
+                      Send Inquiry
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-gray-500 text-center mt-3">
+                  By submitting, you agree to receive communications from MANSOL HAB Trainings
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PopularCourses = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeLevel, setActiveLevel] = useState("All Levels");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCourses, setFilteredCourses] = useState(coursesData);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showWelcomeMessage, setShowWelcomeMessage] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
   const [cardsAnimations, setCardsAnimations] = useState<(() => void)[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<typeof coursesData[0] | null>(null);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   
   const sectionRef = useRef<HTMLElement>(null);
   const mobileSliderRef = useRef<HTMLDivElement>(null);
@@ -221,7 +591,6 @@ const PopularCourses = () => {
 
       // Heading character animation
       if (headingRef.current) {
-        
         const chars = headingCharsRef.current;
         
         chars.forEach((char, index) => {
@@ -371,17 +740,7 @@ const PopularCourses = () => {
       cardsAnimations.forEach(cleanup => cleanup());
       setCardsAnimations([]);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredCourses]);
-
-  // Hide welcome message after 5 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowWelcomeMessage(false);
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Initialize heading characters refs
   useEffect(() => {
@@ -423,8 +782,6 @@ const PopularCourses = () => {
   const addToCardsRef = useCallback((el: HTMLDivElement | null, index: number) => {
     cardsRef.current[index] = el;
   }, []);
-
-
 
   const getLevelColor = (level: string) => {
     const colors = {
@@ -478,165 +835,198 @@ const PopularCourses = () => {
     return images[category as keyof typeof images] || "/abc.jpg";
   };
 
+  // Handle inquiry button click
+  const handleInquiryClick = (course: typeof coursesData[0]) => {
+    setSelectedCourse(course);
+    setIsInquiryModalOpen(true);
+  };
+
   return (
-    <section 
-      ref={sectionRef}
-      className="relative min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white py-12 px-3 sm:px-4 lg:px-6 overflow-hidden"
-    >
-      {/* Animated Wave Background */}
-      <div ref={waveRef} className="absolute top-0 left-0 right-0 h-40 overflow-hidden opacity-10 z-0">
-        <svg 
-          className="w-full h-full"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 1440 320"
-          preserveAspectRatio="none"
-        >
-          <path 
-            fill="#6B21A8"
-            d="M0,0 Q180,100 360,0 T720,0 T1080,100 T1440,0 L1440,320 L0,320 Z"
-          />
-        </svg>
-      </div>
-
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-[#6B21A8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#DA2F6B]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* Welcome Message */}
-       
-
-        {/* Header Section */}
-        <div className="text-center mb-10">
-          <span className="text-[#DA2F6B] font-semibold text-base uppercase tracking-wider mb-3 block section-subtitle">
-            Professional Safety Training
-          </span>
-          
-          {/* Main Heading with character animation */}
-          <h1 
-            ref={headingRef}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1F2937] mb-6"
-          />
-          
-          <p className="text-lg text-[#4B5563] max-w-3xl mx-auto mb-8 leading-relaxed">
-            Complete International Certifications for professional development and career advancement
-          </p>
-
-          {/* Search Bar and Filter Button */}
-          <div className="max-w-3xl mx-auto mb-8">
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#4B5563]" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search safety courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-6 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-3 focus:ring-[#6B21A8] focus:border-transparent transition-all duration-300 text-base"
-                />
-              </div>
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="px-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-2 text-base text-[#1F2937] hover:bg-gray-50"
-              >
-                <Filter size={20} />
-                <span className="hidden sm:inline">Filter</span>
-              </button>
-            </div>
-          </div>
+    <>
+      <section 
+        ref={sectionRef}
+        className="relative min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white py-12 px-3 sm:px-4 lg:px-6 overflow-hidden"
+      >
+        {/* Animated Wave Background */}
+        <div ref={waveRef} className="absolute top-0 left-0 right-0 h-40 overflow-hidden opacity-10 z-0">
+          <svg 
+            className="w-full h-full"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1440 320"
+            preserveAspectRatio="none"
+          >
+            <path 
+              fill="#6B21A8"
+              d="M0,0 Q180,100 360,0 T720,0 T1080,100 T1440,0 L1440,320 L0,320 Z"
+            />
+          </svg>
         </div>
 
-        {/* Filter Panel */}
-        {isFilterOpen && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-[#1F2937] text-lg">Filters</h3>
-              <button 
-                onClick={() => setIsFilterOpen(false)}
-                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
+        {/* Background Elements */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-[#6B21A8]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#DA2F6B]/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          {/* Header Section */}
+          <div className="text-center mb-10">
+            <span className="text-[#DA2F6B] font-semibold text-base uppercase tracking-wider mb-3 block section-subtitle">
+              Professional Safety Training
+            </span>
+            
+            {/* Main Heading with character animation */}
+            <h1 
+              ref={headingRef}
+              className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#1F2937] mb-6"
+            />
+            
+            <p className="text-lg text-[#4B5563] max-w-3xl mx-auto mb-8 leading-relaxed">
+              Complete International Certifications for professional development and career advancement
+            </p>
+
+            {/* Search Bar and Filter Button */}
+            <div className="max-w-3xl mx-auto mb-8">
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#4B5563]" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search safety courses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-6 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-3 focus:ring-[#6B21A8] focus:border-transparent transition-all duration-300 text-base"
+                  />
+                </div>
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className="px-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-2 text-base text-[#1F2937] hover:bg-gray-50"
+                >
+                  <Filter size={20} />
+                  <span className="hidden sm:inline">Filter</span>
+                </button>
+              </div>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-base font-medium text-[#1F2937] mb-3">Level</label>
-                <div className="flex flex-wrap gap-3">
-                  {levels.map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setActiveLevel(level)}
-                      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
-                        activeLevel === level
-                          ? "bg-[#6B21A8] text-white shadow-lg"
-                          : "bg-gray-100 text-[#4B5563] hover:bg-gray-200"
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
+          </div>
+
+          {/* Filter Panel */}
+          {isFilterOpen && (
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-[#1F2937] text-lg">Filters</h3>
+                <button 
+                  onClick={() => setIsFilterOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-base font-medium text-[#1F2937] mb-3">Level</label>
+                  <div className="flex flex-wrap gap-3">
+                    {levels.map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setActiveLevel(level)}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+                          activeLevel === level
+                            ? "bg-[#6B21A8] text-white shadow-lg"
+                            : "bg-gray-100 text-[#4B5563] hover:bg-gray-200"
+                        }`}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={resetFilters}
+                    className="flex-1 py-3 border-2 border-gray-300 text-[#4B5563] rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={() => setIsFilterOpen(false)}
+                    className="flex-1 py-3 bg-[#6B21A8] text-white rounded-lg text-base font-medium hover:bg-[#5B1890] transition-colors shadow-lg"
+                  >
+                    Apply
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-3">
+            </div>
+          )}
+
+          {/* Mobile Category Slider */}
+          <div className="md:hidden mb-8 relative">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-[#1F2937] text-base">Categories</h3>
+              <div className="flex gap-2">
                 <button
-                  onClick={resetFilters}
-                  className="flex-1 py-3 border-2 border-gray-300 text-[#4B5563] rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
+                  onClick={prevSlide}
+                  disabled={mobileSliderIndex === 0}
+                  className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
                 >
-                  Reset
+                  <ChevronLeft size={18} />
                 </button>
                 <button
-                  onClick={() => setIsFilterOpen(false)}
-                  className="flex-1 py-3 bg-[#6B21A8] text-white rounded-lg text-base font-medium hover:bg-[#5B1890] transition-colors shadow-lg"
+                  onClick={nextSlide}
+                  disabled={mobileSliderIndex === categories.length - 1}
+                  className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
                 >
-                  Apply
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Mobile Category Slider */}
-        <div className="md:hidden mb-8 relative">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-[#1F2937] text-base">Categories</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={prevSlide}
-                disabled={mobileSliderIndex === 0}
-                className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={nextSlide}
-                disabled={mobileSliderIndex === categories.length - 1}
-                className="w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg disabled:opacity-50"
-              >
-                <ChevronRight size={18} />
-              </button>
+            
+            <div
+              ref={mobileSliderRef}
+              className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-3"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {categories.map((category) => {
+                const IconComponent = category.icon;
+                return (
+                  <button
+                    key={category.name}
+                    onClick={() => setActiveCategory(category.name)}
+                    className={`category-btn flex-shrink-0 flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-300 border snap-center w-[120px] ${
+                      activeCategory === category.name
+                        ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-lg`
+                        : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-md"
+                    }`}
+                  >
+                    <IconComponent size={24} className="mb-2" />
+                    <span className="font-medium text-sm text-center">{category.name}</span>
+                    <span className={`text-xs mt-1 ${
+                      activeCategory === category.name 
+                        ? "text-white/80" 
+                        : "text-[#4B5563]"
+                    }`}>
+                      {category.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-          
-          <div
-            ref={mobileSliderRef}
-            className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-3"
-            style={{ scrollBehavior: 'smooth' }}
-          >
+
+          {/* Desktop Category Grid */}
+          <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
             {categories.map((category) => {
               const IconComponent = category.icon;
               return (
                 <button
                   key={category.name}
                   onClick={() => setActiveCategory(category.name)}
-                  className={`category-btn flex-shrink-0 flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-300 border snap-center w-[120px] ${
+                  className={`category-btn flex flex-col items-center justify-center p-5 rounded-xl transition-all duration-300 border ${
                     activeCategory === category.name
-                      ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-lg`
-                      : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-md"
+                      ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-xl`
+                      : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-lg"
                   }`}
                 >
-                  <IconComponent size={24} className="mb-2" />
-                  <span className="font-medium text-sm text-center">{category.name}</span>
-                  <span className={`text-xs mt-1 ${
+                  <IconComponent size={28} className="mb-3" />
+                  <span className="font-semibold text-sm text-center leading-tight">{category.name}</span>
+                  <span className={`text-sm mt-1.5 ${
                     activeCategory === category.name 
                       ? "text-white/80" 
                       : "text-[#4B5563]"
@@ -647,168 +1037,149 @@ const PopularCourses = () => {
               );
             })}
           </div>
-        </div>
 
-        {/* Desktop Category Grid */}
-        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
-          {categories.map((category) => {
-            const IconComponent = category.icon;
-            return (
+          {/* Results Info */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div className="text-base text-[#4B5563]">
+              <span className="font-semibold text-[#1F2937]">{filteredCourses.length}</span> courses found
+              {searchQuery && (
+                <span> for <span className="font-medium text-[#DA2F6B]">{searchQuery}</span></span>
+              )}
+              {activeLevel !== "All Levels" && (
+                <span> • <span className="font-medium text-[#6B21A8]">{activeLevel}</span></span>
+              )}
+            </div>
+            {(activeCategory !== "All" || activeLevel !== "All Levels" || searchQuery) && (
               <button
-                key={category.name}
-                onClick={() => setActiveCategory(category.name)}
-                className={`category-btn flex flex-col items-center justify-center p-5 rounded-xl transition-all duration-300 border ${
-                  activeCategory === category.name
-                    ? `bg-gradient-to-r ${category.color} text-white border-transparent shadow-xl`
-                    : "bg-white text-[#1F2937] border-gray-200 hover:border-[#6B21A8] hover:shadow-lg"
-                }`}
+                onClick={resetFilters}
+                className="text-sm text-[#6B21A8] hover:text-[#5B1890] font-medium"
               >
-                <IconComponent size={28} className="mb-3" />
-                <span className="font-semibold text-sm text-center leading-tight">{category.name}</span>
-                <span className={`text-sm mt-1.5 ${
-                  activeCategory === category.name 
-                    ? "text-white/80" 
-                    : "text-[#4B5563]"
-                }`}>
-                  {category.count}
-                </span>
+                Clear filters
               </button>
-            );
-          })}
-        </div>
-
-        {/* Results Info */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-          <div className="text-base text-[#4B5563]">
-            <span className="font-semibold text-[#1F2937]">{filteredCourses.length}</span> courses found
-            {searchQuery && (
-              <span> for <span className="font-medium text-[#DA2F6B]">{searchQuery}</span></span>
-            )}
-            {activeLevel !== "All Levels" && (
-              <span> • <span className="font-medium text-[#6B21A8]">{activeLevel}</span></span>
             )}
           </div>
-          {(activeCategory !== "All" || activeLevel !== "All Levels" || searchQuery) && (
-            <button
-              onClick={resetFilters}
-              className="text-sm text-[#6B21A8] hover:text-[#5B1890] font-medium"
-            >
-              Clear filters
-            </button>
+
+          {/* Courses Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredCourses.map((course, index) => (
+              <div
+                key={course.id}
+                ref={(el) => addToCardsRef(el, index)}
+                className="group bg-white rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#6B21A8]/40 transform-gpu flex flex-col h-full min-h-[480px]"
+                style={{ minWidth: "280px" }}
+              >
+                {/* Course Image */}
+                <div className="relative h-44 flex-shrink-0 overflow-hidden">
+                  <Image
+                    src={getCourseImage(course.category)}
+                    alt={course.title}
+                    fill
+                    className="object-cover transform group-hover:scale-110 transition-transform duration-700"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    priority={index < 4}
+                  />
+                  <div className="absolute inset-0" />
+                </div>
+
+                {/* Course Content */}
+                <div className="flex flex-col flex-1 p-5">
+                  {/* Level */}
+                  <div className="mb-3">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${getLevelColor(course.level)}`}>
+                      {course.level}
+                    </span>
+                  </div>
+
+                  {/* Course Title */}
+                  <h3 className="font-bold text-[#1F2937] text-lg mb-3 line-clamp-2 leading-tight group-hover:text-[#6B21A8] transition-colors">
+                    {course.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-[#4B5563] text-sm leading-relaxed mb-4 line-clamp-2">
+                    {course.description}
+                  </p>
+
+                  {/* Course Details */}
+                  <div className="space-y-3 mb-5 flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-[#6B21A8] to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                        MH
+                      </div>
+                      <div className="text-sm text-[#4B5563]">
+                        By <span className="font-semibold text-[#1F2937]">{course.instructor}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[#4B5563] text-sm">
+                        <Clock size={16} className="text-[#6B21A8]" />
+                        <span className="font-medium">{course.duration}</span>
+                      </div>
+                      {renderStars(course.rating)}
+                    </div>
+                  </div>
+
+                  {/* Price Section */}
+                  <div className="mb-5">
+                    <div className="flex items-end gap-3">
+                      <div className="text-xl font-bold text-[#1F2937]">{course.currentPrice}</div>
+                      <div className="text-sm text-[#4B5563] line-through">{course.originalPrice}</div>
+                    </div>
+                  </div>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => handleInquiryClick(course)}
+                    className="w-full py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#7C3AED] hover:from-[#5B1890] hover:to-[#6D28D9] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-[1.02] shadow-xl hover:shadow-2xl active:scale-95 group flex items-center justify-center gap-3"
+                  >
+                    <MessageSquare size={18} />
+                    Inquiry Now
+                    <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Empty State */}
+          {filteredCourses.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-gradient-to-r from-[#6B21A8]/10 to-[#DA2F6B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search size={28} className="text-[#6B21A8]" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1F2937] mb-3">No courses found</h3>
+              <p className="text-[#4B5563] text-base mb-8 max-w-md mx-auto">
+                {searchQuery 
+                  ? `No safety courses match "${searchQuery}". Try a different search term.`
+                  : "No courses available with current filters. Please try different filters."
+                }
+              </p>
+              <button
+                onClick={resetFilters}
+                className="px-6 py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] hover:from-[#5B1890] hover:to-[#C81E5A] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-105 shadow-xl"
+              >
+                View All Safety Courses
+              </button>
+            </div>
           )}
         </div>
+      </section>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredCourses.map((course, index) => (
-            <div
-              key={course.id}
-              ref={(el) => addToCardsRef(el, index)}
-              className="group bg-white rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#6B21A8]/40 transform-gpu flex flex-col h-full min-h-[480px]"
-              style={{ minWidth: "280px" }}
-            >
-              {/* Course Image */}
-              <div className="relative h-44 flex-shrink-0 overflow-hidden">
-                <Image
-                  src={getCourseImage(course.category)}
-                  alt={course.title}
-                  fill
-                  className="object-cover transform group-hover:scale-110 transition-transform duration-700"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  priority={index < 4}
-                />
-                <div className="absolute inset-0" />
-              </div>
-
-              {/* Course Content */}
-              <div className="flex flex-col flex-1 p-5">
-                {/* Level */}
-                <div className="mb-3">
-                  <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${getLevelColor(course.level)}`}>
-                    {course.level}
-                  </span>
-                </div>
-
-                {/* Course Title */}
-                <h3 className="font-bold text-[#1F2937] text-lg mb-3 line-clamp-2 leading-tight group-hover:text-[#6B21A8] transition-colors">
-                  {course.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-[#4B5563] text-sm leading-relaxed mb-4 line-clamp-2">
-                  {course.description}
-                </p>
-
-                {/* Course Details */}
-                <div className="space-y-3 mb-5 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-[#6B21A8] to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      MH
-                    </div>
-                    <div className="text-sm text-[#4B5563]">
-                      By <span className="font-semibold text-[#1F2937]">{course.instructor}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[#4B5563] text-sm">
-                      <Clock size={16} className="text-[#6B21A8]" />
-                      <span className="font-medium">{course.duration}</span>
-                    </div>
-                    {renderStars(course.rating)}
-                  </div>
-                </div>
-
-                {/* Price Section */}
-                <div className="mb-5">
-                  <div className="flex items-end gap-3">
-                    <div className="text-xl font-bold text-[#1F2937]">{course.currentPrice}</div>
-                    <div className="text-sm text-[#4B5563] line-through">{course.originalPrice}</div>
-                  </div>
-                </div>
-
-                {/* CTA Button */}
-                <button
-                  onClick={() => {
-                    const contactSection = document.getElementById("contact");
-                    contactSection?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="w-full py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#7C3AED] hover:from-[#5B1890] hover:to-[#6D28D9] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-[1.02] shadow-xl hover:shadow-2xl active:scale-95 group flex items-center justify-center gap-3"
-                >
-                  <MessageSquare size={18} />
-                  Inquiry Now
-                  <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredCourses.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 bg-gradient-to-r from-[#6B21A8]/10 to-[#DA2F6B]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Search size={28} className="text-[#6B21A8]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#1F2937] mb-3">No courses found</h3>
-            <p className="text-[#4B5563] text-base mb-8 max-w-md mx-auto">
-              {searchQuery 
-                ? `No safety courses match "${searchQuery}". Try a different search term.`
-                : "No courses available with current filters. Please try different filters."
-              }
-            </p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-3.5 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] hover:from-[#5B1890] hover:to-[#C81E5A] text-white font-semibold rounded-xl text-base transition-all duration-300 transform hover:scale-105 shadow-xl"
-            >
-              View All Safety Courses
-            </button>
-          </div>
-        )}
-      </div>
-    </section>
+      {/* Inquiry Modal */}
+      {selectedCourse && (
+        <InquiryModal
+          isOpen={isInquiryModalOpen}
+          onClose={() => {
+            setIsInquiryModalOpen(false);
+            setSelectedCourse(null);
+          }}
+          course={selectedCourse}
+        />
+      )}
+    </>
   );
 };
 

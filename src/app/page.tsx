@@ -57,7 +57,7 @@ export default function Page() {
 
       <ContactForm />
 
-      <Footer />
+      
     </>
   )
 }
