@@ -81,32 +81,32 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         {/* Back to Login */}
         <div className="flex justify-start">
           <Link
             href="/lms/auth/login"
-            className="inline-flex items-center text-gray-600 hover:text-purple-600 transition-colors duration-300"
+            className="inline-flex items-center text-gray-600 hover:text-purple-600 transition-colors duration-300 group"
           >
-            <HiArrowLeft className="w-5 h-5 mr-2" />
+            <HiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
             Back to Login
           </Link>
         </div>
 
         {/* Signup Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-8 text-white">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+          {/* Header Section - Clean White */}
+          <div className="p-8 border-b border-gray-200">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                <HiUser className="w-8 h-8" />
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-purple-800 rounded-full flex items-center justify-center shadow-md">
+                <HiUser className="w-8 h-8 text-white" />
               </div>
             </div>
             
             <div className="text-center">
-              <h1 className="text-2xl font-bold mb-2">Create Account</h1>
-              <p className="text-white/90 text-sm">Join our learning platform</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
+              <p className="text-gray-600 text-sm">Join our learning platform</p>
             </div>
           </div>
 
@@ -137,7 +137,7 @@ export default function SignupPage() {
                     required
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -160,7 +160,7 @@ export default function SignupPage() {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -176,7 +176,7 @@ export default function SignupPage() {
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  className="block w-full py-2.5 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                  className="block w-full py-2.5 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
                 >
                   <option value="student">Student</option>
                   <option value="instructor">Instructor</option>
@@ -200,7 +200,7 @@ export default function SignupPage() {
                     required
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                    className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
                     placeholder="Create a password (min. 6 chars)"
                   />
                   <button
@@ -209,9 +209,9 @@ export default function SignupPage() {
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
                     {showPassword ? (
-                      <HiEyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HiEyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
                     ) : (
-                      <HiEye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HiEye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
                     )}
                   </button>
                 </div>
@@ -233,7 +233,7 @@ export default function SignupPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                    className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
                     placeholder="Confirm your password"
                   />
                   <button
@@ -242,9 +242,9 @@ export default function SignupPage() {
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
                     {showConfirmPassword ? (
-                      <HiEyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HiEyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
                     ) : (
-                      <HiEye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      <HiEye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
                     )}
                   </button>
                 </div>
@@ -257,15 +257,15 @@ export default function SignupPage() {
                   name="terms"
                   type="checkbox"
                   required
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded transition-colors"
                 />
                 <label htmlFor="terms" className="ml-2 block text-xs text-gray-700">
                   I agree to the{' '}
-                  <Link href="#" className="text-purple-600 hover:underline">
+                  <Link href="#" className="text-purple-600 hover:underline transition-colors">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link href="#" className="text-purple-600 hover:underline">
+                  <Link href="#" className="text-purple-600 hover:underline transition-colors">
                     Privacy Policy
                   </Link>
                 </label>
@@ -276,7 +276,7 @@ export default function SignupPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`w-full py-2.5 px-4 border border-transparent rounded-lg text-base font-medium text-white bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300 ${
+                  className={`w-full py-2.5 px-4 border border-transparent rounded-lg text-base font-medium text-white bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300 shadow-md hover:shadow-lg ${
                     isLoading ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                 >
@@ -297,7 +297,7 @@ export default function SignupPage() {
               <p className="text-gray-600 text-sm">
                 Already have an account?{' '}
                 <Link
-                  href="/login"
+                  href="/lms/auth/login"
                   className="font-medium text-purple-600 hover:text-purple-800 transition-colors"
                 >
                   Sign in

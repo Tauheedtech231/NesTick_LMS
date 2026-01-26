@@ -28,12 +28,12 @@ const navItems = [
     subItems: [
       { 
         title: 'All Courses', 
-        href: '/courses/all',
+        href: '#courses',
         description: 'Browse all available courses'
       },
       { 
         title: 'Short Courses', 
-        href: '/courses/short',
+        href: '#courses',
         description: 'Quick skill development'
       },
       { 
@@ -43,17 +43,14 @@ const navItems = [
       }
     ]
   },
-  {
-    title: 'How It Works',
-    href: '/how-it-works'
-  },
+ 
   {
     title: 'About Us',
-    href: '/about'
+    href: '#about'
   },
   {
     title: 'Contact',
-    href: '/contact'
+    href: '#contact'
   }
 ];
 
@@ -108,6 +105,7 @@ interface User {
 }
 
 export default function Navbar() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -599,8 +597,8 @@ export default function Navbar() {
                   onClick={handleLoginClick}
                   className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium hover:from-[#5B1890] hover:to-[#C81E5A] transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
-                  <HiLogin className="w-4 h-4" />
-                  <span className="text-sm">Login</span>
+                  
+                  <span className="text-md">Login</span>
                   <HiChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${
                     loginDropdownOpen ? 'rotate-180' : ''
                   }`} />
@@ -792,96 +790,86 @@ export default function Navbar() {
             ))}
             
             {/* FIXED: Mobile Login/User Section - Now properly shows dropdown */}
-            <div className="mobile-menu-item mt-4 px-3">
-              {currentUser ? (
-                // Show User Dashboard Links and Logout
-                <>
-                  {/* Dashboard Links */}
-                  <div className="mb-4 space-y-1">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
-                      Dashboard
-                    </div>
-                    {dashboardItems[currentUser.role]?.map((item, idx) => (
-                      <Link
-                        key={idx}
-                        href={item.href}
-                        onClick={closeMobileMenu}
-                        onMouseEnter={() => handleMobileHover(-10 - idx)}
-                        onMouseLeave={handleMobileLeave}
-                        className={`flex items-center space-x-3 py-2.5 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
-                          mobileHoverIndex === -10 - idx 
-                            ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' 
-                            : ''
-                        }`}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    ))}
-                  </div>
+            <div className="mobile-menu-item mt-4 px-3 relative">
+  {currentUser ? (
+    // Logged-in: Dashboard links + Logout
+    <>
+      {/* Dashboard Links */}
+      <div className="mb-4 space-y-1">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
+          Dashboard
+        </div>
+        {dashboardItems[currentUser.role]?.map((item, idx) => (
+          <Link
+            key={idx}
+            href={item.href}
+            onClick={closeMobileMenu}
+            onMouseEnter={() => handleMobileHover(-10 - idx)}
+            onMouseLeave={handleMobileLeave}
+            className={`flex items-center space-x-3 py-2.5 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
+              mobileHoverIndex === -10 - idx ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' : ''
+            }`}
+          >
+            <item.icon className="w-4 h-4" />
+            <span>{item.title}</span>
+          </Link>
+        ))}
+      </div>
 
-                  {/* Logout Button */}
-                  <button
-                    onClick={handleLogout}
-                    onMouseEnter={() => handleMobileHover(-100)}
-                    onMouseLeave={handleMobileLeave}
-                    className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
-                      mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
-                    }`}
-                  >
-                    <HiLogout className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                // FIXED: Show Login Options with working dropdown
-                <>
-                  <div className="flex flex-col space-y-3">
-                    {/* Main Login Button */}
-                    <button
-                      onClick={handleMobileLoginClick}
-                      className={`flex items-center justify-center space-x-2 py-3 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
-                        mobileHoverIndex === -50 ? 'scale-[1.02]' : ''
-                      }`}
-                      onMouseEnter={() => handleMobileHover(-50)}
-                      onMouseLeave={handleMobileLeave}
-                    >
-                      <HiLogin className="w-4 h-4" />
-                      <span>Login</span>
-                      <HiChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${
-                        mobileLoginDropdownOpen ? 'rotate-180' : ''
-                      }`} />
-                    </button>
-                    
-                    {/* FIXED: Login Options Dropdown */}
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      mobileLoginDropdownOpen ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'
-                    }`}>
-                      <div className="space-y-1 border border-[#6B21A8]/20 rounded-lg p-2 bg-gray-50">
-                        {loginItems.map((item, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleLoginTypeSelect(item.href)}
-                            onMouseEnter={() => handleMobileHover(-3 - idx)}
-                            onMouseLeave={handleMobileLeave}
-                            className={`flex items-center justify-between w-full py-2.5 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
-                              mobileHoverIndex === -3 - idx 
-                                ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' 
-                                : ''
-                            }`}
-                          >
-                            <div className="flex-1 text-left">
-                              <div className="font-medium text-gray-800">{item.title}</div>
-                              <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        onMouseEnter={() => handleMobileHover(-100)}
+        onMouseLeave={handleMobileLeave}
+        className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
+          mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
+        }`}
+      >
+        <HiLogout className="w-4 h-4" />
+        <span>Logout</span>
+      </button>
+    </>
+  ) : (
+    // Guest: Login with dropdown
+    <div className="relative w-full">
+      {/* Main Login Button */}
+      <button
+        onClick={() => setMobileLoginDropdownOpen(prev => !prev)}
+        className="flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95"
+      >
+        <span>Login</span>
+        <HiChevronDown
+          className={`w-4 h-4 transform transition-transform duration-300 ${
+            mobileLoginDropdownOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {/* Dropdown */}
+      <div
+        className={`absolute top-full left-0 w-full mt-1 overflow-hidden transition-all duration-300 ease-in-out z-50 ${
+          mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="space-y-1 border border-[#6B21A8]/20 rounded-lg p-2 bg-gray-50 shadow-lg">
+          {loginItems.map((item, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleLoginTypeSelect(item.href)}
+              className="flex items-center justify-between w-full py-2.5 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm hover:bg-[#DA2F6B]/5 hover:text-[#DA2F6B]"
+            >
+              <div className="flex-1 text-left">
+                <div className="font-medium text-gray-800">{item.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+
           </div>
         </div>
       </div>

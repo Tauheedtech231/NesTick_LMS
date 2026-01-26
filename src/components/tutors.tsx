@@ -253,50 +253,33 @@ export default function TutorSlider() {
                     sizes="(max-width: 768px) 240px, 288px"
                   />
                   
-                  {/* Overlay with Bottom Center Text */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
-                    {/* Name and Role - Centered */}
+                  {/* SIMPLE HOVER OVERLAY - صرف نام دکھائیں */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                    {/* فقط نام - center aligned */}
                     <div className="text-center">
-                      <h3 className="text-white font-bold text-lg md:text-xl mb-1">{tutor.name}</h3>
-                      <p className="text-[#DA2F6B] text-sm md:text-base font-medium mb-2">{tutor.role}</p>
-                      
-                      {/* Specialization */}
-                      <p className="text-gray-300 text-xs md:text-sm mb-3">{tutor.specialization}</p>
-                      
-                      {/* Location - Centered */}
-                      <div className="flex items-center justify-center gap-1">
-                        <MapPin size={12} className="text-gray-400" />
-                        <span className="text-gray-300 text-xs md:text-sm">{tutor.location}</span>
-                      </div>
-                      
-                      {/* Experience - Centered */}
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <Briefcase size={12} className="text-gray-400" />
-                        <span className="text-gray-300 text-xs md:text-sm">{tutor.experience}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Click Instruction */}
-                    <div className="mt-4 text-center">
-                      <span className="text-xs text-[#DA2F6B] font-semibold">
-                        Click for details →
-                      </span>
+                      <h3 className="text-white font-bold text-xl md:text-2xl mb-2">{tutor.name}</h3>
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* Fixed Text Below Image */}
-              <div className="mt-4 text-center">
+              {/* Fixed Text Below Image - Desktop */}
+              <div className="hidden md:block mt-4 text-center">
                 <h3 className="text-white font-semibold text-base mb-1">{tutor.name}</h3>
                 <p className="text-[#DA2F6B] text-sm">{tutor.specialization}</p>
-                <button 
-                  onClick={() => handleTutorClick(tutor)}
-                  className="mt-2 text-xs text-gray-400 hover:text-[#DA2F6B] transition-colors"
-                >
-                  View Details
-                </button>
               </div>
+
+              {/* Mobile Only View Button */}
+              {isMobile && (
+                <div className="mt-4 text-center md:hidden">
+                  <button 
+                    onClick={() => handleTutorClick(tutor)}
+                    className="px-4 py-1.5 bg-[#DA2F6B] text-white text-sm rounded-lg font-medium hover:bg-[#C81E5A] transition-colors"
+                  >
+                    View Details
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -331,7 +314,7 @@ export default function TutorSlider() {
         </div>
       </div>
 
-      {/* Info Popup */}
+      {/* Info Popup - Auto opens on click */}
       <AnimatePresence>
         {showInfoPopup && (
           <motion.div

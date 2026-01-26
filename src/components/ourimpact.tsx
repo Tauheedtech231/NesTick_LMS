@@ -222,6 +222,7 @@ export default function OurImpact() {
   return (
     <section 
       ref={sectionRef}
+      id='about'
       className="relative py-20 px-4 sm:px-6 lg:px-8 bg-[#1F2937] overflow-hidden"
     >
       <div className="max-w-7xl mx-auto relative z-10">
