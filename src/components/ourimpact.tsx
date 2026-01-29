@@ -233,7 +233,7 @@ export default function OurImpact() {
             ref={headingRef}
             className="text-4xl md:text-5xl font-bold text-white mb-6 opacity-0"
           >
-            About <span className="text-[#6B21A8]">MANSOL HAB</span>
+            About <span className="text-[#6B21A8]">MANSOL </span>
           </h2>
           
           {/* Description */}
