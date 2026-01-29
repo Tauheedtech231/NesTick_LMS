@@ -268,51 +268,29 @@ export default function StudentsList() {
               </div>
 
               {/* Action Buttons */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                <div className="flex space-x-3">
-                  <button className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm">
-                    View Details
-                  </button>
-                  <button className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all text-sm">
-                    Edit
-                  </button>
-                </div>
-              </div>
+             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+  <div className="flex space-x-3">
+    <button
+      onClick={() => window.location.href = `/lms/Admin_Portal/students/view/${student.id}`}
+      className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+    >
+      View Details
+    </button>
+    <button
+      onClick={() => window.location.href = `/lms/Admin_Portal/students/edit/${student.id}`}
+      className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all text-sm"
+    >
+      Edit
+    </button>
+  </div>
+</div>
+
             </div>
           ))
         )}
       </div>
 
-      {/* Stats Summary */}
-      {!loading && filteredStudents.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="font-bold text-gray-900 mb-4">Students Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <p className="text-sm text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-purple-600">{students.length}</p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-gray-600">Active Students</p>
-              <p className="text-2xl font-bold text-green-600">
-                {students.filter(s => s.status === 'active').length}
-              </p>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-gray-600">Average Performance</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {Math.round(students.reduce((sum, s) => sum + s.performance.averageScore, 0) / students.length)}%
-              </p>
-            </div>
-            <div className="p-4 bg-amber-50 rounded-lg">
-              <p className="text-sm text-gray-600">Avg. Engagement</p>
-              <p className="text-2xl font-bold text-amber-600">
-                {Math.round(students.reduce((sum, s) => sum + s.engagement, 0) / students.length)}%
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+    
     </div>
   )
 }

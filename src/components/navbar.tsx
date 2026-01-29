@@ -88,7 +88,7 @@ const dashboardItems = {
     { title: 'Profile', href: '/dashboard/profile', icon: HiUserCircle }
   ],
   admin: [
-    { title: 'Dashboard', href: '/dashboard', icon: HiBookOpen },
+    { title: 'Dashboard', href: '/lms/Admin_Portal', icon: HiBookOpen },
     { title: 'Users', href: '/dashboard/users', icon: HiUserCircle },
     { title: 'Settings', href: '/dashboard/settings', icon: HiCog }
   ]
