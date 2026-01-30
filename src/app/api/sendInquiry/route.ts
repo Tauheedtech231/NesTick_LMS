@@ -7,6 +7,7 @@ interface InquiryRequest {
   email: string;
   phone?: string;
   message?: string;
+  courseId: string;
   courseName: string;
   duration?: string;
   creditHours?: string;
@@ -33,11 +34,12 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: InquiryRequest = await request.json();
+    console.log('Received inquiry request:', body)
 
     // Validate required fields
-    if (!body.name || !body.email || !body.courseName) {
+    if (!body.name || !body.email || !body.courseName || !body.courseId) {
       return NextResponse.json(
-        { success: false, message: 'Name, email, and course name are required' },
+        { success: false, message: 'Name, email, course name, and course ID are required' },
         { status: 400 }
       );
     }
@@ -57,6 +59,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Generate registration link with course ID
+    const registrationLink = `http://localhost:3000/lms/Registration?courseId=${encodeURIComponent(body.courseId)}`;
 
     // Create HTML email content
     const emailHtml = `
@@ -146,19 +151,21 @@ export async function POST(request: NextRequest) {
             border-radius: 8px;
             margin-top: 10px;
         }
-        .demo-link {
-            background: linear-gradient(135deg, #DA2F6B 0%, #F97316 100%);
+        .registration-link {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
             color: white;
             text-align: center;
-            padding: 20px;
+            padding: 25px 20px;
             border-radius: 8px;
             margin: 25px 0;
             text-decoration: none;
             display: block;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
         }
-        .demo-link:hover {
+        .registration-link:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
         }
         .footer {
             text-align: center;
@@ -188,6 +195,54 @@ export async function POST(request: NextRequest) {
             color: #4b5563;
             font-size: 14px;
         }
+        .button-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .register-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #6B21A8 0%, #7C3AED 100%);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(107, 33, 168, 0.2);
+            margin-top: 10px;
+        }
+        .register-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(107, 33, 168, 0.3);
+        }
+        .steps {
+            background-color: #f0f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            background-color: #6B21A8;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        .step-content {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -210,6 +265,10 @@ export async function POST(request: NextRequest) {
                     <div class="info-item">
                         <div class="label">Course Name</div>
                         <div class="value">${body.courseName}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Course ID</div>
+                        <div class="value">${body.courseId}</div>
                     </div>
                     ${body.duration ? `
                     <div class="info-item">
@@ -245,14 +304,57 @@ export async function POST(request: NextRequest) {
             ` : ''}
 
             <div class="highlight">
-                <p><strong>⚠️ Important Notice:</strong></p>
-                <p>The official registration form is currently under development. For demonstration purposes, please use the following link to experience our registration process:</p>
+                <p><strong>✅ Ready to Register?</strong></p>
+                <p>Your course inquiry has been processed successfully! Now you can complete your registration using the link below. This link is personalized for your selected course:</p>
             </div>
 
-            <a href="https://demo-link.com" class="demo-link" target="_blank">
-                <strong>👉 DEMO REGISTRATION LINK</strong><br>
-                <small>Click here to experience the registration process</small>
-            </a>
+            <div class="section">
+                <div class="section-title">🚀 Complete Your Registration</div>
+                <p>Click the button below to proceed with your registration. The form will be pre-filled with your course information.</p>
+                
+                <div class="button-container">
+                    <a href="${registrationLink}" class="register-button" target="_blank">
+                        📝 Complete Registration Now
+                    </a>
+                </div>
+                
+                <p style="font-size: 14px; color: #666; margin-top: 10px; text-align: center;">
+                    <strong>Registration Link:</strong><br>
+                    <a href="${registrationLink}" style="color: #6B21A8; word-break: break-all;">${registrationLink}</a>
+                </p>
+            </div>
+
+            <div class="steps">
+                <div class="section-title">📝 Registration Process</div>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <strong>Click the registration link above</strong><br>
+                        This will take you to our secure registration form
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <strong>Complete the registration form</strong><br>
+                        Fill in your personal and academic information
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <strong>Upload required documents</strong><br>
+                        Submit scanned copies of your academic documents
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <strong>Receive your credentials</strong><br>
+                        Get your LMS login details via email
+                    </div>
+                </div>
+            </div>
 
             ${body.message ? `
             <div class="section">
@@ -277,17 +379,19 @@ export async function POST(request: NextRequest) {
                         <strong>Phone:</strong> ${body.phone}
                     </div>
                     ` : ''}
+                    <div class="contact-item">
+                        <strong>Course Selected:</strong> ${body.courseName}
+                    </div>
                 </div>
             </div>
 
             <div class="section">
-                <p><strong>📧 What's Next?</strong></p>
-                <p>Our course advisor will contact you within 24-48 hours to discuss:</p>
+                <p><strong>📧 Need Assistance?</strong></p>
+                <p>If you encounter any issues with registration, our support team is here to help:</p>
                 <ul>
-                    <li>Course schedule and availability</li>
-                    <li>Payment options and scholarships</li>
-                    <li>Certification process</li>
-                    <li>Any additional questions you may have</li>
+                    <li>Technical support: support@mansolhab.com</li>
+                    <li>Course inquiries: info@mansolhab.com</li>
+                    <li>Phone support: 03224700200 (Mon-Fri, 9AM-5PM)</li>
                 </ul>
             </div>
         </div>
@@ -313,6 +417,7 @@ Thank you for your interest in our safety training program. We have received you
 
 COURSE DETAILS:
 - Course Name: ${body.courseName}
+- Course ID: ${body.courseId}
 ${body.duration ? `- Duration: ${body.duration}\n` : ''}
 ${body.creditHours ? `- Credit Hours: ${body.creditHours}\n` : ''}
 ${body.fee ? `- Course Fee: ${body.fee}\n` : ''}
@@ -322,10 +427,19 @@ ENTRY REQUIREMENTS:
 ${body.entryRequirements}
 ` : ''}
 
-IMPORTANT NOTICE:
-The official registration form is currently under development. For demonstration purposes, please use the following link to experience our registration process:
+✅ READY TO REGISTER?
+Your course inquiry has been processed successfully! Now you can complete your registration using the link below:
 
-DEMO REGISTRATION LINK: https://demo-link.com
+🚀 COMPLETE YOUR REGISTRATION:
+Click the link below to proceed with your registration. The form will be pre-filled with your course information.
+
+Registration Link: ${registrationLink}
+
+📝 REGISTRATION PROCESS:
+1. Click the registration link above
+2. Complete the registration form
+3. Upload required documents
+4. Receive your LMS login credentials via email
 
 ${body.message ? `
 YOUR MESSAGE:
@@ -336,9 +450,13 @@ YOUR CONTACT INFORMATION:
 - Name: ${body.name}
 - Email: ${body.email}
 ${body.phone ? `- Phone: ${body.phone}\n` : ''}
+- Course Selected: ${body.courseName}
 
-WHAT'S NEXT?
-Our course advisor will contact you within 24-48 hours to discuss course details, payment options, and certification process.
+📧 NEED ASSISTANCE?
+If you encounter any issues with registration, our support team is here to help:
+- Technical support: support@mansolhab.com
+- Course inquiries: info@mansolhab.com
+- Phone support: 03224700200 (Mon-Fri, 9AM-5PM)
 
 ---
 MANSOL HAB Trainings
@@ -352,13 +470,14 @@ MANSOL HAB Trainings
     const mailOptions = {
       from: `"MANSOL HAB Trainings" <tauheeddeveloper13@gmail.com>`,
       to: body.email,
-      subject: `Course Inquiry: ${body.courseName} - MANSOL HAB Trainings`,
+      subject: `🎓 Complete Your Registration: ${body.courseName} - MANSOL HAB Trainings`,
       text: emailText,
       html: emailHtml,
     };
 
     console.log('Attempting to send email to:', body.email);
     console.log('Course:', body.courseName);
+    console.log('Registration Link:', registrationLink);
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
@@ -368,25 +487,69 @@ MANSOL HAB Trainings
     const adminMailOptions = {
       from: `"MANSOL HAB Trainings" <tauheeddeveloper13@gmail.com>`,
       to: 'tauheeddeveloper13@gmail.com',
-      subject: `New Course Inquiry: ${body.courseName}`,
+      subject: `📋 New Course Inquiry: ${body.courseName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #6B21A8;">New Course Inquiry Received</h2>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
+            <h3 style="margin-top: 0;">User Information</h3>
+            <p><strong>Name:</strong> ${body.name}</p>
+            <p><strong>Email:</strong> ${body.email}</p>
+            <p><strong>Phone:</strong> ${body.phone || 'Not provided'}</p>
+            <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
+            <h3 style="margin-top: 0;">Course Details</h3>
+            <p><strong>Course Name:</strong> ${body.courseName}</p>
+            <p><strong>Course ID:</strong> ${body.courseId}</p>
+            ${body.duration ? `<p><strong>Duration:</strong> ${body.duration}</p>` : ''}
+            ${body.creditHours ? `<p><strong>Credit Hours:</strong> ${body.creditHours}</p>` : ''}
+            ${body.fee ? `<p><strong>Fee:</strong> ${body.fee}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h3 style="margin-top: 0;">Registration Link Sent</h3>
+            <p>The following registration link was sent to the user:</p>
+            <p><strong>Link:</strong> ${registrationLink}</p>
+          </div>
+          
+          ${body.message ? `
+          <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h3 style="margin-top: 0;">User Message</h3>
+            <p>${body.message}</p>
+          </div>
+          ` : ''}
+          
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #666;">
+            <p>Automated notification from MANSOL HAB LMS System</p>
+          </div>
+        </div>
+      `,
       text: `
 NEW COURSE INQUIRY RECEIVED
 
-Course: ${body.courseName}
-User: ${body.name} (${body.email})
-Phone: ${body.phone || 'Not provided'}
-Time: ${new Date().toLocaleString()}
-
-User Message: ${body.message || 'No message provided'}
+User Information:
+- Name: ${body.name}
+- Email: ${body.email}
+- Phone: ${body.phone || 'Not provided'}
+- Time: ${new Date().toLocaleString()}
 
 Course Details:
-- Duration: ${body.duration || 'Not specified'}
-- Credit Hours: ${body.creditHours || 'Not specified'}
-- Fee: ${body.fee || 'Not specified'}
+- Course: ${body.courseName}
+- Course ID: ${body.courseId}
+${body.duration ? `- Duration: ${body.duration}\n` : ''}
+${body.creditHours ? `- Credit Hours: ${body.creditHours}\n` : ''}
+${body.fee ? `- Fee: ${body.fee}\n` : ''}
 
-Entry Requirements:
-${body.entryRequirements || 'Not specified'}
-      `,
+Registration Link Sent:
+${registrationLink}
+
+${body.message ? `User Message: ${body.message}\n` : ''}
+---
+Automated notification from MANSOL HAB LMS System
+      `
     };
 
     // Send admin notification (non-blocking)
@@ -399,10 +562,12 @@ ${body.entryRequirements || 'Not specified'}
     return NextResponse.json(
       { 
         success: true, 
-        message: 'Email sent successfully',
+        message: 'Email sent successfully with registration link',
         data: {
           to: body.email,
           course: body.courseName,
+          courseId: body.courseId,
+          registrationLink: registrationLink,
           timestamp: new Date().toISOString()
         }
       },

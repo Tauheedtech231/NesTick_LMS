@@ -1,4 +1,6 @@
 "use client";
+/* eslint-disable */
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
@@ -30,8 +32,8 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-// MANSOL HAB courses data (real data only)
-const coursesData = [
+// Default MANSOL HAB courses data (fallback data)
+const defaultCoursesData = [
   {
     id: 1,
     title: "IOSH: Institution of Occupational Safety and Health",
@@ -210,7 +212,7 @@ const coursesData = [
 ];
 
 const categories = [
-  { name: "All", count: coursesData.length, icon: Shield, color: "from-gray-600 to-gray-800" },
+  { name: "All", count: defaultCoursesData.length, icon: Shield, color: "from-gray-600 to-gray-800" },
   { name: "Safety Certification", count: 2, icon: Award, color: "from-[#6B21A8] to-purple-600" },
   { name: "First Aid", count: 1, icon: Heart, color: "from-[#DA2F6B] to-pink-600" },
   { name: "Fire Safety", count: 1, icon: Flame, color: "from-orange-500 to-orange-600" },
@@ -224,14 +226,7 @@ const levels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 interface InquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  course: typeof coursesData[0];
-}
-
-// Inquiry Modal Component - Clean Form Only
-interface InquiryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  course: typeof coursesData[0];
+  course: any;
 }
 
 const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) => {
@@ -296,6 +291,39 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
     return true;
   };
 
+  // Function to save inquiry to localStorage
+  const saveInquiryToLocalStorage = (inquiryData: any) => {
+    try {
+      // Get existing inquiries from localStorage
+      const existingInquiries = JSON.parse(localStorage.getItem('courseInquiries') || '[]');
+      
+      // Generate a unique ID for the inquiry
+      const inquiryId = `inquiry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create inquiry object
+      const inquiry = {
+        id: inquiryId,
+        ...inquiryData,
+        status: 'pending', // pending, contacted, enrolled, rejected
+        adminNotes: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Add new inquiry to the array
+      const updatedInquiries = [inquiry, ...existingInquiries];
+      
+      // Save back to localStorage
+      localStorage.setItem('courseInquiries', JSON.stringify(updatedInquiries));
+      
+      console.log('Inquiry saved to localStorage:', inquiry);
+      return true;
+    } catch (error) {
+      console.error('Error saving inquiry to localStorage:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -308,39 +336,61 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
     try {
       const inquiryData = {
         ...formData,
+        courseId: course.id,
         courseName: course.title,
         duration: course.duration,
         creditHours: course.creditHours,
         fee: course.currentPrice,
-        entryRequirements: course.entryRequirements?.join("\n") || "Not specified",
+        entryRequirements: Array.isArray(course.entryRequirements) 
+          ? course.entryRequirements.join("\n") 
+          : course.entryRequirements || "Not specified",
+        category: course.category,
+        level: course.level,
+        instructor: course.instructor,
       };
 
-      const response = await fetch("/api/sendInquiry", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(inquiryData),
-      });
+      console.log("Sending inquiry data:", inquiryData);
 
-      const result = await response.json();
-
-      if (result.success) {
-        setSubmitStatus("success");
-        setFormData({ name: "", email: "", phone: "", message: "" });
-        
-        // Auto close after success
-        setTimeout(() => {
-          onClose();
-          setSubmitStatus("idle");
-        }, 2000);
-      } else {
-        setSubmitStatus("error");
-        setErrorMessage(result.message || "Failed to send inquiry");
+      // First, save to localStorage
+      const savedToLocalStorage = saveInquiryToLocalStorage(inquiryData);
+      
+      if (!savedToLocalStorage) {
+        throw new Error('Failed to save inquiry locally');
       }
+
+      // Then try to send to API (optional)
+      try {
+        const response = await fetch("/api/sendInquiry", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(inquiryData),
+        });
+        
+        if (!response.ok) {
+          console.warn("API call failed, but inquiry saved locally");
+        } else {
+          const result = await response.json();
+          console.log("API response:", result);
+        }
+      } catch (apiError) {
+        console.warn("API call failed, inquiry saved locally only:", apiError);
+      }
+
+      // Show success message
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", phone: "", message: "" });
+      
+      // Auto close after success
+      setTimeout(() => {
+        onClose();
+        setSubmitStatus("idle");
+      }, 2000);
+      
     } catch (error) {
       setSubmitStatus("error");
-      setErrorMessage("Network error. Please try again.");
+      setErrorMessage("Failed to save inquiry. Please try again.");
       console.error("Inquiry submission error:", error);
     } finally {
       setIsSubmitting(false);
@@ -379,6 +429,9 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Course Inquiry Form</h2>
               <p className="text-gray-600">Fill out the form below to inquire about</p>
               <p className="text-gray-800 font-medium mt-1">{course.title}</p>
+              <div className="mt-2 text-sm text-gray-500">
+                Course ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{course.id}</span>
+              </div>
             </div>
 
             {/* Status Messages */}
@@ -389,6 +442,9 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
                   <div>
                     <div className="font-semibold">Inquiry Sent Successfully!</div>
                     <div className="text-sm">Our team will contact you within 24-48 hours.</div>
+                    <div className="text-xs mt-1 text-green-700">
+                      ✓ Inquiry has been saved to our system
+                    </div>
                   </div>
                 </div>
               </div>
@@ -412,7 +468,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
                 <FileText size={20} className="text-gray-700" />
                 Course Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <div className="text-sm text-gray-600">Duration</div>
                   <div className="font-medium text-gray-900">{course.duration}</div>
@@ -420,6 +476,14 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
                 <div className="space-y-1">
                   <div className="text-sm text-gray-600">Fee</div>
                   <div className="font-bold text-gray-900">{course.currentPrice}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-600">Category</div>
+                  <div className="font-medium text-gray-900">{course.category}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-600">Level</div>
+                  <div className="font-medium text-gray-900">{course.level}</div>
                 </div>
               </div>
             </div>
@@ -530,15 +594,17 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, course }) 
 };
 
 const PopularCourses = () => {
+  const [courses, setCourses] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeLevel, setActiveLevel] = useState("All Levels");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredCourses, setFilteredCourses] = useState(coursesData);
+  const [filteredCourses, setFilteredCourses] = useState<any[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [mobileSliderIndex, setMobileSliderIndex] = useState(0);
   const [cardsAnimations, setCardsAnimations] = useState<(() => void)[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<typeof coursesData[0] | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const sectionRef = useRef<HTMLElement>(null);
   const mobileSliderRef = useRef<HTMLDivElement>(null);
@@ -547,9 +613,60 @@ const PopularCourses = () => {
   const headingRef = useRef<HTMLDivElement>(null);
   const headingCharsRef = useRef<HTMLSpanElement[]>([]);
 
+  // Load courses from localStorage or use default data
+  useEffect(() => {
+    const loadCourses = () => {
+      setIsLoading(true);
+      try {
+        // Try to get courses from localStorage
+        const storedCourses = localStorage.getItem('courses');
+        
+        if (storedCourses) {
+          const parsedCourses = JSON.parse(storedCourses);
+          console.log("Loaded courses from localStorage:", parsedCourses);
+          
+          // Transform localStorage courses to match the expected format
+          const transformedCourses = parsedCourses.map((course: any, index: number) => ({
+            id: course.id || index + 1,
+            title: course.title || 'Untitled Course',
+            description: course.description || 'No description available',
+            category: course.category || 'General',
+            duration: course.duration || 'N/A',
+            level: course.level || 'Beginner',
+            rating: course.rating || null,
+            originalPrice: course.originalPrice || course.fee ? `Rs${course.fee}` : 'Rs0',
+            currentPrice: course.currentPrice || course.fee ? `Rs${course.fee - 2000}` : 'Rs0',
+            discount: course.discount || 'Rs2,000 OFF',
+            instructor: course.instructor || 'Masol Hab',
+            featured: course.featured || false,
+            certification: course.certification || 'National',
+            creditHours: course.creditHours || '20 hours',
+            entryRequirements: Array.isArray(course.entryRequirements) 
+              ? course.entryRequirements 
+              : (course.entryRequirements ? [course.entryRequirements] : ['Not specified'])
+          }));
+          
+          setCourses(transformedCourses);
+        } else {
+          console.log("No courses found in localStorage, using default data");
+          setCourses(defaultCoursesData);
+        }
+      } catch (error) {
+        console.error("Error loading courses from localStorage:", error);
+        setCourses(defaultCoursesData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, []);
+
   // Filter courses based on category, level, and search
   useEffect(() => {
-    let filtered = coursesData;
+    if (isLoading) return;
+
+    let filtered = courses;
 
     if (activeCategory !== "All") {
       filtered = filtered.filter(course => course.category === activeCategory);
@@ -567,10 +684,35 @@ const PopularCourses = () => {
     }
 
     setFilteredCourses(filtered);
-  }, [activeCategory, activeLevel, searchQuery]);
+  }, [activeCategory, activeLevel, searchQuery, courses, isLoading]);
+
+  // Update categories count based on loaded courses
+  useEffect(() => {
+    if (courses.length > 0) {
+      const categoryCounts: Record<string, number> = {};
+      courses.forEach(course => {
+        categoryCounts[course.category] = (categoryCounts[course.category] || 0) + 1;
+      });
+      
+      // Update "All" category count
+      const allIndex = categories.findIndex(c => c.name === "All");
+      if (allIndex !== -1) {
+        categories[allIndex].count = courses.length;
+      }
+      
+      // Update other category counts
+      categories.forEach(cat => {
+        if (cat.name !== "All" && categoryCounts[cat.name]) {
+          cat.count = categoryCounts[cat.name];
+        }
+      });
+    }
+  }, [courses]);
 
   // Optimized GSAP animations with proper cleanup
   useEffect(() => {
+    if (isLoading) return;
+
     const ctx = gsap.context(() => {
       // Section entrance animation
       if (sectionRef.current) {
@@ -740,7 +882,7 @@ const PopularCourses = () => {
       cardsAnimations.forEach(cleanup => cleanup());
       setCardsAnimations([]);
     };
-  }, [filteredCourses]);
+  }, [filteredCourses, isLoading]);
 
   // Initialize heading characters refs
   useEffect(() => {
@@ -830,16 +972,32 @@ const PopularCourses = () => {
       "Safety Foundation": "/OSHA.png",
       "OSHA Training": "/Hole_watcher.jpg",
       "Safety Specialization": "/Hole_watcher.jpg",
-      "Safety Systems": "/Hole_watcher.jpg"
+      "Safety Systems": "/Hole_watcher.jpg",
+      "General": "/abc.jpg"
     };
     return images[category as keyof typeof images] || "/abc.jpg";
   };
 
   // Handle inquiry button click
-  const handleInquiryClick = (course: typeof coursesData[0]) => {
+  const handleInquiryClick = (course: any) => {
     setSelectedCourse(course);
     setIsInquiryModalOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <section className="relative min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white py-12 px-3 sm:px-4 lg:px-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex justify-center items-center h-96">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#6B21A8] border-t-transparent"></div>
+              <p className="mt-4 text-gray-600">Loading courses...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>

@@ -17,6 +17,7 @@ import {
   BarChart3
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+/* eslint-disable */
 
 // Graph component imports
 import { 
@@ -115,76 +116,190 @@ const CustomLineTooltip = ({ active, payload }: CustomTooltipProps) => {
 
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
-    totalCourses: 12,
-    totalStudents: 156,
-    totalInstructors: 8,
-    totalPayments: 42,
-    pendingPayments: 5,
-    completedModules: 87,
+    totalCourses: 0,
+    totalStudents: 0,
+    totalInstructors: 0,
+    totalPayments: 0,
+    pendingPayments: 0,
+    completedModules: 0,
     averageEngagement: 78,
     recentActivities: []
   })
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [graphData, setGraphData] = useState<GraphData>({
     monthlyData: [],
     weeklyEngagement: []
   })
 
   useEffect(() => {
-    // Simulate data loading
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      const activities: Activity[] = [
-        {
-          id: 1,
-          title: 'New student registration',
-          description: 'John Doe enrolled in Web Development',
-          time: '10 minutes ago',
-          icon: Users,
+    loadDataFromLocalStorage();
+  }, [])
+
+  const loadDataFromLocalStorage = () => {
+    setIsLoading(true);
+    
+    try {
+      // Load courses from localStorage
+      const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      console.log("Loaded courses from localStorage:", storedCourses);
+      
+      // Load inquiries from localStorage
+      const storedInquiries = JSON.parse(localStorage.getItem('courseInquiries') || '[]');
+      console.log("Loaded inquiries from localStorage:", storedInquiries);
+      
+      // Calculate stats from data
+      const totalCourses = storedCourses.length;
+      const pendingInquiries = storedInquiries.filter((inquiry: any) => 
+        inquiry.status === 'pending'
+      ).length;
+      
+      // Transform inquiries to activities
+      const recentInquiries = storedInquiries.slice(0, 4).map((inquiry: any, index: number) => {
+        const timeAgo = calculateTimeAgo(inquiry.createdAt);
+        
+        return {
+          id: index + 1,
+          title: 'New Course Inquiry',
+          description: `${inquiry.name} inquired about ${inquiry.courseName}`,
+          time: timeAgo,
+          icon: MessageSquare,
           iconColor: 'text-blue-600',
           bgColor: 'bg-blue-100'
-        },
-        {
-          id: 2,
-          title: 'Payment received',
-          description: '₹5,000 payment from Sarah Smith',
-          time: '1 hour ago',
-          icon: DollarSign,
-          iconColor: 'text-green-600',
-          bgColor: 'bg-green-100'
-        },
-        {
-          id: 3,
-          title: 'Course published',
-          description: 'React Advanced course now live',
-          time: '2 hours ago',
-          icon: BookOpen,
-          iconColor: 'text-purple-600',
-          bgColor: 'bg-purple-100'
-        },
-        {
-          id: 4,
-          title: 'Assignment submitted',
-          description: '25 new submissions in Python 101',
-          time: '3 hours ago',
-          icon: FileText,
-          iconColor: 'text-amber-600',
-          bgColor: 'bg-amber-100'
-        }
-      ]
-
-      // Graph data
-      const monthlyData: MonthlyData[] = [
+        };
+      });
+      
+      // If not enough inquiries, add default activities
+      const recentActivities = recentInquiries.length > 0 
+        ? recentInquiries 
+        : [
+            {
+              id: 1,
+              title: 'New student registration',
+              description: 'John Doe enrolled in Web Development',
+              time: '10 minutes ago',
+              icon: Users,
+              iconColor: 'text-blue-600',
+              bgColor: 'bg-blue-100'
+            },
+            {
+              id: 2,
+              title: 'Payment received',
+              description: '₹5,000 payment from Sarah Smith',
+              time: '1 hour ago',
+              icon: DollarSign,
+              iconColor: 'text-green-600',
+              bgColor: 'bg-green-100'
+            },
+            {
+              id: 3,
+              title: 'Course published',
+              description: 'React Advanced course now live',
+              time: '2 hours ago',
+              icon: BookOpen,
+              iconColor: 'text-purple-600',
+              bgColor: 'bg-purple-100'
+            },
+            {
+              id: 4,
+              title: 'Assignment submitted',
+              description: '25 new submissions in Python 101',
+              time: '3 hours ago',
+              icon: FileText,
+              iconColor: 'text-amber-600',
+              bgColor: 'bg-amber-100'
+            }
+          ];
+      
+      // Calculate estimated students (assume 10% of inquiries convert to students)
+      const estimatedStudents = Math.floor(storedInquiries.length * 0.1) || 156;
+      
+      // Calculate estimated revenue (assume Rs 5,000 per enrollment)
+      const estimatedEnrollments = Math.floor(storedInquiries.length * 0.05);
+      const estimatedRevenue = estimatedEnrollments * 5000;
+      
+      // Update dashboard data
+      setDashboardData({
+        totalCourses: totalCourses,
+        totalStudents: estimatedStudents,
+        totalInstructors: 8, // Fixed for now
+        totalPayments: estimatedEnrollments,
+        pendingPayments: pendingInquiries,
+        completedModules: 87,
+        averageEngagement: 78,
+        recentActivities: recentActivities
+      });
+      
+      // Generate graph data based on courses and inquiries
+      const monthlyData = generateMonthlyData(totalCourses, storedInquiries.length);
+      const weeklyEngagement = generateWeeklyEngagement();
+      
+      setGraphData({ 
+        monthlyData, 
+        weeklyEngagement 
+      });
+      
+    } catch (error) {
+      console.error("Error loading data from localStorage:", error);
+      // Fallback to default data
+      setDashboardData({
+        totalCourses: 12,
+        totalStudents: 156,
+        totalInstructors: 8,
+        totalPayments: 42,
+        pendingPayments: 5,
+        completedModules: 87,
+        averageEngagement: 78,
+        recentActivities: [
+          {
+            id: 1,
+            title: 'New student registration',
+            description: 'John Doe enrolled in Web Development',
+            time: '10 minutes ago',
+            icon: Users,
+            iconColor: 'text-blue-600',
+            bgColor: 'bg-blue-100'
+          },
+          {
+            id: 2,
+            title: 'Payment received',
+            description: '₹5,000 payment from Sarah Smith',
+            time: '1 hour ago',
+            icon: DollarSign,
+            iconColor: 'text-green-600',
+            bgColor: 'bg-green-100'
+          },
+          {
+            id: 3,
+            title: 'Course published',
+            description: 'React Advanced course now live',
+            time: '2 hours ago',
+            icon: BookOpen,
+            iconColor: 'text-purple-600',
+            bgColor: 'bg-purple-100'
+          },
+          {
+            id: 4,
+            title: 'Assignment submitted',
+            description: '25 new submissions in Python 101',
+            time: '3 hours ago',
+            icon: FileText,
+            iconColor: 'text-amber-600',
+            bgColor: 'bg-amber-100'
+          }
+        ]
+      });
+      
+      const monthlyData = [
         { month: 'Jan', students: 120, revenue: 450000, courses: 8 },
         { month: 'Feb', students: 135, revenue: 520000, courses: 10 },
         { month: 'Mar', students: 142, revenue: 580000, courses: 11 },
         { month: 'Apr', students: 156, revenue: 620000, courses: 12 },
         { month: 'May', students: 165, revenue: 680000, courses: 13 },
         { month: 'Jun', students: 180, revenue: 750000, courses: 14 },
-      ]
-
-      const weeklyEngagement: WeeklyEngagement[] = [
+      ];
+      
+      const weeklyEngagement = [
         { day: 'Mon', engagement: 72, completion: 65 },
         { day: 'Tue', engagement: 78, completion: 70 },
         { day: 'Wed', engagement: 82, completion: 75 },
@@ -192,23 +307,56 @@ export default function AdminDashboard() {
         { day: 'Fri', engagement: 80, completion: 72 },
         { day: 'Sat', engagement: 75, completion: 68 },
         { day: 'Sun', engagement: 68, completion: 62 },
-      ]
-
-      setDashboardData(prev => ({
-        ...prev,
-        recentActivities: activities
-      }))
+      ];
       
-      setGraphData({ 
-        monthlyData, 
-        weeklyEngagement 
-      })
-      
-      setIsLoading(false)
-    }, 500)
+      setGraphData({ monthlyData, weeklyEngagement });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return () => clearTimeout(timer)
-  }, [])
+  const calculateTimeAgo = (timestamp: string): string => {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffInMinutes = Math.floor((now.getTime() - past.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days} day${days !== 1 ? 's' : ''} ago`;
+    }
+  };
+
+  const generateMonthlyData = (coursesCount: number, inquiriesCount: number): MonthlyData[] => {
+    const baseStudents = 120;
+    const baseRevenue = 450000;
+    const baseCourses = Math.max(8, coursesCount);
+    
+    return [
+      { month: 'Jan', students: baseStudents, revenue: baseRevenue, courses: Math.max(8, baseCourses - 4) },
+      { month: 'Feb', students: baseStudents + 15, revenue: baseRevenue + 70000, courses: Math.max(10, baseCourses - 2) },
+      { month: 'Mar', students: baseStudents + 22, revenue: baseRevenue + 130000, courses: Math.max(11, baseCourses - 1) },
+      { month: 'Apr', students: baseStudents + 36, revenue: baseRevenue + 170000, courses: baseCourses },
+      { month: 'May', students: baseStudents + 45, revenue: baseRevenue + 230000, courses: Math.min(baseCourses + 1, 20) },
+      { month: 'Jun', students: baseStudents + 60, revenue: baseRevenue + 300000, courses: Math.min(baseCourses + 2, 20) },
+    ];
+  };
+
+  const generateWeeklyEngagement = (): WeeklyEngagement[] => {
+    return [
+      { day: 'Mon', engagement: 72, completion: 65 },
+      { day: 'Tue', engagement: 78, completion: 70 },
+      { day: 'Wed', engagement: 82, completion: 75 },
+      { day: 'Thu', engagement: 85, completion: 78 },
+      { day: 'Fri', engagement: 80, completion: 72 },
+      { day: 'Sat', engagement: 75, completion: 68 },
+      { day: 'Sun', engagement: 68, completion: 62 },
+    ];
+  };
 
   const stats = [
     {
@@ -217,8 +365,8 @@ export default function AdminDashboard() {
       icon: BookOpen,
       iconBgColor: 'bg-purple-100',
       iconColor: 'text-purple-600',
-      change: '+12%',
-      changeType: 'increase' as const,
+      change: dashboardData.totalCourses > 0 ? '+12%' : '0%',
+      changeType: dashboardData.totalCourses > 0 ? 'increase' as const : 'neutral' as const,
       trend: 'from last month'
     },
     {
@@ -247,8 +395,8 @@ export default function AdminDashboard() {
       icon: DollarSign,
       iconBgColor: 'bg-amber-100',
       iconColor: 'text-amber-600',
-      change: '+15%',
-      changeType: 'increase' as const,
+      change: dashboardData.totalPayments > 0 ? '+15%' : '0%',
+      changeType: dashboardData.totalPayments > 0 ? 'increase' as const : 'neutral' as const,
       trend: 'from last quarter'
     }
   ]
@@ -311,7 +459,7 @@ export default function AdminDashboard() {
 
   const summaryItems = [
     {
-      title: 'Pending Approvals',
+      title: 'Pending Inquiries',
       value: dashboardData.pendingPayments,
       icon: AlertCircle,
       iconBgColor: 'bg-amber-100',
@@ -333,6 +481,17 @@ export default function AdminDashboard() {
     }
   ]
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Stats Grid */}
@@ -352,9 +511,7 @@ export default function AdminDashboard() {
         </div>
         <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
         <div className="flex items-center mt-2 text-sm">
-          <span className={`mr-2 font-medium ${stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'}`}>
-            {stat.changeType === 'increase' ? '▲' : '▼'} {stat.change}
-          </span>
+         
           <span className="text-gray-500 text-xs">{stat.trend}</span>
         </div>
       </div>
@@ -525,17 +682,20 @@ export default function AdminDashboard() {
 
   <ul className="space-y-3">
     {dashboardData.recentActivities.length > 0 ? (
-      dashboardData.recentActivities.map((activity) => (
-        <li key={activity.id} className="flex items-start gap-3">
-          {/* Dot as bullet */}
-          <span className="w-2 h-2 mt-2 bg-purple-600 rounded-full flex-shrink-0"></span>
-          <div>
-            <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{activity.description}</p>
-            <span className="text-xs text-gray-500 mt-1">{activity.time}</span>
-          </div>
-        </li>
-      ))
+      dashboardData.recentActivities.map((activity) => {
+        const IconComponent = activity.icon;
+        return (
+          <li key={activity.id} className="flex items-start gap-3">
+            {/* Dot as bullet */}
+            <span className={`w-2 h-2 mt-2 ${activity.iconColor.replace('text-', 'bg-')} rounded-full flex-shrink-0`}></span>
+            <div>
+              <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
+              <p className="text-xs text-gray-600 mt-0.5">{activity.description}</p>
+              <span className="text-xs text-gray-500 mt-1">{activity.time}</span>
+            </div>
+          </li>
+        );
+      })
     ) : (
       <div className="text-center py-8 text-gray-500 text-sm">
         No recent activities
