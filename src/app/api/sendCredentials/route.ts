@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000" class="login-button" target="_blank">
+                    <a href="https://nes-tick-lms-cnxa.vercel.app/" class="login-button" target="_blank">
                         🔗 Click Here to Access LMS Portal
                     </a>
                 </div>
@@ -405,7 +405,7 @@ This is your temporary password. Please change it immediately after first login.
 
 GETTING STARTED:
 ────────────────────────
-1. Visit: http://localhost:3000
+1. Visit: https://nes-tick-lms-cnxa.vercel.app/
 2. Login with the credentials above
 3. Navigate to your dashboard
 4. Access course materials

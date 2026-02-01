@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate registration link with course ID
-    const registrationLink = `http://localhost:3000/lms/Registration?courseId=${encodeURIComponent(body.courseId)}`;
+const registrationLink = `https://nes-tick-lms-cnxa.vercel.app/lms/Registration?courseId=${encodeURIComponent(body.courseId)}`;
+
 
     // Create HTML email content
     const emailHtml = `

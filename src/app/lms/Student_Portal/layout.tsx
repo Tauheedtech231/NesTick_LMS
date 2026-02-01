@@ -1,37 +1,48 @@
 // app/lms/Student_Portal/layout.tsx
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+'use client'
 
 import Sidebar from './components/Sidebar'
-import { initializeDemoData } from './utils/demoData' 
+import { initializeDemoData } from './utils/demoData'
+import { useEffect } from 'react'
 
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'LMS Student Portal',
-  description: 'Matric/Intermediate Learning Management System',
-}
-
-export default function RootLayout({
+export default function StudentPortalLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Initialize demo data on client side
-  if (typeof window !== 'undefined') {
+  useEffect(() => {
     initializeDemoData()
-  }
+  }, [])
 
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-gray-50`}>
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+
+      <main className="flex-1 md:ml-64">
+        <div className="mobile-content md:mobile-content-none">
+          <div className="p-4 md:p-6 lg:p-8">
             {children}
-          </main>
+          </div>
         </div>
-      </body>
-    </html>
+      </main>
+
+      {/* Global styles should ideally be in globals.css */}
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .mobile-content {
+            padding-top: 80px !important;
+            padding-bottom: 80px !important;
+            min-height: 100vh;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-content-none {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+          }
+        }
+      `}</style>
+    </div>
   )
 }

@@ -1,50 +1,106 @@
 // app/lms/Instructor_Portal/profile/page.tsx
 'use client';
-
-import { useEffect, useState } from 'react';
-import { User, Mail, Phone, Calendar, Shield, Bell, Lock, Save, Upload } from 'lucide-react';
-import { getInstructorProfile } from '../utils/demoData';
 /* eslint-disable */
 
+
+import { useEffect, useState } from 'react';
+import { User, Mail, Phone, Calendar, Book, Award, MapPin, GraduationCap } from 'lucide-react';
+
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    assignmentSubmissions: true,
-    studentQuestions: true,
-    courseUpdates: true,
-    systemMessages: false,
-  });
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [instructor, setInstructor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadedProfile = getInstructorProfile();
-    setProfile(loadedProfile);
+    // Fetch current logged-in instructor from localStorage
+    const fetchInstructorData = () => {
+      try {
+        const userData = localStorage.getItem('currentUser');
+        const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
+        
+        console.log('Profile - Current user:', userData);
+        console.log('Profile - All instructors:', allInstructors);
+
+        if (userData) {
+          const user = JSON.parse(userData);
+          
+          // Find instructor details
+          let instructorDetails = null;
+          
+          if (user.email === 'instructor@gmail.com') {
+            // Demo instructor
+            instructorDetails = {
+              name: 'Demo Instructor',
+              email: 'instructor@gmail.com',
+              phone: 'N/A',
+              specialization: 'Computer Science',
+              qualification: 'PhD in Computer Science',
+              experience: '5+ years',
+              status: 'active',
+              rating: 4.5,
+              students: 0,
+              bio: 'Demo instructor account for testing purposes.',
+              isDemoAccount: true
+            };
+          } else if (user.role === 'instructor') {
+            // Real instructor - find by email or instructorId
+            instructorDetails = allInstructors.find((instr: any) => 
+              instr.email === user.email || 
+              instr.id === user.instructorId
+            );
+          }
+
+          if (instructorDetails) {
+            setInstructor(instructorDetails);
+          } else {
+            // Fallback to basic info
+            setInstructor({
+              name: user.name || user.email.split('@')[0],
+              email: user.email,
+              phone: 'Not available',
+              specialization: 'Not specified',
+              qualification: 'Not specified',
+              experience: 'Not specified',
+              status: 'active',
+              bio: 'No biography available.',
+              isDemoAccount: user.email === 'instructor@gmail.com'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching instructor data:', error);
+        // Set default demo instructor
+        setInstructor({
+          name: 'Demo Instructor',
+          email: 'instructor@gmail.com',
+          phone: 'N/A',
+          specialization: 'Computer Science',
+          qualification: 'PhD in Computer Science',
+          experience: '5+ years',
+          status: 'active',
+          bio: 'Demo instructor account for testing purposes.',
+          isDemoAccount: true
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInstructorData();
   }, []);
 
-  const handleSaveProfile = () => {
-    if (profile) {
-      localStorage.setItem('instructor_profile', JSON.stringify(profile));
-      setIsEditing(false);
-      alert('Profile updated successfully!');
-    }
-  };
-
-  const handleSaveNotifications = () => {
-    localStorage.setItem('instructor_notifications', JSON.stringify(notifications));
-    alert('Notification preferences saved!');
-  };
-
-  const handleChangePassword = () => {
-    setShowPasswordModal(true);
-  };
-
-  if (!profile) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#6B21A8] border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (!instructor) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No profile data found</h3>
+        <p className="text-gray-600">Please log in as an instructor to view profile.</p>
       </div>
     );
   }
@@ -54,311 +110,201 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Profile & Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your instructor account and preferences</p>
+          <h1 className="text-3xl font-bold text-gray-900">Instructor Profile</h1>
+          <p className="text-gray-600 mt-2">View your instructor information and details</p>
         </div>
-        <button
-          onClick={() => setIsEditing(!isEditing)}
-          className="px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
-        >
-          {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Information */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Personal Information</h3>
-              <User className="w-6 h-6 text-gray-400" />
+            <div className="flex items-center gap-6 mb-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-[#6B21A8] to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {instructor.name.split(' ').map((n: string) => n[0]).join('')}
+                </div>
+              </div>
+              <div>
+                <h4 className="text-2xl font-bold text-gray-900">
+                  {instructor.name}
+                  {instructor.isDemoAccount && (
+                    <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full align-middle">
+                      Demo
+                    </span>
+                  )}
+                </h4>
+                <p className="text-gray-600">{instructor.specialization}</p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {instructor.qualification}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-r from-[#6B21A8] to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
-                    {profile.name.split(' ').map((n: any[]) => n[0]).join('')}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-[#6B21A8]" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Email Address</p>
+                      <p className="font-medium text-gray-900">{instructor.email}</p>
+                    </div>
                   </div>
-                  {isEditing && (
-                    <label className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer">
-                      <Upload className="w-4 h-4 text-gray-600" />
-                      <input type="file" className="hidden" accept="image/*" />
-                    </label>
-                  )}
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Phone Number</p>
+                      <p className="font-medium text-gray-900">{instructor.phone || 'Not available'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                      <Award className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Qualification</p>
+                      <p className="font-medium text-gray-900">{instructor.qualification || 'Not specified'}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-2xl font-bold text-gray-900">{profile.name}</h4>
-                  <p className="text-gray-600">{profile.department}</p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Instructor since {profile.joinDate} • {profile.email}
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <Book className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Specialization</p>
+                      <p className="font-medium text-gray-900">{instructor.specialization || 'Not specified'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Experience</p>
+                      <p className="font-medium text-gray-900">{instructor.experience || 'Not specified'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Status</p>
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          instructor.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                        }`}></div>
+                        <p className="font-medium text-gray-900">
+                          {instructor.status === 'active' ? 'Active' : 'Inactive'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bio Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <GraduationCap className="w-5 h-5 text-gray-400" />
+                  <h4 className="font-semibold text-gray-900">Biography</h4>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-700 whitespace-pre-line">
+                    {instructor.bio || 'No biography available.'}
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.name}
-                    onChange={(e) => setProfile({...profile, name: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({...profile, email: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({...profile, phone: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Department
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.department}
-                    onChange={(e) => setProfile({...profile, department: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bio / Introduction
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={profile.bio}
-                    onChange={(e) => setProfile({...profile, bio: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
+        {/* Sidebar - Assigned Courses & Stats */}
+        <div className="space-y-6">
+          {/* Account Status */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Role</span>
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded">
+                  Instructor
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Account Type</span>
+                <span className="font-medium text-gray-900">
+                  {instructor.isDemoAccount ? 'Demo Account' : 'Regular Account'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Rating</span>
+                <div className="flex items-center">
+                  <span className="text-amber-500 mr-1">★</span>
+                  <span className="font-medium text-gray-900">
+                    {instructor.rating || 'N/A'}
+                  </span>
                 </div>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Assigned Students</span>
+                <span className="font-medium text-gray-900">
+                  {instructor.students || 0}
+                </span>
+              </div>
+            </div>
+          </div>
 
-              {isEditing && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSaveProfile}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#6B21A8] hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </button>
+          {/* Assigned Courses */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Assigned Courses</h3>
+            <div className="space-y-3">
+              {instructor.assignedCourses?.length > 0 ? (
+                instructor.assignedCourses.slice(0, 3).map((course: any, index: number) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900">{course.name || 'Unnamed Course'}</h4>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm text-gray-600">Course ID: {course.id}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-500">No courses assigned yet</p>
                 </div>
+              )}
+              
+              {instructor.assignedCourses?.length > 3 && (
+                <p className="text-sm text-gray-500 text-center">
+                  +{instructor.assignedCourses.length - 3} more courses
+                </p>
               )}
             </div>
           </div>
 
-          {/* Security Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Security</h3>
-              <Shield className="w-6 h-6 text-gray-400" />
+          {/* Important Note */}
+          {instructor.isDemoAccount && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <h4 className="font-semibold text-yellow-800 mb-2">Demo Account Notice</h4>
+              <p className="text-sm text-yellow-700">
+                This is a demo instructor account. For a full-featured account, please contact the system administrator.
+              </p>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-[#6B21A8]" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Password</h4>
-                    <p className="text-sm text-gray-600">Last changed 30 days ago</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleChangePassword}
-                  className="px-4 py-2 bg-[#F59E0B] hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
-                >
-                  Change Password
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
-                    <p className="text-sm text-gray-600">Add an extra layer of security</p>
-                  </div>
-                </div>
-                <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
-                  Enable
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications & Preferences */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Notifications</h3>
-              <Bell className="w-6 h-6 text-gray-400" />
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </p>
-                    <p className="text-sm text-gray-600">Receive {key.toLowerCase()} notifications</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={(e) => setNotifications({...notifications, [key]: e.target.checked})}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6B21A8]"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={handleSaveNotifications}
-              className="w-full mt-6 py-3 bg-[#6B21A8] hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Save Preferences
-            </button>
-          </div>
-
-          {/* Account Summary */}
-          <div className="bg-gradient-to-r from-[#6B21A8] to-purple-600 rounded-xl p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Account Summary</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-purple-200">Instructor Since</span>
-                <span className="font-medium">{profile.joinDate}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-200">Department</span>
-                <span className="font-medium">{profile.department}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-200">Status</span>
-                <span className="px-2 py-1 bg-white/20 rounded text-sm">Active</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-200">Last Login</span>
-                <span className="font-medium">Today</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
-
-      {/* Change Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Change Password</h3>
-                  <p className="text-gray-600 mt-1">Create a strong, secure password</p>
-                </div>
-                <button 
-                  onClick={() => setShowPasswordModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-                  />
-                </div>
-                
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Password Requirements</h4>
-                  <ul className="space-y-1 text-sm text-gray-600">
-                    <li>• At least 8 characters long</li>
-                    <li>• Include uppercase and lowercase letters</li>
-                    <li>• Include at least one number</li>
-                    <li>• Include at least one special character</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-8">
-                <button 
-                  onClick={() => setShowPasswordModal(false)}
-                  className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button className="px-6 py-2.5 bg-[#6B21A8] hover:bg-purple-700 text-white font-medium rounded-lg transition-colors">
-                  Update Password
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

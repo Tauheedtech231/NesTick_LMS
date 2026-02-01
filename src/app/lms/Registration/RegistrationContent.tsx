@@ -52,7 +52,7 @@ export default function RegistrationPage() {
     workExperience: '',
     currentJobTitle: '',
     
-    // Documents
+    // Documents (Optional)
     documents: [] as File[],
     documentNames: [] as string[],
     
@@ -168,7 +168,7 @@ export default function RegistrationPage() {
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
-    // Validate file types and sizes
+    // Validate file types and sizes (optional)
     const validFiles = files.filter(file => {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
       const maxSize = 5 * 1024 * 1024 // 5MB
@@ -222,72 +222,56 @@ export default function RegistrationPage() {
     }))
   }
 
-const validateStep = (step: RegistrationStep): boolean => {
-  const newErrors: Record<string, string> = {}
-  
-  if (step === 'personal') {
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
+  const validateStep = (step: RegistrationStep): boolean => {
+    const newErrors: Record<string, string> = {}
     
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email'
-    }
-    
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required'
-    } else if (!/^[0-9+\-\s()]{10,}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number'
-    }
-    
-    // Fixed CNIC validation - accepts 5-6-2 format (36602-464815-91)
-    if (!formData.cnic.trim()) {
-      newErrors.cnic = 'CNIC is required'
-    } else {
-      // Remove all non-digits first
-      const cleanCNIC = formData.cnic.replace(/\D/g, '')
+    if (step === 'personal') {
+      if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
+      if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
       
-      // Check if it's exactly 13 digits
-      if (cleanCNIC.length !== 13) {
-        newErrors.cnic = 'CNIC must be 13 digits'
-      } else if (!/^\d{13}$/.test(cleanCNIC)) {
-        newErrors.cnic = 'CNIC must contain only numbers'
+      if (!formData.email.trim()) {
+        newErrors.email = 'Email is required'
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email'
+      }
+      
+      if (!formData.phone.trim()) {
+        newErrors.phone = 'Phone number is required'
+      } else if (!/^[0-9+\-\s()]{10,}$/.test(formData.phone)) {
+        newErrors.phone = 'Please enter a valid phone number'
+      }
+      
+      if (!formData.cnic.trim()) {
+        newErrors.cnic = 'CNIC is required'
       } else {
-        // Optional: Validate CNIC checksum (last digit)
-        // Pakistan CNIC has a simple checksum validation
-        const cnicDigits = cleanCNIC.split('').map(Number)
-        
-        // Basic validation - first 12 digits should be numbers, last digit can be 0-9
-        if (cnicDigits.some(digit => isNaN(digit))) {
-          newErrors.cnic = 'Invalid CNIC format'
+        const cleanCNIC = formData.cnic.replace(/\D/g, '')
+        if (cleanCNIC.length !== 13) {
+          newErrors.cnic = 'CNIC must be 13 digits'
         }
+      }
+      
+      if (!formData.address.trim()) newErrors.address = 'Address is required'
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
+      if (!formData.gender) newErrors.gender = 'Gender is required'
+    }
+    
+    if (step === 'academic') {
+      if (!formData.highestDegree) newErrors.highestDegree = 'Highest degree is required'
+      if (!formData.institution.trim()) newErrors.institution = 'Institution name is required'
+      if (!formData.graduationYear) newErrors.graduationYear = 'Graduation year is required'
+      
+      // Documents are optional, so no validation needed
+    }
+    
+    if (step === 'payment') {
+      if (paymentMethod === 'offline' && !paymentProof) {
+        newErrors.paymentProof = 'Payment proof screenshot is required'
       }
     }
     
-    if (!formData.address.trim()) newErrors.address = 'Address is required'
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
-    if (!formData.gender) newErrors.gender = 'Gender is required'
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
-  
-  if (step === 'academic') {
-    if (!formData.highestDegree) newErrors.highestDegree = 'Highest degree is required'
-    if (!formData.institution.trim()) newErrors.institution = 'Institution name is required'
-    if (!formData.graduationYear) newErrors.graduationYear = 'Graduation year is required'
-    if (formData.documents.length === 0) {
-      newErrors.documents = 'At least one document is required'
-    }
-  }
-  
-  if (step === 'payment') {
-    if (paymentMethod === 'offline' && !paymentProof) {
-      newErrors.paymentProof = 'Payment proof screenshot is required'
-    }
-  }
-  
-  setErrors(newErrors)
-  return Object.keys(newErrors).length === 0
-}
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
@@ -301,196 +285,198 @@ const validateStep = (step: RegistrationStep): boolean => {
     else if (currentStep === 'payment') setCurrentStep('academic')
   }
 
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = error => reject(error)
-    })
-  }
-
-// Update the handleSubmit function to handle localStorage quota
-const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault()
-  setErrorMessage('')
-  setSuccessMessage('')
-  
-  if (!validateStep('payment')) {
-    return
-  }
-  
-  setIsSubmitting(true)
-  
-  try {
-    // Generate system fields
-    const learnerId = generateLearnerId()
-    const username = formData.email?.split('@')[0] || `student_${Date.now().toString().slice(-6)}`
-    const password = generatePassword()
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setErrorMessage('')
+    setSuccessMessage('')
     
-    const transactionId = `TXN${Date.now().toString().slice(-10)}`
-    
-    // DON'T convert files to base64 for localStorage - store only metadata
-    // Store only file metadata, not the actual file data
-    const documentsMetadata = formData.documents.map((file, index) => ({
-      name: formData.documentNames[index],
-      type: file.type,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-      // Store as reference only, not the actual data
-      id: `doc_${Date.now()}_${index}`
-    }))
-    
-    // For payment proof, also store only metadata
-    const paymentProofMetadata = paymentProof ? {
-      name: paymentProofName,
-      type: paymentProof.type,
-      size: paymentProof.size,
-      uploadedAt: new Date().toISOString(),
-      id: `payment_${Date.now()}`
-    } : null
-    
-    // Create student object WITHOUT large base64 data
-    const studentData = {
-      id: `student_${Date.now()}`,
-      learnerId,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      city: formData.city,
-      country: formData.country,
-      dateOfBirth: formData.dateOfBirth,
-      gender: formData.gender,
-      cnic: formData.cnic,
-      highestDegree: formData.highestDegree,
-      institution: formData.institution,
-      graduationYear: formData.graduationYear,
-      marksGPA: formData.marksGPA,
-      fieldOfStudy: formData.fieldOfStudy,
-      workExperience: formData.workExperience,
-      currentJobTitle: formData.currentJobTitle,
-      courseId: formData.courseId,
-      courseName: formData.courseName,
-      courseDuration: formData.courseDuration,
-      courseFee: formData.courseFee,
-      creditHours: formData.creditHours,
-      category: formData.category,
-      level: formData.level,
-      paymentStatus: paymentMethod === 'offline' ? 'pending' : 'pending',
-      paymentMethod,
-      paymentProof: paymentProofMetadata,
-      transactionId,
-      username,
-      password,
-      registrationDate: new Date().toISOString(),
-      status: 'registered',
-      progress: {
-        overall: 0,
-        completedModules: 0,
-        totalModules: 10,
-        lastAccess: new Date().toISOString()
-      },
-      documents: documentsMetadata,
-      // Flag to indicate files need to be uploaded separately
-      hasFiles: formData.documents.length > 0 || paymentProof !== null
+    if (!validateStep('payment')) {
+      return
     }
     
-    // Try to save to localStorage with error handling
-    try {
-      const existingStudents = JSON.parse(localStorage.getItem('students') || '[]')
-      const updatedStudents = [studentData, ...existingStudents]
-      
-      // Check estimated size
-      const estimatedSize = JSON.stringify(updatedStudents).length
-      const maxSize = 5 * 1024 * 1024 // 5MB in bytes
-      
-      if (estimatedSize > maxSize) {
-        // If too large, clean up old data
-        const trimmedStudents = updatedStudents.slice(0, 50) // Keep only last 50 registrations
-        localStorage.setItem('students', JSON.stringify(trimmedStudents))
-      } else {
-        localStorage.setItem('students', JSON.stringify(updatedStudents))
-      }
-    } catch (storageError) {
-      console.warn('LocalStorage quota exceeded, using fallback storage')
-      // Fallback: Store in sessionStorage or use IndexedDB
-      sessionStorage.setItem('recent_student', JSON.stringify(studentData))
-    }
+    setIsSubmitting(true)
     
-    // Update inquiry status if exists
     try {
-      const inquiries = JSON.parse(localStorage.getItem('courseInquiries') || '[]')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updatedInquiries = inquiries.map((inquiry: any) => {
-        if (inquiry.email === formData.email && inquiry.courseId === formData.courseId) {
-          return {
-            ...inquiry,
-            status: 'registered',
-            registrationDate: new Date().toISOString(),
-            studentId: studentData.id
-          }
-        }
-        return inquiry
-      })
+      // Generate system fields
+      const learnerId = generateLearnerId()
+      const username = formData.email?.split('@')[0] || `student_${Date.now().toString().slice(-6)}`
+      const password = generatePassword()
+      const transactionId = `TXN${Date.now().toString().slice(-10)}`
       
-      // Keep only last 100 inquiries to save space
-      const trimmedInquiries = updatedInquiries.slice(0, 100)
-      localStorage.setItem('courseInquiries', JSON.stringify(trimmedInquiries))
-    } catch (inquiryError) {
-      console.warn('Could not update inquiry status:', inquiryError)
-    }
-    
-    // Send credentials via API
-    try {
-      const response = await fetch('/api/sendCredentials', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Store only file metadata, not the actual file data
+      const documentsMetadata = formData.documents.map((file, index) => ({
+        name: formData.documentNames[index],
+        type: file.type,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+        id: `doc_${Date.now()}_${index}`
+      }))
+      
+      // For payment proof, also store only metadata
+      const paymentProofMetadata = paymentProof ? {
+        name: paymentProofName,
+        type: paymentProof.type,
+        size: paymentProof.size,
+        uploadedAt: new Date().toISOString(),
+        id: `payment_${Date.now()}`
+      } : null
+      
+      // Create student object WITHOUT large base64 data
+      const studentData = {
+        id: `student_${Date.now()}`,
+        learnerId,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        country: formData.country,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        cnic: formData.cnic,
+        highestDegree: formData.highestDegree,
+        institution: formData.institution,
+        graduationYear: formData.graduationYear,
+        marksGPA: formData.marksGPA,
+        fieldOfStudy: formData.fieldOfStudy,
+        workExperience: formData.workExperience,
+        currentJobTitle: formData.currentJobTitle,
+        courseId: formData.courseId,
+        courseName: formData.courseName,
+        courseDuration: formData.courseDuration,
+        courseFee: formData.courseFee,
+        creditHours: formData.creditHours,
+        category: formData.category,
+        level: formData.level,
+        paymentStatus: paymentMethod === 'offline' ? 'pending' : 'pending',
+        paymentMethod,
+        paymentProof: paymentProofMetadata,
+        transactionId,
+        username,
+        password,
+        registrationDate: new Date().toISOString(),
+        status: 'registered',
+        progress: {
+          overall: 0,
+          completedModules: 0,
+          totalModules: 10,
+          lastAccess: new Date().toISOString()
         },
-        body: JSON.stringify({
-          email: formData.email,
-          name: `${formData.firstName} ${formData.lastName}`,
-          learnerId,
-          username,
-          password,
-          courseName: formData.courseName,
-          courseDuration: formData.courseDuration,
-          courseFee: formData.courseFee,
-          transactionId
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to send credentials email')
+        documents: documentsMetadata,
+        hasFiles: formData.documents.length > 0 || paymentProof !== null
       }
       
-      setSuccessMessage('Registration successful! Your credentials have been sent to your email.')
+      // 🔴 Store Student in localStorage
+      try {
+        const existingStudents = JSON.parse(localStorage.getItem('students') || '[]')
+        const updatedStudents = [studentData, ...existingStudents]
+        localStorage.setItem('students', JSON.stringify(updatedStudents))
+      } catch (storageError) {
+        console.warn('LocalStorage quota exceeded, using fallback storage')
+        // Fallback: Store in sessionStorage
+        sessionStorage.setItem('recent_student', JSON.stringify(studentData))
+      }
       
-    } catch (emailError) {
-      console.error('Email sending error:', emailError)
-      // Still show success
-      setSuccessMessage(`Registration submitted successfully! 
-        Your Learner ID: ${learnerId}
-        Username: ${username}
-        Password: ${password}
+      // 🔴 Store Student Credentials in studentAuth localStorage
+      try {
+        const studentAuthData = {
+          id: studentData.id,
+          learnerId,
+          email: formData.email,
+          username: username,
+          password: password,
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          role: 'student',
+          course: formData.courseName,
+          courseId: formData.courseId,
+          registrationDate: new Date().toISOString(),
+          status: 'active',
+          lastLogin: null
+        }
         
-        Note: Could not send email. Please save these credentials and contact support.`)
+        const existingAuth = JSON.parse(localStorage.getItem('studentAuth') || '[]')
+        const updatedAuth = [studentAuthData, ...existingAuth]
+        localStorage.setItem('studentAuth', JSON.stringify(updatedAuth))
+      } catch (authError) {
+        console.warn('Could not save auth data:', authError)
+      }
+      
+      // Update inquiry status if exists
+      try {
+        const inquiries = JSON.parse(localStorage.getItem('courseInquiries') || '[]')
+        const updatedInquiries = inquiries.map((inquiry: any) => {
+          if (inquiry.email === formData.email && inquiry.courseId === formData.courseId) {
+            return {
+              ...inquiry,
+              status: 'registered',
+              registrationDate: new Date().toISOString(),
+              studentId: studentData.id
+            }
+          }
+          return inquiry
+        })
+        
+        localStorage.setItem('courseInquiries', JSON.stringify(updatedInquiries))
+      } catch (inquiryError) {
+        console.warn('Could not update inquiry status:', inquiryError)
+      }
+      
+      // Send credentials via API (optional)
+      try {
+        const response = await fetch('/api/sendCredentials', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            name: `${formData.firstName} ${formData.lastName}`,
+            learnerId,
+            username,
+            password,
+            courseName: formData.courseName,
+            courseDuration: formData.courseDuration,
+            courseFee: formData.courseFee,
+            transactionId
+          })
+        })
+        
+        if (response.ok) {
+          setSuccessMessage('Registration successful! Your credentials have been sent to your email.')
+        } else {
+          throw new Error('Failed to send credentials email')
+        }
+        
+      } catch (emailError) {
+        console.error('Email sending error:', emailError)
+        setSuccessMessage(`✅ **Registration Successful!**
+        
+🎓 **Your Credentials:**
+• Learner ID: ${learnerId}
+• Username: ${username}
+• Password: ${password}
+
+📧 **Login Details:**
+You can login at: /student-login
+Email/Username: ${formData.email || username}
+Password: ${password}
+
+💡 **Important:** Save these credentials for future login.`)
+      }
+      
+      // Redirect after successful registration
+      setTimeout(() => {
+        router.push('/lms/auth/login')
+      }, 10000) // Give time for user to copy credentials
+      
+    } catch (error) {
+      console.error('Registration error:', error)
+      setErrorMessage('Failed to complete registration. Please try again or contact support.')
+    } finally {
+      setIsSubmitting(false)
     }
-    
-    // Reset form after successful submission
-    setTimeout(() => {
-      router.push('/')
-    }, 8000) // Give more time for user to copy credentials
-    
-  } catch (error) {
-    console.error('Registration error:', error)
-    setErrorMessage('Failed to complete registration. Please try again or contact support.')
-  } finally {
-    setIsSubmitting(false)
   }
-}
 
   if (isLoading) {
     return (
@@ -553,7 +539,7 @@ const handleSubmit = async (e: FormEvent) => {
               <div>
                 <p className="font-medium text-green-800">{successMessage}</p>
                 <p className="text-sm text-green-700 mt-1">
-                  You will be redirected to the homepage shortly...
+                  You will be redirected to login page shortly...
                 </p>
               </div>
             </div>
@@ -919,7 +905,7 @@ const handleSubmit = async (e: FormEvent) => {
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Marks / GPA
+                        Marks / GPA (Optional)
                       </label>
                       <input
                         type="text"
@@ -931,10 +917,18 @@ const handleSubmit = async (e: FormEvent) => {
                       />
                     </div>
                     
+                    {/* Document Upload Section - Optional */}
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-4">
-                        Upload Documents (PDF, JPG, PNG, DOC, DOCX) - Max 5MB each *
+                        Upload Documents (Optional)
                       </label>
+                      
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-500">
+                          You can upload documents like CNIC, Photo, Certificates, etc. 
+                          Max 5MB per file. Supported formats: PDF, JPG, PNG, DOC, DOCX
+                        </p>
+                      </div>
                       
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
                         <input
@@ -949,18 +943,14 @@ const handleSubmit = async (e: FormEvent) => {
                           <div className="flex flex-col items-center gap-2">
                             <Upload className="w-8 h-8 text-gray-400" />
                             <p className="text-gray-600">
-                              Click to upload or drag and drop
+                              Click to upload documents (Optional)
                             </p>
                             <p className="text-sm text-gray-500">
-                              Supported formats: PDF, JPG, PNG, DOC, DOCX
+                              You can upload files later if needed
                             </p>
                           </div>
                         </label>
                       </div>
-                      
-                      {errors.documents && (
-                        <p className="mt-2 text-sm text-red-600">{errors.documents}</p>
-                      )}
                       
                       {/* Uploaded Files List */}
                       {formData.documentNames.length > 0 && (

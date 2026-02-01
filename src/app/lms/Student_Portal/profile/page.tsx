@@ -2,303 +2,347 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Lock, Bell, Shield, Download, Save } from 'lucide-react';
-import { getUserProfile } from '../utils/demoData';
+import { useRouter } from 'next/navigation';
+import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X } from 'lucide-react';
 
 export default function ProfileSettingsPage() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    assignmentReminders: true,
-    quizReminders: true,
-    courseUpdates: true,
-    systemMessages: false,
+  const [editData, setEditData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: 'Pakistan'
   });
 
   useEffect(() => {
-    const loadedProfile = getUserProfile();
-    setProfile(loadedProfile);
-  }, []);
+    const studentData = localStorage.getItem('currentStudent');
+    
+    if (!studentData) {
+      router.push('/student-login');
+      return;
+    }
 
-  const handleSaveProfile = () => {
-    // Save to localStorage
+    try {
+      const currentStudent = JSON.parse(studentData);
+      const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+      const studentDetails = allStudents.find((s: any) => s.id === currentStudent.id);
+      
+      if (studentDetails) {
+        setProfile(studentDetails);
+        setEditData({
+          firstName: studentDetails.firstName || '',
+          lastName: studentDetails.lastName || '',
+          email: studentDetails.email || '',
+          phone: studentDetails.phone || '',
+          address: studentDetails.address || '',
+          city: studentDetails.city || '',
+          country: studentDetails.country || 'Pakistan'
+        });
+      } else {
+        setProfile(currentStudent);
+        setEditData({
+          firstName: currentStudent.firstName || '',
+          lastName: currentStudent.lastName || '',
+          email: currentStudent.email || '',
+          phone: currentStudent.phone || '',
+          address: currentStudent.address || '',
+          city: currentStudent.city || '',
+          country: currentStudent.country || 'Pakistan'
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  const handleSave = () => {
     if (profile) {
-      localStorage.setItem('lms_user_profile', JSON.stringify(profile));
+      const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+      const updatedStudents = allStudents.map((s: any) => 
+        s.id === profile.id ? { ...s, ...editData } : s
+      );
+      localStorage.setItem('students', JSON.stringify(updatedStudents));
+      
+      const updatedProfile = { ...profile, ...editData };
+      setProfile(updatedProfile);
+      localStorage.setItem('currentStudent', JSON.stringify(updatedProfile));
+      
       setIsEditing(false);
       alert('Profile updated successfully!');
     }
   };
 
-  const handleSaveNotifications = () => {
-    localStorage.setItem('lms_notification_prefs', JSON.stringify(notifications));
-    alert('Notification preferences saved!');
+  const handleCancel = () => {
+    setEditData({
+      firstName: profile?.firstName || '',
+      lastName: profile?.lastName || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
+      address: profile?.address || '',
+      city: profile?.city || '',
+      country: profile?.country || 'Pakistan'
+    });
+    setIsEditing(false);
   };
 
-  const handleChangePassword = () => {
-    alert('Password change functionality will be integrated with backend');
-  };
-
-  if (!profile) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-600 border-t-transparent"></div>
       </div>
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600">Profile not found.</p>
+      </div>
+    );
+  }
+
+  const fullName = profile.fullName || 
+    `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 
+    'Student';
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile & Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account and preferences</p>
+    <div className="w-full px-6">
+      {/* Header - Full Width */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
+            <p className="text-gray-600 text-sm mt-1">Manage your personal information</p>
+          </div>
+          
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              isEditing 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+            }`}
+          >
+            {isEditing ? <X size={18} /> : <Edit2 size={18} />}
+            {isEditing ? 'Cancel' : 'Edit Profile'}
+          </button>
+        </div>
+
+        {/* Profile Header */}
+        <div className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg w-full">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white text-lg font-semibold">
+            {fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <h2 className="text-lg font-medium text-gray-900">{fullName}</h2>
+            <p className="text-gray-600 text-sm mt-1">{profile.email}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Information */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Personal Information</h3>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors"
-              >
-                {isEditing ? 'Cancel' : 'Edit Profile'}
-              </button>
-            </div>
+      {/* Personal Information Form - Full Width */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 w-full">
+        <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+          <User size={20} />
+          Personal Information
+        </h3>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-500 to-purple-700 flex items-center justify-center text-white text-2xl font-bold">
-                  {profile.name.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900">{profile.name}</h4>
-                  <p className="text-gray-600">{profile.email}</p>
-                  <p className="text-gray-500 text-sm mt-2">{profile.studentId} • {profile.grade}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.name}
-                    onChange={(e) => setProfile({...profile, name: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({...profile, email: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Student ID
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.studentId}
-                    disabled
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Grade/Level
-                  </label>
-                  <select
-                    value={profile.grade}
-                    onChange={(e) => setProfile({...profile, grade: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  >
-                    <option>9th Grade</option>
-                    <option>10th Grade</option>
-                    <option>11th Grade</option>
-                    <option>12th Grade</option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Institution
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.institution}
-                    onChange={(e) => setProfile({...profile, institution: e.target.value})}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-                  />
-                </div>
-              </div>
-
-              {isEditing && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSaveProfile}
-                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Security */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Security</h3>
-              <Shield className="w-6 h-6 text-gray-400" />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Password</h4>
-                    <p className="text-sm text-gray-600">Last changed 30 days ago</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleChangePassword}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
-                >
-                  Change Password
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
-                    <p className="text-sm text-gray-600">Add an extra layer of security</p>
-                  </div>
-                </div>
-                <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
-                  Enable
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications & Preferences */}
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Notifications</h3>
-              <Bell className="w-6 h-6 text-gray-400" />
+          {/* Name Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={editData.firstName}
+                onChange={(e) => setEditData({...editData, firstName: e.target.value})}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  isEditing 
+                    ? 'border-gray-300 bg-white' 
+                    : 'border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+              />
             </div>
 
-            <div className="space-y-4">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </p>
-                    <p className="text-sm text-gray-600">Receive {key.toLowerCase()} notifications</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={(e) => setNotifications({...notifications, [key]: e.target.checked})}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                  </label>
-                </div>
-              ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={editData.lastName}
+                onChange={(e) => setEditData({...editData, lastName: e.target.value})}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  isEditing 
+                    ? 'border-gray-300 bg-white' 
+                    : 'border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+              />
             </div>
-
-            <button
-              onClick={handleSaveNotifications}
-              className="w-full mt-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Save Preferences
-            </button>
           </div>
 
-          {/* Data Management */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Data Management</h3>
-            
-            <div className="space-y-4">
-              <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Download className="w-5 h-5 text-gray-400" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Export Data</p>
-                    <p className="text-sm text-gray-600">Download your study data</p>
-                  </div>
+          {/* Contact Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Mail size={16} />
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={editData.email}
+                disabled
+                className="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg"
+              />
+              <p className="text-xs text-gray-500 mt-2">Email cannot be changed</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Phone size={16} />
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={editData.phone}
+                onChange={(e) => setEditData({...editData, phone: e.target.value})}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  isEditing 
+                    ? 'border-gray-300 bg-white' 
+                    : 'border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+                placeholder="03XX-XXXXXXX"
+              />
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <MapPin size={16} />
+              Address
+            </label>
+            <input
+              type="text"
+              value={editData.address}
+              onChange={(e) => setEditData({...editData, address: e.target.value})}
+              disabled={!isEditing}
+              className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                isEditing 
+                  ? 'border-gray-300 bg-white' 
+                  : 'border-gray-200 bg-gray-50 text-gray-600'
+              }`}
+              placeholder="Enter your complete address"
+            />
+          </div>
+
+          {/* City & Country */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City
+              </label>
+              <input
+                type="text"
+                value={editData.city}
+                onChange={(e) => setEditData({...editData, city: e.target.value})}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  isEditing 
+                    ? 'border-gray-300 bg-white' 
+                    : 'border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+                placeholder="e.g., Karachi"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Country
+              </label>
+              <select
+                value={editData.country}
+                onChange={(e) => setEditData({...editData, country: e.target.value})}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  isEditing 
+                    ? 'border-gray-300 bg-white' 
+                    : 'border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+              >
+                <option value="Pakistan">Pakistan</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Registration Info */}
+          <div className="pt-6 border-t">
+            <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <Calendar size={16} />
+              Registration Information
+            </h4>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-gray-500">Registration Date</div>
+                <div className="font-medium text-gray-900">
+                  {profile.registrationDate ? 
+                    new Date(profile.registrationDate).toLocaleDateString('en-US', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    }) : 
+                    'Not available'
+                  }
                 </div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-gray-500">Student ID</div>
+                <div className="font-medium text-gray-900">{profile.learnerId || 'Not assigned'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Save Button */}
+          {isEditing && (
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <button
+                onClick={handleCancel}
+                className="px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
               </button>
-
-              <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400">🗑️</div>
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Clear Study Data</p>
-                    <p className="text-sm text-gray-600">Reset your progress locally</p>
-                  </div>
-                </div>
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
+              >
+                <Save size={18} />
+                Save Changes
               </button>
             </div>
-          </div>
-
-          {/* Account Status */}
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-purple-900 mb-4">Account Status</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-purple-700">Account Type</span>
-                <span className="font-medium text-purple-900">Student</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-700">Joined Date</span>
-                <span className="font-medium text-purple-900">Jan 15, 2024</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-700">Courses Enrolled</span>
-                <span className="font-medium text-purple-900">4</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-purple-700">Active Sessions</span>
-                <span className="font-medium text-purple-900">1 device</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
+      </div>
+
+      {/* Note Section */}
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg w-full">
+        <p className="text-sm text-blue-700">
+          <span className="font-medium">Note:</span> Your email and student ID cannot be changed. 
+          For other modifications, contact support.
+        </p>
       </div>
     </div>
   );

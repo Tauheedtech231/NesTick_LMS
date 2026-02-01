@@ -122,6 +122,247 @@ function LoginLoading() {
   )
 }
 
+// INSTRUCTOR LOGIN VALIDATION FUNCTION
+const validateInstructorLogin = (email: string, password: string) => {
+  console.log('Validating instructor login for:', email);
+  
+  // 1. FIRST: Check if it's the fixed demo instructor account
+  if (email === 'instructor@gmail.com' && password === '123456') {
+    console.log('Using fixed demo instructor account');
+    return {
+      success: true,
+      isDemoAccount: true,
+      userData: {
+        email: 'instructor@gmail.com',
+        name: 'Demo Instructor',
+        role: 'instructor',
+        isDemoAccount: true,
+        loginType: 'instructor'
+      },
+      redirectTo: '/lms/Instructor_Portal'
+    };
+  }
+  
+  // 2. SECOND: Check against instructorUsers in localStorage (real instructors added by admin)
+  try {
+    const instructorUsers = JSON.parse(localStorage.getItem('instructorUsers') || '[]');
+    console.log('Checking instructorUsers in localStorage:', instructorUsers);
+    
+    // Find matching instructor user
+    const instructorUser = instructorUsers.find((user: any) => 
+      user.email === email && 
+      user.password === password && 
+      user.role === 'instructor'
+    );
+    
+    if (instructorUser) {
+      console.log('Found instructor in instructorUsers:', instructorUser);
+      
+      // Get additional instructor details from instructors list
+      const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
+      const instructorDetails = allInstructors.find((instructor: any) => 
+        instructor.id === instructorUser.id
+      );
+      
+      return {
+        success: true,
+        isDemoAccount: false,
+        userData: {
+          ...instructorUser,
+          name: instructorDetails?.name || instructorUser.name || email.split('@')[0],
+          role: 'instructor',
+          loginType: 'instructor',
+          instructorId: instructorUser.id,
+          instructorDetails: instructorDetails
+        },
+        redirectTo: '/lms/Instructor_Portal'
+      };
+    }
+  } catch (error) {
+    console.error('Error checking instructorUsers:', error);
+  }
+  
+  // 3. THIRD: Check against regular users list (legacy/backup)
+  try {
+    const regularUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    console.log('Checking regular users as fallback:', regularUsers);
+    
+    const regularUser = regularUsers.find((user: any) => 
+      user.email === email && 
+      user.password === password && 
+      user.role === 'instructor'
+    );
+    
+    if (regularUser) {
+      console.log('Found instructor in regular users:', regularUser);
+      return {
+        success: true,
+        isDemoAccount: false,
+        userData: {
+          email: regularUser.email,
+          name: regularUser.name || email.split('@')[0],
+          role: 'instructor',
+          loginType: 'instructor'
+        },
+        redirectTo: '/lms/Instructor_Portal'
+      };
+    }
+  } catch (error) {
+    console.error('Error checking regular users:', error);
+  }
+  
+  // If no match found
+  console.log('No valid instructor found with these credentials');
+  return {
+    success: false,
+    error: 'Invalid email or password for instructor account'
+  };
+};
+
+// STUDENT LOGIN VALIDATION FUNCTION (UPDATED)
+const validateStudentLogin = (identifier: string, password: string) => {
+  console.log('Validating student login for:', identifier);
+  
+  // First, check against studentAuth in localStorage
+  try {
+    const studentAuth = JSON.parse(localStorage.getItem('studentAuth') || '[]');
+    console.log('Checking studentAuth:', studentAuth);
+    
+    // Find student by email, username, or learnerId
+    const student = studentAuth.find((s: any) => {
+      // Check if identifier matches email, username, or learnerId
+      const matchesEmail = s.email?.toLowerCase() === identifier.toLowerCase();
+      const matchesUsername = s.username?.toLowerCase() === identifier.toLowerCase();
+      const matchesLearnerId = s.learnerId === identifier;
+      
+      return (matchesEmail || matchesUsername || matchesLearnerId) && 
+             s.password === password;
+    });
+    
+    if (student) {
+      console.log('Student found in studentAuth:', student);
+      return {
+        success: true,
+        userData: {
+          id: student.id,
+          learnerId: student.learnerId,
+          email: student.email,
+          username: student.username,
+          password: student.password,
+          fullName: student.fullName,
+          role: 'student',
+          course: student.course,
+          courseId: student.courseId,
+          registrationDate: student.registrationDate,
+          status: 'active',
+          loginTime: new Date().toISOString()
+        },
+        redirectTo: '/lms/Student_Portal'
+      };
+    }
+  } catch (error) {
+    console.error('Error checking studentAuth:', error);
+  }
+  
+  // Second, check if it's demo student account (for testing)
+  if (
+    (identifier === 'student@gmail.com' || 
+     identifier === 'student' || 
+     identifier === 'STU98765432') && 
+    password === '123456'
+  ) {
+    console.log('Using demo student account');
+    
+    // Check if demo student already exists
+    try {
+      const studentAuth = JSON.parse(localStorage.getItem('studentAuth') || '[]');
+      const existingDemo = studentAuth.find((s: any) => s.email === 'student@gmail.com');
+      
+      if (existingDemo) {
+        return {
+          success: true,
+          isDemoAccount: true,
+          userData: {
+            ...existingDemo,
+            loginTime: new Date().toISOString()
+          },
+          redirectTo: '/lms/Student_Portal'
+        };
+      }
+    } catch (error) {
+      console.error('Error checking existing demo:', error);
+    }
+    
+    // Create demo student data
+    const demoStudent = {
+      id: `student_demo_${Date.now()}`,
+      learnerId: 'STU98765432',
+      email: 'student@gmail.com',
+      username: 'student',
+      password: '123456',
+      fullName: 'Demo Student',
+      role: 'student',
+      course: 'Web Development',
+      courseId: 'course_demo',
+      registrationDate: new Date().toISOString(),
+      status: 'active',
+      lastLogin: null
+    };
+    
+    // Add to studentAuth for future logins
+    try {
+      const existingAuth = JSON.parse(localStorage.getItem('studentAuth') || '[]');
+      const updatedAuth = [demoStudent, ...existingAuth];
+      localStorage.setItem('studentAuth', JSON.stringify(updatedAuth));
+    } catch (error) {
+      console.error('Error saving demo student:', error);
+    }
+    
+    return {
+      success: true,
+      isDemoAccount: true,
+      userData: {
+        ...demoStudent,
+        loginTime: new Date().toISOString()
+      },
+      redirectTo: '/lms/Student_Portal'
+    };
+  }
+  
+  // Third, check against regular users as fallback
+  try {
+    const regularUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const regularUser = regularUsers.find((u: any) => 
+      u.email === identifier && 
+      u.password === password &&
+      u.role === 'student'
+    );
+    
+    if (regularUser) {
+      console.log('Found student in regular users:', regularUser);
+      return {
+        success: true,
+        userData: {
+          email: regularUser.email,
+          name: regularUser.name || regularUser.email.split('@')[0],
+          role: 'student',
+          loginType: 'student'
+        },
+        redirectTo: '/lms/Student_Portal'
+      };
+    }
+  } catch (error) {
+    console.error('Error checking regular users:', error);
+  }
+  
+  // If no match found
+  console.log('No valid student found with these credentials');
+  return {
+    success: false,
+    error: 'Invalid credentials. Please check your login details and try again.'
+  };
+};
+
 // Main login component
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -149,90 +390,123 @@ function LoginContent() {
     setError('')
     setIsLoading(true)
     
-    // SPECIAL HANDLING FOR SPECIFIC CREDENTIALS
-    // These credentials will work regardless of local storage and login type
-    const specialCredentials = [
-      {
-        email: 'nestickteck@gmail.com',
-        password: '123456',
-        name: 'Admin User',
-        role: 'admin',
-        redirectTo: '/lms/Admin_Portal'
-      },
-      {
-        email: 'instructor@gmail.com',
-        password: '123456',
-        name: 'Instructor',
-        role: 'instructor',
-        redirectTo: '/lms/Instructor_Portal'
-      }
-    ]
-    
-    // Check for special credentials first - NO LOGIN TYPE CHECK FOR THESE
-    const specialUser = specialCredentials.find(
-      cred => cred.email === formData.email && cred.password === formData.password
-    )
-    
     setTimeout(() => {
-      if (specialUser) {
-        console.log('Special user login:', specialUser.email, 'Login type was:', loginType)
-        
-        // Save current user to local storage
-        const userData = {
-          email: specialUser.email,
-          name: specialUser.name,
-          role: specialUser.role,
-          isSpecialUser: true,
-          loginType: loginType // Store what login type they used
+      try {
+        // Handle different login types
+        if (loginType === 'instructor') {
+          // INSTRUCTOR LOGIN: Use the specific validation function
+          const validation = validateInstructorLogin(formData.email, formData.password);
+          
+          if (validation.success) {
+            console.log('Instructor login successful:', validation.userData);
+            
+            // Save current user to local storage
+            localStorage.setItem('currentUser', JSON.stringify(validation.userData));
+            
+            // Also save as lastInstructorLogin for easier access
+            localStorage.setItem('lastInstructorLogin', JSON.stringify({
+              email: formData.email,
+              timestamp: new Date().toISOString(),
+              isDemoAccount: validation.isDemoAccount
+            }));
+            
+            // Show success popup
+            const userName = validation.userData.name || formData.email.split('@')[0];
+            setSuccessMessage(validation.isDemoAccount 
+              ? `Welcome, ${userName}! (Demo Account)`
+              : `Welcome back, ${userName}!`
+            );
+            setShowSuccess(true);
+            
+            // Redirect to instructor portal
+            setTimeout(() => {
+              router.push(validation.redirectTo || '/lms/Instructor_Portal');
+            }, 2000);
+          } else {
+            console.log('Instructor login failed');
+            setError(validation.error || 'Invalid instructor credentials');
+          }
+        } 
+        else if (loginType === 'admin') {
+          // ADMIN LOGIN: Check fixed demo account
+          if (formData.email === 'nestickteck@gmail.com' && formData.password === '123456') {
+            const adminUser = {
+              email: formData.email,
+              name: 'Admin User',
+              role: 'admin',
+              isDemoAccount: true,
+              loginType: 'admin'
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(adminUser));
+            
+            setSuccessMessage('Welcome back, Admin!');
+            setShowSuccess(true);
+            
+            setTimeout(() => {
+              router.push('/lms/Admin_Portal');
+            }, 2000);
+          } else {
+            // Check regular users for admin
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find((u: any) => 
+              u.email === formData.email && 
+              u.password === formData.password &&
+              u.role === 'admin'
+            );
+            
+            if (user) {
+              localStorage.setItem('currentUser', JSON.stringify(user));
+              setSuccessMessage(`Welcome back, ${user.name || user.email}!`);
+              setShowSuccess(true);
+              
+              setTimeout(() => {
+                router.push('/lms/Admin_Portal');
+              }, 2000);
+            } else {
+              setError('Invalid admin credentials');
+            }
+          }
         }
-        localStorage.setItem('currentUser', JSON.stringify(userData))
-        
-        // Show success popup
-        setSuccessMessage(`Welcome back, ${specialUser.name}!`)
-        setShowSuccess(true)
-        
-        // Redirect to specific portal
-        setTimeout(() => {
-          router.push(specialUser.redirectTo)
-        }, 2000)
-      } else {
-        // Check local storage for regular users
-        const users = JSON.parse(localStorage.getItem('users') || '[]')
-        
-        console.log('Checking local storage users:', users)
-        console.log('Form data:', formData)
-        console.log('Login type:', loginType)
-        
-        // Find user with matching email and password
-        const user = users.find((u: any) => {
-          console.log('Checking user:', u.email, 'against', formData.email)
-          return u.email === formData.email && 
-                 u.password === formData.password
-          // REMOVED LOGIN TYPE CHECK: && u.role === loginType
-        })
-        
-        if (user) {
-          console.log('User found in local storage:', user)
+        else {
+          // STUDENT LOGIN: Use the updated validation function
+          // Students can login with email, username, or learnerId
+          const validation = validateStudentLogin(formData.email, formData.password);
           
-          // Save current user to local storage
-          localStorage.setItem('currentUser', JSON.stringify(user))
-          
-          // Show success popup
-          setSuccessMessage(`Welcome back, ${user.name || user.email}!`)
-          setShowSuccess(true)
-          
-          // Redirect to dashboard
-          setTimeout(() => {
-            router.push('/lms/Admin_Portal')
-          }, 2000)
-        } else {
-          console.log('No user found matching credentials')
-          setError('Invalid email or password')
+          if (validation.success) {
+            console.log('Student login successful:', validation.userData);
+            
+            // Save to appropriate storage based on data structure
+            if (validation.userData.learnerId) {
+              // New student auth structure
+              localStorage.setItem('currentStudent', JSON.stringify(validation.userData));
+            } else {
+              // Legacy student structure
+              localStorage.setItem('currentUser', JSON.stringify(validation.userData));
+            }
+            
+            // Show success popup
+            const userName = validation.userData.fullName || validation.userData.name || validation.userData.username || formData.email.split('@')[0];
+            setSuccessMessage(`Welcome back, ${userName}!`);
+            setShowSuccess(true);
+            
+            // Redirect to student dashboard
+            setTimeout(() => {
+              router.push(validation.redirectTo || '/lms/Student_Portal');
+            }, 2000);
+          } else {
+            console.log('Student login failed');
+            setError(validation.error || 'Invalid student credentials');
+          }
         }
+      } catch (error: any) {
+        console.error('Login error:', error);
+        setError('An error occurred during login');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false)
-    }, 1000)
-  }
+    }, 1000);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -242,45 +516,45 @@ function LoginContent() {
     }))
   }
 
-  // Pre-fill credentials based on email
+  // Pre-fill credentials based on email/identifier
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const email = e.target.value
-    setFormData(prev => ({ ...prev, email }))
+    const identifier = e.target.value
+    setFormData(prev => ({ ...prev, email: identifier }))
     
-    // Auto-fill password for special emails
-    const specialEmails = ['nestickteck@gmail.com', 'instructor@gmail.com']
-    if (specialEmails.includes(email)) {
-      setFormData(prev => ({ ...prev, password: '123456' }))
+    // Auto-fill password for special identifiers
+    const specialIdentifiers = [
+      'nestickteck@gmail.com', 
+      'instructor@gmail.com',
+      'student@gmail.com',
+      'student',
+      'STU98765432'
+    ];
+    
+    if (specialIdentifiers.includes(identifier)) {
+      setFormData(prev => ({ ...prev, password: '123456' }));
       
-      // Also set login type automatically based on email
-      if (email === 'nestickteck@gmail.com') {
-        // Update URL for admin
-        router.replace('/lms/auth/login?type=admin')
-      } else if (email === 'instructor@gmail.com') {
-        // Update URL for instructor
-        router.replace('/lms/auth/login?type=instructor')
+      // Also set login type automatically based on identifier
+      if (identifier === 'nestickteck@gmail.com') {
+        router.replace('/lms/auth/login?type=admin');
+      } else if (identifier === 'instructor@gmail.com') {
+        router.replace('/lms/auth/login?type=instructor');
+      } else if (identifier === 'student@gmail.com' || identifier === 'student' || identifier === 'STU98765432') {
+        router.replace('/lms/auth/login?type=student');
       }
     }
   }
 
-  // Demo credentials note and auto-create users
+  // Add demo users to localStorage for testing
   useEffect(() => {
-    // Add special users to local storage if they don't exist
-    const users = JSON.parse(localStorage.getItem('users') || '[]')
+    // Only add demo users if they don't exist
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    const specialUsers = [
+    const demoUsers = [
       {
         email: 'nestickteck@gmail.com',
         password: '123456',
         name: 'Admin User',
         role: 'admin',
-        createdAt: new Date().toISOString()
-      },
-      {
-        email: 'instructor@gmail.com',
-        password: '123456',
-        name: 'Instructor User',
-        role: 'instructor',
         createdAt: new Date().toISOString()
       },
       {
@@ -290,29 +564,49 @@ function LoginContent() {
         role: 'student',
         createdAt: new Date().toISOString()
       }
-    ]
+    ];
     
-    let updated = false
-    specialUsers.forEach(specialUser => {
-      const exists = users.some((u: any) => u.email === specialUser.email)
+    let updated = false;
+    demoUsers.forEach(demoUser => {
+      const exists = users.some((u: any) => u.email === demoUser.email);
       if (!exists) {
-        users.push(specialUser)
-        updated = true
-        console.log('Added user to local storage:', specialUser.email)
+        users.push(demoUser);
+        updated = true;
       }
-    })
+    });
     
     if (updated) {
-      localStorage.setItem('users', JSON.stringify(users))
-      console.log('Updated local storage users:', users)
+      localStorage.setItem('users', JSON.stringify(users));
     }
-  }, [])
-
-  // Debug info
-  useEffect(() => {
-    console.log('Current login type:', loginType)
-    console.log('Form data:', formData)
-  }, [loginType, formData])
+    
+    // Also check for demo student in studentAuth
+    try {
+      const studentAuth = JSON.parse(localStorage.getItem('studentAuth') || '[]');
+      const demoStudentExists = studentAuth.some((s: any) => s.email === 'student@gmail.com');
+      
+      if (!demoStudentExists) {
+        const demoStudent = {
+          id: `student_demo_${Date.now()}`,
+          learnerId: 'STU98765432',
+          email: 'student@gmail.com',
+          username: 'student',
+          password: '123456',
+          fullName: 'Demo Student',
+          role: 'student',
+          course: 'Web Development',
+          courseId: 'course_demo',
+          registrationDate: new Date().toISOString(),
+          status: 'active',
+          lastLogin: null
+        };
+        
+        const updatedAuth = [demoStudent, ...studentAuth];
+        localStorage.setItem('studentAuth', JSON.stringify(updatedAuth));
+      }
+    } catch (error) {
+      console.error('Error setting up demo student:', error);
+    }
+  }, []);
 
   return (
     <>
@@ -347,10 +641,6 @@ function LoginContent() {
 
             {/* Form Section */}
             <div className="p-8">
-           
-
-              
-
               {/* Error Message */}
               {error && (
                 <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -375,15 +665,18 @@ function LoginContent() {
                     </Link>
                   ))}
                 </div>
-                
               </div>
+
+             
+
+             
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email Input */}
+                {/* Identifier Input - Label changes based on login type */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
+                    {loginType === 'student' ? 'Email / Username / Learner ID' : 'Email Address'}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -392,13 +685,17 @@ function LoginContent() {
                     <input
                       id="email"
                       name="email"
-                      type="email"
+                      type={loginType === 'student' ? 'text' : 'email'}
                       autoComplete="email"
                       required
                       value={formData.email}
                       onChange={handleEmailChange}
                       className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
-                      placeholder="Enter your email"
+                      placeholder={
+                        loginType === 'student' 
+                          ? 'Enter email, username, or learner ID' 
+                          : 'Enter your email'
+                      }
                     />
                   </div>
                 </div>
@@ -437,30 +734,6 @@ function LoginContent() {
                   </div>
                 </div>
 
-                {/* Remember Me & Forgot Password */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <input
-                      id="remember-me"
-                      name="remember-me"
-                      type="checkbox"
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded transition-colors"
-                    />
-                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                      Remember me
-                    </label>
-                  </div>
-
-                  <div className="text-sm">
-                    <Link
-                      href="/forgot-password"
-                      className="font-medium text-purple-600 hover:text-purple-800 transition-colors"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
-                </div>
-
                 {/* Submit Button */}
                 <div className="pt-2">
                   <button
@@ -482,18 +755,8 @@ function LoginContent() {
                 </div>
               </form>
 
-              {/* Sign Up Link */}
-              <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-                <p className="text-gray-600 text-sm">
-                  Don&apos;t have an account?{' '}
-                  <Link
-                    href="/lms/auth/sign_up"
-                    className="font-medium text-purple-600 hover:text-purple-800 transition-colors"
-                  >
-                    Sign up now
-                  </Link>
-                </p>
-              </div>
+             
+             
             </div>
           </div>
 

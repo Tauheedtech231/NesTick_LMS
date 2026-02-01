@@ -65,7 +65,7 @@ export default function StudentsList() {
     try {
       setLoading(true)
       const storedStudents = JSON.parse(localStorage.getItem('students') || '[]')
-      console.log('Loaded students from localStorage:', storedStudents.length)
+      console.log('Loaded students from localStorage:', storedStudents)
       
       // Transform data if needed
       const formattedStudents = storedStudents.map((student: any) => ({
