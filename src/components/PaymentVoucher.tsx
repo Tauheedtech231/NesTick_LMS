@@ -157,6 +157,16 @@ Fees: PKR ${voucherData.fees.toLocaleString()}
     );
   }
 
+  // Bank details
+  const bankDetails = {
+    bankName: "National Bank of Pakistan",
+    accountTitle: "TechSafe Education Pvt Ltd",
+    accountNumber: "1001-23456789-01",
+    iban: "PK36NBPA1001234567890101",
+    swiftCode: "NBPAKKAXXX",
+    branch: "Main Branch, Islamabad"
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
@@ -241,6 +251,68 @@ Fees: PKR ${voucherData.fees.toLocaleString()}
             </div>
           </div>
 
+          {/* Bank Details Section - YEH ADD KIYA HAI */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+              </svg>
+              Bank Account Details
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Bank Name</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900">{bankDetails.bankName}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Account Title</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900">{bankDetails.accountTitle}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Account Number</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900 tracking-wider">{bankDetails.accountNumber}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">IBAN</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900 tracking-wider">{bankDetails.iban}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">SWIFT Code</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900">{bankDetails.swiftCode}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Branch</label>
+                  <div className="p-3 bg-white rounded-lg border border-gray-300">
+                    <span className="font-medium text-gray-900">{bankDetails.branch}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-sm text-gray-700 p-3 bg-yellow-100 rounded-lg">
+              <span className="font-bold">Important:</span> Please use Enrollment ID <span className="font-mono font-bold">{voucherData.enrollmentId}</span> as payment reference.
+            </div>
+          </div>
+
           {/* Payment Summary */}
           <div className="bg-gray-50 rounded-xl p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h3>
@@ -266,7 +338,8 @@ Fees: PKR ${voucherData.fees.toLocaleString()}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Instructions</h3>
             <ol className="space-y-2 list-decimal list-inside text-gray-700">
-              <li>Make payment to our bank account using this voucher as reference</li>
+              <li>Make payment to the bank account details provided above</li>
+              <li>Use Enrollment ID as payment reference: <span className="font-bold">{voucherData.enrollmentId}</span></li>
               <li>Upload the payment slip in the next step for verification</li>
               <li>Keep this voucher safe for future reference</li>
               <li>Contact support at info@techsafe.edu.pk for any queries</li>

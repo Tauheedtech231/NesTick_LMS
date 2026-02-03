@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface EnrollmentFormProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface EnrollmentFormProps {
 }
 
 export default function EnrollmentForm({ isOpen, onClose, onSuccess, course }: EnrollmentFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -95,7 +97,14 @@ export default function EnrollmentForm({ isOpen, onClose, onSuccess, course }: E
       
       setIsSubmitting(false);
       onClose();
-      onSuccess();
+      
+      // ✅ IMPORTANT: Redirect to enrollment page
+      router.push('/courses/enrollment');
+      
+      // Call onSuccess callback if needed
+      if (onSuccess) {
+        onSuccess();
+      }
     }, 1000);
   };
 

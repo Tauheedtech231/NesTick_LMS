@@ -190,14 +190,7 @@ export default function PaymentSlipUpload() {
                 >
                   Browse More Courses
                 </button>
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="flex-1 bg-[#F97316] hover:bg-[#EA580C] text-white 
-                           font-semibold py-3 px-4 rounded-lg hover:scale-[1.02] 
-                           transition-all duration-300"
-                >
-                  Go to Dashboard
-                </button>
+               
               </div>
             </div>
           </div>

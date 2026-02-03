@@ -154,7 +154,7 @@ const HeroSlider = () => {
   }, []);
 
   return (
-    <section className="relative w-full h-screen overflow-hidden bg-gray-900">
+    <section className="relative w-full h-[85vh] sm:h-[90vh] md:h-screen overflow-hidden bg-gray-900">
       {/* Background image with parallax effect */}
       <div ref={bgRef} className="absolute inset-0">
         <Image
@@ -172,13 +172,13 @@ const HeroSlider = () => {
       {/* Text Content Container */}
       <div
         ref={slideRef}
-        className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-16 z-20"
+        className="absolute inset-0 flex flex-col justify-center px-4 sm:px-6 md:px-12 lg:px-16 z-20"
       >
-        <div className="max-w-4xl">
+        <div className="max-w-4xl px-2 sm:px-0">
           {/* Subtitle - Smaller heading */}
           <h2
             ref={subtitleRef}
-            className="text-lg md:text-xl lg:text-2xl text-white/90 font-medium mb-2 md:mb-3 opacity-0"
+            className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 font-medium mb-1 sm:mb-2 md:mb-3 opacity-0"
           >
             {slides[current].subtitle}
           </h2>
@@ -186,7 +186,7 @@ const HeroSlider = () => {
           {/* Main Title - Responsive font sizes */}
           <h1
             ref={titleRef}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 leading-tight opacity-0"
+            className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 md:mb-4 lg:mb-6 leading-tight opacity-0"
           >
             {slides[current].title}
           </h1>
@@ -194,7 +194,7 @@ const HeroSlider = () => {
           {/* Description - Concise text */}
           <p
             ref={descriptionRef}
-            className="text-lg md:text-xl text-white/90 max-w-2xl mb-8 md:mb-10 opacity-0"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 max-w-2xl mb-4 sm:mb-6 md:mb-8 lg:mb-10 opacity-0 line-clamp-3 sm:line-clamp-none"
           >
             {slides[current].description}
           </p>
@@ -202,20 +202,14 @@ const HeroSlider = () => {
           {/* Buttons Container */}
           <div 
             ref={buttonsRef}
-            className="flex flex-col sm:flex-row gap-4 md:gap-6 opacity-0"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 opacity-0"
           >
-            {/* Primary CTA - Enroll Now */}
-            <button
-              onClick={() => window.location.href = '/enroll'}
-              className="px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-lg"
-            >
-              Enroll Now
-            </button>
+          
             
             {/* Secondary CTA - View Courses */}
             <button
               onClick={() => window.location.href = '/courses'}
-              className="px-8 py-3 border-2 border-[#1E3A8A] text-white font-semibold rounded-lg hover:underline transition-all duration-300 hover:scale-105 text-lg"
+              className="px-4 sm:px-6 md:px-8 py-2 sm:py-3 border-2 bg-[#F97316] text-white font-semibold rounded-lg hover:underline transition-all duration-300 hover:scale-105 text-sm sm:text-base md:text-lg w-full sm:w-auto"
             >
               View Courses
             </button>
@@ -223,24 +217,24 @@ const HeroSlider = () => {
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+      {/* Scroll Indicator - Hidden on very small screens */}
+      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 hidden xs:block">
         <ChevronDown 
-          size={36} 
-          className="text-white/80 animate-float"
+          size={24} 
+          className="sm:size-8 text-white/80 animate-float"
         />
       </div>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-2 md:gap-3">
+      <div className="absolute bottom-12 sm:bottom-16 md:bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-1 sm:gap-2 md:gap-3">
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => !isAnimating && animateSlideTransition(index)}
-            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
+            className={`h-1 sm:h-2 md:h-3 rounded-full transition-all duration-300 ${
               current === index 
-                ? "bg-white w-6 md:w-8" 
-                : "bg-white/50 hover:bg-white/80"
+                ? "bg-white w-6 sm:w-8 md:w-10" 
+                : "bg-white/50 hover:bg-white/80 w-4 sm:w-6 md:w-8"
             }`}
             aria-label={`Go to slide ${index + 1}`}
             disabled={isAnimating}
@@ -260,6 +254,26 @@ const HeroSlider = () => {
         }
         .animate-float {
           animation: float 2s ease-in-out infinite;
+        }
+        
+        /* For very small screens */
+        @media (max-height: 600px) {
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        }
+        
+        /* Responsive text line clamping */
+        @media (max-width: 640px) and (max-height: 700px) {
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
         }
       `}</style>
     </section>

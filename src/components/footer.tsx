@@ -73,10 +73,10 @@ export default function Footer() {
   };
 
   return (
-    <footer id="contact" className="bg-[#1F2937] text-white relative overflow-hidden pt-6 pb-4 px-4 md:px-6 lg:px-8">
-      {/* Animated Background Circles - Reduced */}
-      <div className="absolute top-0 left-0 w-32 h-32 bg-[#6B21A8] rounded-full mix-blend-soft-light filter blur-xl opacity-10"></div>
-      <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#DA2F6B] rounded-full mix-blend-soft-light filter blur-xl opacity-10"></div>
+    <footer id="contact" className="bg-[#1F3A93] text-white relative overflow-hidden pt-6 pb-4 px-4 md:px-6 lg:px-8">
+      {/* Animated Background Circles - Updated to blue theme */}
+      <div className="absolute top-0 left-0 w-32 h-32 bg-[#4A90E2] rounded-full mix-blend-soft-light filter blur-xl opacity-20"></div>
+      <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#FFA500] rounded-full mix-blend-soft-light filter blur-xl opacity-10"></div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Main Footer Content - Compact on mobile */}
@@ -84,20 +84,21 @@ export default function Footer() {
           {/* Brand Section - Always visible */}
           <div className="md:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#6B21A8] to-[#DA2F6B] rounded-lg flex items-center justify-center">
+              {/* Logo - Updated to blue gradient */}
+              <div className="w-8 h-8 bg-gradient-to-br from-[#1F3A93] to-[#4A90E2] rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">M</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">MANSOL HAB</h3>
-                <p className="text-xs text-gray-400">Since 2005</p>
+                <p className="text-xs text-gray-300">Since 2005</p>
               </div>
             </div>
             
-            <p className="text-gray-300 text-xs mb-3 leading-relaxed">
+            <p className="text-gray-200 text-xs mb-3 leading-relaxed">
               Excellence in safety education. Shaping future leaders.
             </p>
             
-            {/* Social Links - Compact */}
+            {/* Social Links - Compact with updated colors */}
             <div className="flex gap-1 mb-3">
               {socialIcons.map((social, idx) => (
                 <a
@@ -106,7 +107,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={social.label}
-                  className="bg-gray-800 hover:bg-[#F59E0B] text-white p-1.5 rounded transition-all duration-300 flex items-center justify-center"
+                  className="bg-[#4A90E2] hover:bg-[#FFA500] text-white p-1.5 rounded transition-all duration-300 flex items-center justify-center"
                 >
                   {social.icon}
                 </a>
@@ -122,9 +123,10 @@ export default function Footer() {
                 <li key={idx}>
                   <a 
                     href={link.href}
-                    className="text-gray-400 hover:text-[#F59E0B] transition-all duration-300 flex items-center gap-1.5 text-xs hover:translate-x-1"
+                    className="text-gray-300 hover:text-[#FFA500] transition-all duration-300 flex items-center gap-1.5 text-xs hover:translate-x-1"
                   >
-                    <span className="w-1 h-1 bg-[#F59E0B] rounded-full"></span>
+                    {/* Bullet point - Updated to orange */}
+                    <span className="w-1 h-1 bg-[#FFA500] rounded-full"></span>
                     {link.name}
                   </a>
                 </li>
@@ -142,9 +144,9 @@ export default function Footer() {
               >
                 <h3 className="text-base font-bold text-white">Programs</h3>
                 {expandedSections.programs ? (
-                  <FaChevronUp className="text-[#F59E0B]" size={14} />
+                  <FaChevronUp className="text-[#FFA500]" size={14} />
                 ) : (
-                  <FaChevronDown className="text-gray-400" size={14} />
+                  <FaChevronDown className="text-gray-300" size={14} />
                 )}
               </button>
               
@@ -154,9 +156,9 @@ export default function Footer() {
                     <li key={idx}>
                       <a 
                         href={program.href}
-                        className="text-gray-400 hover:text-[#F59E0B] transition-all duration-300 flex items-center gap-1.5 text-xs"
+                        className="text-gray-300 hover:text-[#FFA500] transition-all duration-300 flex items-center gap-1.5 text-xs"
                       >
-                        <span className="w-1 h-1 bg-[#F59E0B] rounded-full"></span>
+                        <span className="w-1 h-1 bg-[#FFA500] rounded-full"></span>
                         {program.name}
                       </a>
                     </li>
@@ -173,9 +175,9 @@ export default function Footer() {
                   <li key={idx}>
                     <a 
                       href={program.href}
-                      className="text-gray-400 hover:text-[#F59E0B] transition-all duration-300 flex items-center gap-1.5 text-xs hover:translate-x-1"
+                      className="text-gray-300 hover:text-[#FFA500] transition-all duration-300 flex items-center gap-1.5 text-xs hover:translate-x-1"
                     >
-                      <span className="w-1 h-1 bg-[#F59E0B] rounded-full"></span>
+                      <span className="w-1 h-1 bg-[#FFA500] rounded-full"></span>
                       {program.name}
                     </a>
                   </li>
@@ -194,9 +196,9 @@ export default function Footer() {
               >
                 <h3 className="text-base font-bold text-white">Contact</h3>
                 {expandedSections.contact ? (
-                  <FaChevronUp className="text-[#F59E0B]" size={14} />
+                  <FaChevronUp className="text-[#FFA500]" size={14} />
                 ) : (
-                  <FaChevronDown className="text-gray-400" size={14} />
+                  <FaChevronDown className="text-gray-300" size={14} />
                 )}
               </button>
               
@@ -206,13 +208,14 @@ export default function Footer() {
                     <a
                       key={idx}
                       href={contact.href}
-                      className="flex items-start gap-2 text-gray-300 hover:text-[#F59E0B] transition-all duration-300"
+                      className="flex items-start gap-2 text-gray-200 hover:text-[#FFA500] transition-all duration-300"
                     >
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[#6B21A8] hover:text-[#F59E0B] transition-colors duration-300 flex-shrink-0">
+                      {/* Icon container - Updated to light blue */}
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[#4A90E2] hover:text-[#FFA500] transition-colors duration-300 flex-shrink-0">
                         {contact.icon}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-gray-400">{contact.label}</div>
+                        <div className="text-xs text-gray-300">{contact.label}</div>
                         <div className="text-xs leading-tight">{contact.text}</div>
                       </div>
                     </a>
@@ -229,13 +232,13 @@ export default function Footer() {
                   <a
                     key={idx}
                     href={contact.href}
-                    className="flex items-start gap-2 text-gray-300 hover:text-[#F59E0B] transition-all duration-300 group"
+                    className="flex items-start gap-2 text-gray-200 hover:text-[#FFA500] transition-all duration-300 group"
                   >
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[#6B21A8] group-hover:text-[#F59E0B] transition-colors duration-300 flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[#4A90E2] group-hover:text-[#FFA500] transition-colors duration-300 flex-shrink-0">
                       {contact.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-gray-400">{contact.label}</div>
+                      <div className="text-xs text-gray-300">{contact.label}</div>
                       <div className="text-xs leading-tight">{contact.text}</div>
                     </div>
                   </a>
@@ -245,29 +248,29 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Footer Bottom - Compact */}
-        <div className="mt-4 pt-4 border-t border-gray-800">
+        {/* Footer Bottom - Compact with updated colors */}
+        <div className="mt-4 pt-4 border-t border-[#4A90E2]/30">
           <div className="flex flex-col md:flex-row justify-between items-center gap-2">
-            <div className="text-gray-500 text-xs text-center md:text-left">
+            <div className="text-gray-300 text-xs text-center md:text-left">
               © {new Date().getFullYear()} MANSOL HAB Trainings
             </div>
             
-            <div className="flex flex-wrap justify-center gap-3 text-xs text-gray-500">
+            <div className="flex flex-wrap justify-center gap-3 text-xs text-gray-300">
               <a
                 href="#"
-                className="hover:text-[#F59E0B] transition-colors duration-300"
+                className="hover:text-[#FFA500] transition-colors duration-300"
               >
                 Privacy
               </a>
               <a
                 href="#"
-                className="hover:text-[#F59E0B] transition-colors duration-300"
+                className="hover:text-[#FFA500] transition-colors duration-300"
               >
                 Terms
               </a>
               <a
                 href="#"
-                className="hover:text-[#F59E0B] transition-colors duration-300"
+                className="hover:text-[#FFA500] transition-colors duration-300"
               >
                 Cookies
               </a>
@@ -275,19 +278,19 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Mobile: Contact Numbers Bar */}
-        <div className="md:hidden mt-4 pt-3 border-t border-gray-800">
+        {/* Mobile: Contact Numbers Bar - Updated colors */}
+        <div className="md:hidden mt-4 pt-3 border-t border-[#4A90E2]/30">
           <div className="flex flex-col items-center gap-2">
             <div className="text-center">
-              <div className="text-xs text-gray-400 mb-1">Need Help?</div>
+              <div className="text-xs text-gray-300 mb-1">Need Help?</div>
               <a 
                 href="tel:03224700200" 
-                className="text-sm font-semibold text-[#F59E0B] hover:text-white transition-colors"
+                className="text-sm font-semibold text-[#FFA500] hover:text-white transition-colors"
               >
                 03224700200
               </a>
             </div>
-            <div className="text-center text-xs text-gray-500">
+            <div className="text-center text-xs text-gray-300">
               Available Monday to Saturday, 9 AM to 5 PM
             </div>
           </div>
