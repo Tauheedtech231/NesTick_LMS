@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { gsap } from "gsap";
 import { 
   HiMenu, 
@@ -17,7 +17,7 @@ import {
   HiBookOpen
 } from "react-icons/hi";
 
-// Updated Navbar Items - LMS Structure
+// Updated Navbar Items - Simplified for TechSafe Education
 const navItems = [
   {
     title: 'Home',
@@ -25,31 +25,32 @@ const navItems = [
   },
   {
     title: 'Courses',
+    href: '/courses',
     subItems: [
       { 
-        title: 'All Courses', 
-        href: '#courses',
-        description: 'Browse all available courses'
+        title: 'OSHA Safety', 
+        href: '/courses/osha',
+        description: 'Workplace safety training'
       },
       { 
-        title: 'Short Courses', 
-        href: '#courses',
-        description: 'Quick skill development'
+        title: 'Civil Engineering', 
+        href: '/courses/civil',
+        description: 'Basic civil engineering concepts'
       },
       { 
-        title: 'Professional Certifications', 
-        href: '#courses',
-        description: 'Industry-recognized credentials'
+        title: 'Cybersecurity', 
+        href: '/courses/cybersecurity',
+        description: 'Digital safety for students'
       }
     ]
   },
   {
-    title: 'About Us',
-    href: '/lms/about'
+    title: 'About',
+    href: '/about'
   },
   {
     title: 'Contact',
-    href: '/lms/contact'
+    href: '/contact'
   }
 ];
 
@@ -122,6 +123,7 @@ export default function Navbar() {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const menuTimeline = useRef<gsap.core.Timeline | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   // Check if user is logged in
   useEffect(() => {
@@ -419,26 +421,31 @@ export default function Navbar() {
     }
   }, [mobileSubMenuOpen, animateMobileSubMenu]);
 
+  // Check if link is active
+  const isActive = (href: string) => {
+    if (href === '/') {
+      return pathname === '/';
+    }
+    return pathname?.startsWith(href);
+  };
+
   return (
-    <nav className={`w-full bg-white/95 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50 transition-all duration-300 ${
-      scrolled ? 'shadow-lg py-2' : 'shadow-md py-3'
+    <nav className={`w-full bg-white font-sans sticky top-0 z-50 transition-all duration-300 ${
+      scrolled ? 'shadow-lg py-2' : 'shadow-sm py-3'
     }`}>
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          {/* Logo */}
+          {/* Logo - TechSafe Education */}
           <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#6B21A8] to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-[#6B21A8] to-purple-600 rounded-xl blur-sm opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-            </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-[#6B21A8] to-purple-600 bg-clip-text text-transparent">
-                MANSOL
-              </span>
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl font-bold text-[#1E3A8A]">
+                  TechSafe
+                </span>
+                <div className="w-2 h-2 rounded-full bg-[#F97316]"></div>
+              </div>
               <span className="text-xs text-gray-500 font-medium">
-                HAB Trainings
+                Education
               </span>
             </div>
           </Link>
@@ -453,15 +460,17 @@ export default function Navbar() {
                       <button
                         onMouseEnter={() => handleHover(idx)}
                         onMouseLeave={handleLeave}
-                        onClick={() => handleDesktopNavClick('#courses')}
-                        className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium group cursor-pointer"
+                        onClick={() => handleDesktopNavClick(item.href!)}
+                        className={`flex items-center space-x-2 px-5 py-3 rounded-lg transition-all duration-200 font-medium text-[#334155] hover:text-[#F97316] cursor-pointer ${
+                          isActive(item.href!) ? 'font-bold text-[#F97316]' : ''
+                        }`}
                       >
-                        <span className="text-sm">{item.title}</span>
+                        <span className="text-base">{item.title}</span>
                         <HiChevronDown className="w-4 h-4 transform group-hover:rotate-180 transition-transform duration-200" />
                       </button>
                       
                       {/* Sub-menu */}
-                      <div className="absolute top-full left-0 mt-1 w-64 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-20"
+                      <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 z-20"
                            onMouseEnter={() => handleHover(idx)}
                            onMouseLeave={handleLeave}>
                         <div className="p-2 space-y-1">
@@ -469,10 +478,12 @@ export default function Navbar() {
                             <button
                               key={sidx}
                               onClick={() => handleDesktopNavClick(sub.href)}
-                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#6B21A8]/5 transition-all duration-200 group w-full text-left cursor-pointer"
+                              className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#F97316]/5 transition-all duration-200 group w-full text-left cursor-pointer"
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-800 group-hover:text-[#6B21A8] text-sm">
+                                <div className={`font-medium text-gray-800 group-hover:text-[#F97316] text-sm ${
+                                  isActive(sub.href) ? 'font-bold text-[#F97316]' : ''
+                                }`}>
                                   {sub.title}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-0.5">
@@ -489,7 +500,9 @@ export default function Navbar() {
                       onClick={() => handleDesktopNavClick(item.href!)}
                       onMouseEnter={() => handleHover(idx)}
                       onMouseLeave={handleLeave}
-                      className="flex items-center space-x-2 px-5 py-3 rounded-lg text-gray-800 hover:text-[#6B21A8] transition-all duration-200 font-medium text-sm cursor-pointer"
+                      className={`flex items-center space-x-2 px-5 py-3 rounded-lg transition-all duration-200 font-medium text-[#334155] hover:text-[#F97316] text-base cursor-pointer ${
+                        isActive(item.href!) ? 'font-bold text-[#F97316]' : ''
+                      }`}
                     >
                       <span>{item.title}</span>
                     </button>
@@ -500,21 +513,23 @@ export default function Navbar() {
               {/* GSAP Hover Bottom Line */}
               <div
                 ref={hoverRef}
-                className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] rounded-full shadow-lg"
+                className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F97316] rounded-full"
                 style={{ width: 0 }}
               />
             </ul>
           </div>
 
-          {/* Right Side - Login/User Button */}
-          <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
+          {/* Right Side - User/Login Only (Enroll Now Button Removed) */}
+          <div className="flex items-center space-x-4 flex-shrink-0">
+            {/* Enroll Now Button REMOVED */}
+
+            {/* Existing User/Login Functionality - Hidden on mobile when logged out */}
             {currentUser ? (
-              // User is logged in - Show User Dropdown
-              <div className="relative">
+              <div className="hidden lg:block relative">
                 <button
                   ref={userButtonRef}
                   onClick={handleLoginClick}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium hover:from-[#5B1890] hover:to-[#C81E5A] transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#1E3A8A] to-[#F97316] text-white font-medium hover:from-[#1E40AF] hover:to-[#EA580C] transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
                   <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                     {(() => {
@@ -532,12 +547,12 @@ export default function Navbar() {
                 {userDropdownOpen && (
                   <div
                     ref={userDropdownRef}
-                    className="absolute top-full right-0 mt-2 w-72 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/50 z-20"
+                    className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-20"
                   >
                     {/* User Info Section */}
-                    <div className="p-4 border-b border-gray-200/50">
+                    <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#1E3A8A] to-[#F97316] flex items-center justify-center">
                           {(() => {
                             const UserIcon = getUserIcon();
                             return <UserIcon className="w-6 h-6 text-white" />;
@@ -571,11 +586,11 @@ export default function Navbar() {
                         <Link
                           key={idx}
                           href={item.href}
-                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#6B21A8]/5 transition-all duration-200 group"
+                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-[#F97316]/5 transition-all duration-200 group"
                           onClick={() => setUserDropdownOpen(false)}
                         >
-                          <item.icon className="w-5 h-5 text-gray-500 group-hover:text-[#6B21A8]" />
-                          <div className="font-medium text-gray-800 group-hover:text-[#6B21A8] text-sm">
+                          <item.icon className="w-5 h-5 text-gray-500 group-hover:text-[#F97316]" />
+                          <div className="font-medium text-gray-800 group-hover:text-[#F97316] text-sm">
                             {item.title}
                           </div>
                         </Link>
@@ -583,7 +598,7 @@ export default function Navbar() {
                     </div>
 
                     {/* Logout Button */}
-                    <div className="p-3 border-t border-gray-200/50">
+                    <div className="p-3 border-t border-gray-200">
                       <button
                         onClick={handleLogout}
                         className="flex items-center justify-center space-x-2 w-full p-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -596,14 +611,14 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              // User is not logged in - Show Login Dropdown
-              <div className="relative">
+              <div className="hidden lg:block relative">
                 <button
                   ref={loginButtonRef}
                   onClick={handleLoginClick}
-                  className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium hover:from-[#5B1890] hover:to-[#C81E5A] transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#1E3A8A] to-[#F97316] text-white font-medium hover:from-[#1E40AF] hover:to-[#EA580C] transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
-                  <span className="text-md">Login</span>
+                  <HiLogin className="w-5 h-5" />
+                  <span className="text-sm">Login</span>
                   <HiChevronDown className={`w-4 h-4 transform transition-transform duration-300 ${
                     loginDropdownOpen ? 'rotate-180' : ''
                   }`} />
@@ -613,17 +628,17 @@ export default function Navbar() {
                 {loginDropdownOpen && (
                   <div
                     ref={loginDropdownRef}
-                    className="absolute top-full right-0 mt-2 w-64 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/50 z-20"
+                    className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-20"
                   >
                     <div className="p-2 space-y-1">
                       {loginItems.map((item, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleLoginTypeSelect(item.href)}
-                          className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#6B21A8]/5 transition-all duration-200 group w-full text-left"
+                          className="flex items-start space-x-3 p-3 rounded-lg hover:bg-[#F97316]/5 transition-all duration-200 group w-full text-left"
                         >
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-800 group-hover:text-[#6B21A8] text-sm">
+                            <div className="font-medium text-gray-800 group-hover:text-[#F97316] text-sm">
                               {item.title}
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5">
@@ -637,19 +652,17 @@ export default function Navbar() {
                 )}
               </div>
             )}
-          </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex lg:hidden items-center">
+            {/* Mobile Menu Button */}
             <button
               onClick={toggleMobileMenu}
-              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#DA2F6B] focus:ring-opacity-50"
+              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:ring-opacity-50"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
-                <HiX className="w-5 h-5 transform transition-transform duration-300" />
+                <HiX className="w-6 h-6 transform transition-transform duration-300" />
               ) : (
-                <HiMenu className="w-5 h-5 transform transition-transform duration-300" />
+                <HiMenu className="w-6 h-6 transform transition-transform duration-300" />
               )}
             </button>
           </div>
@@ -672,7 +685,7 @@ export default function Navbar() {
           <div className="flex justify-end p-4 border-b border-gray-200">
             <button
               onClick={closeMobileMenu}
-              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#DA2F6B] focus:ring-opacity-50"
+              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:ring-opacity-50"
               aria-label="Close menu"
             >
               <HiX className="w-5 h-5 transform transition-transform duration-300" />
@@ -684,7 +697,7 @@ export default function Navbar() {
             {currentUser && (
               <div className="mobile-menu-item px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#1E3A8A] to-[#F97316] flex items-center justify-center">
                     {(() => {
                       const UserIcon = getUserIcon();
                       return <UserIcon className="w-5 h-5 text-white" />;
@@ -713,6 +726,8 @@ export default function Navbar() {
               </div>
             )}
 
+            {/* Mobile Enroll Now Button REMOVED */}
+
             {/* Navigation Items */}
             {navItems.map((item, idx) => (
               <div key={idx} className="mobile-menu-item">
@@ -725,11 +740,11 @@ export default function Navbar() {
                       }}
                       onMouseEnter={() => handleMobileHover(idx)}
                       onMouseLeave={handleMobileLeave}
-                      className={`flex items-center justify-between w-full py-3 text-gray-800 font-medium text-base transition-all duration-200 border-b-2 ${
+                      className={`flex items-center justify-between w-full py-4 text-gray-800 font-medium text-base transition-all duration-200 border-b-2 ${
                         mobileHoverIndex === idx || mobileSubMenuOpen === idx
-                          ? 'border-[#DA2F6B] bg-[#DA2F6B]/5 text-[#DA2F6B]' 
+                          ? 'border-[#F97316] bg-[#F97316]/5 text-[#F97316]' 
                           : 'border-transparent'
-                      }`}
+                      } ${isActive(item.href!) ? 'font-bold text-[#F97316]' : ''}`}
                     >
                       <div className="flex items-center space-x-3">
                         <span>{item.title}</span>
@@ -751,22 +766,22 @@ export default function Navbar() {
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      <div className="pl-4 space-y-1 border-l-2 border-[#DA2F6B]/20 ml-2 mt-1 pb-1">
+                      <div className="pl-4 space-y-1 border-l-2 border-[#F97316]/20 ml-2 mt-1 pb-1">
                         {item.subItems.map((sub, sidx) => (
                           <button
                             key={sidx}
                             onClick={() => handleMobileNavClick(sub.href)}
                             onMouseEnter={() => handleMobileHover(100 + sidx)}
                             onMouseLeave={handleMobileLeave}
-                            className={`flex items-center justify-between py-2.5 text-gray-600 transition-all duration-200 text-sm group w-full text-left ${
+                            className={`flex items-center justify-between py-3 text-gray-600 transition-all duration-200 text-sm group w-full text-left ${
                               mobileHoverIndex === 100 + sidx 
-                                ? 'text-[#DA2F6B]' 
+                                ? 'text-[#F97316]' 
                                 : ''
-                            }`}
+                            } ${isActive(sub.href) ? 'font-bold text-[#F97316]' : ''}`}
                           >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-1 h-1 rounded-full bg-gray-300 group-hover:bg-[#DA2F6B] transition-colors duration-200 ${
-                                mobileHoverIndex === 100 + sidx ? 'bg-[#DA2F6B]' : ''
+                              <div className={`w-2 h-2 rounded-full bg-gray-300 group-hover:bg-[#F97316] transition-colors duration-200 ${
+                                mobileHoverIndex === 100 + sidx ? 'bg-[#F97316]' : ''
                               }`} />
                               <span>{sub.title}</span>
                             </div>
@@ -780,11 +795,11 @@ export default function Navbar() {
                     onClick={() => handleMobileNavClick(item.href!)}
                     onMouseEnter={() => handleMobileHover(idx)}
                     onMouseLeave={handleMobileLeave}
-                    className={`flex items-center space-x-3 px-3 py-3 text-gray-800 font-medium transition-all duration-200 border-b-2 text-base w-full text-left ${
+                    className={`flex items-center space-x-3 px-3 py-4 text-gray-800 font-medium transition-all duration-200 border-b-2 text-base w-full text-left ${
                       mobileHoverIndex === idx 
-                        ? 'border-[#DA2F6B] bg-[#DA2F6B]/5 text-[#DA2F6B]' 
+                        ? 'border-[#F97316] bg-[#F97316]/5 text-[#F97316]' 
                         : 'border-transparent'
-                    }`}
+                    } ${isActive(item.href!) ? 'font-bold text-[#F97316]' : ''}`}
                   >
                     <span>{item.title}</span>
                   </button>
@@ -793,83 +808,80 @@ export default function Navbar() {
             ))}
             
             {/* Mobile Login/User Section */}
-            <div className="mobile-menu-item mt-4 px-3 relative">
-              {currentUser ? (
-                <>
-                  {/* Dashboard Links */}
-                  <div className="mb-4 space-y-1">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
-                      Dashboard
-                    </div>
-                    {dashboardItems[currentUser.role]?.map((item, idx) => (
-                      <Link
+            {currentUser ? (
+              <div className="mobile-menu-item mt-4 px-3">
+                {/* Dashboard Links */}
+                <div className="mb-4 space-y-1">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">
+                    Dashboard
+                  </div>
+                  {dashboardItems[currentUser.role]?.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      href={item.href}
+                      onClick={closeMobileMenu}
+                      onMouseEnter={() => handleMobileHover(-10 - idx)}
+                      onMouseLeave={handleMobileLeave}
+                      className={`flex items-center space-x-3 py-3 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
+                        mobileHoverIndex === -10 - idx ? 'bg-[#F97316]/5 text-[#F97316]' : ''
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  onMouseEnter={() => handleMobileHover(-100)}
+                  onMouseLeave={handleMobileLeave}
+                  className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
+                    mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
+                  }`}
+                >
+                  <HiLogout className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="mobile-menu-item mt-4 px-3">
+                <button
+                  onClick={() => setMobileLoginDropdownOpen(prev => !prev)}
+                  className="flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-[#1E3A8A] to-[#F97316] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95"
+                >
+                  <span>Login</span>
+                  <HiChevronDown
+                    className={`w-4 h-4 transform transition-transform duration-300 ${
+                      mobileLoginDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown */}
+                <div
+                  className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${
+                    mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="space-y-1 border border-[#1E3A8A]/20 rounded-lg p-2 bg-gray-50 shadow-lg">
+                    {loginItems.map((item, idx) => (
+                      <button
                         key={idx}
-                        href={item.href}
-                        onClick={closeMobileMenu}
-                        onMouseEnter={() => handleMobileHover(-10 - idx)}
-                        onMouseLeave={handleMobileLeave}
-                        className={`flex items-center space-x-3 py-2.5 text-gray-600 transition-all duration-200 rounded-lg text-sm ${
-                          mobileHoverIndex === -10 - idx ? 'bg-[#DA2F6B]/5 text-[#DA2F6B]' : ''
-                        }`}
+                        onClick={() => handleLoginTypeSelect(item.href)}
+                        className="flex items-center justify-between w-full py-3 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm hover:bg-[#F97316]/5 hover:text-[#F97316] w-full text-left"
                       >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                      </Link>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{item.title}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+                        </div>
+                      </button>
                     ))}
                   </div>
-
-                  {/* Logout Button */}
-                  <button
-                    onClick={handleLogout}
-                    onMouseEnter={() => handleMobileHover(-100)}
-                    onMouseLeave={handleMobileLeave}
-                    className={`flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95 ${
-                      mobileHoverIndex === -100 ? 'scale-[1.02]' : ''
-                    }`}
-                  >
-                    <HiLogout className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                <div className="relative w-full">
-                  {/* Main Login Button */}
-                  <button
-                    onClick={() => setMobileLoginDropdownOpen(prev => !prev)}
-                    className="flex items-center justify-center space-x-2 w-full py-3 rounded-lg bg-gradient-to-r from-[#6B21A8] to-[#DA2F6B] text-white font-medium transition-all duration-300 shadow-lg transform hover:scale-[1.02] active:scale-95"
-                  >
-                    <span>Login</span>
-                    <HiChevronDown
-                      className={`w-4 h-4 transform transition-transform duration-300 ${
-                        mobileLoginDropdownOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {/* Dropdown */}
-                  <div
-                    className={`absolute top-full left-0 w-full mt-1 overflow-hidden transition-all duration-300 ease-in-out z-50 ${
-                      mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <div className="space-y-1 border border-[#6B21A8]/20 rounded-lg p-2 bg-gray-50 shadow-lg">
-                      {loginItems.map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleLoginTypeSelect(item.href)}
-                          className="flex items-center justify-between w-full py-2.5 px-3 text-gray-600 transition-all duration-200 rounded-lg text-sm hover:bg-[#DA2F6B]/5 hover:text-[#DA2F6B] w-full text-left"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-800">{item.title}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

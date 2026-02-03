@@ -10,13 +10,19 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isHome = pathname === "/";
+
+  // Routes where navbar/footer should show exactly
+  const exactRoutes = ["/", "/about", "/contact", "/courses"];
+
+  // Show Navbar/Footer if pathname is in exactRoutes OR starts with /courses/
+  const showNav =
+    exactRoutes.includes(pathname) || pathname.startsWith("/courses/");
 
   return (
     <>
-      {isHome && <Navbar />}
+      {showNav && <Navbar />}
       {children}
-      {isHome && <Footer />}
+      {showNav && <Footer />}
     </>
   );
 }

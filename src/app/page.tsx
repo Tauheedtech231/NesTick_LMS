@@ -1,9 +1,11 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import Footer from "@/components/footer"
-import OurImpact from "@/components/ourimpact"
+
+
 import ContactForm from "@/components/query"
+import AboutSection from "@/components/ourimpact"
+import CoursesPage from "./courses/page"
 
 //Professional skeleton for Hero (prevents late rendering issue)
 const HeroSlider = dynamic(
@@ -19,17 +21,7 @@ const HeroSlider = dynamic(
 )
 
 
-const PopularCourses = dynamic(
-  () => import("@/components/courses"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto h-48 bg-gray-100 animate-pulse rounded-xl" />
-      </div>
-    ),
-  }
-)
+
 
 const TutorSlider = dynamic(
   () => import("@/components/tutors"),
@@ -49,9 +41,9 @@ export default function Page() {
       {/* Hero will NEVER appear late now */}
       <HeroSlider />
 
-      <OurImpact />
+    <AboutSection/>
 
-      <PopularCourses />
+      <CoursesPage/>
 
       <TutorSlider />
 

@@ -6,28 +6,28 @@ import { ChevronDown } from "lucide-react";
 
 const slides = [
   {
-    image:
-      "https://images.pexels.com/photos/247823/pexels-photo-247823.jpeg",
-    title: "Welcome to MANSOL LMS",
-    subtitle: "Premium Learning Platform",
-    description:
-      "Learn from the best instructors and boost your skills with our comprehensive courses",
+    image: "/hero/tech1.jpg",
+    title: "Professional Technical Courses",
+    subtitle: "For Future Skills",
+    description: "Learn practical skills in Safety, Civil, and Cybersecurity domains with certified courses designed for young learners."
   },
   {
-    image:
-      "https://images.pexels.com/photos/8199602/pexels-photo-8199602.jpeg",
-    title: "Transform Your Career",
-    subtitle: "Industry-Ready Skills",
-    description:
-      "Master industry-relevant technologies with hands-on projects and real-world applications",
+    image: "/hero/tech2.jpg",
+    title: "Build Your Career Foundation",
+    subtitle: "Industry-Ready Training",
+    description: "Master essential technical skills with hands-on projects and real-world applications."
   },
   {
-    image:
-     "https://images.pexels.com/photos/7683730/pexels-photo-7683730.jpeg",
-    title: "Join Our Learning Community",
-    subtitle: "Connect & Grow Together",
-    description:
-      "Collaborate with peers and get guidance from expert mentors worldwide",
+    image: "/hero/tech3.jpg",
+    title: "Expert-Led Learning Experience",
+    subtitle: "Quality Education",
+    description: "Learn from experienced professionals and gain industry-recognized certifications."
+  },
+  {
+    image: "/hero/tech4.jpg",
+    title: "Empower Your Future",
+    subtitle: "Skill Development",
+    description: "Develop practical knowledge in OSHA, Civil Engineering, and Cybersecurity for career success."
   },
 ];
 
@@ -40,17 +40,9 @@ const HeroSlider = () => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
-  // Split title into purple and white parts
-  const splitTitle = (title: string) => {
-    const words = title.split(" ");
-    const firstHalf = words.slice(0, Math.ceil(words.length / 2)).join(" ");
-    const secondHalf = words.slice(Math.ceil(words.length / 2)).join(" ");
-    return { firstHalf, secondHalf };
-  };
-
-  // Animate slide transition with staggered elements - using useCallback
+  // Animate slide transition with staggered elements
   const animateSlideTransition = useCallback((nextSlide: number) => {
     if (isAnimating) return;
     setIsAnimating(true);
@@ -62,47 +54,41 @@ const HeroSlider = () => {
       }
     });
 
-    // Exit animation - elements slide out to left
+    // Exit animation - fade out elements
     timeline
-      // Subtitle exits left
       .to(subtitleRef.current, {
-        x: -100,
+        y: -20,
         opacity: 0,
-        duration: 0.6,
+        duration: 0.5,
         ease: "power2.inOut"
       }, 0)
-      // Title exits right
       .to(titleRef.current, {
-        x: 100,
+        y: -20,
         opacity: 0,
-        duration: 0.6,
+        duration: 0.5,
         ease: "power2.inOut"
       }, 0.1)
-      // Description exits left
       .to(descriptionRef.current, {
-        x: -80,
+        y: -20,
         opacity: 0,
         duration: 0.5,
         ease: "power2.inOut"
-      }, 0.1)
-      // Button exits right
-      .to(buttonRef.current, {
-        x: 80,
+      }, 0.2)
+      .to(buttonsRef.current, {
+        y: -20,
         opacity: 0,
         duration: 0.5,
-        ease: "power2.inOut"
-      }, 0.1)
-      // Background fades
-      .to(slideRef.current, {
-        opacity: 0,
-        duration: 0.4,
         ease: "power2.inOut"
       }, 0.3)
-      // Enter animation with new content
+      .to(slideRef.current, {
+        opacity: 0,
+        duration: 0.3,
+        ease: "power2.inOut"
+      }, 0.3)
       .call(() => {
         // Reset positions before entering
-        gsap.set([titleRef.current, subtitleRef.current, descriptionRef.current, buttonRef.current], {
-          x: 0,
+        gsap.set([titleRef.current, subtitleRef.current, descriptionRef.current, buttonsRef.current], {
+          y: 20,
           opacity: 0
         });
       })
@@ -112,68 +98,49 @@ const HeroSlider = () => {
         duration: 0.6,
         ease: "power2.inOut"
       })
-      // Staggered enter animation from opposite sides
-      // Subtitle enters from right
+      // Staggered enter animation
       .to(subtitleRef.current, {
-        x: 0,
+        y: 0,
         opacity: 1,
         duration: 0.7,
         ease: "power2.out"
-      }, "-=0.3")
-      // Title enters from left
+      }, "-=0.4")
       .to(titleRef.current, {
-        x: 0,
+        y: 0,
         opacity: 1,
         duration: 0.7,
         ease: "power2.out"
       }, "-=0.5")
-      // Description enters from right
       .to(descriptionRef.current, {
-        x: 0,
+        y: 0,
         opacity: 1,
         duration: 0.6,
         ease: "power2.out"
       }, "-=0.4")
-      // Button enters from left
-      .to(buttonRef.current, {
-        x: 0,
+      .to(buttonsRef.current, {
+        y: 0,
         opacity: 1,
         duration: 0.6,
         ease: "power2.out"
-      }, "-=0.4");
+      }, "-=0.3");
   }, [isAnimating]);
 
-  // Auto Slide Transition - Fixed useEffect dependency
+  // Auto Slide Transition
   useEffect(() => {
     const interval = setInterval(() => {
       const next = (current + 1) % slides.length;
       animateSlideTransition(next);
-    }, 6000);
+    }, 5000);
     
     return () => clearInterval(interval);
-  }, [current, animateSlideTransition]); // Added animateSlideTransition to dependencies
-
-  // Background Parallax
-  useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
-      if (!bgRef.current) return;
-      
-      const { innerWidth, innerHeight } = window;
-      const x = (e.clientX / innerWidth - 0.5) * 25;
-      const y = (e.clientY / innerHeight - 0.5) * 25;
-      gsap.to(bgRef.current, { x, y, duration: 1, ease: "power2.out" });
-    };
-    
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, []);
+  }, [current, animateSlideTransition]);
 
   // Initial animation on mount
   useEffect(() => {
-    if (!subtitleRef.current || !titleRef.current || !descriptionRef.current || !buttonRef.current) return;
+    if (!subtitleRef.current || !titleRef.current || !descriptionRef.current || !buttonsRef.current) return;
     
     gsap.fromTo(
-      [subtitleRef.current, titleRef.current, descriptionRef.current, buttonRef.current],
+      [subtitleRef.current, titleRef.current, descriptionRef.current, buttonsRef.current],
       { y: 30, opacity: 0 },
       {
         y: 0,
@@ -187,8 +154,8 @@ const HeroSlider = () => {
   }, []);
 
   return (
-    <section className="relative w-full h-screen overflow-hidden bg-[#F5F5F5]">
-      {/* Background with overlay */}
+    <section className="relative w-full h-screen overflow-hidden bg-gray-900">
+      {/* Background image with parallax effect */}
       <div ref={bgRef} className="absolute inset-0">
         <Image
           src={slides[current].image}
@@ -198,71 +165,81 @@ const HeroSlider = () => {
           priority
           sizes="100vw"
         />
-        {/* Gradient overlay for better text visibility */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
+        {/* Blue overlay for text readability */}
+        <div className="absolute inset-0 bg-blue-900/50" />
       </div>
 
-      {/* Text Content */}
+      {/* Text Content Container */}
       <div
         ref={slideRef}
-        className="absolute inset-0 flex flex-col justify-center items-center text-center px-4 z-20"
+        className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-16 z-20"
       >
-        {/* Subtitle - Purple with slide animation */}
-        <h2
-          ref={subtitleRef}
-          className="text-lg md:text-2xl text-[#DA2F6B] font-semibold mb-2 opacity-0"
-        >
-          {slides[current].subtitle}
-        </h2>
-        
-        {/* Title - Half Purple, Half White with slide animation */}
-        <h1
-          ref={titleRef}
-          className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 drop-shadow-2xl opacity-0"
-        >
-          <span className="text-[#6B21A8]">
-            {splitTitle(slides[current].title).firstHalf}
-          </span>
-          {" "}
-          <span className="text-white">
-            {splitTitle(slides[current].title).secondHalf}
-          </span>
-        </h1>
+        <div className="max-w-4xl">
+          {/* Subtitle - Smaller heading */}
+          <h2
+            ref={subtitleRef}
+            className="text-lg md:text-xl lg:text-2xl text-white/90 font-medium mb-2 md:mb-3 opacity-0"
+          >
+            {slides[current].subtitle}
+          </h2>
+          
+          {/* Main Title - Responsive font sizes */}
+          <h1
+            ref={titleRef}
+            className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 leading-tight opacity-0"
+          >
+            {slides[current].title}
+          </h1>
 
-        {/* Description - White with slide animation */}
-        <p
-          ref={descriptionRef}
-          className="text-lg md:text-xl text-white max-w-2xl bg-black/20 backdrop-blur-sm rounded-lg p-4 opacity-0"
-        >
-          {slides[current].description}
-        </p>
+          {/* Description - Concise text */}
+          <p
+            ref={descriptionRef}
+            className="text-lg md:text-xl text-white/90 max-w-2xl mb-8 md:mb-10 opacity-0"
+          >
+            {slides[current].description}
+          </p>
 
-        {/* Primary Button with animation */}
-        <button
-          ref={buttonRef}
-          className="mt-8 px-8 py-3 bg-gradient-to-r from-[#6B21A8] to-[#8B5CF6] hover:from-[#5B1890] hover:to-[#7C3AED] text-white font-semibold rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl opacity-0"
-        >
-          Explore Courses
-        </button>
+          {/* Buttons Container */}
+          <div 
+            ref={buttonsRef}
+            className="flex flex-col sm:flex-row gap-4 md:gap-6 opacity-0"
+          >
+            {/* Primary CTA - Enroll Now */}
+            <button
+              onClick={() => window.location.href = '/enroll'}
+              className="px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-lg"
+            >
+              Enroll Now
+            </button>
+            
+            {/* Secondary CTA - View Courses */}
+            <button
+              onClick={() => window.location.href = '/courses'}
+              className="px-8 py-3 border-2 border-[#1E3A8A] text-white font-semibold rounded-lg hover:underline transition-all duration-300 hover:scale-105 text-lg"
+            >
+              View Courses
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Scroll Icon with fade animation */}
+      {/* Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
         <ChevronDown 
           size={36} 
-          className="text-white opacity-80 animate-float"
+          className="text-white/80 animate-float"
         />
       </div>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 flex gap-2 md:gap-3">
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => !isAnimating && animateSlideTransition(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
               current === index 
-                ? "bg-white w-6" 
+                ? "bg-white w-6 md:w-8" 
                 : "bg-white/50 hover:bg-white/80"
             }`}
             aria-label={`Go to slide ${index + 1}`}
@@ -271,7 +248,7 @@ const HeroSlider = () => {
         ))}
       </div>
 
-      {/* Custom animations in style tag */}
+      {/* Custom float animation */}
       <style jsx global>{`
         @keyframes float {
           0%, 100% {
