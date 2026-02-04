@@ -1,502 +1,340 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { X, MapPin, GraduationCap, Briefcase, Globe, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Award, Briefcase, Clock, CheckCircle } from 'lucide-react';
 
-const tutors = [
+const trainers = [
   {
     id: 1,
-    name: 'Dr. Edward Bowman',
-    role: 'Senior Safety Consultant',
-    specialization: 'Workplace Safety',
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1374&auto=format&fit=crop',
-    bio: 'Expert in workplace safety with extensive experience in industrial safety management and risk assessment. Over 8 years of professional training experience.',
-    experience: '8+ years',
-    responseTime: '2 hours',
-    languages: ['English', 'Spanish'],
-    location: 'New York, USA',
-    education: 'PhD in Safety Engineering',
-    certifications: ['OSHA Certified', 'ISO 45001 Lead Auditor', 'Certified Safety Professional'],
-    expertise: ['Risk Assessment', 'Safety Management Systems', 'Industrial Safety']
+    name: 'Raza Hassan Zaheer',
+    role: 'Mechanical Trade Trainer',
+    expertise: 'Specialized in industrial mechanical systems, machine operations, and maintenance protocols with 12+ years of hands-on experience',
+    experience: '12+ years',
+    image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
+    certifications: ['Certified Mechanical Engineer', 'ISO 9001 Lead Auditor', 'Industrial Safety Specialist', 'Machine Operations Expert'],
+    studentsTrained: '850+',
+    trainingStyle: 'Practical hands-on with real industrial equipment'
   },
   {
     id: 2,
-    name: 'Prof. Denise Wood',
-    role: 'Industrial Hygiene Expert',
-    specialization: 'Health & Safety',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1376&auto=format&fit=crop',
-    bio: 'Specialized in industrial hygiene and occupational health with a focus on preventive measures. Trained over 1800 professionals globally.',
-    experience: '6+ years',
-    responseTime: '1 hour',
-    languages: ['English', 'French'],
-    location: 'London, UK',
-    education: 'MSc in Occupational Health',
-    certifications: ['CIH Certified', 'NEBOSH Diploma', 'Occupational Hygienist'],
-    expertise: ['Industrial Hygiene', 'Chemical Safety', 'Health Risk Assessment']
+    name: 'Muhammad Waseem',
+    role: 'Welding Trade Trainer',
+    expertise: 'Expert in MIG, TIG, and Arc welding techniques with focus on industrial applications and structural welding',
+    experience: '8+ years',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1376&auto=format&fit=crop&w=400&h=400',
+    certifications: ['AWS Certified Welding Inspector', 'Pressure Vessel Welding Specialist', 'Structural Welding Expert', 'Advanced Welding Instructor'],
+    studentsTrained: '620+',
+    trainingStyle: 'Precision-focused with quality control emphasis'
   },
   {
     id: 3,
-    name: 'Dr. Samuel Lee',
-    role: 'Risk Assessment Director',
-    specialization: 'Risk Management',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=1470&auto=format&fit=crop',
-    bio: 'Focused on risk management strategies and safety protocol development for various industries. Expert in implementing safety standards.',
-    experience: '7+ years',
-    responseTime: '3 hours',
-    languages: ['English', 'Mandarin'],
-    location: 'Singapore',
-    education: 'PhD in Risk Management',
-    certifications: ['CRSP Certified', 'Project Management Professional', 'Risk Manager'],
-    expertise: ['Risk Analysis', 'Safety Audits', 'Compliance Management']
+    name: 'Muhammad Nouman Zain',
+    role: 'HSE Trainer',
+    expertise: 'Comprehensive health, safety, and environmental training with OSHA compliance focus and risk management',
+    experience: '10+ years',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
+    certifications: ['NEBOSH Certified', 'OSHA 30-Hour Trainer', 'Environmental Management Specialist', 'Risk Assessment Expert'],
+    studentsTrained: '1100+',
+    trainingStyle: 'Regulatory compliance with practical scenarios'
   },
   {
     id: 4,
-    name: 'Dr. Olivia Harris',
-    role: 'Fire Safety Professor',
-    specialization: 'Fire Safety Engineering',
-    image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?q=80&w=1374&auto=format&fit=crop',
-    bio: 'Renowned fire safety expert with academic and practical experience in fire prevention engineering. Published researcher and industry consultant.',
-    experience: '12+ years',
-    responseTime: '4 hours',
-    languages: ['English', 'German'],
-    location: 'Berlin, Germany',
-    education: 'PhD in Fire Safety Engineering',
-    certifications: ['NFPA Certified', 'Fire Protection Specialist', 'Fire Safety Engineer'],
-    expertise: ['Fire Prevention', 'Emergency Planning', 'Building Safety Codes']
+    name: 'Ali Raza',
+    role: 'Pipe Fitting Expert',
+    expertise: 'Industrial pipe fitting, installation specialist with expertise in high-pressure systems',
+    experience: '9+ years',
+    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
+    certifications: ['Certified Pipe Fitter', 'ASME B31.3 Specialist', 'Industrial Piping Expert', 'Blueprint Reading Specialist'],
+    studentsTrained: '730+',
+    trainingStyle: 'Detailed technical with blueprint interpretation'
   },
   {
     id: 5,
-    name: 'Michael Chen',
-    role: 'Construction Safety Manager',
-    specialization: 'Construction Safety',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop',
-    bio: 'Construction safety specialist with hands-on experience in large-scale industrial projects. Focus on practical safety implementations.',
-    experience: '5+ years',
-    responseTime: '2 hours',
-    languages: ['English', 'Cantonese'],
-    location: 'Hong Kong',
-    education: 'MEng in Construction Safety',
-    certifications: ['CSP Certified', 'LEED Green Associate', 'Construction Safety Officer'],
-    expertise: ['Site Safety', 'Equipment Safety', 'Contractor Management']
+    name: 'Ayesha Khan',
+    role: 'Safety Compliance Officer',
+    expertise: 'Workplace safety regulations, compliance training, and audit preparation',
+    experience: '7+ years',
+    image: 'https://images.unsplash.com/photo-1581579431539-9a45e56b61db?q=80&w=1376&auto=format&fit=crop&w=400&h=400',
+    certifications: ['OSHA Certified', 'Safety Management Expert', 'Compliance Auditor', 'Incident Investigation Specialist'],
+    studentsTrained: '950+',
+    trainingStyle: 'Audit-focused with documentation skills'
+  },
+  {
+    id: 6,
+    name: 'Muhammad Shahid',
+    role: 'Industrial Welding Instructor',
+    expertise: 'Advanced welding techniques for industrial applications and fabrication',
+    experience: '11+ years',
+    image: 'https://images.unsplash.com/photo-1569510914741-59c7c54c2c8f?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
+    certifications: ['Advanced Welding Instructor', 'Fabrication Specialist', 'Quality Control Expert', 'Metallurgy Basics'],
+    studentsTrained: '890+',
+    trainingStyle: 'Advanced techniques with quality assurance'
   },
 ];
 
-export default function TutorSlider() {
-  const [current, setCurrent] = useState(0);
-  const [selectedTutor, setSelectedTutor] = useState(tutors[0]);
-  const [showInfoPopup, setShowInfoPopup] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [animationKey, setAnimationKey] = useState(0);
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933'
+};
+
+export default function TrainersSlider() {
+  const [selectedTrainer, setSelectedTrainer] = useState<typeof trainers[0] | null>(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const isPausedRef = useRef(false);
+  const animationRef = useRef<Animation | null>(null);
 
-  // Check if mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const keyframes = [
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-50%)' }
+    ];
+
+    const options: KeyframeAnimationOptions = {
+      duration: 40000,
+      iterations: Infinity,
+      easing: 'linear'
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
+
+    animationRef.current = slider.animate(keyframes, options);
+
+    const handleMouseEnter = () => {
+      animationRef.current?.pause();
+    };
+
+    const handleMouseLeave = () => {
+      animationRef.current?.play();
+    };
+
+    slider.addEventListener('mouseenter', handleMouseEnter);
+    slider.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      animationRef.current?.cancel();
+      slider.removeEventListener('mouseenter', handleMouseEnter);
+      slider.removeEventListener('mouseleave', handleMouseLeave);
+    };
   }, []);
 
-  // Optimized smooth animation with proper restart
-  useEffect(() => {
-    if (sliderRef.current && !isPausedRef.current) {
-      const duration = isMobile ? 15 : 20;
-      
-      const keyframes = [
-        { transform: 'translateX(0%)' },
-        { transform: 'translateX(-50%)' }
-      ];
-
-      const options: KeyframeAnimationOptions = {
-        duration: duration * 1000,
-        iterations: Infinity,
-        easing: 'linear'
-      };
-
-      const animation = sliderRef.current.animate(keyframes, options);
-
-      // Pause animation when mouse enters
-      const handleMouseEnter = () => {
-        isPausedRef.current = true;
-        animation.pause();
-      };
-
-      const handleMouseLeave = () => {
-        isPausedRef.current = false;
-        animation.play();
-      };
-
-      sliderRef.current.addEventListener('mouseenter', handleMouseEnter);
-      sliderRef.current.addEventListener('mouseleave', handleMouseLeave);
-
-      return () => {
-        animation.cancel();
-        sliderRef.current?.removeEventListener('mouseenter', handleMouseEnter);
-        sliderRef.current?.removeEventListener('mouseleave', handleMouseLeave);
-      };
-    }
-  }, [isMobile, animationKey]);
-
-  // Auto slide function for dots
-  const autoSlide = () => {
-    if (!isPausedRef.current) {
-      setCurrent(prev => {
-        const next = (prev + 1) % tutors.length;
-        return next;
-      });
-    }
+  const handleTrainerClick = (trainer: typeof trainers[0]) => {
+    setSelectedTrainer(trainer);
+    setIsPopupOpen(true);
+    animationRef.current?.pause();
   };
 
-  // Start auto slide for dots
-  useEffect(() => {
-    const interval = setInterval(autoSlide, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Handle tutor click
-  const handleTutorClick = (tutor: typeof tutors[0]) => {
-    setSelectedTutor(tutor);
-    setCurrent(tutors.findIndex(t => t.id === tutor.id));
-    setShowInfoPopup(true);
-    isPausedRef.current = true;
-  };
-
-  const goToSlide = (index: number) => {
-    setCurrent(index);
-    isPausedRef.current = true;
+  const closePopup = () => {
+    setIsPopupOpen(false);
     setTimeout(() => {
-      isPausedRef.current = false;
-      setAnimationKey(prev => prev + 1);
-    }, 1000);
+      animationRef.current?.play();
+    }, 300);
   };
 
-  const nextSlide = () => {
-    const next = (current + 1) % tutors.length;
-    goToSlide(next);
+  const handlePrevTrainer = () => {
+    if (!selectedTrainer) return;
+    const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
+    const prevIndex = currentIndex === 0 ? trainers.length - 1 : currentIndex - 1;
+    setSelectedTrainer(trainers[prevIndex]);
   };
 
-  const prevSlide = () => {
-    const prev = current === 0 ? tutors.length - 1 : current - 1;
-    goToSlide(prev);
-  };
-
-  // Close info popup function
-  const closeInfoPopup = () => {
-    setShowInfoPopup(false);
-    isPausedRef.current = false;
-    setAnimationKey(prev => prev + 1);
+  const handleNextTrainer = () => {
+    if (!selectedTrainer) return;
+    const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
+    const nextIndex = currentIndex === trainers.length - 1 ? 0 : currentIndex + 1;
+    setSelectedTrainer(trainers[nextIndex]);
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] py-8 px-4 overflow-hidden">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#1F3A93] mb-2">
-          Expert <span className="text-[#FFA500]">Tutors</span>
-        </h1>
-        <p className="text-[#333333] text-sm md:text-base max-w-xl mx-auto">
-          Meet our industry-leading safety experts
-        </p>
-      </div>
-
-      {/* Continuous Slider with CSS Animation */}
-      <div className="relative w-full overflow-hidden py-8 group">
-        {/* Navigation Arrows */}
-        <button
-          onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-[#1F3A93]/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-[#1F3A93] transition-all opacity-0 group-hover:opacity-100"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        
-        <button
-          onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-[#1F3A93]/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-[#1F3A93] transition-all opacity-0 group-hover:opacity-100"
-        >
-          <ChevronRight size={20} />
-        </button>
-
-        {/* Gradient Overlays - Updated to light theme */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#F5F5F5] to-transparent z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#F5F5F5] to-transparent z-10" />
-        
-        {/* Smooth Infinite Slider */}
-        <div 
-          ref={sliderRef}
-          className="flex gap-6 md:gap-8"
-          key={animationKey}
-        >
-          {[...tutors, ...tutors].map((tutor, idx) => (
-            <div
-              key={`${tutor.id}-${idx}`}
-              className="flex-shrink-0 cursor-pointer group relative"
-              onClick={() => handleTutorClick(tutor)}
-            >
-              <div className="relative w-60 h-60 md:w-72 md:h-72">
-                {/* Glow Effect - Updated to light blue */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#4A90E2]/20 to-[#1F3A93]/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-500" />
-                
-                {/* Tutor Image */}
-                <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#E5E5E5] group-hover:border-[#4A90E2] transition-all duration-300 transform group-hover:scale-105 shadow-md">
-                  <Image
-                    src={tutor.image}
-                    alt={tutor.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 240px, 288px"
-                  />
-                  
-                  {/* HOVER OVERLAY - Updated colors */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1F3A93]/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                    <div className="text-center">
-                      <h3 className="text-white font-bold text-xl md:text-2xl mb-2">{tutor.name}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Fixed Text Below Image - Desktop */}
-              <div className="hidden md:block mt-4 text-center">
-                <h3 className="text-[#1F3A93] font-semibold text-base mb-1">{tutor.name}</h3>
-                <p className="text-[#4A90E2] text-sm">{tutor.specialization}</p>
-              </div>
-
-              {/* Mobile Only View Button - Updated to dark blue */}
-              {isMobile && (
-                <div className="mt-4 text-center md:hidden">
-                  <button 
-                    onClick={() => handleTutorClick(tutor)}
-                    className="px-4 py-1.5 bg-[#1F3A93] text-white text-sm rounded-lg font-medium hover:bg-[#162D75] transition-colors shadow-sm"
-                  >
-                    View Details
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="inline-block px-4 py-2 rounded-full mb-4 bg-red-50">
+            <span className="text-sm font-semibold text-red-700">
+              Expert Faculty
+            </span>
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+            Meet Our <span className="text-red-700">Trainers</span>
+          </h1>
+          
+          <p className="text-base text-gray-600 max-w-2xl mx-auto">
+            Click on any trainer to view their professional details and expertise
+          </p>
         </div>
-      </div>
 
-      {/* Dots Navigation with active indicator - Updated colors */}
-      <div className="flex flex-col items-center gap-4 mb-8">
-        <div className="flex justify-center items-center gap-3">
-          {tutors.map((tutor, index) => (
-            <button
-              key={tutor.id}
-              onClick={() => goToSlide(index)}
-              className="group relative"
-            >
-              <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                index === current 
-                  ? 'bg-[#1F3A93] scale-125 ring-2 ring-[#1F3A93]/30' 
-                  : 'bg-gray-400 group-hover:bg-[#4A90E2]'
-              }`} />
-              {/* Show name on hover */}
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-[#333333]/80 backdrop-blur-sm text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                {tutor.name}
-              </div>
-            </button>
-          ))}
-        </div>
-        
-        {/* Current Tutor Info - Updated colors */}
-        <div className="text-center">
-          <div className="text-[#1F3A93] font-medium text-lg">{tutors[current].name}</div>
-          <div className="text-[#4A90E2] text-sm">{tutors[current].role}</div>
-        </div>
-      </div>
-
-      {/* Info Popup - Updated colors */}
-      <AnimatePresence>
-        {showInfoPopup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#333333]/90 flex items-center justify-center z-50 p-4"
-            onClick={closeInfoPopup}
+        <div className="relative overflow-hidden py-8">
+          <div 
+            ref={sliderRef}
+            className="flex gap-6 md:gap-8 py-8"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#E5E5E5] shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header - Updated to dark blue */}
-              <div className="sticky top-0 bg-white p-4 flex items-center justify-between border-b border-[#E5E5E5]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#1F3A93] to-[#4A90E2] rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">T</span>
-                  </div>
-                  <div>
-                    <div className="text-[#1F3A93] font-bold text-lg">{selectedTutor.name}</div>
-                    <div className="text-[#4A90E2] text-sm">{selectedTutor.role}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={closeInfoPopup}
-                  className="text-gray-500 hover:text-[#1F3A93] transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-4 md:p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Left Column */}
-                  <div className="lg:col-span-1 space-y-6">
-                    {/* Image */}
-                    <div className="relative w-40 h-40 mx-auto rounded-full overflow-hidden border-2 border-[#E5E5E5]">
+            {[...trainers, ...trainers].map((trainer, index) => (
+              <div
+                key={`${trainer.id}-${index}`}
+                onClick={() => handleTrainerClick(trainer)}
+                className="flex-shrink-0 cursor-pointer group"
+              >
+                <div className="relative w-64 md:w-72">
+                  <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto mb-4">
+                    <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform duration-500">
                       <Image
-                        src={selectedTutor.image}
-                        alt={selectedTutor.name}
+                        src={trainer.image}
+                        alt={trainer.name}
                         fill
                         className="object-cover"
+                        sizes="(max-width: 768px) 256px, 288px"
                       />
-                    </div>
-
-                    {/* Quick Info */}
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[#333333] text-sm">
-                          <MapPin className="w-4 h-4 text-[#1F3A93]" />
-                          <span>Location</span>
-                        </div>
-                        <div className="text-[#333333] pl-6">{selectedTutor.location}</div>
-                      </div>
                       
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[#333333] text-sm">
-                          <Briefcase className="w-4 h-4 text-[#1F3A93]" />
-                          <span>Experience</span>
-                        </div>
-                        <div className="text-[#333333] pl-6">{selectedTutor.experience}</div>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[#333333] text-sm">
-                          <Globe className="w-4 h-4 text-[#1F3A93]" />
-                          <span>Languages</span>
-                        </div>
-                        <div className="text-[#333333] pl-6">{selectedTutor.languages.join(', ')}</div>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+                        <span className="text-white font-semibold text-sm">View Details →</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Column */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Bio */}
-                    <div className="space-y-2">
-                      <div className="text-[#333333] text-sm font-medium">Professional Bio</div>
-                      <p className="text-[#333333] leading-relaxed text-sm">{selectedTutor.bio}</p>
+                  <div className="text-center px-4">
+                    <h3 className="font-bold text-lg mb-1 text-gray-900">
+                      {trainer.name}
+                    </h3>
+                    <p className="text-sm font-medium mb-2 text-blue-900">
+                      {trainer.role}
+                    </p>
+                    <div className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                      <Clock className="w-3 h-3" />
+                      <span>{trainer.experience}</span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                    {/* Education */}
-                    <div className="space-y-2">
-                      <div className="text-[#333333] text-sm font-medium">Education</div>
-                      <div className="flex items-center gap-3">
-                        <GraduationCap className="w-4 h-4 text-[#1F3A93]" />
-                        <span className="text-[#333333]">{selectedTutor.education}</span>
-                      </div>
+        
+
+        {isPopupOpen && selectedTrainer && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+              <div className="relative h-48 md:h-56 bg-gradient-to-r from-blue-900 to-gray-900">
+                <button
+                  onClick={closePopup}
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                
+                <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
+                  <div className="relative w-32 h-32 md:w-40 md:h-40">
+                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl">
+                      <Image
+                        src={selectedTrainer.image}
+                        alt={selectedTrainer.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 128px, 160px"
+                      />
                     </div>
+                  </div>
+                </div>
+              </div>
 
-                    {/* Specialization */}
-                    <div className="space-y-2">
-                      <div className="text-[#333333] text-sm font-medium">Specialization</div>
-                      <div className="flex items-center gap-3">
-                        <Briefcase className="w-4 h-4 text-[#1F3A93]" />
-                        <span className="text-[#333333]">{selectedTutor.specialization}</span>
-                      </div>
+              <div className="pt-16 pb-8 px-6 md:px-8">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">
+                    {selectedTrainer.name}
+                  </h2>
+                  <div className="text-lg font-semibold mb-3 text-blue-900">
+                    {selectedTrainer.role}
+                  </div>
+                  <div className="flex justify-center items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{selectedTrainer.experience}</span>
                     </div>
-
-                    {/* Expertise Areas - Updated to light blue */}
-                    <div className="space-y-2">
-                      <div className="text-[#333333] text-sm font-medium">Areas of Expertise</div>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTutor.expertise?.map((area, idx) => (
-                          <div
-                            key={idx}
-                            className="text-[#1F3A93] text-sm px-3 py-1.5 border border-[#4A90E2] bg-[#F5F5F5] rounded-full"
-                          >
-                            {area}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Certifications - Updated to accent orange */}
-                    <div className="space-y-2">
-                      <div className="text-[#333333] text-sm font-medium">Certifications</div>
-                      <div className="space-y-2">
-                        {selectedTutor.certifications?.map((cert, idx) => (
-                          <div key={idx} className="flex items-center gap-3">
-                            <CheckCircle className="w-4 h-4 text-[#FFA500]" />
-                            <span className="text-[#333333] text-sm">{cert}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                    <div className="flex items-center gap-1">
+                      <Briefcase className="w-4 h-4" />
+                      <span>{selectedTrainer.studentsTrained} trained</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Tutor Navigation in Popup - Updated colors */}
-                <div className="mt-8 pt-6 border-t border-[#E5E5E5]">
-                  <div className="text-[#333333] text-sm mb-4 font-medium">All Expert Tutors</div>
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {tutors.map((tutor) => (
-                      <button
-                        key={tutor.id}
-                        onClick={() => {
-                          setSelectedTutor(tutor);
-                        }}
-                        className={`flex flex-col items-center p-2 transition-all duration-300 ${
-                          selectedTutor.id === tutor.id
-                            ? 'text-[#1F3A93]'
-                            : 'text-gray-500 hover:text-[#4A90E2]'
-                        }`}
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-red-700" />
+                    <h3 className="font-semibold text-gray-900">Expertise</h3>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">
+                    {selectedTrainer.expertise}
+                  </p>
+                </div>
+
+                <div className="mb-8 bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Briefcase className="w-4 h-4 text-red-700" />
+                    <h4 className="font-semibold text-gray-900">Training Style</h4>
+                  </div>
+                  <p className="text-gray-600">{selectedTrainer.trainingStyle}</p>
+                </div>
+
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Award className="w-5 h-5 text-red-700" />
+                    <h3 className="font-semibold text-gray-900">Certifications</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {selectedTrainer.certifications.map((cert, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 bg-white"
                       >
-                        <div className={`relative w-10 h-10 rounded-full overflow-hidden mb-1 ${
-                          selectedTutor.id === tutor.id ? 'border-2 border-[#1F3A93]' : 'border border-[#E5E5E5]'
-                        }`}>
-                          <Image
-                            src={tutor.image}
-                            alt={tutor.name}
-                            width={40}
-                            height={40}
-                            className="object-cover"
-                          />
-                        </div>
-                        <span className="text-xs">
-                          {tutor.name.split(' ')[0]}
-                        </span>
-                      </button>
+                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-900" />
+                        <span className="text-sm text-gray-700">{cert}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Close Button - Updated to accent orange */}
-                <div className="mt-8 flex justify-center">
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
                   <button
-                    onClick={closeInfoPopup}
-                    className="px-6 py-2 bg-[#FFA500] text-white rounded-lg font-medium hover:bg-[#E59400] transition-colors shadow-sm"
+                    onClick={handlePrevTrainer}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
                   >
-                    Close
+                    ← Previous Trainer
+                  </button>
+                  
+                  <div className="flex gap-2">
+                    {trainers.map((trainer) => (
+                      <button
+                        key={trainer.id}
+                        onClick={() => setSelectedTrainer(trainer)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          selectedTrainer.id === trainer.id
+                            ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={handleNextTrainer}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
+                  >
+                    Next Trainer →
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -1,238 +1,368 @@
-// app/courses/page.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import CourseCard from '@/components/CourseCard';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { 
+  HiClock, 
+  HiUserGroup, 
+  HiAcademicCap, 
+  HiCheckCircle,
+  HiArrowRight,
+  HiBookOpen,
+  HiShieldCheck,
+  HiOutlineFire as HiWrench,
+  HiFire,
+  HiStar,
+  HiChartBar
+} from "react-icons/hi";
+import Link from "next/link";
 
-// Sample courses data
+// Brand Colors
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  charcoal: '#111111',
+  teal: '#1FB6CB'
+};
+
+// Course Data with Unsplash images
 const courses = [
   {
-    id: 'osha-safety',
-    title: 'OSHA Workplace Safety',
-    description: 'Learn essential workplace safety protocols and regulations for industrial environments.',
-    duration: '6 Weeks',
-    level: 'Intermediate',
-    category: 'Safety',
-    fees: 15000,
-    image: 'osha.jpg'
-  },
-  {
-    id: 'civil-engineering',
-    title: 'Civil Engineering Basics',
-    description: 'Introduction to civil engineering principles, materials, and construction techniques.',
+    id: 'pipe-fitter',
+    title: 'Pipe Fitter',
+    category: 'Technical Training',
+    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
     duration: '8 Weeks',
-    level: 'Matric',
-    category: 'Engineering',
-    fees: 12000,
-    image: 'civil.jpg'
+    students: 'Max 20 per batch',
+    level: 'Beginner to Advanced',
+    highlights: [
+      'Learn pipe cutting, threading, and installation',
+      'Blueprint reading and interpretation',
+      'Pipe system design and layout',
+      'Safety protocols and standards',
+      'Hands-on workshop training',
+      'Industry certification preparation'
+    ],
+    price: 'PKR 25,000',
+    originalPrice: 'PKR 30,000',
+    savings: 'Save PKR 5,000',
+    icon: HiWrench,
+    color: BRAND_COLORS.teal,
+    image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+    featured: true,
+    rating: 4.8,
+    reviews: 124
   },
   {
-    id: 'cybersecurity',
-    title: 'Cybersecurity Fundamentals',
-    description: 'Understand basic cybersecurity concepts, threats, and protection mechanisms.',
-    duration: '10 Weeks',
-    level: 'Intermediate',
-    category: 'IT & Tech',
-    fees: 18000,
-    image: 'cybersecurity.jpg'
-  },
-  {
-    id: 'electrical-basics',
-    title: 'Electrical Engineering Basics',
-    description: 'Fundamentals of electrical circuits, wiring, and safety procedures.',
-    duration: '7 Weeks',
-    level: 'Matric',
-    category: 'Engineering',
-    fees: 14000,
-    image: 'electrical.jpg'
-  },
-  {
-    id: 'mechanical-drafting',
-    title: 'Mechanical Drafting & CAD',
-    description: 'Learn mechanical drawing techniques and Computer-Aided Design software.',
-    duration: '9 Weeks',
-    level: 'Advanced',
-    category: 'Design',
-    fees: 20000,
-    image: 'mechanical.jpg'
-  },
-  {
-    id: 'first-aid',
-    title: 'First Aid & Emergency Response',
-    description: 'Essential first aid skills and emergency response procedures for various situations.',
-    duration: '5 Weeks',
-    level: 'Matric',
-    category: 'Safety',
-    fees: 8000,
-    image: 'first-aid.jpg'
-  },
-  
-  {
-    id: 'construction-safety',
-    title: 'Construction Site Safety',
-    description: 'Safety protocols and regulations specific to construction sites and heavy machinery.',
+    id: 'safety-inspector',
+    title: 'Safety Inspector',
+    category: 'Safety Training',
+    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
     duration: '6 Weeks',
+    students: 'Max 15 per batch',
     level: 'Intermediate',
-    category: 'Safety',
-    fees: 13000,
-    image: 'construction.jpg'
+    highlights: [
+      'OSHA standards and regulations',
+      'Site inspection methodologies',
+      'Risk assessment techniques',
+      'Safety documentation',
+      'Emergency response planning',
+      'Certification exam preparation'
+    ],
+    price: 'PKR 30,000',
+    originalPrice: 'PKR 35,000',
+    savings: 'Save PKR 5,000',
+    icon: HiShieldCheck,
+    color: BRAND_COLORS.darkRoyalBlue,
+    image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+    featured: true,
+    rating: 4.9,
+    reviews: 89
   },
+  {
+    id: 'welding',
+    title: 'Professional Welding',
+    category: 'Technical Training',
+    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
+    duration: '10 Weeks',
+    students: 'Max 12 per batch',
+    level: 'Beginner to Professional',
+    highlights: [
+      'MIG, TIG, and Arc welding techniques',
+      'Metal identification and preparation',
+      'Weld quality inspection',
+      'Safety equipment usage',
+      'Industry-standard certification',
+      'Portfolio development'
+    ],
+    price: 'PKR 35,000',
+    originalPrice: 'PKR 40,000',
+    savings: 'Save PKR 5,000',
+    icon: HiFire,
+    color: BRAND_COLORS.deepRed,
+    image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+    featured: true,
+    rating: 4.7,
+    reviews: 156
+  }
 ];
 
 export default function CoursesPage() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedLevel, setSelectedLevel] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Get unique categories and levels
-  const categories = ['All', ...new Set(courses.map(course => course.category))];
-  const levels = ['All', ...new Set(courses.map(course => course.level))];
-
-  // Filter courses based on selections
-  const filteredCourses = courses.filter(course => {
-    const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
-    const matchesLevel = selectedLevel === 'All' || course.level === selectedLevel;
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesCategory && matchesLevel && matchesSearch;
-  });
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Technical Courses</h1>
-            <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto">
-              Choose from our comprehensive range of technical courses designed for Class 10–12 students
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <div className="inline-flex items-center px-4 py-2 rounded-full mb-4"
+            style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}>
+            <HiStar className="w-4 h-4 mr-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+            <span className="text-sm font-semibold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+              Industry-Focused Training
+            </span>
           </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            Technical & Safety Training Programs
+          </h1>
+          
+          <p className="text-lg max-w-3xl mx-auto mb-8" style={{ color: BRAND_COLORS.darkGrey }}>
+            Mansol Hab School of Skills Development offers industry-focused technical and safety training programs 
+            designed to meet international standards.
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-6 mb-12">
+            <div className="flex items-center">
+              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
+              <span className="font-medium">International Standards</span>
+            </div>
+            <div className="flex items-center">
+              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
+              <span className="font-medium">Hands-on Training</span>
+            </div>
+            <div className="flex items-center">
+              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
+              <span className="font-medium">Industry Certification</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Courses Grid - Fixed Height Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {courses.map((course, index) => (
+            <motion.div
+              key={course.id}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              whileHover={{ y: -8 }}
+              onMouseEnter={() => setHoveredCard(course.id)}
+              onMouseLeave={() => setHoveredCard(null)}
+              className="relative group flex flex-col"
+            >
+              {/* Featured Badge */}
+              {course.featured && (
+                <div className="absolute top-4 left-4 z-10">
+                  <div className="px-3 py-1 rounded-full flex items-center"
+                    style={{ 
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white
+                    }}>
+                    <HiStar className="w-3 h-3 mr-1" />
+                    <span className="text-xs font-semibold">Featured</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Course Card with Fixed Height */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-full border border-gray-100 transition-all duration-300 group-hover:shadow-2xl flex flex-col">
+                {/* Course Image - Fixed Height */}
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={course.image}
+                    alt={course.title}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  
+                  {/* Category Badge */}
+                  <div className="absolute top-4 right-4">
+                    <div className="px-3 py-1 rounded-full backdrop-blur-sm bg-white/90">
+                      <span className="text-xs font-semibold" style={{ color: course.color }}>
+                        {course.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Course Content - Flex Grow for Equal Height */}
+                <div className="p-6 flex flex-col flex-grow">
+                  {/* Title and Icon */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                        {course.title}
+                      </h3>
+                      <div className="flex items-center mb-3">
+                        <div className="flex items-center mr-4">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <HiStar 
+                              key={star} 
+                              className={`w-4 h-4 ${star <= Math.floor(course.rating) ? 'text-yellow-400' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium" style={{ color: BRAND_COLORS.darkGrey }}>
+                          {course.rating} ({course.reviews} reviews)
+                        </span>
+                      </div>
+                    </div>
+                    <course.icon className="w-8 h-8 flex-shrink-0 ml-3" style={{ color: course.color }} />
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-600 mb-4 line-clamp-2 flex-shrink-0">
+                    {course.description}
+                  </p>
+
+                  {/* Highlights */}
+                  <div className="mb-4 flex-grow">
+                    <div className="flex items-center mb-2">
+                      <HiChartBar className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
+                      <span className="font-semibold text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
+                        What You&apos;ll Learn:
+                      </span>
+                    </div>
+                    <ul className="space-y-1">
+                      {course.highlights.slice(0, 3).map((highlight, idx) => (
+                        <li key={idx} className="flex items-start">
+                          <HiCheckCircle className="w-3 h-3 mr-2 mt-0.5 flex-shrink-0" style={{ color: BRAND_COLORS.teal }} />
+                          <span className="text-xs text-gray-600 line-clamp-2">{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Course Details */}
+                  <div className="grid grid-cols-2 gap-2 mb-4 flex-shrink-0">
+                    <div className="flex items-center">
+                      <HiClock className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                      <span className="text-xs text-gray-600">{course.duration}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <HiUserGroup className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                      <span className="text-xs text-gray-600">{course.students}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <HiAcademicCap className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                      <span className="text-xs text-gray-600">{course.level}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <HiBookOpen className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                      <span className="text-xs text-gray-600">Certification</span>
+                    </div>
+                  </div>
+
+                  {/* Price and CTA - Fixed at Bottom */}
+                  <div className="border-t border-gray-100 pt-4 mt-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <div className="flex items-center">
+                          <span className="text-xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+                            {course.price}
+                          </span>
+                          {course.originalPrice && (
+                            <span className="text-xs text-gray-500 line-through ml-2">
+                              {course.originalPrice}
+                            </span>
+                          )}
+                        </div>
+                        
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/courses/${course.id}`}
+                      className="block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] group"
+                      style={{
+                        backgroundColor: hoveredCard === course.id ? BRAND_COLORS.darkRoyalBlue : BRAND_COLORS.deepRed,
+                        color: BRAND_COLORS.white
+                      }}
+                    >
+                      <span className="flex items-center justify-center text-sm">
+                        View Course Details
+                        <HiArrowRight className="w-3 h-3 ml-2 transform group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
+
+        {/* Info Section */}
+       <motion.div 
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ delay: 0.6 }}
+  className="mt-16 rounded-2xl shadow-lg p-8"
+  style={{ 
+    backgroundColor: BRAND_COLORS.darkNavy,
+    border: `1px solid ${BRAND_COLORS.darkRoyalBlue}`
+  }}
+>
+  <div className="text-center max-w-4xl mx-auto">
+    <h2 className="text-3xl font-bold mb-6 text-white">
+      What Makes Mansol Hab School Different
+    </h2>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      
+      {/* Certificates */}
+      <div className="text-center p-4">
+        <h3 className="text-lg font-semibold mb-2 text-white">
+          Recognized & Practical Certificates
+        </h3>
+        <p className="text-gray-300">
+          Our certificates reflect real skills, valued by employers in construction, safety, and technical industries.
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        {/* Filters and Search */}
-        <div className="mb-8 space-y-4">
-          {/* Search Bar */}
-          <div className="relative max-w-2xl mx-auto">
-            <input
-              type="text"
-              placeholder="Search courses..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-6 py-4 pl-12 rounded-xl border border-gray-300 
-                       focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A]/20 
-                       outline-none transition-colors shadow-sm"
-            />
-            <svg 
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+      {/* Trainers */}
+      <div className="text-center p-4">
+        <h3 className="text-lg font-semibold mb-2 text-white">
+          Experienced Trainers
+        </h3>
+        <p className="text-gray-300">
+          Learn hands-on skills from industry professionals who guide you through practical challenges, not just theory.
+        </p>
+      </div>
 
-          {/* Filter Controls */}
-          <div className="flex flex-wrap gap-4 justify-center">
-            {/* Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-300 
-                         focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A]/20 
-                         outline-none transition-colors"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
+      {/* Career Support */}
+      <div className="text-center p-4">
+        <h3 className="text-lg font-semibold mb-2 text-white">
+          Career Guidance & Support
+        </h3>
+        <p className="text-gray-300">
+          We help students explore career paths, prepare for job opportunities, and succeed in technical fields.
+        </p>
+      </div>
 
-            {/* Level Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Level
-              </label>
-              <select
-                value={selectedLevel}
-                onChange={(e) => setSelectedLevel(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-300 
-                         focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A]/20 
-                         outline-none transition-colors"
-              >
-                {levels.map(level => (
-                  <option key={level} value={level}>{level}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filters */}
-            <div className="self-end">
-              <button
-                onClick={() => {
-                  setSelectedCategory('All');
-                  setSelectedLevel('All');
-                  setSearchQuery('');
-                }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 
-                         font-medium rounded-lg transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Info */}
-        <div className="mb-8 text-center">
-          <p className="text-gray-600">
-            Showing <span className="font-bold text-gray-900">{filteredCourses.length}</span> courses
-            {selectedCategory !== 'All' && ` in ${selectedCategory}`}
-            {selectedLevel !== 'All' && ` at ${selectedLevel} level`}
-            {searchQuery && ` matching "${searchQuery}"`}
-          </p>
-        </div>
-
-        {/* Courses Grid */}
-        {filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredCourses.map(course => (
-              <CourseCard key={course.id} {...course} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your filters or search terms</p>
-            <button
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedLevel('All');
-                setSearchQuery('');
-              }}
-              className="px-6 py-3 bg-[#1E3A8A] hover:bg-[#1E40AF] text-white 
-                       font-semibold rounded-lg transition-colors"
-            >
-              View All Courses
-            </button>
-          </div>
-        )}
+    </div>
+  </div>
+</motion.div>
       </div>
     </div>
   );

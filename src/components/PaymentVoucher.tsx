@@ -1,403 +1,319 @@
-// app/courses/components/PaymentVoucher.tsx
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Download, Printer, Copy, CheckCircle } from 'lucide-react';
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
+import { 
+  HiDownload, 
+  HiPrinter, 
+  HiCreditCard, 
+HiOutlineBan as  HiBanknotes,
+ HiQrcode as  HiQrCode,
+  HiClipboardCheck,
+ 
+   
+} from "react-icons/hi";
+/* eslint-disable */
 
-interface VoucherData {
-  enrollmentId: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  level: string;
-  courseTitle: string;
-  fees: number;
-  enrollmentDate: string;
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
+
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6CB'
+};
+
+interface PaymentVoucherProps {
+  enrollmentData: any;
+  onGenerated: () => void;
 }
 
-export default function PaymentVoucher() {
-  const [voucherData, setVoucherData] = useState<VoucherData | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [isPrinted, setIsPrinted] = useState(false);
+export default function PaymentVoucher({ enrollmentData, onGenerated }: PaymentVoucherProps) {
+  const voucherRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  useEffect(() => {
-    // Load student info from localStorage
-    const studentInfo = localStorage.getItem('studentInfo');
-    if (studentInfo) {
-      const parsedData = JSON.parse(studentInfo);
-      setVoucherData(parsedData);
-      
-      // Mark voucher as generated
-      const enrollmentData = localStorage.getItem('enrollmentData');
-      if (enrollmentData) {
-        const data = JSON.parse(enrollmentData);
-        data.voucherGenerated = true;
-        localStorage.setItem('enrollmentData', JSON.stringify(data));
-      }
+  // Generate unique voucher number
+  const voucherNumber = `VCH-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+  const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
+
+  // Bank account details
+  const bankAccounts = [
+    {
+      name: 'JazzCash',
+      number: '0300-1234567',
+      accountName: 'Mansol Hab School of Skills Development',
+      type: 'Mobile Account'
+    },
+    {
+      name: 'EasyPaisa',
+      number: '0315-7654321',
+      accountName: 'Mansol Hab School of Skills Development',
+      type: 'Mobile Account'
+    },
+    {
+      name: 'UBL',
+      number: '1234-5678901',
+      accountName: 'Mansol Hab School of Skills Development',
+      accountType: 'Current Account',
+      branch: 'Main Branch, Karachi'
     }
-  }, []);
+  ];
 
-  const handlePrint = () => {
-    window.print();
-    setIsPrinted(true);
+  const generateVoucher = async () => {
+    if (!voucherRef.current) return;
+
+    setIsGenerating(true);
+    
+    try {
+      // Generate image from voucher
+      const dataUrl = await toPng(voucherRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#FFFFFF'
+      });
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Add voucher to PDF
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`payment-voucher-${voucherNumber}.pdf`);
+
+      // Store in localStorage
+      localStorage.setItem('paymentVoucher', JSON.stringify({
+        ...enrollmentData,
+        voucherNumber,
+        generatedAt: new Date().toISOString()
+      }));
+
+      onGenerated();
+    } catch (error) {
+      console.error('Error generating voucher:', error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleCopyDetails = () => {
-    if (!voucherData) return;
-    
-    const details = `
-Enrollment ID: ${voucherData.enrollmentId}
-Student Name: ${voucherData.fullName}
-Course: ${voucherData.courseTitle}
-Fees: PKR ${voucherData.fees.toLocaleString()}
-    `.trim();
-    
-    navigator.clipboard.writeText(details);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    if (!voucherData) return;
-    
-    // Create a printable voucher HTML
-    const voucherHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Payment Voucher - ${voucherData.enrollmentId}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .voucher { max-width: 600px; margin: 0 auto; border: 2px solid #1E3A8A; padding: 30px; border-radius: 10px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .logo { font-size: 24px; font-weight: bold; color: #1E3A8A; margin-bottom: 10px; }
-        .title { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 5px; }
-        .subtitle { color: #666; margin-bottom: 20px; }
-        .details { margin: 20px 0; }
-        .detail-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .label { font-weight: bold; color: #555; }
-        .value { color: #333; }
-        .total { font-size: 18px; font-weight: bold; color: #1E3A8A; }
-        .instructions { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px; }
-        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-    </style>
-</head>
-<body>
-    <div class="voucher">
-        <div class="header">
-            <div class="logo">TechSafe Education</div>
-            <div class="title">Payment Voucher</div>
-            <div class="subtitle">Enrollment ID: ${voucherData.enrollmentId}</div>
-        </div>
-        
-        <div class="details">
-            <div class="detail-row">
-                <span class="label">Student Name:</span>
-                <span class="value">${voucherData.fullName}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Enrollment ID:</span>
-                <span class="value">${voucherData.enrollmentId}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Course:</span>
-                <span class="value">${voucherData.courseTitle}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Level:</span>
-                <span class="value">${voucherData.level}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Enrollment Date:</span>
-                <span class="value">${new Date(voucherData.enrollmentDate).toLocaleDateString()}</span>
-            </div>
-            <div class="detail-row total">
-                <span class="label">Total Fees:</span>
-                <span class="value">PKR ${voucherData.fees.toLocaleString()}</span>
-            </div>
-        </div>
-        
-        <div class="instructions">
-            <h3>Payment Instructions:</h3>
-            <ol>
-                <li>Make payment to our bank account</li>
-                <li>Upload the payment slip in the next step</li>
-                <li>Keep this voucher for reference</li>
-                <li>Contact support if you face any issues</li>
-            </ol>
-        </div>
-        
-        <div class="footer">
-            <p>Generated on ${new Date().toLocaleDateString()}</p>
-            <p>TechSafe Education © ${new Date().getFullYear()}</p>
-        </div>
-    </div>
-</body>
-</html>
-    `;
-    
-    // Create blob and download
-    const blob = new Blob([voucherHTML], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `payment-voucher-${voucherData.enrollmentId}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  if (!voucherData) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Loading voucher...</p>
-      </div>
-    );
-  }
-
-  // Bank details
-  const bankDetails = {
-    bankName: "National Bank of Pakistan",
-    accountTitle: "TechSafe Education Pvt Ltd",
-    accountNumber: "1001-23456789-01",
-    iban: "PK36NBPA1001234567890101",
-    swiftCode: "NBPAKKAXXX",
-    branch: "Main Branch, Islamabad"
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('Account number copied to clipboard!');
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="w-10 h-10 text-white" />
+    <div className="space-y-8">
+      {/* Instructions */}
+    <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="bg-gradient-to-r rounded-xl shadow-lg p-4" // reduced padding
+  style={{ 
+    background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)`
+  }}
+>
+  <div className="flex items-center mb-3"> {/* reduced margin-bottom */}
+    <HiClipboardCheck className="w-5 h-5 mr-2.5 text-white" /> {/* smaller icon */}
+    <h2 className="text-lg font-bold text-white">Payment Instructions</h2> {/* slightly smaller text */}
+  </div>
+  <div className="space-y-2.5"> {/* reduced spacing */}
+    {[ 
+      "Download the payment voucher below",
+      "Pay the amount using any of the provided accounts",
+      "Save your payment slip/receipt for upload in next step",
+      "Upload the payment slip to complete enrollment"
+    ].map((text, index) => (
+      <div key={index} className="flex items-start">
+        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+          <span className="text-white text-xs font-bold">{index + 1}</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Voucher</h1>
-        <p className="text-gray-600">Your enrollment has been submitted successfully</p>
+        <span className="text-gray-200 text-sm">{text}</span> {/* slightly smaller text */}
       </div>
+    ))}
+  </div>
+</motion.div>
 
-      {/* Voucher Card */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-        {/* Voucher Header */}
-        <div className="bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-white">TechSafe Education</h2>
-              <p className="text-blue-100">Official Payment Voucher</p>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <div className="text-center md:text-right">
-                <div className="text-sm text-blue-100">Enrollment ID</div>
-                <div className="text-xl font-bold text-white tracking-wider">
-                  {voucherData.enrollmentId}
-                </div>
-              </div>
-            </div>
+
+      {/* Voucher Preview */}
+      <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.1 }}
+  className="bg-white rounded-2xl shadow-md p-6 border border-gray-200"
+>
+  {/* Header */}
+  <div className="flex items-center justify-between mb-6">
+    <div>
+      <h2 className="text-xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+        Payment Voucher
+      </h2>
+      <p className="text-gray-500 text-sm">Valid for 3 days only</p>
+    </div>
+    <div className="flex items-center space-x-3">
+      <button
+        onClick={generateVoucher}
+        disabled={isGenerating}
+        className="flex items-center px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95"
+        style={{
+          backgroundColor: BRAND_COLORS.deepRed,
+          color: BRAND_COLORS.white
+        }}
+      >
+        <HiDownload className="w-4 h-4 mr-1" />
+        {isGenerating ? 'Generating...' : 'Download'}
+      </button>
+      <button
+        onClick={() => window.print()}
+        className="flex items-center px-4 py-2 rounded-lg font-semibold border transition-all duration-300 hover:bg-gray-50"
+        style={{ 
+          borderColor: BRAND_COLORS.deepRed,
+          color: BRAND_COLORS.deepRed
+        }}
+      >
+        <HiPrinter className="w-4 h-4 mr-1" />
+        Print
+      </button>
+    </div>
+  </div>
+
+  {/* Voucher Card */}
+  <div ref={voucherRef} className="border-2 border-dashed rounded-xl p-6 mb-6" style={{ borderColor: BRAND_COLORS.deepRed }}>
+    <div className="text-center mb-6">
+      <div className="inline-block px-3 py-1 rounded-full mb-3" style={{ backgroundColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.white }}>
+        <span className="font-bold text-xs">OFFICIAL PAYMENT VOUCHER</span>
+      </div>
+      <h1 className="text-2xl font-bold mb-1" style={{ color: BRAND_COLORS.darkNavy }}>
+        Mansol Hab School of Skills Development
+      </h1>
+      <p className="text-gray-500 text-sm">Industry-Focused Technical Training</p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Student Info */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 pb-1 border-b" style={{ color: BRAND_COLORS.darkNavy, borderColor: BRAND_COLORS.softGrey }}>
+          Student Information
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div>
+            <div className="text-gray-500">Full Name</div>
+            <div className="font-bold">{enrollmentData.fullName}</div>
           </div>
-        </div>
-
-        {/* Voucher Body */}
-        <div className="p-8">
-          {/* Student & Course Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {/* Student Details */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Student Information
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Full Name:</span>
-                  <span className="font-medium text-gray-900">{voucherData.fullName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-gray-900">{voucherData.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium text-gray-900">{voucherData.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Level:</span>
-                  <span className="font-medium text-gray-900">{voucherData.level}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Course Details */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-                Course Details
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Course:</span>
-                  <span className="font-medium text-gray-900 text-right">{voucherData.courseTitle}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Enrollment Date:</span>
-                  <span className="font-medium text-gray-900">
-                    {new Date(voucherData.enrollmentDate).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="font-medium text-green-600">Pending Payment</span>
-                </div>
-              </div>
-            </div>
+          <div>
+            <div className="text-gray-500">Course</div>
+            <div className="font-bold">{enrollmentData.course}</div>
           </div>
-
-          {/* Bank Details Section - YEH ADD KIYA HAI */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-              </svg>
-              Bank Account Details
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Bank Name</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900">{bankDetails.bankName}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Account Title</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900">{bankDetails.accountTitle}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Account Number</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900 tracking-wider">{bankDetails.accountNumber}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">IBAN</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900 tracking-wider">{bankDetails.iban}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">SWIFT Code</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900">{bankDetails.swiftCode}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Branch</label>
-                  <div className="p-3 bg-white rounded-lg border border-gray-300">
-                    <span className="font-medium text-gray-900">{bankDetails.branch}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 text-sm text-gray-700 p-3 bg-yellow-100 rounded-lg">
-              <span className="font-bold">Important:</span> Please use Enrollment ID <span className="font-mono font-bold">{voucherData.enrollmentId}</span> as payment reference.
-            </div>
+          <div>
+            <div className="text-gray-500">Enrollment ID</div>
+            <div className="font-medium">{enrollmentData.enrollmentId}</div>
           </div>
-
-          {/* Payment Summary */}
-          <div className="bg-gray-50 rounded-xl p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-600">Course Fees:</span>
-                <span className="font-medium text-gray-900">PKR {voucherData.fees.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-600">Registration Fee:</span>
-                <span className="font-medium text-gray-900">PKR 500</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-lg font-bold text-gray-900">Total Amount:</span>
-                <span className="text-xl font-bold text-[#1E3A8A]">
-                  PKR {(voucherData.fees + 500).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Instructions</h3>
-            <ol className="space-y-2 list-decimal list-inside text-gray-700">
-              <li>Make payment to the bank account details provided above</li>
-              <li>Use Enrollment ID as payment reference: <span className="font-bold">{voucherData.enrollmentId}</span></li>
-              <li>Upload the payment slip in the next step for verification</li>
-              <li>Keep this voucher safe for future reference</li>
-              <li>Contact support at info@techsafe.edu.pk for any queries</li>
-            </ol>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button
-              onClick={handleDownload}
-              className="flex items-center justify-center space-x-2 bg-white border border-[#1E3A8A] 
-                       text-[#1E3A8A] font-semibold py-3 px-4 rounded-lg hover:bg-blue-50 
-                       transition-all duration-300"
-            >
-              <Download className="w-5 h-5" />
-              <span>Download Voucher</span>
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className="flex items-center justify-center space-x-2 bg-white border border-gray-300 
-                       text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 
-                       transition-all duration-300"
-            >
-              <Printer className="w-5 h-5" />
-              <span>Print Voucher</span>
-            </button>
-
-            <button
-              onClick={handleCopyDetails}
-              className="flex items-center justify-center space-x-2 bg-white border border-gray-300 
-                       text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 
-                       transition-all duration-300"
-            >
-              {copied ? (
-                <>
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-green-600">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-5 h-5" />
-                  <span>Copy Details</span>
-                </>
-              )}
-            </button>
+          <div>
+            <div className="text-gray-500">Voucher Number</div>
+            <div className="font-medium text-blue-600">{voucherNumber}</div>
           </div>
         </div>
       </div>
 
-      {/* Next Step */}
-      <div className="mt-8 text-center">
-        <p className="text-gray-600 mb-4">
-          After downloading the voucher, proceed to upload your payment slip
-        </p>
-        <div className="w-8 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F97316] mx-auto mb-4 rounded-full" />
-        <div className="text-sm text-gray-500">Step 2/3 • Payment Slip Upload</div>
+      {/* Payment Info */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 pb-1 border-b" style={{ color: BRAND_COLORS.darkNavy, borderColor: BRAND_COLORS.softGrey }}>
+          Payment Information
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div>
+            <div className="text-gray-500">Amount Payable</div>
+            <div className="font-bold text-2xl" style={{ color: BRAND_COLORS.deepRed }}>{enrollmentData.price}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Due Date</div>
+            <div className="font-medium">{expiryDate.toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Status</div>
+            <div className="inline-block px-2 py-1 rounded-full font-semibold" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+              PENDING PAYMENT
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+
+    {/* Notes */}
+    <div className="mt-6 p-3 rounded-md" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10`, border: `1px solid ${BRAND_COLORS.deepRed}20` }}>
+      <h4 className="font-bold mb-1 flex items-center text-sm">
+        <HiQrCode className="w-4 h-4 mr-2" style={{ color: BRAND_COLORS.deepRed }} />
+        Important Instructions
+      </h4>
+      <ul className="text-xs space-y-1 text-gray-600">
+        <li>• This voucher is valid for 3 days only</li>
+        <li>• Mention your name and voucher number in payment transaction</li>
+        <li>• Save payment receipt for verification</li>
+        <li>• Contact support if payment is not reflected within 24 hours</li>
+      </ul>
+    </div>
+  </div>
+
+  {/* Bank Accounts */}
+  <div className="mt-6">
+    <h3 className="text-lg font-bold mb-4 flex items-center" style={{ color: BRAND_COLORS.darkNavy }}>
+      <HiBanknotes className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+      Payment Methods
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {bankAccounts.map((account, index) => (
+        <div key={index} className="border rounded-xl p-4 hover:shadow-md transition-shadow" style={{ borderColor: BRAND_COLORS.softGrey }}>
+          <div className="flex items-center mb-3">
+            <HiCreditCard className="w-6 h-6 mr-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+            <div>
+              <h4 className="font-bold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>{account.name}</h4>
+              <p className="text-xs text-gray-500">{account.type || account.accountType}</p>
+            </div>
+          </div>
+          <div className="space-y-1 text-xs">
+            <div>
+              <div className="text-gray-500">Account Number</div>
+              <div className="font-mono font-bold flex items-center justify-between">
+                {account.number}
+                <button
+                  onClick={() => copyToClipboard(account.number)}
+                  className="px-2 py-0.5 rounded border text-xs hover:bg-gray-50"
+                  style={{ borderColor: BRAND_COLORS.teal, color: BRAND_COLORS.teal }}
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-500">Account Name</div>
+              <div className="font-medium text-sm">{account.accountName}</div>
+            </div>
+            {account.branch && (
+              <div>
+                <div className="text-gray-500">Branch</div>
+                <div className="font-medium text-sm">{account.branch}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* QR Code Section */}
+ 
+</motion.div>
+
     </div>
   );
 }

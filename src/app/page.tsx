@@ -6,6 +6,8 @@ import dynamic from "next/dynamic"
 import ContactForm from "@/components/query"
 import AboutSection from "@/components/ourimpact"
 import CoursesPage from "./courses/page"
+import TrainersSection from "@/components/tutors"
+import TrainersSlider from "@/components/tutors"
 
 //Professional skeleton for Hero (prevents late rendering issue)
 const HeroSlider = dynamic(
@@ -23,17 +25,6 @@ const HeroSlider = dynamic(
 
 
 
-const TutorSlider = dynamic(
-  () => import("@/components/tutors"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto h-40 bg-gray-100 animate-pulse rounded-xl" />
-      </div>
-    ),
-  }
-)
 
 export default function Page() {
   return (
@@ -45,7 +36,7 @@ export default function Page() {
 
       <CoursesPage/>
 
-      <TutorSlider />
+      <TrainersSlider/>
 
       <ContactForm />
 
