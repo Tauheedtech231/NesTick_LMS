@@ -101,7 +101,7 @@ export default function ContactForm() {
         {/* Section Header - Centered */}
         <div className="text-center mb-12">
           <h2 
-            className="text-3xl sm:text-4xl font-bold mb-4"
+            className="text-3xl mt-10 sm:text-4xl font-bold mb-4"
             style={{ color: BRAND_COLORS.darkNavy }}
           >
             Get in Touch
@@ -275,12 +275,7 @@ export default function ContactForm() {
           </form>
         </div>
 
-        {/* Footer Note - Centered */}
-        <div className="mt-8 text-center">
-          <p className="text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
-            All fields marked with * are required
-          </p>
-        </div>
+       
       </div>
     </section>
   );

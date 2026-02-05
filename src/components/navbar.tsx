@@ -131,14 +131,15 @@ export default function Navbar() {
   const [mobileSubMenuOpen, setMobileSubMenuOpen] = useState<number | null>(null);
   const [mobileLoginDropdownOpen, setMobileLoginDropdownOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [mobileMenuHeight, setMobileMenuHeight] = useState(0);
+  const [isLogoVisible, setIsLogoVisible] = useState(false);
   
   const loginDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const loginButtonRef = useRef<HTMLButtonElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const logoTextRef = useRef<HTMLDivElement>(null);
+  const logoContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -161,43 +162,40 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // GSAP animations for mobile menu
+  // Logo animation on mount
   useEffect(() => {
-    if (mobileMenuRef.current) {
-      if (mobileMenuOpen) {
-        // Calculate height for smooth animation
-        const height = mobileMenuRef.current.scrollHeight;
-        setMobileMenuHeight(height);
-        
-        // Animate mobile menu
-        gsap.fromTo(
-          mobileMenuRef.current,
-          {
-            opacity: 0,
-            height: 0,
-            y: -20
-          },
-          {
-            opacity: 1,
-            height: height,
-            y: 0,
-            duration: 0.3,
-            ease: "power2.out"
-          }
-        );
-      } else {
-        if (mobileMenuRef.current) {
-          gsap.to(mobileMenuRef.current, {
-            opacity: 0,
-            height: 0,
-            y: -20,
-            duration: 0.2,
-            ease: "power2.in"
-          });
-        }
-      }
+    if (logoContainerRef.current && logoTextRef.current) {
+      // Reset initial state
+      gsap.set(logoContainerRef.current, {
+        width: '60px',
+        borderRadius: '30px',
+        overflow: 'hidden'
+      });
+      
+      gsap.set(logoTextRef.current, {
+        opacity: 0,
+        x: 100
+      });
+      
+      // Animate slider opening
+      const timeline = gsap.timeline({ delay: 0.5 });
+      
+      timeline
+        .to(logoContainerRef.current, {
+          width: '200px',
+          borderRadius: '30px',
+          duration: 0.8,
+          ease: "power2.out"
+        })
+        .to(logoTextRef.current, {
+          opacity: 1,
+          x: 0,
+          duration: 0.6,
+          ease: "back.out(1.2)"
+        }, "-=0.4")
+        .call(() => setIsLogoVisible(true));
     }
-  }, [mobileMenuOpen]);
+  }, []);
 
   // Animate dropdowns
   const animateDropdown = (element: HTMLElement, show: boolean) => {
@@ -308,7 +306,17 @@ export default function Navbar() {
   // Toggle mobile menu
   const toggleMobileMenu = useCallback(() => {
     setMobileMenuOpen(!mobileMenuOpen);
+    // Reset mobile dropdowns when closing menu
+    if (mobileMenuOpen) {
+      setMobileSubMenuOpen(null);
+      setMobileLoginDropdownOpen(false);
+    }
   }, [mobileMenuOpen]);
+
+  // Toggle mobile login dropdown
+  const toggleMobileLoginDropdown = useCallback(() => {
+    setMobileLoginDropdownOpen(!mobileLoginDropdownOpen);
+  }, [mobileLoginDropdownOpen]);
 
   // Get user role icon
   const getUserIcon = useCallback(() => {
@@ -349,7 +357,7 @@ export default function Navbar() {
     <nav 
       ref={navRef}
       className={`w-full fixed top-0 z-50 transition-all duration-300 ${
-        scrolled ? 'shadow-md backdrop-blur-sm' : ''
+        scrolled ? 'shadow-lg backdrop-blur-md' : ''
       }`}
       style={{
         backgroundColor: scrolled ? `${BRAND_COLORS.darkNavy}EE` : BRAND_COLORS.darkNavy
@@ -357,42 +365,22 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo - Fixed Size */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="flex items-center space-x-3">
-              {/* Logo Image - Larger Size */}
-              {/* <div className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-lg overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                <img
-                  src="/MANSOL HAB Logo.jpg"
-                  alt="Mansol Hab Logo"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    // Fallback if image doesn't load
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="w-full h-full bg-gradient-to-br from-[#0B1C3D] to-[#1E3A8A] flex items-center justify-center">
-                          <span class="text-white font-bold text-lg md:text-xl">MH</span>
-                        </div>
-                      `;
-                    }
-                  }}
-                />
-              </div> */}
+          {/* Logo with Slider Animation */}
+          <Link href="/" className="flex items-center">
+           <div className="flex items-center">
+<div className="flex items-center">
+  <div className="h-[60px] w-[60px] sm:h-[80px] sm:w-[80px] flex items-center justify-center">
+    <img
+      src="/abc.png"        // PNG with transparent background
+      alt="Mansol Logo"
+      className="h-full w-auto object-contain"
+      style={{ filter: "brightness(0) invert(1)" }} // turns dark text to white
+    />
+  </div>
+</div>
 
-              {/* Text - Larger and Better Spaced */}
-              <div className="flex flex-col">
-                <div className="text-lg md:text-xl font-bold text-white tracking-tight transition-all duration-300 group-hover:tracking-wider">
-                  MANSOL HAB
-                </div>
-                <div className="text-xs md:text-sm font-medium transition-all duration-300 group-hover:tracking-wider"
-                     style={{ color: BRAND_COLORS.lightGrey }}>
-                  School of Skills Development
-                </div>
-              </div>
-            </div>
+</div>
+
           </Link>
 
           {/* Desktop Navigation */}
@@ -631,178 +619,173 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      <div
-        ref={mobileMenuRef}
-        className="lg:hidden overflow-hidden"
-        style={{
-          height: mobileMenuOpen ? `${mobileMenuHeight}px` : '0px',
-          transition: mobileMenuOpen ? 'height 0.3s ease-out' : 'height 0.2s ease-in'
-        }}
-      >
-        <div 
-          className="px-4 py-3 space-y-1 shadow-lg"
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden absolute top-20 left-0 right-0 shadow-xl animate-in slide-in-from-top-5 duration-300"
           style={{
             backgroundColor: BRAND_COLORS.darkNavy,
             borderTop: `1px solid ${BRAND_COLORS.softGrey}`
           }}
         >
-          {navItems.map((item, idx) => (
-            <div key={idx}>
-              {item.subItems ? (
-                <>
-                  <button
-                    onClick={() => toggleMobileSubMenu(idx)}
-                    className="flex items-center justify-between w-full px-3 py-3 text-left rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
+          <div className="px-4 py-3 space-y-1">
+            {navItems.map((item, idx) => (
+              <div key={idx}>
+                {item.subItems ? (
+                  <>
+                    <button
+                      onClick={() => toggleMobileSubMenu(idx)}
+                      className="flex items-center justify-between w-full px-3 py-3 text-left rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
+                    >
+                      <span className="text-white font-medium transition-all duration-200 hover:tracking-wide">
+                        {item.title}
+                      </span>
+                      <HiChevronDown className={`w-4 h-4 text-white/70 transform transition-transform duration-300 ${
+                        mobileSubMenuOpen === idx ? 'rotate-180' : ''
+                      }`} />
+                    </button>
+                    
+                    {/* Mobile Submenu */}
+                    {mobileSubMenuOpen === idx && (
+                      <div className="pl-4 space-y-1 ml-2 border-l mb-2"
+                        style={{ borderColor: BRAND_COLORS.softGrey }}>
+                        {item.subItems.map((sub, sidx) => (
+                          <Link
+                            key={sidx}
+                            href={sub.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm"
+                            style={{ color: BRAND_COLORS.lightGrey }}
+                          >
+                            <div className="font-medium transition-all duration-300 hover:text-white hover:pl-2">
+                              {sub.title}
+                            </div>
+                            <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80 hover:pl-2" 
+                                 style={{ color: BRAND_COLORS.softGrey }}>
+                              {sub.description}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-3 rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
                   >
                     <span className="text-white font-medium transition-all duration-200 hover:tracking-wide">
                       {item.title}
                     </span>
-                    <HiChevronDown className={`w-4 h-4 text-white/70 transform transition-transform duration-300 ${
-                      mobileSubMenuOpen === idx ? 'rotate-180' : ''
-                    }`} />
-                  </button>
-                  
-                  {/* Mobile Submenu */}
-                  <div 
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      mobileSubMenuOpen === idx ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <div className="pl-4 space-y-1 ml-2 border-l"
-                      style={{ borderColor: BRAND_COLORS.softGrey }}>
-                      {item.subItems.map((sub, sidx) => (
-                        <Link
-                          key={sidx}
-                          href={sub.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm"
-                          style={{ color: BRAND_COLORS.lightGrey }}
-                        >
-                          <div className="font-medium transition-all duration-300 hover:text-white hover:pl-2">
-                            {sub.title}
-                          </div>
-                          <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80 hover:pl-2" 
-                               style={{ color: BRAND_COLORS.softGrey }}>
-                            {sub.description}
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <Link
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-3 rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
-                >
-                  <span className="text-white font-medium transition-all duration-200 hover:tracking-wide">
-                    {item.title}
-                  </span>
-                </Link>
-              )}
-            </div>
-          ))}
+                  </Link>
+                )}
+              </div>
+            ))}
 
-          {/* Mobile Login/User Section */}
-          <div className="pt-4 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
-            {currentUser ? (
-              <>
-                {/* User Info */}
-                <div className="px-3 py-3 mb-3 rounded-lg transition-all duration-300 hover:shadow-md"
-                  style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                      style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
-                      {(() => {
-                        const UserIcon = getUserIcon();
-                        return <UserIcon className="w-4 h-4 text-white" />;
-                      })()}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white text-sm">
-                        {currentUser.name}
+            {/* Mobile Login/User Section */}
+            <div className="pt-4 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
+              {currentUser ? (
+                <>
+                  {/* User Info */}
+                  <div className="px-3 py-3 mb-3 rounded-lg transition-all duration-300 hover:shadow-md"
+                    style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                        style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
+                        {(() => {
+                          const UserIcon = getUserIcon();
+                          return <UserIcon className="w-4 h-4 text-white" />;
+                        })()}
                       </div>
-                      <div className="text-xs" style={{ color: BRAND_COLORS.lightGrey }}>
-                        {currentUser.role}
+                      <div>
+                        <div className="font-semibold text-white text-sm">
+                          {currentUser.name}
+                        </div>
+                        <div className="text-xs" style={{ color: BRAND_COLORS.lightGrey }}>
+                          {currentUser.role}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Dashboard Links */}
-                <div className="space-y-1 mb-3">
-                  {dashboardItems[currentUser.role]?.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
-                      style={{ color: BRAND_COLORS.lightGrey }}
-                    >
-                      <item.icon className="w-4 h-4 transition-transform duration-300 hover:scale-125" />
-                      <span className="transition-all duration-300 hover:text-white hover:tracking-wide">
-                        {item.title}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Logout Button */}
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95"
-                  style={{
-                    backgroundColor: BRAND_COLORS.deepRed,
-                    color: BRAND_COLORS.white
-                  }}
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setMobileLoginDropdownOpen(!mobileLoginDropdownOpen)}
-                  className="w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95 mb-2"
-                  style={{
-                    backgroundColor: BRAND_COLORS.deepRed,
-                    color: BRAND_COLORS.white
-                  }}
-                >
-                  Login
-                </button>
-
-                {/* Mobile Login Options */}
-                <div 
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    mobileLoginDropdownOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="space-y-1 rounded-lg p-2"
-                    style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}>
-                    {loginItems.map((item, idx) => (
-                      <button
+                  {/* Dashboard Links */}
+                  <div className="space-y-1 mb-3">
+                    {dashboardItems[currentUser.role]?.map((item, idx) => (
+                      <Link
                         key={idx}
-                        onClick={() => handleLoginTypeSelect(item.href)}
-                        className="w-full px-3 py-2 text-left rounded-md transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
+                        style={{ color: BRAND_COLORS.lightGrey }}
                       >
-                        <div className="font-medium text-white text-sm transition-all duration-300 hover:tracking-wide">
+                        <item.icon className="w-4 h-4 transition-transform duration-300 hover:scale-125" />
+                        <span className="transition-all duration-300 hover:text-white hover:tracking-wide">
                           {item.title}
-                        </div>
-                        <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
-                             style={{ color: BRAND_COLORS.softGrey }}>
-                          {item.description}
-                        </div>
-                      </button>
+                        </span>
+                      </Link>
                     ))}
                   </div>
-                </div>
-              </>
-            )}
+
+                  {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95"
+                    style={{
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={toggleMobileLoginDropdown}
+                    className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95 mb-2"
+                    style={{
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <HiLogin className="w-4 h-4" />
+                      <span>Login</span>
+                    </div>
+                    <HiChevronDown className={`w-4 h-4 transition-transform duration-300 ${
+                      mobileLoginDropdownOpen ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+
+                  {/* Mobile Login Options */}
+                  {mobileLoginDropdownOpen && (
+                    <div 
+                      className="space-y-1 rounded-lg p-2 mb-2 animate-in slide-in-from-top-5 duration-300"
+                      style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}
+                    >
+                      {loginItems.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleLoginTypeSelect(item.href)}
+                          className="w-full px-3 py-2 text-left rounded-md transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
+                        >
+                          <div className="font-medium text-white text-sm transition-all duration-300 hover:tracking-wide">
+                            {item.title}
+                          </div>
+                          <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
+                               style={{ color: BRAND_COLORS.softGrey }}>
+                            {item.description}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 }

@@ -142,20 +142,38 @@ export default function CoursesPage() {
             designed to meet international standards.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-6 mb-12">
-            <div className="flex items-center">
-              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
-              <span className="font-medium">International Standards</span>
-            </div>
-            <div className="flex items-center">
-              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
-              <span className="font-medium">Hands-on Training</span>
-            </div>
-            <div className="flex items-center">
-              <HiCheckCircle className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
-              <span className="font-medium">Industry Certification</span>
-            </div>
-          </div>
+        <div className="flex flex-col items-center sm:flex-row sm:justify-center gap-4 sm:gap-6 mb-12">
+  {/* Item 1 */}
+  <div className="w-full flex justify-center sm:w-auto">
+    <div className="flex items-center gap-2 w-64">
+      <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
+      <span className="font-medium text-center">
+        International Standards
+      </span>
+    </div>
+  </div>
+
+  {/* Item 2 */}
+  <div className="w-full flex justify-center sm:w-auto">
+    <div className="flex items-center gap-2 w-64">
+      <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
+      <span className="font-medium text-center">
+        Hands-on Training
+      </span>
+    </div>
+  </div>
+
+  {/* Item 3 */}
+  <div className="w-full flex justify-center sm:w-auto">
+    <div className="flex items-center gap-2 w-64">
+      <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
+      <span className="font-medium text-center">
+        Industry Certification
+      </span>
+    </div>
+  </div>
+</div>
+
         </motion.div>
 
         {/* Courses Grid - Fixed Height Cards */}

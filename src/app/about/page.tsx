@@ -208,7 +208,7 @@ export default function AboutSection() {
     <section 
   ref={sectionRef}
   id="about"
-  className="relative py-12 sm:py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden"
+  className="relative  py-12 sm:py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden"
 >
   <div className="max-w-7xl mx-auto">
 
@@ -216,7 +216,7 @@ export default function AboutSection() {
     <div className="text-center mb-10 sm:mb-14 md:mb-20">
       <h2
         ref={headingRef}
-        className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1E3A8A] mb-4"
+        className="text-2xl mt-10 sm:text-3xl md:text-4xl font-bold text-[#1E3A8A] mb-4"
       >
         Empowering Young Minds with Technical Skills
       </h2>

@@ -275,12 +275,7 @@ export default function ContactForm() {
           </form>
         </div>
 
-        {/* Footer Note - Centered */}
-        <div className="mt-8 text-center">
-          <p className="text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
-            All fields marked with * are required
-          </p>
-        </div>
+       
       </div>
     </section>
   );
