@@ -111,7 +111,7 @@ const dashboardItems = {
   ]
 };
 
-// User interface - Updated to support different user types
+// User interface
 interface User {
   id?: string;
   name?: string;
@@ -131,31 +131,25 @@ export default function Navbar() {
   const [mobileSubMenuOpen, setMobileSubMenuOpen] = useState<number | null>(null);
   const [mobileLoginDropdownOpen, setMobileLoginDropdownOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLogoVisible, setIsLogoVisible] = useState(false);
   
   const loginDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const loginButtonRef = useRef<HTMLButtonElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
-  const logoTextRef = useRef<HTMLDivElement>(null);
-  const logoContainerRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
-  // Check if user is logged in - Updated to handle different user structures
+  // Check if user is logged in
   useEffect(() => {
     try {
       const userStr = localStorage.getItem('currentUser');
       if (userStr) {
         const userData = JSON.parse(userStr);
-        console.log('User data from localStorage:', userData);
-        
-        // Transform user data to consistent format
         let user: User;
         
         if (userData.role === 'student') {
-          // Handle student data structure
           user = {
             id: userData.id || userData.studentId,
             name: userData.fullName || userData.name || userData.username || 'Student',
@@ -182,7 +176,6 @@ export default function Navbar() {
             createdAt: userData.createdAt
           };
         } else {
-          // Fallback for unknown structure
           user = {
             name: userData.name || userData.fullName || userData.username || 'User',
             email: userData.email,
@@ -192,7 +185,6 @@ export default function Navbar() {
           };
         }
         
-        console.log('Processed user object:', user);
         setCurrentUser(user);
       }
     } catch (error) {
@@ -213,94 +205,16 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Logo animation on mount
-  useEffect(() => {
-    if (logoContainerRef.current && logoTextRef.current) {
-      // Reset initial state
-      gsap.set(logoContainerRef.current, {
-        width: '60px',
-        borderRadius: '30px',
-        overflow: 'hidden'
-      });
-      
-      gsap.set(logoTextRef.current, {
-        opacity: 0,
-        x: 100
-      });
-      
-      // Animate slider opening
-      const timeline = gsap.timeline({ delay: 0.5 });
-      
-      timeline
-        .to(logoContainerRef.current, {
-          width: '200px',
-          borderRadius: '30px',
-          duration: 0.8,
-          ease: "power2.out"
-        })
-        .to(logoTextRef.current, {
-          opacity: 1,
-          x: 0,
-          duration: 0.6,
-          ease: "back.out(1.2)"
-        }, "-=0.4")
-        .call(() => setIsLogoVisible(true));
-    }
-  }, []);
-
-  // Animate dropdowns
-  const animateDropdown = (element: HTMLElement, show: boolean) => {
-    if (show) {
-      gsap.fromTo(
-        element,
-        {
-          opacity: 0,
-          y: -10,
-          scale: 0.95
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.2,
-          ease: "back.out(1.2)"
-        }
-      );
-    } else {
-      gsap.to(element, {
-        opacity: 0,
-        y: -10,
-        scale: 0.95,
-        duration: 0.15,
-        ease: "power2.in"
-      });
-    }
-  };
-
-  // Handle navigation
-  const handleNavClick = useCallback((href: string) => {
-    router.push(href);
-    setMobileMenuOpen(false);
-  }, [router]);
-
   // Login dropdown click handler
   const handleLoginClick = useCallback(() => {
     if (currentUser) {
       const newState = !userDropdownOpen;
       setUserDropdownOpen(newState);
       setLoginDropdownOpen(false);
-      
-      if (userDropdownRef.current && newState) {
-        animateDropdown(userDropdownRef.current, true);
-      }
     } else {
       const newState = !loginDropdownOpen;
       setLoginDropdownOpen(newState);
       setUserDropdownOpen(false);
-      
-      if (loginDropdownRef.current && newState) {
-        animateDropdown(loginDropdownRef.current, true);
-      }
     }
   }, [currentUser, userDropdownOpen, loginDropdownOpen]);
 
@@ -326,28 +240,51 @@ export default function Navbar() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
       if (
         loginDropdownRef.current && 
-        !loginDropdownRef.current.contains(event.target as Node) &&
+        !loginDropdownRef.current.contains(target) &&
         loginButtonRef.current && 
-        !loginButtonRef.current.contains(event.target as Node)
+        !loginButtonRef.current.contains(target)
       ) {
         setLoginDropdownOpen(false);
       }
 
       if (
         userDropdownRef.current && 
-        !userDropdownRef.current.contains(event.target as Node) &&
+        !userDropdownRef.current.contains(target) &&
         userButtonRef.current && 
-        !userButtonRef.current.contains(event.target as Node)
+        !userButtonRef.current.contains(target)
       ) {
         setUserDropdownOpen(false);
+      }
+
+      if (
+        mobileMenuRef.current && 
+        mobileMenuOpen && 
+        !mobileMenuRef.current.contains(target) &&
+        !target.closest('button[aria-label="Toggle menu"]')
+      ) {
+        setMobileMenuOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu when pressing Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [mobileMenuOpen]);
 
   // Toggle mobile sub-menu
   const toggleMobileSubMenu = useCallback((index: number) => {
@@ -356,8 +293,9 @@ export default function Navbar() {
 
   // Toggle mobile menu
   const toggleMobileMenu = useCallback(() => {
-    setMobileMenuOpen(!mobileMenuOpen);
-    // Reset mobile dropdowns when closing menu
+    const newState = !mobileMenuOpen;
+    setMobileMenuOpen(newState);
+    
     if (mobileMenuOpen) {
       setMobileSubMenuOpen(null);
       setMobileLoginDropdownOpen(false);
@@ -381,18 +319,16 @@ export default function Navbar() {
     }
   }, [currentUser]);
 
-  // Get user display name - FIXED: Safe handling of name
+  // Get user display name
   const getUserDisplayName = useCallback(() => {
     if (!currentUser) return '';
     
-    // Try different possible name fields
     const name = currentUser.name || 
                  currentUser.fullName || 
                  currentUser.username || 
                  currentUser.email?.split('@')[0] || 
                  'User';
     
-    // Safely get first name
     if (typeof name === 'string' && name.trim() !== '') {
       const firstName = name.split(' ')[0];
       return firstName;
@@ -401,7 +337,7 @@ export default function Navbar() {
     return 'User';
   }, [currentUser]);
 
-  // Get user email - Safe handling
+  // Get user email
   const getUserEmail = useCallback(() => {
     if (!currentUser) return '';
     return currentUser.email || currentUser.username || 'No email provided';
@@ -435,20 +371,49 @@ export default function Navbar() {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo with Slider Animation */}
-        <Link href="/" className="flex items-center">
-  <div className="flex items-center">
-    <div className="h-[60px] w-[60px] sm:h-[80px] sm:w-[80px] flex items-center justify-center">
-      <img
-        src="/newlogo.jpg" // PNG with transparent background
-        alt="Mansol Logo"
-        className="h-full w-auto object-contain"
-      />
-    </div>
-  </div>
-</Link>
+        <div className="flex justify-between items-center h-16 md:h-20">
+          {/* Logo - Hidden on mobile, shown on desktop */}
+          <Link href="/" className="hidden lg:flex items-center">
+            <div className="flex items-center">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-[60px] md:w-[60px] flex items-center justify-center">
+                <img
+                  src="/newlogo.jpg"
+                  alt="Mansol Logo"
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+            </div>
+          </Link>
 
+          {/* Mobile Navigation Header */}
+          <div className="lg:hidden flex items-center justify-between w-full">
+            {/* Mobile Menu Button - Left Side */}
+            <button
+              onClick={toggleMobileMenu}
+              className="p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <HiX className="w-6 h-6 text-white transition-transform duration-300" />
+              ) : (
+                <HiMenu className="w-6 h-6 text-white transition-transform duration-300" />
+              )}
+            </button>
+
+            {/* Mobile Logo - Center */}
+            <Link href="/" className="flex items-center">
+              <div className="h-10 w-10 flex items-center justify-center">
+                <img
+                  src="/newlogo.jpg"
+                  alt="Mansol Logo"
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+            </Link>
+
+            {/* Placeholder for alignment */}
+            <div className="w-10"></div>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
@@ -519,10 +484,10 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Right Side - Login/User Button */}
-          <div className="flex items-center space-x-4">
+          {/* Right Side - Desktop Login/User Button */}
+          <div className="hidden lg:flex items-center space-x-4">
             {currentUser ? (
-              <div className="hidden lg:block relative">
+              <div className="relative">
                 <button
                   ref={userButtonRef}
                   onClick={handleLoginClick}
@@ -621,7 +586,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="hidden lg:block relative">
+              <div className="relative">
                 <button
                   ref={loginButtonRef}
                   onClick={handleLoginClick}
@@ -668,190 +633,218 @@ export default function Navbar() {
                 )}
               </div>
             )}
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={toggleMobileMenu}
-              className="lg:hidden p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <HiX className="w-6 h-6 text-white transition-transform duration-300 rotate-0" />
-              ) : (
-                <HiMenu className="w-6 h-6 text-white transition-transform duration-300" />
-              )}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - SLIDE FROM LEFT ONLY */}
       {mobileMenuOpen && (
-        <div
-          className="lg:hidden absolute top-20 left-0 right-0 shadow-xl animate-in slide-in-from-top-5 duration-300"
-          style={{
-            backgroundColor: BRAND_COLORS.darkNavy,
-            borderTop: `1px solid ${BRAND_COLORS.softGrey}`
-          }}
-        >
-          <div className="px-4 py-3 space-y-1">
-            {navItems.map((item, idx) => (
-              <div key={idx}>
-                {item.subItems ? (
-                  <>
-                    <button
-                      onClick={() => toggleMobileSubMenu(idx)}
-                      className="flex items-center justify-between w-full px-3 py-3 text-left rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
+        <>
+          {/* Backdrop Overlay */}
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          
+          {/* Slide-in Menu from Left */}
+          <div
+            ref={mobileMenuRef}
+            className="lg:hidden fixed top-0 bottom-0 left-0 w-full max-w-xs shadow-2xl z-50 overflow-y-auto animate-in slide-in-from-left duration-300"
+            style={{
+              backgroundColor: BRAND_COLORS.darkNavy,
+              borderRight: `1px solid ${BRAND_COLORS.softGrey}`,
+            }}
+          >
+            {/* Menu Header */}
+            <div className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
+                 style={{ 
+                   backgroundColor: BRAND_COLORS.darkNavy,
+                   borderColor: BRAND_COLORS.softGrey 
+                 }}>
+           
+              
+              {/* Close Button */}
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-95"
+                aria-label="Close menu"
+              >
+                <HiX className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <div className="px-4 py-6 space-y-1">
+              {navItems.map((item, idx) => (
+                <div key={idx} className="border-b border-white/10 pb-1 last:border-0">
+                  {item.subItems ? (
+                    <>
+                      <button
+                        onClick={() => toggleMobileSubMenu(idx)}
+                        className="flex items-center justify-between w-full px-3 py-3 text-left rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <item.icon className="w-5 h-5 text-white/70" />
+                          <span className="text-white font-medium text-base transition-all duration-200">
+                            {item.title}
+                          </span>
+                        </div>
+                        <HiChevronDown className={`w-5 h-5 text-white/70 transform transition-transform duration-300 ${
+                          mobileSubMenuOpen === idx ? 'rotate-180' : ''
+                        }`} />
+                      </button>
+                      
+                      {/* Mobile Submenu */}
+                      {mobileSubMenuOpen === idx && (
+                        <div className="pl-10 pr-3 space-y-2 mt-1 mb-2 animate-in slide-in-from-top-5 duration-200">
+                          {item.subItems.map((sub, sidx) => (
+                            <Link
+                              key={sidx}
+                              href={sub.href}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="block px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/5 hover:shadow-sm border-l-2 border-white/20"
+                              style={{ color: BRAND_COLORS.lightGrey }}
+                            >
+                              <div className="font-medium text-sm transition-all duration-300 hover:text-white">
+                                {sub.title}
+                              </div>
+                              <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
+                                   style={{ color: BRAND_COLORS.softGrey }}>
+                                {sub.description}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98] block"
                     >
-                      <span className="text-white font-medium transition-all duration-200 hover:tracking-wide">
+                      <item.icon className="w-5 h-5 text-white/70" />
+                      <span className="text-white font-medium text-base transition-all duration-200">
                         {item.title}
                       </span>
-                      <HiChevronDown className={`w-4 h-4 text-white/70 transform transition-transform duration-300 ${
-                        mobileSubMenuOpen === idx ? 'rotate-180' : ''
+                    </Link>
+                  )}
+                </div>
+              ))}
+
+              {/* Mobile Login/User Section */}
+              <div className="pt-4 mt-3 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
+                {currentUser ? (
+                  <>
+                    {/* User Info */}
+                    <div className="px-3 py-3 mb-3 rounded-lg transition-all duration-300 hover:shadow-md"
+                      style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+                          style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
+                          {(() => {
+                            const UserIcon = getUserIcon();
+                            return <UserIcon className="w-5 h-5 text-white" />;
+                          })()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-white text-sm">
+                            {getUserDisplayName()}
+                          </div>
+                          <div className="text-xs mt-0.5" style={{ color: BRAND_COLORS.lightGrey }}>
+                            {getUserEmail()}
+                          </div>
+                          <div className="mt-1.5">
+                            <span className="text-xs px-2 py-1 rounded-full capitalize transition-all duration-300"
+                              style={{ 
+                                backgroundColor: `${BRAND_COLORS.darkRoyalBlue}40`,
+                                color: BRAND_COLORS.lightGrey
+                              }}>
+                              {currentUser.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dashboard Links */}
+                    <div className="space-y-1 mb-3">
+                      {dashboardItems[currentUser.role]?.map((item, idx) => (
+                        <Link
+                          key={idx}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98]"
+                          style={{ color: BRAND_COLORS.lightGrey }}
+                        >
+                          <item.icon className="w-4 h-4 transition-transform duration-300" />
+                          <span className="transition-all duration-300 hover:text-white">
+                            {item.title}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+
+                    {/* Logout Button */}
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 flex items-center justify-center space-x-2"
+                      style={{
+                        backgroundColor: BRAND_COLORS.deepRed,
+                        color: BRAND_COLORS.white
+                      }}
+                    >
+                      <HiLogout className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={toggleMobileLoginDropdown}
+                      className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 mb-2"
+                      style={{
+                        backgroundColor: BRAND_COLORS.deepRed,
+                        color: BRAND_COLORS.white
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <HiLogin className="w-4 h-4" />
+                        <span>Login</span>
+                      </div>
+                      <HiChevronDown className={`w-4 h-4 transition-transform duration-300 ${
+                        mobileLoginDropdownOpen ? 'rotate-180' : ''
                       }`} />
                     </button>
-                    
-                    {/* Mobile Submenu */}
-                    {mobileSubMenuOpen === idx && (
-                      <div className="pl-4 space-y-1 ml-2 border-l mb-2"
-                        style={{ borderColor: BRAND_COLORS.softGrey }}>
-                        {item.subItems.map((sub, sidx) => (
-                          <Link
-                            key={sidx}
-                            href={sub.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="block px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm"
-                            style={{ color: BRAND_COLORS.lightGrey }}
+
+                    {/* Mobile Login Options */}
+                    {mobileLoginDropdownOpen && (
+                      <div 
+                        className="space-y-2 rounded-lg p-2 mb-3 animate-in slide-in-from-top-5 duration-300"
+                        style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}
+                      >
+                        {loginItems.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleLoginTypeSelect(item.href)}
+                            className="w-full px-3 py-2 text-left rounded-lg transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98]"
                           >
-                            <div className="font-medium transition-all duration-300 hover:text-white hover:pl-2">
-                              {sub.title}
+                            <div className="font-medium text-white text-sm transition-all duration-300">
+                              {item.title}
                             </div>
-                            <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80 hover:pl-2" 
+                            <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
                                  style={{ color: BRAND_COLORS.softGrey }}>
-                              {sub.description}
+                              {item.description}
                             </div>
-                          </Link>
+                          </button>
                         ))}
                       </div>
                     )}
                   </>
-                ) : (
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-3 rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
-                  >
-                    <span className="text-white font-medium transition-all duration-200 hover:tracking-wide">
-                      {item.title}
-                    </span>
-                  </Link>
                 )}
               </div>
-            ))}
-
-            {/* Mobile Login/User Section */}
-            <div className="pt-4 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
-              {currentUser ? (
-                <>
-                  {/* User Info */}
-                  <div className="px-3 py-3 mb-3 rounded-lg transition-all duration-300 hover:shadow-md"
-                    style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                        style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
-                        {(() => {
-                          const UserIcon = getUserIcon();
-                          return <UserIcon className="w-4 h-4 text-white" />;
-                        })()}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white text-sm">
-                          {getUserDisplayName()}
-                        </div>
-                        <div className="text-xs" style={{ color: BRAND_COLORS.lightGrey }}>
-                          {currentUser.role}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dashboard Links */}
-                  <div className="space-y-1 mb-3">
-                    {dashboardItems[currentUser.role]?.map((item, idx) => (
-                      <Link
-                        key={idx}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 px-3 py-2 rounded-md text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
-                        style={{ color: BRAND_COLORS.lightGrey }}
-                      >
-                        <item.icon className="w-4 h-4 transition-transform duration-300 hover:scale-125" />
-                        <span className="transition-all duration-300 hover:text-white hover:tracking-wide">
-                          {item.title}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Logout Button */}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95"
-                    style={{
-                      backgroundColor: BRAND_COLORS.deepRed,
-                      color: BRAND_COLORS.white
-                    }}
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={toggleMobileLoginDropdown}
-                    className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg font-medium transition-all duration-300 hover:shadow-lg active:scale-95 mb-2"
-                    style={{
-                      backgroundColor: BRAND_COLORS.deepRed,
-                      color: BRAND_COLORS.white
-                    }}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <HiLogin className="w-4 h-4" />
-                      <span>Login</span>
-                    </div>
-                    <HiChevronDown className={`w-4 h-4 transition-transform duration-300 ${
-                      mobileLoginDropdownOpen ? 'rotate-180' : ''
-                    }`} />
-                  </button>
-
-                  {/* Mobile Login Options */}
-                  {mobileLoginDropdownOpen && (
-                    <div 
-                      className="space-y-1 rounded-lg p-2 mb-2 animate-in slide-in-from-top-5 duration-300"
-                      style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}
-                    >
-                      {loginItems.map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleLoginTypeSelect(item.href)}
-                          className="w-full px-3 py-2 text-left rounded-md transition-all duration-300 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
-                        >
-                          <div className="font-medium text-white text-sm transition-all duration-300 hover:tracking-wide">
-                            {item.title}
-                          </div>
-                          <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
-                               style={{ color: BRAND_COLORS.softGrey }}>
-                            {item.description}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
-        </div>
+        </>
       )}
     </nav>
   );

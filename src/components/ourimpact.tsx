@@ -28,12 +28,12 @@ export default function AboutSection() {
         gsap.set(elementsToClear, { clearProps: "all" });
       }
 
-      // Section entrance
+      // Section entrance - FIXED: Remove horizontal movement
       if (sectionRef.current) {
         gsap.fromTo(sectionRef.current,
           { 
             opacity: 0,
-            y: 30
+            y: 50 // Only vertical movement
           },
           {
             opacity: 1,
@@ -42,72 +42,50 @@ export default function AboutSection() {
             ease: 'power2.out',
             scrollTrigger: {
               trigger: sectionRef.current,
-              start: 'top 90%',
+              start: 'top 85%', // Start earlier
+              end: 'bottom 50%',
               toggleActions: 'play none none reverse',
             },
           }
         );
       }
 
-      // Heading animation
+      // Heading animation - FIXED: Only fade and vertical
       if (headingRef.current) {
         gsap.fromTo(headingRef.current,
           {
-            x: -80,
+            y: 30, // Changed from x to y
             opacity: 0
           },
           {
-            x: 0,
+            y: 0,
             opacity: 1,
-            duration: 1,
-            ease: 'power3.out',
+            duration: 0.8,
+            ease: 'power2.out',
             scrollTrigger: {
               trigger: headingRef.current,
-              start: 'top 85%',
+              start: 'top 90%',
               toggleActions: 'play none none reverse',
             }
           }
         );
       }
 
-      // Description animation
+      // Description animation - FIXED: Only fade and vertical
       if (descriptionRef.current) {
         gsap.fromTo(descriptionRef.current,
           {
-            x: 80,
+            y: 40, // Changed from x to y
             opacity: 0
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 1,
-            ease: 'power3.out',
-            delay: 0.2,
-            scrollTrigger: {
-              trigger: descriptionRef.current,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      }
-
-      // Image animation
-      if (imageRef.current) {
-        gsap.fromTo(imageRef.current,
-          {
-            y: 80,
-            opacity: 0,
-            scale: 0.95
           },
           {
             y: 0,
             opacity: 1,
-            scale: 1,
-            duration: 1,
-            ease: 'back.out(1.2)',
+            duration: 0.8,
+            delay: 0.1,
+            ease: 'power2.out',
             scrollTrigger: {
-              trigger: imageRef.current,
+              trigger: descriptionRef.current,
               start: 'top 90%',
               toggleActions: 'play none none reverse'
             }
@@ -115,22 +93,45 @@ export default function AboutSection() {
         );
       }
 
-      // Content animation
+      // Image animation - FIXED: Remove excessive y movement
+      if (imageRef.current) {
+        gsap.fromTo(imageRef.current,
+          {
+            y: 60, // Reduced from 80
+            opacity: 0,
+            scale: 0.98
+          },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.9,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: imageRef.current,
+              start: 'top 85%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+      }
+
+      // Content animation - FIXED: Simpler staggered animation
       if (contentRef.current) {
         gsap.fromTo(contentRef.current.children,
           {
-            y: 40,
+            y: 20,
             opacity: 0
           },
           {
             y: 0,
             opacity: 1,
-            duration: 0.6,
-            stagger: 0.1,
+            duration: 0.5,
+            stagger: 0.08, // Reduced stagger
             ease: 'power2.out',
             scrollTrigger: {
               trigger: contentRef.current,
-              start: 'top 85%',
+              start: 'top 80%',
               toggleActions: 'play none none reverse'
             }
           }
@@ -195,9 +196,6 @@ export default function AboutSection() {
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                   quality={90}
                 />
-                
-                {/* Overlay with unique design */}
-                
               </div>
 
               {/* Decorative corner elements */}
@@ -207,50 +205,56 @@ export default function AboutSection() {
           </div>
 
           {/* Content section - Right side */}
-         <div className="lg:w-1/2">
-  <div ref={contentRef} className="h-full flex flex-col justify-center">
-    {/* Main heading */}
-    <div className="mb-8">
-      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 relative inline-block">
-        Why Choose TechSafe Education?
-        <span className="absolute -bottom-1 left-0 w-24 h-1 bg-red-700 rounded-full" />
-      </h3>
-      <p className="text-gray-700 text-lg">
-        We focus on quality, safety, and long-term value for students.
-      </p>
-    </div>
+          <div className="lg:w-1/2">
+            <div ref={contentRef} className="h-full flex flex-col justify-center">
+              {/* Main heading */}
+              <div className="mb-8">
+                <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 relative inline-block">
+                  Why Choose TechSafe Education?
+                  <span className="absolute -bottom-1 left-0 w-24 h-1 bg-red-700 rounded-full" />
+                </h3>
+                <p className="text-gray-700 text-lg">
+                  We focus on quality, safety, and long-term value for students.
+                </p>
+              </div>
 
- {/* Benefits list */}
-<div className="space-y-4 mb-10">
-  {[
-    "Industry-aligned curriculum with practical exposure",
-    "Certified and experienced instructors",
-    "Focus on safety standards and professional ethics",
-    "Career-oriented training and recognized certifications"
-  ].map((item, index) => (
-    <div
-      key={index}
-      className="flex items-start gap-3 p-2"
-    >
-      {/* Simple marker */}
-      <div className="flex-shrink-0 mt-1">
-        <div className="w-3 h-3 rounded-full bg-red-700" />
-      </div>
+              {/* Benefits list */}
+              <div className="space-y-4 mb-10">
+                {[
+                  "Industry-aligned curriculum with practical exposure",
+                  "Certified and experienced instructors",
+                  "Focus on safety standards and professional ethics",
+                  "Career-oriented training and recognized certifications"
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-2"
+                  >
+                    {/* Simple marker */}
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-3 h-3 rounded-full bg-red-700" />
+                    </div>
 
-      {/* Text */}
-      <span className="text-gray-800 font-medium text-base">
-        {item}
-      </span>
-    </div>
-  ))}
-</div>
+                    {/* Text */}
+                    <span className="text-gray-800 font-medium text-base">
+                      {item}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-  </div>
-</div>
-
+              {/* CTA Button - Optional */}
+              <div className="mt-8">
+                <button
+                  className="px-8 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D] text-white font-semibold rounded-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  onClick={() => window.location.href = '/courses'}
+                >
+                  Explore Our Courses
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-
-      
       </div>
     </section>
   );
