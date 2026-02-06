@@ -97,9 +97,7 @@ const loginItems = [
 // Dashboard items
 const dashboardItems = {
   student: [
-    { title: 'My Courses', href: '/dashboard/courses', icon: HiBookOpen },
-    { title: 'Progress', href: '/dashboard/progress', icon: HiAcademicCap },
-    { title: 'Profile', href: '/dashboard/profile', icon: HiUserCircle }
+    { title: 'Dashboard', href: '/lms/Student_Portal', icon: HiBookOpen },
   ],
   instructor: [
     { title: 'My Classes', href: '/dashboard/classes', icon: HiBookOpen },
@@ -113,13 +111,15 @@ const dashboardItems = {
   ]
 };
 
-// User interface
+// User interface - Updated to support different user types
 interface User {
-  id: string;
-  name: string;
-  email: string;
+  id?: string;
+  name?: string;
+  email?: string;
   role: 'student' | 'instructor' | 'admin';
-  createdAt: string;
+  createdAt?: string;
+  fullName?: string;
+  username?: string;
 }
 
 export default function Navbar() {
@@ -143,11 +143,62 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Check if user is logged in
+  // Check if user is logged in - Updated to handle different user structures
   useEffect(() => {
-    const user = localStorage.getItem('currentUser');
-    if (user) {
-      setCurrentUser(JSON.parse(user));
+    try {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        console.log('User data from localStorage:', userData);
+        
+        // Transform user data to consistent format
+        let user: User;
+        
+        if (userData.role === 'student') {
+          // Handle student data structure
+          user = {
+            id: userData.id || userData.studentId,
+            name: userData.fullName || userData.name || userData.username || 'Student',
+            email: userData.email || userData.studentEmail,
+            role: 'student',
+            fullName: userData.fullName || userData.name || userData.username,
+            username: userData.username,
+            createdAt: userData.registrationDate || userData.createdAt
+          };
+        } else if (userData.role === 'instructor') {
+          user = {
+            id: userData.id,
+            name: userData.name || userData.email?.split('@')[0] || 'Instructor',
+            email: userData.email,
+            role: 'instructor',
+            createdAt: userData.createdAt
+          };
+        } else if (userData.role === 'admin') {
+          user = {
+            id: userData.id,
+            name: userData.name || 'Admin',
+            email: userData.email,
+            role: 'admin',
+            createdAt: userData.createdAt
+          };
+        } else {
+          // Fallback for unknown structure
+          user = {
+            name: userData.name || userData.fullName || userData.username || 'User',
+            email: userData.email,
+            role: userData.role || 'student',
+            fullName: userData.fullName,
+            username: userData.username
+          };
+        }
+        
+        console.log('Processed user object:', user);
+        setCurrentUser(user);
+      }
+    } catch (error) {
+      console.error('Error parsing user from localStorage:', error);
+      localStorage.removeItem('currentUser');
+      setCurrentUser(null);
     }
   }, []);
 
@@ -330,10 +381,30 @@ export default function Navbar() {
     }
   }, [currentUser]);
 
-  // Get user display name
+  // Get user display name - FIXED: Safe handling of name
   const getUserDisplayName = useCallback(() => {
     if (!currentUser) return '';
-    return currentUser.name.split(' ')[0];
+    
+    // Try different possible name fields
+    const name = currentUser.name || 
+                 currentUser.fullName || 
+                 currentUser.username || 
+                 currentUser.email?.split('@')[0] || 
+                 'User';
+    
+    // Safely get first name
+    if (typeof name === 'string' && name.trim() !== '') {
+      const firstName = name.split(' ')[0];
+      return firstName;
+    }
+    
+    return 'User';
+  }, [currentUser]);
+
+  // Get user email - Safe handling
+  const getUserEmail = useCallback(() => {
+    if (!currentUser) return '';
+    return currentUser.email || currentUser.username || 'No email provided';
   }, [currentUser]);
 
   // Check if link is active
@@ -366,22 +437,18 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo with Slider Animation */}
-          <Link href="/" className="flex items-center">
-           <div className="flex items-center">
-<div className="flex items-center">
-  <div className="h-[60px] w-[60px] sm:h-[80px] sm:w-[80px] flex items-center justify-center">
-    <img
-      src="/abc.png"        // PNG with transparent background
-      alt="Mansol Logo"
-      className="h-full w-auto object-contain"
-      style={{ filter: "brightness(0) invert(1)" }} // turns dark text to white
-    />
+        <Link href="/" className="flex items-center">
+  <div className="flex items-center">
+    <div className="h-[60px] w-[60px] sm:h-[80px] sm:w-[80px] flex items-center justify-center">
+      <img
+        src="/newlogo.jpg" // PNG with transparent background
+        alt="Mansol Logo"
+        className="h-full w-auto object-contain"
+      />
+    </div>
   </div>
-</div>
+</Link>
 
-</div>
-
-          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
@@ -498,10 +565,10 @@ export default function Navbar() {
                         </div>
                         <div>
                           <div className="font-semibold text-white text-sm">
-                            {currentUser.name}
+                            {getUserDisplayName()}
                           </div>
                           <div className="text-xs" style={{ color: BRAND_COLORS.lightGrey }}>
-                            {currentUser.email}
+                            {getUserEmail()}
                           </div>
                           <div className="mt-1">
                             <span className="text-xs px-2 py-0.5 rounded-full capitalize transition-all duration-300 hover:scale-105"
@@ -699,7 +766,7 @@ export default function Navbar() {
                       </div>
                       <div>
                         <div className="font-semibold text-white text-sm">
-                          {currentUser.name}
+                          {getUserDisplayName()}
                         </div>
                         <div className="text-xs" style={{ color: BRAND_COLORS.lightGrey }}>
                           {currentUser.role}

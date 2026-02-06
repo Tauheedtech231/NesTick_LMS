@@ -1,7 +1,7 @@
 // app/lms/Student_Portal/layout.tsx
 'use client'
 
-import Sidebar from './components/Sidebar'
+
 import { initializeDemoData } from './utils/demoData'
 import { useEffect } from 'react'
 
@@ -16,7 +16,7 @@ export default function StudentPortalLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+    
 
       <main className="flex-1 md:ml-64">
         <div className="mobile-content md:mobile-content-none">

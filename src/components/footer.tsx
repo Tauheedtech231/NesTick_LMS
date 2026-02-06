@@ -1,312 +1,151 @@
 "use client";
 
-import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa";
-import { IoMailOutline, IoCallOutline, IoLocationOutline } from "react-icons/io5";
-import { useState } from "react";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaTiktok,
+} from "react-icons/fa";
 
 export default function Footer() {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
-
-  const quickLinks = [
-    { name: "Home", href: "#" },
-    { name: "About", href: "#" },
-    { name: "Contact", href: "#" },
-  ];
-
-  const trainingPrograms = [
-    { name: "Pipe Fitter", href: "#" },
-    { name: "Safety Inspector", href: "#" },
-    { name: "Welding", href: "#" },
-  ];
-
-  const contactInfo = [
-    {
-      icon: <IoCallOutline />,
-      title: "Phone",
-      details: [
-        { text: "+92 300 1234567", href: "tel:+923001234567" },
-      ]
-    },
-    {
-      icon: <IoMailOutline />,
-      title: "Email",
-      details: [
-        { text: "info@mansolhab.edu.pk", href: "mailto:info@mansolhab.edu.pk" },
-      ]
-    }
-  ];
-
-  const socialLinks = [
-    {
-      icon: <FaFacebookF />,
-      href: "https://web.facebook.com/profile.php?id=61567152315949",
-      label: "Facebook"
-    },
-    {
-      icon: <FaInstagram />,
-      href: "https://www.instagram.com/mansol.hab.training.services/",
-      label: "Instagram"
-    },
-    {
-      icon: <FaLinkedinIn />,
-      href: "https://www.linkedin.com/in/mansol-hab-traning-services-b7b4b1296/",
-      label: "LinkedIn"
-    }
-  ];
-
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
   return (
-    <footer className="bg-[#0B1C3D] text-white pt-8 pb-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Mobile View - Compact */}
-        <div className="lg:hidden">
-          
-          {/* Brand Section - Always Visible */}
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-1">MANSOL HAB</h2>
-            <p className="text-[#E5E7EB] text-xs mb-3">
-              School of Skills Development
-            </p>
-            
-            {/* Social Links - Small */}
-            <div className="flex space-x-3 mb-4">
-              {socialLinks.map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={social.label}
-                  className="w-8 h-8 rounded-full bg-[#1F2933] flex items-center justify-center 
-                           text-[#E5E7EB] hover:bg-[#B11217] hover:text-white 
-                           transition-colors duration-300 text-sm"
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
-          </div>
+    <footer className="bg-gradient-to-r from-[#0f1220] via-[#15192f] to-[#0f1220] text-white">
+      <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 
-          {/* Quick Links - Accordion */}
-          <div className="mb-4">
-            <button
-              onClick={() => toggleSection('quicklinks')}
-              className="w-full flex justify-between items-center py-2 border-b border-[#1F2933]"
-            >
-              <span className="text-sm font-medium">Quick Links</span>
-              <span className="text-[#E5E7EB]">
-                {expandedSection === 'quicklinks' ? '−' : '+'}
-              </span>
-            </button>
-            {expandedSection === 'quicklinks' && (
-              <ul className="space-y-2 pt-2">
-                {quickLinks.map((link, index) => (
-                  <li key={index}>
-                    <a
-                      href={link.href}
-                      className="text-[#E5E7EB] hover:text-[#B11217] text-sm block py-1"
-                    >
-                      {link.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Courses - Accordion */}
-          <div className="mb-4">
-            <button
-              onClick={() => toggleSection('courses')}
-              className="w-full flex justify-between items-center py-2 border-b border-[#1F2933]"
-            >
-              <span className="text-sm font-medium">Courses</span>
-              <span className="text-[#E5E7EB]">
-                {expandedSection === 'courses' ? '−' : '+'}
-              </span>
-            </button>
-            {expandedSection === 'courses' && (
-              <ul className="space-y-2 pt-2">
-                {trainingPrograms.map((program, index) => (
-                  <li key={index}>
-                    <a
-                      href={program.href}
-                      className="text-[#E5E7EB] hover:text-[#B11217] text-sm block py-1"
-                    >
-                      {program.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Contact Info - Compact */}
-          <div className="mb-4">
-            <div className="space-y-3">
-              {contactInfo.map((info, index) => (
-                <div key={index} className="flex items-start">
-                  <div className="text-[#E5E7EB] mr-2 mt-0.5 text-sm">
-                    {info.icon}
-                  </div>
-                  <div>
-                    {info.details.map((detail, idx) => (
-                      detail.href.startsWith('tel:') || detail.href.startsWith('mailto:') ? (
-                        <a
-                          key={idx}
-                          href={detail.href}
-                          className="text-[#E5E7EB] hover:text-[#B11217] text-xs block"
-                        >
-                          {detail.text}
-                        </a>
-                      ) : (
-                        <p key={idx} className="text-[#E5E7EB] text-xs">
-                          {detail.text}
-                        </p>
-                      )
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Desktop View - Full */}
-        <div className="hidden lg:grid grid-cols-4 gap-8 mb-8">
-          
-          {/* Brand Section */}
+          {/* Logo & About */}
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2">MANSOL HAB</h2>
-              <p className="text-[#E5E7EB] text-sm">
-                School of Skills Development
-              </p>
-            </div>
-            
-            <p className="text-[#E5E7EB] text-sm mb-6">
-              Excellence in technical and safety training.
+            <img
+              src="/newlogo.jpg"
+              alt="MansolHab Logo"
+              className="w-48 mb-6"
+            />
+
+            <p className="text-gray-300 text-sm leading-relaxed mb-6">
+              Excellence in education since 2005. <br />
+              Shaping future leaders through quality education and character building.
             </p>
-            
-            {/* Social Links */}
-            <div className="flex space-x-4">
-              {socialLinks.map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={social.label}
-                  className="w-10 h-10 rounded-full bg-[#1F2933] flex items-center justify-center 
-                           text-[#E5E7EB] hover:bg-[#B11217] hover:text-white 
-                           transition-colors duration-300"
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
+
+            {/* Social Icons */}
+           <div className="flex space-x-4">
+  {/* Facebook */}
+  <a
+    href="https://web.facebook.com/profile.php?id=61567152315949"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-10 h-10 flex items-center justify-center rounded-md
+               bg-[#1877F2] text-white
+               transition hover:text-[#B11217]"
+  >
+    <FaFacebookF size={18} />
+  </a>
+
+  {/* Instagram */}
+  <a
+    href="https://www.instagram.com/mansol.hab.training.services/?hl=en"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-10 h-10 flex items-center justify-center rounded-md
+               bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF]
+               text-white transition hover:text-[#B11217]"
+  >
+    <FaInstagram size={18} />
+  </a>
+
+  {/* LinkedIn */}
+  <a
+    href="https://www.linkedin.com/in/mansol-hab-traning-services-b7b4b1296/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-10 h-10 flex items-center justify-center rounded-md
+               bg-[#0A66C2] text-white
+               transition hover:text-[#B11217]"
+  >
+    <FaLinkedinIn size={18} />
+  </a>
+
+  {/* TikTok */}
+  <a
+    href="https://www.tiktok.com/@mansol.skp"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="w-10 h-10 flex items-center justify-center rounded-md
+               bg-black text-white
+               transition hover:text-[#B11217]"
+  >
+    <FaTiktok size={18} />
+  </a>
+</div>
+
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-bold mb-6">Quick Links</h3>
-            <ul className="space-y-3">
-              {quickLinks.map((link, index) => (
-                <li key={index}>
-                  <a
-                    href={link.href}
-                    className="text-[#E5E7EB] hover:text-[#B11217] 
-                             transition-colors duration-300 inline-block text-sm"
-                  >
-                    {link.name}
-                  </a>
+            <h3 className="text-2xl font-semibold mb-6">Quick Links</h3>
+            <ul className="space-y-3 text-gray-300">
+              {["Home", "Courses", "About", "Contact"].map((item) => (
+                <li
+                  key={item}
+                  className="cursor-pointer transition hover:text-[#B11217]"
+                >
+                  • {item}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Training Programs */}
+          {/* Programs */}
           <div>
-            <h3 className="text-lg font-bold mb-6">Courses</h3>
-            <ul className="space-y-3">
-              {trainingPrograms.map((program, index) => (
-                <li key={index}>
-                  <a
-                    href={program.href}
-                    className="text-[#E5E7EB] hover:text-[#B11217] 
-                             transition-colors duration-300 inline-block text-sm"
-                  >
-                    {program.name}
-                  </a>
+            <h3 className="text-2xl font-semibold mb-6">Programs</h3>
+            <ul className="space-y-3 text-gray-300">
+              {[
+                "BOSH (Building Operating System Hardware)",
+                "Fire Safety",
+                "OSHA (Occupational Safety and Health Administration)",
+                "Hole Watcher",
+                "Permit to Work System (PTW System)",
+              ].map((program) => (
+                <li
+                  key={program}
+                  className="transition hover:text-[#B11217]"
+                >
+                  • {program}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Contact Information */}
+          {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-bold mb-6">Contact</h3>
-            <div className="space-y-4">
-              {contactInfo.map((info, index) => (
-                <div key={index} className="flex items-start">
-                  <div className="text-[#E5E7EB] mr-3 mt-1">
-                    {info.icon}
-                  </div>
-                  <div>
-                    <div className="space-y-1">
-                      {info.details.map((detail, idx) => (
-                        detail.href.startsWith('tel:') || detail.href.startsWith('mailto:') ? (
-                          <a
-                            key={idx}
-                            href={detail.href}
-                            className="text-[#E5E7EB] hover:text-[#B11217] 
-                                     transition-colors duration-300 text-sm block"
-                          >
-                            {detail.text}
-                          </a>
-                        ) : (
-                          <p key={idx} className="text-[#E5E7EB] text-sm">
-                            {detail.text}
-                          </p>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+            <h3 className="text-2xl font-semibold mb-6">Contact Info</h3>
+            <ul className="space-y-3 text-gray-300 text-sm">
+              <li><strong className="text-white">General:</strong> 03224700200</li>
+              <li><strong className="text-white">Lahore:</strong> 03104700200</li>
+              <li><strong className="text-white">Sheikhupura:</strong> 03054700202</li>
+              <li><strong className="text-white">Rawalpindi:</strong> 03204700607</li>
 
-        {/* Copyright - Small for mobile */}
-        <div className="border-t border-[#1F2933] pt-4 mt-4">
-          <div className="flex flex-col items-center">
-            <div className="text-[#E5E7EB] text-xs text-center mb-2">
-              © {new Date().getFullYear()} MANSOL HAB. All rights reserved.
-            </div>
-            
-            <div className="flex space-x-4">
-              <a
-                href="#"
-                className="text-[#E5E7EB] hover:text-[#B11217] text-xs"
-              >
-                Privacy
-              </a>
-              <a
-                href="#"
-                className="text-[#E5E7EB] hover:text-[#B11217] text-xs"
-              >
-                Terms
-              </a>
-            </div>
-          </div>
-        </div>
+              <li className="transition hover:text-[#B11217]">
+                <strong className="text-white">Email:</strong> info@mansolhab.com
+              </li>
 
+              <li className="transition hover:text-[#B11217]">
+                <strong className="text-white">WhatsApp:</strong> 03224700200
+              </li>
+
+              <li className="pt-3">
+                <strong className="text-white">Office Hours:</strong><br />
+                Monday to Saturday<br />
+                9 to 5
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-white/10 text-center py-4 text-xs text-gray-400">
+        © {new Date().getFullYear()} MansolHab. All Rights Reserved.
       </div>
     </footer>
   );

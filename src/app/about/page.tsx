@@ -4,89 +4,31 @@ import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { 
-  HiCheckCircle,
-  HiHand,
-  HiAcademicCap,
-  HiLightBulb,
-  HiHeart,
-  HiBriefcase
-} from "react-icons/hi";
 
 gsap.registerPlugin(ScrollTrigger);
-
-const whyChoosePoints = [
-  {
-    title: 'Industry-recognized certifications',
-    icon: HiCheckCircle,
-    color: 'bg-blue-100',
-    textColor: 'text-blue-800',
-  },
-  {
-    title: 'Hands-on practical training',
-    icon: HiHand,
-    color: 'bg-orange-100',
-    textColor: 'text-orange-800',
-  },
-  {
-    title: 'Experienced industry professionals',
-    icon: HiAcademicCap,
-    color: 'bg-green-100',
-    textColor: 'text-green-800',
-  },
-  {
-    title: 'Modern equipment and facilities',
-    icon: HiLightBulb,
-    color: 'bg-purple-100',
-    textColor: 'text-purple-800',
-  },
-  {
-    title: 'Personalized mentorship',
-    icon: HiHeart,
-    color: 'bg-pink-100',
-    textColor: 'text-pink-800',
-  },
-  {
-    title: 'Job placement assistance',
-    icon: HiBriefcase,
-    color: 'bg-indigo-100',
-    textColor: 'text-indigo-800',
-  }
-];
 
 export default function AboutSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
-  // Create refs array properly
-  const pointRefs = useRef<(HTMLDivElement | null)[]>([]);
-  
-  // Initialize refs arrays
-  useEffect(() => {
-    pointRefs.current = pointRefs.current.slice(0, whyChoosePoints.length);
-  }, []);
-
-  const setPointRef = (index: number) => (el: HTMLDivElement | null) => {
-    pointRefs.current[index] = el;
-  };
-
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Clear any existing animations
       const elementsToClear = [
         headingRef.current, 
         descriptionRef.current, 
-        cardRef.current,
-        ...pointRefs.current.filter(Boolean)
+        imageRef.current,
+        contentRef.current
       ].filter(Boolean) as HTMLElement[];
       
       if (elementsToClear.length > 0) {
         gsap.set(elementsToClear, { clearProps: "all" });
       }
 
-      // Smooth entrance for entire section
+      // Section entrance
       if (sectionRef.current) {
         gsap.fromTo(sectionRef.current,
           { 
@@ -107,7 +49,7 @@ export default function AboutSection() {
         );
       }
 
-      // Heading animation - from left
+      // Heading animation
       if (headingRef.current) {
         gsap.fromTo(headingRef.current,
           {
@@ -123,13 +65,12 @@ export default function AboutSection() {
               trigger: headingRef.current,
               start: 'top 85%',
               toggleActions: 'play none none reverse',
-              markers: false
             }
           }
         );
       }
 
-      // Description animation - from right
+      // Description animation
       if (descriptionRef.current) {
         gsap.fromTo(descriptionRef.current,
           {
@@ -151,9 +92,9 @@ export default function AboutSection() {
         );
       }
 
-      // Card animation - from bottom
-      if (cardRef.current) {
-        gsap.fromTo(cardRef.current,
+      // Image animation
+      if (imageRef.current) {
+        gsap.fromTo(imageRef.current,
           {
             y: 80,
             opacity: 0,
@@ -166,7 +107,7 @@ export default function AboutSection() {
             duration: 1,
             ease: 'back.out(1.2)',
             scrollTrigger: {
-              trigger: cardRef.current,
+              trigger: imageRef.current,
               start: 'top 90%',
               toggleActions: 'play none none reverse'
             }
@@ -174,24 +115,21 @@ export default function AboutSection() {
         );
       }
 
-      // Why choose points - staggered animation
-      const validPointRefs = pointRefs.current.filter(Boolean) as HTMLElement[];
-      if (validPointRefs.length > 0) {
-        gsap.fromTo(validPointRefs,
+      // Content animation
+      if (contentRef.current) {
+        gsap.fromTo(contentRef.current.children,
           {
-            x: 40,
-            opacity: 0,
-            scale: 0.9
+            y: 40,
+            opacity: 0
           },
           {
-            x: 0,
+            y: 0,
             opacity: 1,
-            scale: 1,
-            duration: 0.5,
-            stagger: 0.08,
+            duration: 0.6,
+            stagger: 0.1,
             ease: 'power2.out',
             scrollTrigger: {
-              trigger: cardRef.current,
+              trigger: contentRef.current,
               start: 'top 85%',
               toggleActions: 'play none none reverse'
             }
@@ -206,97 +144,114 @@ export default function AboutSection() {
 
   return (
     <section 
-  ref={sectionRef}
-  id="about"
-  className="relative  py-12 sm:py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden"
->
-  <div className="max-w-7xl mx-auto">
-
-    {/* Header */}
-    <div className="text-center mb-10 sm:mb-14 md:mb-20">
-      <h2
-        ref={headingRef}
-        className="text-2xl mt-10 sm:text-3xl md:text-4xl font-bold text-[#1E3A8A] mb-4"
-      >
-        Empowering Young Minds with Technical Skills
-      </h2>
-
-      <div ref={descriptionRef} className="max-w-3xl mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-gray-700 leading-relaxed">
-          TechSafe Education delivers practical, industry-focused technical education.
-          We emphasize hands-on learning and real-world skills in Safety, Civil Engineering,
-          and Cybersecurity to prepare students for professional success.
-        </p>
-      </div>
-    </div>
-
-    {/* Main Card */}
-    <div
-      ref={cardRef}
-      className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-lg"
+      ref={sectionRef}
+      id="about"
+      className="relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden"
     >
-      <div className="flex flex-col lg:flex-row min-h-[450px]">
-
-        {/* Image */}
-        <div className="lg:w-1/2 relative h-64 sm:h-72 md:h-80 lg:h-auto">
-          <Image
-            src="https://images.pexels.com/photos/35872219/pexels-photo-35872219.jpeg"
-            alt="Students learning technical skills"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#0B1C3D]/30 to-transparent" />
-
-          <div className="absolute top-4 left-4 bg-white/90 px-3 py-1.5 rounded-full">
-            <span className="text-sm font-semibold text-[#1E3A8A]">
-              Modern Learning Facility
-            </span>
+      {/* Background decorative elements */}
+      <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-blue-100/20 to-transparent rounded-full -translate-x-32 -translate-y-32" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-blue-100/10 to-transparent rounded-full translate-x-48 translate-y-48" />
+      
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Header with unique underline */}
+        <div className="text-center mb-16 md:mb-24">
+          <div className="inline-block relative">
+            <h2
+              ref={headingRef}
+              className="text-3xl mt-10 sm:text-4xl md:text-4xl font-bold text-[#1E3A8A] mb-6 relative z-10"
+            >
+              Empowering Young Minds with Technical Skills
+            </h2>
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
+            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full" />
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="lg:w-1/2 p-6 sm:p-8 md:p-10 flex flex-col justify-center">
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            Why Choose TechSafe Education?
-          </h3>
-
-          <p className="text-gray-600 text-sm sm:text-base mb-6">
-            We focus on quality, safety, and long-term value for students.
-          </p>
-
-          {/* Dot List (No Icons) */}
-          <ul className="space-y-3 text-sm sm:text-base text-gray-800">
-            <li className="flex items-start gap-3">
-              <span className="text-[#B11217] mt-1">•</span>
-              Industry-aligned curriculum with practical exposure
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#B11217] mt-1">•</span>
-              Certified and experienced instructors
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#B11217] mt-1">•</span>
-              Focus on safety standards and professional ethics
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="text-[#B11217] mt-1">•</span>
-              Career-oriented training and recognized certifications
-            </li>
-          </ul>
-
-          {/* Footer Info */}
-          <div className="mt-8 pt-5 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              Trusted by students • Industry supported • Skill-focused education
+          <div ref={descriptionRef} className="max-w-4xl mx-auto mt-10">
+            <p className="text-lg sm:text-xl text-gray-700 leading-relaxed px-4">
+              TechSafe Education delivers practical, industry-focused technical education.
+              We emphasize hands-on learning and real-world skills in Safety, Civil Engineering,
+              and Cybersecurity to prepare students for professional success.
             </p>
           </div>
         </div>
-      </div>
+
+        {/* Main content - Split layout with unique design */}
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+          {/* Image section - Left side */}
+          <div className="lg:w-1/2">
+            <div 
+              ref={imageRef}
+              className="relative group"
+            >
+              {/* Main image container */}
+              <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-2xl">
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#0B1C3D]/40 via-transparent to-transparent z-10" />
+                <Image
+                  src="https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"
+                  alt="Students learning technical skills at TechSafe Education"
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  quality={90}
+                />
+                
+                {/* Overlay with unique design */}
+                
+              </div>
+
+              {/* Decorative corner elements */}
+              <div className="absolute -top-4 -left-4 w-16 h-16 border-t-2 border-l-2 border-blue-300 rounded-tl-2xl opacity-60" />
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 border-b-2 border-r-2 border-red-300 rounded-br-2xl opacity-60" />
+            </div>
+          </div>
+
+          {/* Content section - Right side */}
+         <div className="lg:w-1/2">
+  <div ref={contentRef} className="h-full flex flex-col justify-center">
+    {/* Main heading */}
+    <div className="mb-8">
+      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 relative inline-block">
+        Why Choose TechSafe Education?
+        <span className="absolute -bottom-1 left-0 w-24 h-1 bg-red-700 rounded-full" />
+      </h3>
+      <p className="text-gray-700 text-lg">
+        We focus on quality, safety, and long-term value for students.
+      </p>
     </div>
 
-  </div>
-</section>
+ {/* Benefits list */}
+<div className="space-y-4 mb-10">
+  {[
+    "Industry-aligned curriculum with practical exposure",
+    "Certified and experienced instructors",
+    "Focus on safety standards and professional ethics",
+    "Career-oriented training and recognized certifications"
+  ].map((item, index) => (
+    <div
+      key={index}
+      className="flex items-start gap-3 p-2"
+    >
+      {/* Simple marker */}
+      <div className="flex-shrink-0 mt-1">
+        <div className="w-3 h-3 rounded-full bg-red-700" />
+      </div>
 
+      {/* Text */}
+      <span className="text-gray-800 font-medium text-base">
+        {item}
+      </span>
+    </div>
+  ))}
+</div>
+
+  </div>
+</div>
+
+        </div>
+
+      
+      </div>
+    </section>
   );
 }

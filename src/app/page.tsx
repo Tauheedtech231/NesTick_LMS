@@ -6,8 +6,10 @@ import dynamic from "next/dynamic"
 import ContactForm from "@/components/query"
 import AboutSection from "@/components/ourimpact"
 import CoursesPage from "./courses/page"
-import TrainersSection from "@/components/tutors"
+
 import TrainersSlider from "@/components/tutors"
+import CoursesTab from "@/components/stats"
+
 
 //Professional skeleton for Hero (prevents late rendering issue)
 const HeroSlider = dynamic(
@@ -31,12 +33,14 @@ export default function Page() {
     <>
       {/* Hero will NEVER appear late now */}
       <HeroSlider />
+    
 
     <AboutSection/>
 
       <CoursesPage/>
 
       <TrainersSlider/>
+      <CoursesTab/>
 
       <ContactForm />
 

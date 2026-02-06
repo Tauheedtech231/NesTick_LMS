@@ -4,8 +4,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   HiUpload, 
-  HiCheckCircle, 
-  HiXCircle,
+  HiCheckCircle,
   HiDocumentText,
   HiPhotograph,
   HiCloudUpload,
@@ -39,8 +38,8 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const allowedFileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-  const maxFileSize = 5 * 1024 * 1024; // 5MB
+  const allowedFileTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+  const maxFileSize = 2 * 1024 * 1024; // 2MB
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -48,28 +47,24 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
 
     // Validate file type
     if (!allowedFileTypes.includes(selectedFile.type)) {
-      alert('Please upload only JPG, PNG, or PDF files');
+      alert('Please upload only JPG or PNG files (max 2MB)');
       return;
     }
 
     // Validate file size
     if (selectedFile.size > maxFileSize) {
-      alert('File size must be less than 5MB');
+      alert('File size must be less than 2MB');
       return;
     }
 
     setFile(selectedFile);
 
-    // Generate preview for images
-    if (selectedFile.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
-    } else {
-      setPreview(null);
-    }
+    // Generate preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
   };
 
   const handleRemoveFile = () => {
@@ -80,34 +75,223 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
     }
   };
 
-  const simulateUpload = () => {
+  // Image compression function
+  const compressImage = (dataUrl: string, maxWidth: number = 800, maxHeight: number = 600, quality: number = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = dataUrl;
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        
+        let width = img.width;
+        let height = img.height;
+        
+        // Calculate new dimensions maintaining aspect ratio
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image with new dimensions
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Determine image format based on original
+        const format = dataUrl.includes('image/png') ? 'image/png' : 'image/jpeg';
+        const compressed = canvas.toDataURL(format, quality);
+        resolve(compressed);
+      };
+      
+      img.onerror = () => {
+        resolve(dataUrl);
+      };
+    });
+  };
+
+  const storeUploadedFileInLocalStorage = async (file: File, previewDataUrl: string | null) => {
+    try {
+      // Get existing uploaded files
+      const existingFilesStr = localStorage.getItem('uploadedFiles');
+      const existingFiles = existingFilesStr ? JSON.parse(existingFilesStr) : [];
+      
+      // Compress image for storage
+      let compressedImage = previewDataUrl;
+      if (previewDataUrl && previewDataUrl.length > 100000) { // If > 100KB
+        compressedImage = await compressImage(previewDataUrl, 800, 600, 0.7);
+      }
+      
+      // Create file object with ALL necessary data
+      const fileToStore = {
+        id: `file-${Date.now()}`,
+        name: file.name,
+        studentName: enrollmentData?.fullName || 'Unknown Student',
+        email: enrollmentData?.email || '',
+        phone: enrollmentData?.phone || '',
+        course: enrollmentData?.course || 'Unknown Course',
+        amount: enrollmentData?.price || 'PKR 25,000',
+        transactionId: transactionId || `TXN-${Date.now()}`,
+        paymentMethod: paymentMethod,
+        paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+        thumbnail: compressedImage, // ACTUAL base64 string
+        hasPreview: !!compressedImage,
+        uploadDate: new Date().toISOString(),
+        enrollmentId: enrollmentData?.enrollmentId || `ENR-${Date.now()}`,
+        // Additional data for admin
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        address: enrollmentData?.address || '',
+        city: enrollmentData?.city || '',
+        education: enrollmentData?.education || '',
+        emergencyContact: enrollmentData?.emergencyContact || '',
+        dateOfBirth: enrollmentData?.dateOfBirth || ''
+      };
+      
+      console.log('📁 File object created:', {
+        studentName: fileToStore.studentName,
+        thumbnailLength: fileToStore.thumbnail ? fileToStore.thumbnail.length : 0,
+        thumbnailType: typeof fileToStore.thumbnail,
+        hasThumbnail: !!fileToStore.thumbnail,
+        fileType: file.type
+      });
+      
+      // Add to array (keep only last 10 files)
+      const updatedFiles = [fileToStore, ...existingFiles].slice(0, 10);
+      
+      // Store in localStorage
+      localStorage.setItem('uploadedFiles', JSON.stringify(updatedFiles));
+      
+      return fileToStore;
+    } catch (error) {
+      console.error('❌ Error storing file:', error);
+      return null;
+    }
+  };
+
+  const storePaymentSubmission = (fileMetadata: any) => {
+    try {
+      // Create payment data
+      const paymentData = {
+        transactionId,
+        paymentMethod,
+        paymentDate: paymentDate || new Date().toISOString().split('T')[0],
+        uploadedAt: new Date().toISOString(),
+        status: 'pending_verification',
+        studentName: enrollmentData?.fullName || 'Unknown',
+        course: enrollmentData?.course || 'Unknown',
+        amount: enrollmentData?.price || 'N/A',
+        email: enrollmentData?.email || '',
+        phone: enrollmentData?.phone || '',
+        fileId: fileMetadata?.id || null,
+        hasFile: !!fileMetadata,
+        // Store screenshot URL if available
+        screenshotUrl: fileMetadata?.thumbnail || null
+      };
+      
+      // Store payment submission
+      localStorage.setItem('paymentSubmission', JSON.stringify(paymentData));
+      
+      console.log('✅ Payment data stored:', {
+        transactionId,
+        studentName: paymentData.studentName
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error storing payment data:', error);
+      
+      // Store minimal data as fallback
+      try {
+        const minimalData = {
+          txn: transactionId,
+          method: paymentMethod,
+          date: paymentDate,
+          student: enrollmentData?.fullName || 'Student',
+          course: enrollmentData?.course || 'Course',
+          status: 'pending'
+        };
+        
+        localStorage.setItem('payment_minimal', JSON.stringify(minimalData));
+        return true;
+      } catch (e) {
+        console.error('Even minimal storage failed:', e);
+        return false;
+      }
+    }
+  };
+
+  const simulateUpload = async () => {
     setIsUploading(true);
     setUploadProgress(0);
 
-    const interval = setInterval(() => {
+    // Simulate progress
+    const progressInterval = setInterval(() => {
       setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          
-          // Store payment data in localStorage
-          const paymentData = {
-            ...enrollmentData,
-            transactionId,
-            paymentMethod,
-            paymentDate: paymentDate || new Date().toISOString(),
-            uploadedAt: new Date().toISOString(),
-            status: 'pending_verification'
-          };
-          localStorage.setItem('paymentSubmission', JSON.stringify(paymentData));
-          
-          // Call onComplete after a delay
-          setTimeout(onComplete, 1000);
-          return 100;
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
         }
         return prev + 10;
       });
-    }, 200);
+    }, 150);
+
+    try {
+      // Store file metadata with thumbnail
+      let fileMetadata = null;
+      if (file && preview) {
+        fileMetadata = await storeUploadedFileInLocalStorage(file, preview);
+        
+        if (!fileMetadata) {
+          throw new Error('Failed to store file metadata');
+        }
+        
+        console.log('✅ File metadata stored successfully:', {
+          id: fileMetadata.id,
+          name: fileMetadata.studentName,
+          thumbnailStored: !!fileMetadata.thumbnail
+        });
+      }
+      
+      // Store payment submission
+      const paymentStored = storePaymentSubmission(fileMetadata);
+      
+      if (!paymentStored) {
+        throw new Error('Failed to store payment data');
+      }
+      
+      // Complete progress
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      console.log('✅ Upload completed successfully!');
+      
+      // Wait a moment then complete
+      setTimeout(() => {
+        onComplete();
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      clearInterval(progressInterval);
+      alert('Upload failed. Please try again.');
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,6 +304,11 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
 
     if (!transactionId.trim()) {
       alert('Please enter your transaction ID');
+      return;
+    }
+
+    if (file.size > maxFileSize) {
+      alert('File is too large. Please upload an image under 2MB.');
       return;
     }
 
@@ -139,6 +328,9 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
             Upload Payment Slip
           </h2>
           <p className="text-gray-600">Upload your payment slip for verification</p>
+          <p className="text-xs text-green-600 mt-1">
+            ✅ PNG and JPG files supported (max 2MB)
+          </p>
         </div>
       </div>
 
@@ -228,7 +420,7 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
         {/* File Upload Area */}
         <div>
           <label className="block text-sm font-medium mb-4 text-gray-700">
-            Payment Slip / Receipt *
+            Payment Slip / Receipt * (JPG/PNG, max 2MB)
           </label>
           
           {!file ? (
@@ -243,13 +435,13 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
                 <span className="text-gray-600"> or drag and drop</span>
               </div>
               <p className="text-sm text-gray-500">
-                PNG, JPG, PDF up to 5MB
+                PNG, JPG up to 2MB
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
                 onChange={handleFileChange}
-                accept=".jpg,.jpeg,.png,.pdf"
+                accept=".jpg,.jpeg,.png"
                 className="hidden"
               />
             </div>
@@ -258,15 +450,14 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
               style={{ borderColor: BRAND_COLORS.softGrey }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  {file.type.startsWith('image/') ? (
-                    <HiPhotograph className="w-8 h-8 mr-3 text-blue-500" />
-                  ) : (
-                    <HiDocumentText className="w-8 h-8 mr-3 text-blue-500" />
-                  )}
+                  <HiPhotograph className="w-8 h-8 mr-3 text-blue-500" />
                   <div>
                     <h4 className="font-medium">{file.name}</h4>
                     <p className="text-sm text-gray-500">
                       {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type.split('/')[1].toUpperCase()}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      ✅ Ready to upload
                     </p>
                   </div>
                 </div>
@@ -298,7 +489,7 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
                 </div>
               </div>
 
-              {preview && file.type.startsWith('image/') && (
+              {preview && (
                 <div className="mt-4">
                   <img
                     src={preview}
@@ -336,7 +527,7 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
             </div>
             <div className="flex items-start">
               <HiCheckCircle className="w-4 h-4 mr-2 mt-0.5 text-green-500 flex-shrink-0" />
-              <span className="text-sm text-gray-600">Amount should match course fee</span>
+              <span className="text-sm text-gray-600">PNG and JPG files are supported</span>
             </div>
           </div>
         </div>

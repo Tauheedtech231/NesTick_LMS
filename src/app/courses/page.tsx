@@ -177,158 +177,191 @@ export default function CoursesPage() {
         </motion.div>
 
         {/* Courses Grid - Fixed Height Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.map((course, index) => (
-            <motion.div
-              key={course.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
-              onMouseEnter={() => setHoveredCard(course.id)}
-              onMouseLeave={() => setHoveredCard(null)}
-              className="relative group flex flex-col"
-            >
-              {/* Featured Badge */}
-              {course.featured && (
-                <div className="absolute top-4 left-4 z-10">
-                  <div className="px-3 py-1 rounded-full flex items-center"
-                    style={{ 
-                      backgroundColor: BRAND_COLORS.deepRed,
-                      color: BRAND_COLORS.white
-                    }}>
-                    <HiStar className="w-3 h-3 mr-1" />
-                    <span className="text-xs font-semibold">Featured</span>
-                  </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+  {courses.map((course, index) => (
+    <motion.div
+      key={course.id}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      whileHover={{ y: -8 }}
+      onMouseEnter={() => setHoveredCard(course.id)}
+      onMouseLeave={() => setHoveredCard(null)}
+      className="relative group flex flex-col"
+    >
+      {/* Featured Badge */}
+      {course.featured && (
+        <div className="absolute top-4 left-4 z-10">
+          <div
+            className="px-3 py-1 rounded-full flex items-center"
+            style={{
+              backgroundColor: BRAND_COLORS.deepRed,
+              color: BRAND_COLORS.white,
+            }}
+          >
+            <HiStar className="w-3 h-3 mr-1" />
+            <span className="text-xs font-semibold">Featured</span>
+          </div>
+        </div>
+      )}
+
+      {/* Course Card */}
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-full border border-gray-100 transition-all duration-300 group-hover:shadow-2xl flex flex-col">
+        
+        {/* ✅ UPDATED IMAGE SECTION */}
+        <div className="relative h-56 sm:h-64 lg:h-72 overflow-hidden">
+          <img
+            src={course.image}
+            alt={course.title}
+            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+
+          {/* Category Badge */}
+          <div className="absolute top-4 right-4">
+            <div className="px-3 py-1 rounded-full backdrop-blur-sm bg-white/90">
+              <span
+                className="text-xs font-semibold"
+                style={{ color: course.color }}
+              >
+                {course.category}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Course Content */}
+        <div className="p-6 flex flex-col flex-grow">
+          {/* Title & Icon */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3
+                className="text-xl font-bold mb-2"
+                style={{ color: BRAND_COLORS.darkNavy }}
+              >
+                {course.title}
+              </h3>
+
+              <div className="flex items-center mb-3">
+                <div className="flex items-center mr-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <HiStar
+                      key={star}
+                      className={`w-4 h-4 ${
+                        star <= Math.floor(course.rating)
+                          ? "text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
                 </div>
-              )}
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: BRAND_COLORS.darkGrey }}
+                >
+                  {course.rating} ({course.reviews} reviews)
+                </span>
+              </div>
+            </div>
 
-              {/* Course Card with Fixed Height */}
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-full border border-gray-100 transition-all duration-300 group-hover:shadow-2xl flex flex-col">
-                {/* Course Image - Fixed Height */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  
-                  {/* Category Badge */}
-                  <div className="absolute top-4 right-4">
-                    <div className="px-3 py-1 rounded-full backdrop-blur-sm bg-white/90">
-                      <span className="text-xs font-semibold" style={{ color: course.color }}>
-                        {course.category}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            <course.icon
+              className="w-8 h-8 flex-shrink-0 ml-3"
+              style={{ color: course.color }}
+            />
+          </div>
 
-                {/* Course Content - Flex Grow for Equal Height */}
-                <div className="p-6 flex flex-col flex-grow">
-                  {/* Title and Icon */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
-                        {course.title}
-                      </h3>
-                      <div className="flex items-center mb-3">
-                        <div className="flex items-center mr-4">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <HiStar 
-                              key={star} 
-                              className={`w-4 h-4 ${star <= Math.floor(course.rating) ? 'text-yellow-400' : 'text-gray-300'}`} 
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm font-medium" style={{ color: BRAND_COLORS.darkGrey }}>
-                          {course.rating} ({course.reviews} reviews)
-                        </span>
-                      </div>
-                    </div>
-                    <course.icon className="w-8 h-8 flex-shrink-0 ml-3" style={{ color: course.color }} />
-                  </div>
+          {/* Description */}
+          <p className="text-gray-600 mb-4 line-clamp-2">
+            {course.description}
+          </p>
 
-                  {/* Description */}
-                  <p className="text-gray-600 mb-4 line-clamp-2 flex-shrink-0">
-                    {course.description}
-                  </p>
+          {/* Details */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="flex items-center">
+              <HiClock
+                className="w-3 h-3 mr-1"
+                style={{ color: BRAND_COLORS.darkRoyalBlue }}
+              />
+              <span className="text-xs text-gray-600">
+                {course.duration}
+              </span>
+            </div>
 
-                  {/* Highlights */}
-                  <div className="mb-4 flex-grow">
-                    <div className="flex items-center mb-2">
-                      <HiChartBar className="w-5 h-5 mr-2" style={{ color: BRAND_COLORS.teal }} />
-                      <span className="font-semibold text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
-                        What You&apos;ll Learn:
-                      </span>
-                    </div>
-                    <ul className="space-y-1">
-                      {course.highlights.slice(0, 3).map((highlight, idx) => (
-                        <li key={idx} className="flex items-start">
-                          <HiCheckCircle className="w-3 h-3 mr-2 mt-0.5 flex-shrink-0" style={{ color: BRAND_COLORS.teal }} />
-                          <span className="text-xs text-gray-600 line-clamp-2">{highlight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+            <div className="flex items-center">
+              <HiUserGroup
+                className="w-3 h-3 mr-1"
+                style={{ color: BRAND_COLORS.darkRoyalBlue }}
+              />
+              <span className="text-xs text-gray-600">
+                {course.students}
+              </span>
+            </div>
 
-                  {/* Course Details */}
-                  <div className="grid grid-cols-2 gap-2 mb-4 flex-shrink-0">
-                    <div className="flex items-center">
-                      <HiClock className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                      <span className="text-xs text-gray-600">{course.duration}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <HiUserGroup className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                      <span className="text-xs text-gray-600">{course.students}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <HiAcademicCap className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                      <span className="text-xs text-gray-600">{course.level}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <HiBookOpen className="w-3 h-3 mr-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                      <span className="text-xs text-gray-600">Certification</span>
-                    </div>
-                  </div>
+            <div className="flex items-center">
+              <HiAcademicCap
+                className="w-3 h-3 mr-1"
+                style={{ color: BRAND_COLORS.darkRoyalBlue }}
+              />
+              <span className="text-xs text-gray-600">
+                {course.level}
+              </span>
+            </div>
 
-                  {/* Price and CTA - Fixed at Bottom */}
-                  <div className="border-t border-gray-100 pt-4 mt-auto">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <div className="flex items-center">
-                          <span className="text-xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
-                            {course.price}
-                          </span>
-                          {course.originalPrice && (
-                            <span className="text-xs text-gray-500 line-through ml-2">
-                              {course.originalPrice}
-                            </span>
-                          )}
-                        </div>
-                        
-                      </div>
-                    </div>
+            <div className="flex items-center">
+              <HiBookOpen
+                className="w-3 h-3 mr-1"
+                style={{ color: BRAND_COLORS.darkRoyalBlue }}
+              />
+              <span className="text-xs text-gray-600">
+                Certification
+              </span>
+            </div>
+          </div>
 
-                    <Link
-                      href={`/courses/${course.id}`}
-                      className="block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] group"
-                      style={{
-                        backgroundColor: hoveredCard === course.id ? BRAND_COLORS.darkRoyalBlue : BRAND_COLORS.deepRed,
-                        color: BRAND_COLORS.white
-                      }}
-                    >
-                      <span className="flex items-center justify-center text-sm">
-                        View Course Details
-                        <HiArrowRight className="w-3 h-3 ml-2 transform group-hover:translate-x-1 transition-transform" />
-                      </span>
-                    </Link>
-                  </div>
+          {/* Price + CTA */}
+          <div className="border-t border-gray-100 pt-4 mt-auto">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="flex items-center">
+                  <span
+                    className="text-xl font-bold"
+                    style={{ color: BRAND_COLORS.deepRed }}
+                  >
+                    {course.price}
+                  </span>
+
+                  {course.originalPrice && (
+                    <span className="text-xs text-gray-500 line-through ml-2">
+                      {course.originalPrice}
+                    </span>
+                  )}
                 </div>
               </div>
-            </motion.div>
-          ))}
+            </div>
+
+            <Link
+              href={`/courses/${course.id}`}
+              className="block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] group"
+              style={{
+                backgroundColor:
+                  hoveredCard === course.id
+                    ? BRAND_COLORS.darkRoyalBlue
+                    : BRAND_COLORS.deepRed,
+                color: BRAND_COLORS.white,
+              }}
+            >
+              <span className="flex items-center justify-center text-sm">
+                View Course Details
+                <HiArrowRight className="w-3 h-3 ml-2 transform group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          </div>
         </div>
+      </div>
+    </motion.div>
+  ))}
+</div>
+
 
         {/* Info Section */}
        <motion.div 

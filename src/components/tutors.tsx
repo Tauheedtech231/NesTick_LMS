@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { X, Award, Briefcase, Clock, CheckCircle } from 'lucide-react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const trainers = [
   {
@@ -49,45 +53,94 @@ const trainers = [
     studentsTrained: '730+',
     trainingStyle: 'Detailed technical with blueprint interpretation'
   },
-  {
-    id: 5,
-    name: 'Ayesha Khan',
-    role: 'Safety Compliance Officer',
-    expertise: 'Workplace safety regulations, compliance training, and audit preparation',
-    experience: '7+ years',
-    image: 'https://images.unsplash.com/photo-1581579431539-9a45e56b61db?q=80&w=1376&auto=format&fit=crop&w=400&h=400',
-    certifications: ['OSHA Certified', 'Safety Management Expert', 'Compliance Auditor', 'Incident Investigation Specialist'],
-    studentsTrained: '950+',
-    trainingStyle: 'Audit-focused with documentation skills'
-  },
-  {
-    id: 6,
-    name: 'Muhammad Shahid',
-    role: 'Industrial Welding Instructor',
-    expertise: 'Advanced welding techniques for industrial applications and fabrication',
-    experience: '11+ years',
-    image: 'https://images.unsplash.com/photo-1569510914741-59c7c54c2c8f?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
-    certifications: ['Advanced Welding Instructor', 'Fabrication Specialist', 'Quality Control Expert', 'Metallurgy Basics'],
-    studentsTrained: '890+',
-    trainingStyle: 'Advanced techniques with quality assurance'
-  },
 ];
-
-const BRAND_COLORS = {
-  darkNavy: '#0B1C3D',
-  darkRoyalBlue: '#1E3A8A',
-  deepRed: '#B11217',
-  white: '#FFFFFF',
-  lightGrey: '#F4F6F8',
-  softGrey: '#E5E7EB',
-  darkGrey: '#1F2933'
-};
 
 export default function TrainersSlider() {
   const [selectedTrainer, setSelectedTrainer] = useState<typeof trainers[0] | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<Animation | null>(null);
+  
+  // Refs for animations
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const subHeadingRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Clear existing animations
+      gsap.set([headingRef.current, subHeadingRef.current, badgeRef.current], { 
+        clearProps: "all" 
+      });
+
+      // Badge animation - fade in
+      if (badgeRef.current) {
+        gsap.fromTo(badgeRef.current,
+          {
+            opacity: 0,
+            y: 20
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: badgeRef.current,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            }
+          }
+        );
+      }
+
+      // Main heading animation - from left
+      if (headingRef.current) {
+        gsap.fromTo(headingRef.current,
+          {
+            x: -80,
+            opacity: 0
+          },
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: headingRef.current,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            }
+          }
+        );
+      }
+
+      // Subheading animation - from right
+      if (subHeadingRef.current) {
+        gsap.fromTo(subHeadingRef.current,
+          {
+            x: 80,
+            opacity: 0
+          },
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: subHeadingRef.current,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            }
+          }
+        );
+      }
+
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
 
   useEffect(() => {
     const slider = sliderRef.current;
@@ -152,20 +205,20 @@ export default function TrainersSlider() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
+    <div ref={sectionRef} className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <div className="inline-block px-4 py-2 rounded-full mb-4 bg-red-50">
+          <div ref={badgeRef} className="inline-block px-4 py-2 rounded-full mb-4 bg-red-50">
             <span className="text-sm font-semibold text-red-700">
               Expert Faculty
             </span>
           </div>
           
-          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+          <h1 ref={headingRef} className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
             Meet Our <span className="text-red-700">Trainers</span>
           </h1>
           
-          <p className="text-base text-gray-600 max-w-2xl mx-auto">
+          <p ref={subHeadingRef} className="text-base text-gray-600 max-w-2xl mx-auto">
             Click on any trainer to view their professional details and expertise
           </p>
         </div>
@@ -182,8 +235,9 @@ export default function TrainersSlider() {
                 className="flex-shrink-0 cursor-pointer group"
               >
                 <div className="relative w-64 md:w-72">
+                  {/* SQUARE IMAGE CONTAINER */}
                   <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto mb-4">
-                    <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform duration-500">
+                    <div className="relative w-full h-full rounded-2xl overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform duration-500">
                       <Image
                         src={trainer.image}
                         alt={trainer.name}
@@ -196,27 +250,31 @@ export default function TrainersSlider() {
                         <span className="text-white font-semibold text-sm">View Details →</span>
                       </div>
                     </div>
+                    
+                    {/* Experience badge on top of square image */}
+                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+                      <div className="flex items-center gap-1 bg-red-700 text-white px-4 py-1.5 rounded-full shadow-lg">
+                        <Clock className="w-3 h-3" />
+                        <span className="text-xs font-semibold whitespace-nowrap">
+                          {trainer.experience}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="text-center px-4">
+                  <div className="text-center px-4 pt-6">
                     <h3 className="font-bold text-lg mb-1 text-gray-900">
                       {trainer.name}
                     </h3>
-                    <p className="text-sm font-medium mb-2 text-blue-900">
+                    <p className="text-sm font-medium text-blue-900">
                       {trainer.role}
                     </p>
-                    <div className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                      <Clock className="w-3 h-3" />
-                      <span>{trainer.experience}</span>
-                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
-        
 
         {isPopupOpen && selectedTrainer && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -229,9 +287,10 @@ export default function TrainersSlider() {
                   <X className="w-5 h-5" />
                 </button>
                 
+                {/* SQUARE IMAGE IN POPUP */}
                 <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
                   <div className="relative w-32 h-32 md:w-40 md:h-40">
-                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl">
+                    <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-white shadow-2xl">
                       <Image
                         src={selectedTrainer.image}
                         alt={selectedTrainer.name}
