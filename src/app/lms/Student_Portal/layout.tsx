@@ -1,48 +1,61 @@
-// app/lms/Student_Portal/layout.tsx
-'use client'
+// app/layout.tsx
+'use client';
 
+import { useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import { initializeStudentData } from './utils/initializeData.ts'; 
 
-import { initializeDemoData } from './utils/demoData'
-import { useEffect } from 'react'
-
-export default function StudentPortalLayout({
+export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   useEffect(() => {
-    initializeDemoData()
-  }, [])
+    // Initialize demo data if not exists
+    initializeStudentData();
+  }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-    
-
-      <main className="flex-1 md:ml-64">
-        <div className="mobile-content md:mobile-content-none">
-          <div className="p-4 md:p-6 lg:p-8">
-            {children}
+    <html lang="en">
+      <head>
+        <title>Student Portal - LMS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-inter bg-gray-50 min-h-screen">
+        <div className="flex min-h-screen">
+          {/* Sidebar */}
+          <div className="hidden lg:block fixed left-0 top-0 h-full w-64 z-40">
+            <Sidebar />
+          </div>
+          
+          {/* Mobile Sidebar (handled inside Sidebar component) */}
+          <Sidebar />
+          
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col lg:ml-64 w-full">
+            <Header />
+            <main className="flex-1 p-4 md:p-6 overflow-auto bg-gray-50">
+              {children}
+            </main>
           </div>
         </div>
-      </main>
 
-      {/* Global styles should ideally be in globals.css */}
-      <style jsx global>{`
-        @media (max-width: 768px) {
-          .mobile-content {
-            padding-top: 80px !important;
-            padding-bottom: 80px !important;
-            min-height: 100vh;
+        {/* Global Styles */}
+        <style jsx global>{`
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           }
-        }
-
-        @media (min-width: 769px) {
-          .mobile-content-none {
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
+          
+          /* Remove any default margins/padding */
+          * {
+            box-sizing: border-box;
           }
-        }
-      `}</style>
-    </div>
-  )
+        `}</style>
+      </body>
+    </html>
+  );
 }

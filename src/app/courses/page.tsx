@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // useEffect import करें
 import { motion } from "framer-motion";
 import { 
   HiClock, 
@@ -112,8 +112,29 @@ const courses = [
   }
 ];
 
+// ✅ localStorage key constant
+const LOCAL_STORAGE_KEY = 'industrial_training_courses';
+
 export default function CoursesPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+
+  // ✅ useEffect for saving courses to localStorage on page render
+  useEffect(() => {
+    // Save courses to localStorage
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(courses));
+      console.log(`Courses successfully saved to localStorage with key: "${LOCAL_STORAGE_KEY}"`);
+      
+      // Optional: Verify the data was saved
+      const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        console.log(`Verified: ${parsedData.length} courses saved successfully`);
+      }
+    } catch (error) {
+      console.error('Error saving courses to localStorage:', error);
+    }
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">

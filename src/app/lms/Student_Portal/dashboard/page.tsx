@@ -12,11 +12,13 @@ import {
   HiArrowRight,
   HiPlay
 } from 'react-icons/hi';
-import KPICard from './components/KPICard';
-import ProgressBar from './components/ProgressBar';
-import CourseCard from './components/CourseCard';
-import Link from 'next/link';
 /* eslint-disable */
+
+import KPICard from '../components/KPICard';
+import ProgressBar from '../components/ProgressBar';
+import CourseCard from '../components/CourseCard';
+import Link from 'next/link';
+
 
 type User = {
   id: string;
