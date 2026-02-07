@@ -372,9 +372,9 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 md:h-20">
-          {/* Logo - Hidden on mobile, shown on desktop */}
-          <Link href="/" className="hidden lg:flex items-center">
-            <div className="flex items-center">
+          {/* Desktop Logo - Left Side */}
+          <div className="hidden lg:flex items-center">
+            <Link href="/" className="flex items-center">
               <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-[60px] md:w-[60px] flex items-center justify-center">
                 <img
                   src="/newlogo.jpg"
@@ -382,8 +382,8 @@ export default function Navbar() {
                   className="h-full w-auto object-contain"
                 />
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
           {/* Mobile Navigation Header */}
           <div className="lg:hidden flex items-center justify-between w-full">
@@ -400,88 +400,82 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Mobile Logo - Center */}
-            <Link href="/" className="flex items-center">
-              <div className="h-10 w-10 flex items-center justify-center">
-                <img
-                  src="/newlogo.jpg"
-                  alt="Mansol Logo"
-                  className="h-full w-auto object-contain"
-                />
-              </div>
-            </Link>
+            {/* Mobile Logo - Center (Hidden on mobile header) */}
+            <div className="flex-1"></div>
 
             {/* Placeholder for alignment */}
             <div className="w-10"></div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navItems.map((item, idx) => (
-              <div key={idx} className="relative">
-                {item.subItems ? (
-                  <div className="group">
-                    <button
+          {/* Desktop Navigation - Centered */}
+          <div className="hidden lg:flex items-center justify-center flex-1">
+            <div className="flex items-center space-x-1">
+              {navItems.map((item, idx) => (
+                <div key={idx} className="relative">
+                  {item.subItems ? (
+                    <div className="group">
+                      <button
+                        onMouseEnter={() => handleNavHover(idx)}
+                        onMouseLeave={handleNavLeave}
+                        className={`flex items-center space-x-1 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                          isActive(item.href) 
+                            ? 'bg-white/10 shadow-inner' 
+                            : 'hover:bg-white/5 hover:shadow-sm'
+                        }`}
+                      >
+                        <span className="text-white font-medium text-sm transition-all duration-200 group-hover:tracking-wide">
+                          {item.title}
+                        </span>
+                        <HiChevronDown className="w-4 h-4 text-white/70 transition-transform duration-200 group-hover:rotate-180" />
+                      </button>
+                      
+                      {/* Submenu */}
+                      <div 
+                        className="absolute top-full left-0 mt-1 w-56 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform-gpu origin-top"
+                        style={{
+                          backgroundColor: BRAND_COLORS.darkNavy,
+                          border: `1px solid ${BRAND_COLORS.softGrey}`
+                        }}
+                      >
+                        <div className="p-2 space-y-1">
+                          {item.subItems.map((sub, sidx) => (
+                            <Link
+                              key={sidx}
+                              href={sub.href}
+                              className="block px-3 py-2 rounded-md text-sm transition-all duration-150 hover:bg-white/5 hover:pl-4 hover:shadow-sm"
+                              style={{ color: BRAND_COLORS.lightGrey }}
+                            >
+                              <div className="font-medium mb-0.5 transition-all duration-150 hover:text-white">
+                                {sub.title}
+                              </div>
+                              <div className="text-xs transition-all duration-150 hover:text-white/80" 
+                                   style={{ color: BRAND_COLORS.softGrey }}>
+                                {sub.description}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <Link
+                      href={item.href}
                       onMouseEnter={() => handleNavHover(idx)}
                       onMouseLeave={handleNavLeave}
-                      className={`flex items-center space-x-1 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                      className={`px-4 py-2.5 rounded-lg transition-all duration-200 ${
                         isActive(item.href) 
                           ? 'bg-white/10 shadow-inner' 
                           : 'hover:bg-white/5 hover:shadow-sm'
                       }`}
                     >
-                      <span className="text-white font-medium text-sm transition-all duration-200 group-hover:tracking-wide">
+                      <span className="text-white font-medium text-sm transition-all duration-200 hover:tracking-wide">
                         {item.title}
                       </span>
-                      <HiChevronDown className="w-4 h-4 text-white/70 transition-transform duration-200 group-hover:rotate-180" />
-                    </button>
-                    
-                    {/* Submenu */}
-                    <div 
-                      className="absolute top-full left-0 mt-1 w-56 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform-gpu origin-top"
-                      style={{
-                        backgroundColor: BRAND_COLORS.darkNavy,
-                        border: `1px solid ${BRAND_COLORS.softGrey}`
-                      }}
-                    >
-                      <div className="p-2 space-y-1">
-                        {item.subItems.map((sub, sidx) => (
-                          <Link
-                            key={sidx}
-                            href={sub.href}
-                            className="block px-3 py-2 rounded-md text-sm transition-all duration-150 hover:bg-white/5 hover:pl-4 hover:shadow-sm"
-                            style={{ color: BRAND_COLORS.lightGrey }}
-                          >
-                            <div className="font-medium mb-0.5 transition-all duration-150 hover:text-white">
-                              {sub.title}
-                            </div>
-                            <div className="text-xs transition-all duration-150 hover:text-white/80" 
-                                 style={{ color: BRAND_COLORS.softGrey }}>
-                              {sub.description}
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    href={item.href}
-                    onMouseEnter={() => handleNavHover(idx)}
-                    onMouseLeave={handleNavLeave}
-                    className={`px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                      isActive(item.href) 
-                        ? 'bg-white/10 shadow-inner' 
-                        : 'hover:bg-white/5 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className="text-white font-medium text-sm transition-all duration-200 hover:tracking-wide">
-                      {item.title}
-                    </span>
-                  </Link>
-                )}
-              </div>
-            ))}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Right Side - Desktop Login/User Button */}
@@ -655,22 +649,33 @@ export default function Navbar() {
               borderRight: `1px solid ${BRAND_COLORS.softGrey}`,
             }}
           >
-            {/* Menu Header */}
-            <div className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
+            {/* Menu Header with Logo - At the top of the sidebar */}
+            <div className="p-4 border-b flex flex-col items-center justify-center"
                  style={{ 
                    backgroundColor: BRAND_COLORS.darkNavy,
                    borderColor: BRAND_COLORS.softGrey 
                  }}>
-           
+              {/* Logo in sidebar */}
+              <Link href="/" className="mb-4" onClick={() => setMobileMenuOpen(false)}>
+                <div className="h-16 w-16 flex items-center justify-center">
+                  <img
+                    src="/newlogo.jpg"
+                    alt="Mansol Logo"
+                    className="h-full w-auto object-contain"
+                  />
+                </div>
+              </Link>
               
-              {/* Close Button */}
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-95"
-                aria-label="Close menu"
-              >
-                <HiX className="w-6 h-6 text-white" />
-              </button>
+              <div className="flex items-center justify-between w-full">
+                <div></div> {/* Empty div for spacing */}
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-95"
+                  aria-label="Close menu"
+                >
+                  <HiX className="w-6 h-6 text-white" />
+                </button>
+              </div>
             </div>
 
             <div className="px-4 py-6 space-y-1">
