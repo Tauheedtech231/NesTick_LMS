@@ -1,337 +1,369 @@
-// app/lms/Instructor_Portal/assignments/create/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  HiArrowLeft, HiCalendar, HiDocumentText, 
-  HiSave, HiChevronDown
-} from 'react-icons/hi'
-import { toast, Toaster } from 'react-hot-toast'
+import { Save, X, Plus, Trash2, Calendar } from 'lucide-react'
+/* eslint-disable */
 
-interface Course {
-  id: string
-  title: string
-  code: string
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
 }
 
 export default function CreateAssignmentPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [formData, setFormData] = useState({
-    courseId: '',
+  const [instructor, setInstructor] = useState<any>(null)
+  const [course, setCourse] = useState<any>(null)
+  
+  const [assignment, setAssignment] = useState({
     title: '',
     description: '',
-    totalMarks: 100,
-    dueDate: '',
     instructions: '',
-    status: 'active' as 'active' | 'draft'
+    dueDate: '',
+    totalPoints: 100,
+    attachments: [''] as string[],
+    status: 'draft' as 'draft' | 'published'
   })
-  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
-    loadCourses()
-  }, [])
-
-  const loadCourses = () => {
-    try {
-      // Get current instructor
-      const userData = localStorage.getItem('currentUser')
-      let currentUser = null
-      if (userData) {
-        currentUser = JSON.parse(userData)
-      }
-
-      // Get assigned courses
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-      const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]')
-      
-      let assignedCourses: Course[] = []
-      
-      if (currentUser?.email === 'instructor@gmail.com') {
-        assignedCourses = allCourses
-      } else if (currentUser?.role === 'instructor') {
-        const instructorDetails = allInstructors.find((instr: any) => 
-          instr.email === currentUser.email || instr.id === currentUser.instructorId
-        )
-        
-        if (instructorDetails?.assignedCourseIds) {
-          assignedCourses = allCourses.filter((course: Course) => 
-            instructorDetails.assignedCourseIds.includes(course.id)
-          )
+    const loadInstructorData = () => {
+      try {
+        const currentUserStr = localStorage.getItem('currentUser')
+        if (!currentUserStr) {
+          router.push('/lms/auth/login?type=instructor')
+          return
         }
+
+        const currentUser = JSON.parse(currentUserStr)
+        if (currentUser.role !== 'instructor') {
+          router.push('/lms/auth/login?type=instructor')
+          return
+        }
+
+        setInstructor(currentUser)
+
+        // Load assigned course
+        const courses = JSON.parse(localStorage.getItem('lms_courses') || '[]')
+        const courseId = currentUser.courseId || currentUser.assignedCourseId
+        const assignedCourse = courses.find((c: any) => c.id === courseId)
+        setCourse(assignedCourse)
+        
+        // Set default due date (7 days from now)
+        const defaultDueDate = new Date()
+        defaultDueDate.setDate(defaultDueDate.getDate() + 7)
+        setAssignment(prev => ({
+          ...prev,
+          dueDate: defaultDueDate.toISOString().slice(0, 16)
+        }))
+        
+      } catch (error) {
+        console.error('Error loading instructor data:', error)
       }
-
-      setCourses(assignedCourses)
-
-    } catch (error) {
-      console.error('Error loading courses:', error)
-      toast.error('Failed to load courses')
     }
+
+    loadInstructorData()
+  }, [router])
+
+  const handleAddAttachment = () => {
+    setAssignment({ ...assignment, attachments: [...assignment.attachments, ''] })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRemoveAttachment = (index: number) => {
+    const newAttachments = assignment.attachments.filter((_, i) => i !== index)
+    setAssignment({ ...assignment, attachments: newAttachments })
+  }
+
+  const handleAttachmentChange = (index: number, value: string) => {
+    const newAttachments = [...assignment.attachments]
+    newAttachments[index] = value
+    setAssignment({ ...assignment, attachments: newAttachments })
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.courseId) {
-      toast.error('Please select a course')
+    if (!assignment.title.trim()) {
+      alert('Please enter assignment title')
       return
     }
-
-    if (!formData.title.trim()) {
-      toast.error('Please enter assignment title')
+    
+    if (!assignment.instructions.trim()) {
+      alert('Please enter assignment instructions')
       return
     }
-
-    if (!formData.dueDate) {
-      toast.error('Please select a due date')
+    
+    if (!assignment.dueDate) {
+      alert('Please select due date')
       return
     }
 
     setLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      const assignmentId = `assignment_${Date.now()}`
-      
+      // Create assignment object
+      const assignmentId = `assignment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const newAssignment = {
         id: assignmentId,
-        courseId: formData.courseId,
-        title: formData.title,
-        description: formData.description,
-        type: 'assignment',
-        totalMarks: parseInt(formData.totalMarks.toString()),
-        dueDate: formData.dueDate,
-        instructions: formData.instructions,
+        ...assignment,
+        attachments: assignment.attachments.filter(a => a.trim() !== ''),
+        instructorId: instructor.id,
+        instructorName: instructor.name,
+        courseId: instructor.courseId,
+        courseTitle: course?.title || 'Course',
+        submissions: 0,
+        graded: 0,
         createdAt: new Date().toISOString(),
-        createdBy: 'Instructor',
-        status: formData.status,
-        submissions: []
+        updatedAt: new Date().toISOString()
       }
 
-      const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-      localStorage.setItem('assignments', JSON.stringify([...existingAssignments, newAssignment]))
-      
-      toast.success('Assignment created successfully!')
-      
-      setTimeout(() => {
-        router.push('/lms/Instructor_Portal/assignments')
-      }, 1000)
+      // Save to localStorage
+      const existingAssignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]')
+      const updatedAssignments = [...existingAssignments, newAssignment]
+      localStorage.setItem('instructor_assignments', JSON.stringify(updatedAssignments))
 
+      // Save activity
+      const activity = {
+        id: `activity_${Date.now()}`,
+        type: 'assignment',
+        title: newAssignment.title,
+        description: 'Assignment created',
+        courseId: instructor.courseId,
+        instructorId: instructor.id,
+        timestamp: new Date().toISOString(),
+        action: 'created',
+        metadata: newAssignment
+      }
+
+      const existingActivities = JSON.parse(localStorage.getItem('instructor_activities') || '[]')
+      const updatedActivities = [...existingActivities, activity]
+      localStorage.setItem('instructor_activities', JSON.stringify(updatedActivities))
+
+      alert(`Assignment ${assignment.status === 'published' ? 'published' : 'saved as draft'} successfully!`)
+      router.push('/lms/Instructor_Portal/assignments')
+      
     } catch (error) {
       console.error('Error creating assignment:', error)
-      toast.error('Failed to create assignment')
+      alert('Failed to create assignment')
     } finally {
       setLoading(false)
     }
   }
 
-  const getCourseName = (courseId: string) => {
-    const course = courses.find(c => c.id === courseId)
-    return course ? `${course.title} (${course.code})` : ''
-  }
-
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
+  if (!instructor || !course) {
+    return <div className="min-h-screen bg-white p-6">Loading...</div>
   }
 
   return (
-    <>
-      <Toaster position="top-center" />
-      
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <Link
-              href="/lms/Instructor_Portal/assignments"
-              className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-            >
-              <HiArrowLeft className="w-5 h-5 mr-2" />
-              <span>Back to Assignments</span>
-            </Link>
-            
-            <h1 className="text-2xl font-bold text-gray-900">Create Assignment</h1>
-            <p className="text-gray-600 mt-1">
-              Create a new assignment for students
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="bg-white border border-gray-300 rounded-lg p-6">
-            {/* Course Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Course *
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.courseId}
-                  onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select a course</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title} ({course.code})
-                    </option>
-                  ))}
-                </select>
-                <HiChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
+    <div className="min-h-screen bg-white p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/lms/Instructor_Portal/assignments"
+                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                  Create Assignment
+                </h1>
+                <p className="text-darkGrey mt-1">
+                  For: {course.title}
+                </p>
               </div>
             </div>
+          </div>
+          <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+        </div>
+      </div>
 
-            {/* Title */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assignment Title *
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            Assignment Details
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Title *
               </label>
               <input
                 type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter assignment title"
                 required
+                value={assignment.title}
+                onChange={(e) => setAssignment({ ...assignment, title: e.target.value })}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="e.g., Final Project Submission"
               />
             </div>
 
-            {/* Description */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Brief Description
+              </label>
+              <input
+                type="text"
+                value={assignment.description}
+                onChange={(e) => setAssignment({ ...assignment, description: e.target.value })}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="Short description of the assignment"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Detailed Instructions *
               </label>
               <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Brief description of the assignment..."
+                required
+                value={assignment.instructions}
+                onChange={(e) => setAssignment({ ...assignment, instructions: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="Provide detailed instructions for students..."
               />
+              <p className="text-xs text-darkGrey/70 mt-1">
+                You can use markdown formatting for better readability
+              </p>
             </div>
 
-            {/* Instructions */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Instructions
-              </label>
-              <textarea
-                value={formData.instructions}
-                onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-                rows={4}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Detailed instructions for students..."
-              />
-            </div>
-
-            {/* Total Marks and Due Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Marks *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={formData.totalMarks}
-                  onChange={(e) => setFormData({...formData, totalMarks: parseInt(e.target.value) || 100})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Due Date *
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Due Date & Time *
                 </label>
                 <div className="relative">
-                  <HiCalendar className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
                   <input
                     type="datetime-local"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    value={assignment.dueDate}
+                    onChange={(e) => setAssignment({ ...assignment, dueDate: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Total Points *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="1000"
+                  step="0.5"
+                  value={assignment.totalPoints}
+                  onChange={(e) => setAssignment({ ...assignment, totalPoints: parseFloat(e.target.value) })}
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                />
+              </div>
             </div>
 
-            {/* Status */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Attachments */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-darkGrey">
+                  Attachment URLs (Optional)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddAttachment}
+                  className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add URL
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {assignment.attachments.map((attachment, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="url"
+                      value={attachment}
+                      onChange={(e) => handleAttachmentChange(index, e.target.value)}
+                      className="flex-1 px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                      placeholder={`https://example.com/resource-${index + 1}.pdf`}
+                    />
+                    {assignment.attachments.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(index)}
+                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-darkGrey/70 mt-1">
+                Add links to PDFs, videos, or other resources
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
                 Status
               </label>
-              <div className="relative">
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="draft">Draft</option>
-                </select>
-                <HiChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Course Info */}
-            {formData.courseId && (
-              <div className="mb-6 p-4 bg-gray-50 border border-gray-300 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">Selected Course</h3>
-                <div className="flex items-center gap-3">
-                  <HiDocumentText className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-900">{getCourseName(formData.courseId)}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-6 border-t border-gray-300">
-              <Link
-                href="/lms/Instructor_Portal/assignments"
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              <select
+                value={assignment.status}
+                onChange={(e) => setAssignment({ ...assignment, status: e.target.value as 'draft' | 'published' })}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
               >
-                Cancel
-              </Link>
-              
-              <button
-                type="submit"
-                disabled={loading}
-                className={`px-6 py-3 rounded-lg font-medium flex-1 flex items-center justify-center gap-2 ${
-                  loading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <HiSave className="w-5 h-5" />
-                    Create Assignment
-                  </>
-                )}
-              </button>
+                <option value="draft">Save as Draft (Hidden from students)</option>
+                <option value="published">Publish Now (Visible to students)</option>
+              </select>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
-    </>
+
+        {/* Form Actions */}
+        <div className="flex justify-end gap-4">
+          <Link
+            href="/lms/Instructor_Portal/assignments"
+            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ 
+              backgroundColor: BRAND_COLORS.deepRed,
+              color: BRAND_COLORS.white 
+            }}
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {assignment.status === 'published' ? 'Publishing...' : 'Saving...'}
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                {assignment.status === 'published' ? 'Publish Assignment' : 'Save as Draft'}
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }

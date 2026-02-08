@@ -312,30 +312,192 @@ const validateStudentLogin = (email: string, password: string) => {
   };
 };
 
-// INSTRUCTOR LOGIN VALIDATION (SAME AS BEFORE)
+// UPDATED: INSTRUCTOR LOGIN VALIDATION FROM LOCALSTORAGE
 const validateInstructorLogin = (email: string, password: string) => {
-  console.log('Validating instructor login for:', email);
+  console.log('🔍 Validating instructor login for:', email);
   
-  // Check fixed demo instructor account
+  // 1. Check instructor_users from LocalStorage (NEW KEY)
+  try {
+    const instructorUsers = JSON.parse(localStorage.getItem('instructor_users') || '[]');
+    console.log('📋 Checking instructor_users:', instructorUsers.length, 'instructors found');
+    
+    // Find matching instructor
+    const instructorUser = instructorUsers.find((user: any) => {
+      const matchesEmail = user.email?.toLowerCase() === email.toLowerCase();
+      const matchesPhone = user.phone === email; // Also allow phone login
+      
+      return (matchesEmail || matchesPhone) && 
+             user.password === password && 
+             user.role === 'instructor' &&
+             user.status !== 'inactive';
+    });
+    
+    if (instructorUser) {
+      console.log('✅ Instructor found in instructor_users:', {
+        name: instructorUser.name,
+        email: instructorUser.email,
+        role: instructorUser.role
+      });
+      
+      // 2. Get instructor profile details from lms_instructors
+      const lmsInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
+      const instructorProfile = lmsInstructors.find((inst: any) => 
+        inst.email === instructorUser.email || inst.id === instructorUser.id
+      );
+      
+      // Create instructor session data
+      const instructorSession = {
+        id: instructorUser.id,
+        email: instructorUser.email,
+        password: instructorUser.password,
+        name: instructorUser.name,
+        phone: instructorUser.phone,
+        role: 'instructor',
+        courseId: instructorUser.courseId,
+        assignedCourseId: instructorUser.courseId,
+        status: instructorUser.status,
+        createdAt: instructorUser.createdAt,
+        lastLogin: new Date().toISOString(),
+        loginTime: new Date().toISOString(),
+        
+        // Profile data from lms_instructors
+        profileData: instructorProfile ? {
+          specialization: instructorProfile.specialization,
+          experience: instructorProfile.experience,
+          qualification: instructorProfile.qualification,
+          bio: instructorProfile.bio,
+          rating: instructorProfile.rating,
+          assignedCourse: instructorProfile.assignedCourse,
+          totalStudents: instructorProfile.totalStudents
+        } : null
+      };
+      
+      // Update last login time
+      try {
+        const updatedUsers = instructorUsers.map((user: any) => 
+          user.id === instructorUser.id 
+            ? { ...user, lastLogin: new Date().toISOString() }
+            : user
+        );
+        localStorage.setItem('instructor_users', JSON.stringify(updatedUsers));
+      } catch (error) {
+        console.error('Error updating last login:', error);
+      }
+      
+      return {
+        success: true,
+        userData: instructorSession,
+        redirectTo: '/lms/Instructor_Portal'
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error checking instructor_users:', error);
+  }
+  
+  // 3. Check fixed demo instructor account
   if (email === 'instructor@gmail.com' && password === '123456') {
-    console.log('Using fixed demo instructor account');
+    console.log('🎮 Using fixed demo instructor account');
+    
+    // Check if demo instructor already exists in instructor_users
+    try {
+      const instructorUsers = JSON.parse(localStorage.getItem('instructor_users') || '[]');
+      const existingDemo = instructorUsers.find((user: any) => user.email === 'instructor@gmail.com');
+      
+      if (existingDemo) {
+        return {
+          success: true,
+          isDemoAccount: true,
+          userData: {
+            ...existingDemo,
+            loginTime: new Date().toISOString()
+          },
+          redirectTo: '/lms/Instructor_Portal'
+        };
+      }
+    } catch (error) {
+      console.error('Error checking existing demo:', error);
+    }
+    
+    // Create demo instructor data
+    const demoInstructor = {
+      id: `instructor_demo_${Date.now()}`,
+      email: 'instructor@gmail.com',
+      password: '123456',
+      name: 'Demo Instructor',
+      role: 'instructor',
+      phone: '+92 300 1234567',
+      courseId: 'pipe-fitter', // Default course
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      lastLogin: null
+    };
+    
+    // Add to instructor_users for future logins
+    try {
+      const existingUsers = JSON.parse(localStorage.getItem('instructor_users') || '[]');
+      const updatedUsers = [demoInstructor, ...existingUsers];
+      localStorage.setItem('instructor_users', JSON.stringify(updatedUsers));
+      
+      // Also add to lms_instructors for profile
+      const lmsInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
+      const demoProfile = {
+        id: demoInstructor.id,
+        name: demoInstructor.name,
+        email: demoInstructor.email,
+        phone: demoInstructor.phone,
+        specialization: 'Technical Training',
+        experience: '5 years',
+        qualification: 'BSc in Engineering',
+        bio: 'Experienced instructor with 5+ years of teaching experience.',
+        status: 'active',
+        rating: 4.8,
+        assignedCourse: {
+          id: 'pipe-fitter',
+          title: 'Pipe Fitter',
+          category: 'Technical Training',
+          duration: '8 Weeks'
+        },
+        courseId: 'pipe-fitter',
+        password: '123456',
+        totalStudents: 45,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const updatedInstructors = [demoProfile, ...lmsInstructors];
+      localStorage.setItem('lms_instructors', JSON.stringify(updatedInstructors));
+    } catch (error) {
+      console.error('Error saving demo instructor:', error);
+    }
+    
     return {
       success: true,
       isDemoAccount: true,
       userData: {
-        email: 'instructor@gmail.com',
-        name: 'Demo Instructor',
-        role: 'instructor',
-        isDemoAccount: true,
-        loginType: 'instructor'
+        ...demoInstructor,
+        loginTime: new Date().toISOString(),
+        profileData: {
+          specialization: 'Technical Training',
+          experience: '5 years',
+          qualification: 'BSc in Engineering',
+          rating: 4.8,
+          assignedCourse: {
+            id: 'pipe-fitter',
+            title: 'Pipe Fitter',
+            category: 'Technical Training',
+            duration: '8 Weeks'
+          }
+        }
       },
       redirectTo: '/lms/Instructor_Portal'
     };
   }
   
+  // If no match found
+  console.log('❌ No valid instructor found with these credentials');
   return {
     success: false,
-    error: 'Invalid instructor credentials'
+    error: 'Invalid credentials. Please use the email and password sent by admin.'
   };
 };
 
@@ -471,7 +633,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
   }
 
-  // Setup demo accounts in localStorage
+  // Setup demo accounts in LocalStorage
   useEffect(() => {
     // Setup demo student account if not exists
     try {
@@ -499,6 +661,61 @@ const handleSubmit = async (e: React.FormEvent) => {
       }
     } catch (error) {
       console.error('Error setting up demo student:', error);
+    }
+    
+    // Setup demo instructor account in new key
+    try {
+      const instructorUsers = JSON.parse(localStorage.getItem('instructor_users') || '[]');
+      const demoInstructorExists = instructorUsers.some((u: any) => u.email === 'instructor@gmail.com');
+      
+      if (!demoInstructorExists) {
+        const demoInstructor = {
+          id: `instructor_demo_${Date.now()}`,
+          email: 'instructor@gmail.com',
+          password: '123456',
+          name: 'Demo Instructor',
+          role: 'instructor',
+          phone: '+92 300 1234567',
+          courseId: 'pipe-fitter',
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          lastLogin: null
+        };
+        
+        const updatedUsers = [demoInstructor, ...instructorUsers];
+        localStorage.setItem('instructor_users', JSON.stringify(updatedUsers));
+        
+        // Also add to lms_instructors for profile data
+        const lmsInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
+        const demoProfile = {
+          id: demoInstructor.id,
+          name: demoInstructor.name,
+          email: demoInstructor.email,
+          phone: demoInstructor.phone,
+          specialization: 'Technical Training',
+          experience: '5 years',
+          qualification: 'BSc in Engineering',
+          bio: 'Experienced instructor with 5+ years of teaching experience.',
+          status: 'active',
+          rating: 4.8,
+          assignedCourse: {
+            id: 'pipe-fitter',
+            title: 'Pipe Fitter',
+            category: 'Technical Training',
+            duration: '8 Weeks'
+          },
+          courseId: 'pipe-fitter',
+          password: '123456',
+          totalStudents: 45,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        const updatedInstructors = [demoProfile, ...lmsInstructors];
+        localStorage.setItem('lms_instructors', JSON.stringify(updatedInstructors));
+      }
+    } catch (error) {
+      console.error('Error setting up demo instructor:', error);
     }
   }, []);
 
@@ -566,7 +783,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 {/* Email/Identifier Input */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    {loginType === 'student' ? 'Email or Username' : 'Email Address'}
+                    {loginType === 'student' ? 'Email or Username' : 
+                     loginType === 'instructor' ? 'Email or Phone Number' : 
+                     'Email Address'}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -584,10 +803,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                       placeholder={
                         loginType === 'student' 
                           ? 'Enter email or username' 
+                          : loginType === 'instructor'
+                          ? 'Enter email or phone number'
                           : 'Enter your email'
                       }
                     />
                   </div>
+                  {loginType === 'instructor' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use email sent by admin or phone number
+                    </p>
+                  )}
                 </div>
 
                 {/* Password Input */}
@@ -622,6 +848,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                       )}
                     </button>
                   </div>
+                  {loginType === 'instructor' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use password sent by admin via email
+                    </p>
+                  )}
                 </div>
 
                 {/* Submit Button */}
@@ -653,6 +884,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                 {loginType === 'student' && (
                   <p className="text-xs text-gray-500 mt-2">
                     Use the credentials sent to your email after payment verification.
+                  </p>
+                )}
+                {loginType === 'instructor' && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Use the credentials sent to your email by the admin.
                   </p>
                 )}
               </div>

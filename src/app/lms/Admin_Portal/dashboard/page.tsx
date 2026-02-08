@@ -1,580 +1,1192 @@
 'use client'
+/* eslint-disable */
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { 
-  BookOpen,
-  Users,
-  UserCircle,
-  TrendingUp,
-  Clock,
-  MessageSquare,
   CheckCircle,
-  ChevronRight,
   AlertCircle,
   DollarSign,
+  Users,
+  Eye,
+  Download,
+  Search,
+  Image as ImageIcon,
+  RefreshCw,
+  X,
   FileText,
-  BarChart3
+  Send,
+  Key,
+  Mail,
+  ChevronRight,
+  Bell,
+  Shield,
+  FileCheck,
+  CreditCard
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 
-// Graph component imports
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line 
-} from 'recharts'
-
-// Type definitions
-type Activity = {
-  id: number;
-  title: string;
-  description: string;
-  time: string;
-  icon: LucideIcon;
-  iconColor: string;
-  bgColor: string;
+type PaymentStudent = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  course: string;
+  amount: string;
+  paymentDate: string;
+  paymentMethod: string;
+  transactionId: string;
+  status: 'pending' | 'verified' | 'rejected';
+  screenshotUrl: string;
+  uploadedAt: string;
 }
 
-type MonthlyData = {
-  month: string;
-  students: number;
-  revenue: number;
-  courses: number;
+type StudentCredentials = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  course: string;
+  username: string;
+  password: string;
+  sentDate: string;
+  status: 'sent' | 'failed';
 }
-
-type WeeklyEngagement = {
-  day: string;
-  engagement: number;
-  completion: number;
-}
-
-type GraphData = {
-  monthlyData: MonthlyData[];
-  weeklyEngagement: WeeklyEngagement[];
-}
-
-type DashboardData = {
-  totalCourses: number;
-  totalStudents: number;
-  totalInstructors: number;
-  totalPayments: number;
-  pendingPayments: number;
-  completedModules: number;
-  averageEngagement: number;
-  recentActivities: Activity[];
-}
-
-type CustomTooltipProps = {
-  active?: boolean;
-  payload?: Array<{
-    value: number;
-    name: string;
-    color: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload?: any;
-  }>;
-}
-
-// Custom Tooltip Components
-const CustomBarTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white p-3 border border-gray-200 shadow-sm rounded-lg">
-        <p className="font-medium text-gray-900">Monthly Revenue</p>
-        <p className="text-sm text-gray-600">
-          Amount: <span className="font-medium">₹{payload[0].value?.toLocaleString('en-IN')}</span>
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
-const CustomLineTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white p-3 border border-gray-200 shadow-sm rounded-lg">
-        <p className="font-medium text-gray-900 mb-2">Performance Metrics</p>
-        {payload.map((entry, index: number) => (
-          <p key={index} className="text-sm text-gray-600" style={{ color: entry.color }}>
-            {entry.name}: <span className="font-medium">{entry.value}%</span>
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
 
 export default function AdminDashboard() {
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
-    totalCourses: 12,
-    totalStudents: 156,
-    totalInstructors: 8,
-    totalPayments: 42,
-    pendingPayments: 5,
-    completedModules: 87,
-    averageEngagement: 78,
-    recentActivities: []
-  })
+  const [paymentStudents, setPaymentStudents] = useState<PaymentStudent[]>([])
+  const [studentCredentials, setStudentCredentials] = useState<StudentCredentials[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSendingCredentials, setIsSendingCredentials] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false)
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
+  const [selectedStudentDetails, setSelectedStudentDetails] = useState<PaymentStudent | null>(null)
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false)
+  const [selectedCredentials, setSelectedCredentials] = useState<StudentCredentials | null>(null)
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [graphData, setGraphData] = useState<GraphData>({
-    monthlyData: [],
-    weeklyEngagement: []
-  })
+  // Brand Colors
+  const BRAND_COLORS = {
+    darkNavy: '#0B1C3D',
+    darkRoyalBlue: '#1E3A8A',
+    deepRed: '#B11217',
+    white: '#FFFFFF',
+    lightGrey: '#F4F6F8',
+    softGrey: '#E5E7EB',
+    darkGrey: '#1F2933',
+    teal: '#1FB6C9',
+    brightRed: '#D32F2F'
+  }
 
-  useEffect(() => {
-    // Simulate data loading
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-      const activities: Activity[] = [
-        {
-          id: 1,
-          title: 'New student registration',
-          description: 'John Doe enrolled in Web Development',
-          time: '10 minutes ago',
-          icon: Users,
-          iconColor: 'text-blue-600',
-          bgColor: 'bg-blue-100'
-        },
-        {
-          id: 2,
-          title: 'Payment received',
-          description: '₹5,000 payment from Sarah Smith',
-          time: '1 hour ago',
-          icon: DollarSign,
-          iconColor: 'text-green-600',
-          bgColor: 'bg-green-100'
-        },
-        {
-          id: 3,
-          title: 'Course published',
-          description: 'React Advanced course now live',
-          time: '2 hours ago',
-          icon: BookOpen,
-          iconColor: 'text-purple-600',
-          bgColor: 'bg-purple-100'
-        },
-        {
-          id: 4,
-          title: 'Assignment submitted',
-          description: '25 new submissions in Python 101',
-          time: '3 hours ago',
-          icon: FileText,
-          iconColor: 'text-amber-600',
-          bgColor: 'bg-amber-100'
+  // Load data function
+  const loadDataFromLocalStorage = () => {
+    setIsLoading(true);
+    
+    try {
+      console.log("🔍 Loading payment data from localStorage...");
+      
+      const studentsWithPayments: PaymentStudent[] = [];
+      
+      // Check for uploadedFiles
+      const uploadedFilesStr = localStorage.getItem('uploadedFiles');
+      if (uploadedFilesStr) {
+        try {
+          const uploadedFiles = JSON.parse(uploadedFilesStr);
+          console.log("📁 Uploaded files:", uploadedFiles);
+          
+          if (uploadedFiles && uploadedFiles.length > 0) {
+            uploadedFiles.forEach((file: any) => {
+              if (file && file.studentName && file.thumbnail) {
+                console.log("✅ Found file with thumbnail:", {
+                  name: file.studentName,
+                  thumbnailExists: !!file.thumbnail,
+                  thumbnailLength: file.thumbnail?.length || 0
+                });
+                
+                studentsWithPayments.push({
+                  id: file.id || `file-${Date.now()}`,
+                  name: file.studentName,
+                  email: file.email || 'Not available',
+                  phone: file.phone || 'Not available',
+                  course: file.course || 'Unknown Course',
+                  amount: file.amount || 'PKR 25,000',
+                  paymentDate: file.uploadDate ? new Date(file.uploadDate).toLocaleDateString() : new Date().toLocaleDateString(),
+                  paymentMethod: file.paymentMethod || 'JazzCash',
+                  transactionId: file.transactionId || `TXN-${Math.random().toString(36).substr(2, 8)}`,
+                  status: 'pending',
+                  screenshotUrl: file.thumbnail || '',
+                  uploadedAt: file.uploadDate || new Date().toISOString()
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("❌ Error parsing uploadedFiles:", error);
         }
-      ]
-
-      // Graph data
-      const monthlyData: MonthlyData[] = [
-        { month: 'Jan', students: 120, revenue: 450000, courses: 8 },
-        { month: 'Feb', students: 135, revenue: 520000, courses: 10 },
-        { month: 'Mar', students: 142, revenue: 580000, courses: 11 },
-        { month: 'Apr', students: 156, revenue: 620000, courses: 12 },
-        { month: 'May', students: 165, revenue: 680000, courses: 13 },
-        { month: 'Jun', students: 180, revenue: 750000, courses: 14 },
-      ]
-
-      const weeklyEngagement: WeeklyEngagement[] = [
-        { day: 'Mon', engagement: 72, completion: 65 },
-        { day: 'Tue', engagement: 78, completion: 70 },
-        { day: 'Wed', engagement: 82, completion: 75 },
-        { day: 'Thu', engagement: 85, completion: 78 },
-        { day: 'Fri', engagement: 80, completion: 72 },
-        { day: 'Sat', engagement: 75, completion: 68 },
-        { day: 'Sun', engagement: 68, completion: 62 },
-      ]
-
-      setDashboardData(prev => ({
-        ...prev,
-        recentActivities: activities
-      }))
+      }
       
-      setGraphData({ 
-        monthlyData, 
-        weeklyEngagement 
-      })
+      // Check for paymentSubmission
+      const paymentSubmissionStr = localStorage.getItem('paymentSubmission');
+      if (paymentSubmissionStr) {
+        try {
+          const paymentSubmission = JSON.parse(paymentSubmissionStr);
+          console.log("💰 Payment submission:", paymentSubmission);
+          
+          if (paymentSubmission && paymentSubmission.studentName) {
+            const exists = studentsWithPayments.some(s => 
+              s.transactionId === paymentSubmission.transactionId
+            );
+            
+            if (!exists) {
+              studentsWithPayments.push({
+                id: `payment-${Date.now()}`,
+                name: paymentSubmission.studentName,
+                email: 'Not available',
+                phone: 'Not available',
+                course: paymentSubmission.course || 'Unknown Course',
+                amount: paymentSubmission.amount || 'PKR 25,000',
+                paymentDate: paymentSubmission.paymentDate || new Date().toLocaleDateString(),
+                paymentMethod: paymentSubmission.paymentMethod || 'JazzCash',
+                transactionId: paymentSubmission.transactionId || `TXN-${Math.random().toString(36).substr(2, 8)}`,
+                status: 'pending',
+                screenshotUrl: paymentSubmission.screenshotUrl || '',
+                uploadedAt: paymentSubmission.uploadedAt || new Date().toISOString()
+              });
+            }
+          }
+        } catch (error) {
+          console.error("❌ Error parsing paymentSubmission:", error);
+        }
+      }
       
-      setIsLoading(false)
-    }, 500)
+      console.log("🎯 Final loaded students:", studentsWithPayments);
+      setPaymentStudents(studentsWithPayments);
+      
+      // Load credentials from localStorage
+      const credentialsStr = localStorage.getItem('studentCredentials');
+      if (credentialsStr) {
+        try {
+          const credentials = JSON.parse(credentialsStr);
+          setStudentCredentials(credentials);
+          console.log("🔑 Loaded credentials:", credentials);
+        } catch (error) {
+          console.error("❌ Error parsing credentials:", error);
+        }
+      }
+      
+    } catch (error) {
+      console.error("❌ Error loading data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-    return () => clearTimeout(timer)
+  // Load data on component mount
+  useEffect(() => {
+    loadDataFromLocalStorage();
   }, [])
 
-  const stats = [
-    {
-      title: 'Active Courses',
-      value: dashboardData.totalCourses,
-      icon: BookOpen,
-      iconBgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-      change: '+12%',
-      changeType: 'increase' as const,
-      trend: 'from last month'
-    },
-    {
-      title: 'Active Students',
-      value: dashboardData.totalStudents,
-      icon: Users,
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      change: '+8%',
-      changeType: 'increase' as const,
-      trend: 'from last week'
-    },
-    {
-      title: 'Instructors',
-      value: dashboardData.totalInstructors,
-      icon: UserCircle,
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600',
-      change: '+5%',
-      changeType: 'increase' as const,
-      trend: 'from last month'
-    },
-    {
-      title: 'Total Revenue',
-      value: `₹${(dashboardData.totalPayments * 5000).toLocaleString('en-IN')}`,
-      icon: DollarSign,
-      iconBgColor: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      change: '+15%',
-      changeType: 'increase' as const,
-      trend: 'from last quarter'
-    }
-  ]
+  // Handle verify payment
+  const handleVerifyPayment = (studentId: string) => {
+    setPaymentStudents(prev => prev.map(student => 
+      student.id === studentId ? { ...student, status: 'verified' as const } : student
+    ));
+  }
 
-  const quickActions = [
-    {
-      title: 'Add Course',
-      description: 'Create new course',
-      href: '/lms/Admin_Portal/courses/add',
-      icon: BookOpen,
-      iconBgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600'
-    },
-    {
-      title: 'Manage Students',
-      description: 'View all students',
-      href: '/lms/Admin_Portal/students',
-      icon: Users,
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600'
-    },
-    {
-      title: 'Track Payments',
-      description: 'Monitor transactions',
-      href: '/lms/Admin_Portal/payments',
-      icon: TrendingUp,
-      iconBgColor: 'bg-amber-100',
-      iconColor: 'text-amber-600'
-    },
-    {
-      title: 'Generate Reports',
-      description: 'Create insights',
-      href: '/lms/Admin_Portal/reports',
-      icon: BarChart3,
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600'
-    }
-  ]
+  // Handle reject payment
+  const handleRejectPayment = (studentId: string) => {
+    setPaymentStudents(prev => prev.map(student => 
+      student.id === studentId ? { ...student, status: 'rejected' as const } : student
+    ));
+    alert('Payment rejected!');
+  }
 
-  const performanceMetrics = [
-    {
-      title: 'Student Engagement',
-      value: `${dashboardData.averageEngagement}%`,
-      percentage: dashboardData.averageEngagement,
-      color: 'from-blue-500 to-blue-700',
-      bgColor: 'bg-blue-50',
-      icon: TrendingUp,
-      iconColor: 'text-blue-600'
-    },
-    {
-      title: 'Module Completion',
-      value: `${dashboardData.completedModules}`,
-      percentage: Math.min((dashboardData.completedModules / 100) * 100, 100),
-      color: 'from-green-500 to-green-700',
-      bgColor: 'bg-green-50',
-      icon: CheckCircle,
-      iconColor: 'text-green-600'
+  // Send credentials to student
+  const sendCredentialsToStudent = async (student: PaymentStudent) => {
+    if (!student.email || student.email === 'Not available') {
+      alert('Student email is required to send credentials. Please make sure the student provided an email.');
+      return;
     }
-  ]
 
-  const summaryItems = [
-    {
-      title: 'Pending Approvals',
-      value: dashboardData.pendingPayments,
-      icon: AlertCircle,
-      iconBgColor: 'bg-amber-100',
-      iconColor: 'text-amber-600'
-    },
-    {
-      title: 'New Messages',
-      value: 8,
-      icon: MessageSquare,
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600'
-    },
-    {
-      title: 'Active Sessions',
-      value: 156,
-      icon: Clock,
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600'
+    setIsSendingCredentials(student.id);
+    
+    try {
+      const response = await fetch('/api/send-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentEmail: student.email,
+          studentName: student.name,
+          courseName: student.course,
+          amount: student.amount,
+          paymentMethod: student.paymentMethod
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Save credentials to localStorage
+        const newCredential: StudentCredentials = {
+          id: `cred-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          studentId: student.id,
+          studentName: student.name,
+          studentEmail: student.email,
+          course: student.course,
+          username: result.credentials.username,
+          password: result.credentials.password,
+          sentDate: new Date().toISOString(),
+          status: 'sent'
+        };
+
+        const existingCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
+        const updatedCredentials = [...existingCredentials, newCredential];
+        
+        localStorage.setItem('studentCredentials', JSON.stringify(updatedCredentials));
+        setStudentCredentials(updatedCredentials);
+
+        // Verify the payment
+        handleVerifyPayment(student.id);
+        
+        alert(`✅ Credentials sent successfully to ${student.email}!\n\nUsername: ${result.credentials.username}\nPassword: ${result.credentials.password}\n\nCredentials have been saved to localStorage.`);
+      } else {
+        throw new Error(result.message || 'Failed to send credentials');
+      }
+    } catch (error: any) {
+      console.error('❌ Error sending credentials:', error);
+      alert(`❌ Failed to send credentials: ${error.message}`);
+      
+      // Save failed attempt
+      const failedCredential: StudentCredentials = {
+        id: `cred-failed-${Date.now()}`,
+        studentId: student.id,
+        studentName: student.name,
+        studentEmail: student.email,
+        course: student.course,
+        username: 'FAILED',
+        password: 'FAILED',
+        sentDate: new Date().toISOString(),
+        status: 'failed'
+      };
+
+      const existingCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
+      const updatedCredentials = [...existingCredentials, failedCredential];
+      
+      localStorage.setItem('studentCredentials', JSON.stringify(updatedCredentials));
+      setStudentCredentials(updatedCredentials);
+    } finally {
+      setIsSendingCredentials(null);
     }
-  ]
+  }
 
-  return (
-    <>
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-  {stats.map((stat, index) => {
-    const IconComponent = stat.icon;
+  // View screenshot
+  const viewScreenshot = (student: PaymentStudent) => {
+    console.log("👁️ Viewing screenshot for:", {
+      name: student.name,
+      screenshotUrl: student.screenshotUrl,
+      hasScreenshot: !!student.screenshotUrl,
+      screenshotLength: student.screenshotUrl?.length || 0
+    });
+    
+    if (student.screenshotUrl && student.screenshotUrl.length > 100) {
+      setSelectedScreenshot(student.screenshotUrl);
+      setSelectedStudentDetails(student);
+      setShowScreenshotModal(true);
+    } else {
+      alert('No valid screenshot available for this student.');
+    }
+  }
+
+  // Download screenshot
+  const downloadScreenshot = (student: PaymentStudent) => {
+    if (student.screenshotUrl) {
+      const link = document.createElement('a');
+      link.href = student.screenshotUrl;
+      link.download = `payment-${student.name}-${student.transactionId}.jpg`;
+      link.click();
+    } else {
+      alert('No screenshot available to download.');
+    }
+  }
+
+  // View credentials
+  const viewCredentials = (credential: StudentCredentials) => {
+    setSelectedCredentials(credential);
+    setShowCredentialsModal(true);
+  }
+
+  // Resend credentials
+  const resendCredentials = async (credential: StudentCredentials) => {
+    if (confirm(`Resend credentials to ${credential.studentEmail}?`)) {
+      try {
+        const response = await fetch('/api/send-credentials', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            studentEmail: credential.studentEmail,
+            studentName: credential.studentName,
+            courseName: credential.course,
+            username: credential.username,
+            password: credential.password,
+            isResend: true
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert(`✅ Credentials resent successfully to ${credential.studentEmail}!`);
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error: any) {
+        alert(`❌ Failed to resend credentials: ${error.message}`);
+      }
+    }
+  }
+
+  // Filter students
+  const filteredStudents = paymentStudents.filter(student => {
+    const matchesSearch = 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = selectedStatus === 'all' || student.status === selectedStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filter credentials
+  const filteredCredentials = studentCredentials.filter(cred => 
+    cred.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cred.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cred.studentEmail.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate stats
+  const totalSubmissions = paymentStudents.length;
+  const pendingVerifications = paymentStudents.filter(s => s.status === 'pending').length;
+  const verifiedPayments = paymentStudents.filter(s => s.status === 'verified').length;
+  const rejectedPayments = paymentStudents.filter(s => s.status === 'rejected').length;
+  const totalRevenue = paymentStudents.reduce((sum, student) => {
+    const amountStr = student.amount.replace('PKR ', '').replace(/,/g, '');
+    const amount = parseFloat(amountStr) || 25000;
+    return sum + amount;
+  }, 0);
+  const sentCredentials = studentCredentials.filter(c => c.status === 'sent').length;
+  const failedCredentials = studentCredentials.filter(c => c.status === 'failed').length;
+
+  if (isLoading) {
     return (
-      <div 
-        key={index} 
-        className="bg-white rounded-xl border border-gray-200 p-5 shadow-md  transition-shadow duration-200"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm text-gray-500 font-medium">{stat.title}</p>
-          <div className={`p-2 rounded-lg ${stat.iconBgColor} flex items-center justify-center`}>
-            <IconComponent className={`w-6 h-6 ${stat.iconColor}`} />
-          </div>
-        </div>
-        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-        <div className="flex items-center mt-2 text-sm">
-          <span className={`mr-2 font-medium ${stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'}`}>
-            {stat.changeType === 'increase' ? '▲' : '▼'} {stat.change}
-          </span>
-          <span className="text-gray-500 text-xs">{stat.trend}</span>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
+          <p className="mt-4 text-darkGrey">Loading payment data...</p>
         </div>
       </div>
     );
-  })}
-</div>
+  }
 
+  return (
+    <div className="bg-white min-h-screen p-6">
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                Welcome back, Admin
+              </h1>
+              <p className="text-darkGrey mt-1">
+                Manage student payments and credentials from one dashboard
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-darkGrey">
+              <span>Admin Portal</span>
+              <ChevronRight className="w-4 h-4" />
+              <span className="font-medium">Payments</span>
+            </div>
+          </div>
+          <div className="mt-4 h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+        </div>
+      </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Quick Actions & Performance */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Quick Actions */}
-          <div className=" rounded-xl border  p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
+      {/* Stats Cards - Payment Overview */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Payment Overview
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Total Submissions</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{totalSubmissions}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
+                <Users className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Pending Verification</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{pendingVerifications}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
+                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Verified Payments</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{verifiedPayments}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
+                <CheckCircle className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Total Revenue</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>PKR {totalRevenue.toLocaleString()}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
+                <CreditCard className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards - Credentials Status */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Credentials Status
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Sent Credentials</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{sentCredentials}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
+                <Mail className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Failed Credentials</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{failedCredentials}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
+                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Rejected Payments</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{rejectedPayments}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
+                <X className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Panel */}
+      <div className="mb-8">
+        <div className="bg-white rounded-lg border border-softGrey p-5">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: BRAND_COLORS.darkGrey }} />
+                <input
+                  type="text"
+                  placeholder="Search by name, course, email, or transaction ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                />
+              </div>
             </div>
             
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-  {quickActions.map((action, index) => (
-    <Link
-      key={index}
-      href={action.href}
-      className="flex justify-between items-center p-3 rounded-md hover:bg-purple-50 transition-colors duration-200 cursor-pointer"
-    >
-      <div>
-        <h3 className="text-gray-900 font-medium text-base">{action.title}</h3>
-        {action.description && (
-          <p className="text-gray-500 text-sm mt-0.5">{action.description}</p>
-        )}
-      </div>
-      <span className="text-purple-600 font-bold text-lg">{'>'}</span>
-    </Link>
-  ))}
-</div>
-
+            <div className="w-full md:w-48">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (confirm('Clear all localStorage data?')) {
+                    localStorage.removeItem('studentCredentials');
+                    localStorage.removeItem('uploadedFiles');
+                    localStorage.removeItem('paymentSubmission');
+                    alert('LocalStorage cleared!');
+                    loadDataFromLocalStorage();
+                  }
+                }}
+                className="px-4 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+              >
+                Clear Data
+              </button>
+              <button
+                onClick={loadDataFromLocalStorage}
+                className="px-4 py-2.5 rounded-lg transition-colors font-medium flex items-center gap-2"
+                style={{ 
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white 
+                }}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Performance Metrics with Graphs */}
-          <div className=" rounded-xl border  p-6 ">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Performance Metrics</h2>
+      {/* Payment Submissions Table */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Payment Submissions
+          </h2>
+          <span className="text-sm text-darkGrey">
+            Showing {filteredStudents.length} of {paymentStudents.length} students
+          </span>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
+          {filteredStudents.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Student
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Course
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Amount
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Transaction ID
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Screenshot
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                
+                <tbody>
+                  {filteredStudents.map((student) => (
+                    <tr 
+                      key={student.id} 
+                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
+                    >
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-medium text-darkGrey">{student.name}</p>
+                          <p className="text-sm text-darkGrey/70">{student.email}</p>
+                          <p className="text-xs text-darkGrey/50">{student.phone}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="font-medium text-darkGrey">{student.course}</span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{student.amount}</p>
+                          <p className="text-sm text-darkGrey/70">{student.paymentMethod}</p>
+                          <p className="text-xs text-darkGrey/50">{student.paymentDate}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <p className="font-mono text-sm bg-lightGrey px-2 py-1 rounded text-darkGrey">
+                          {student.transactionId}
+                        </p>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        {student.screenshotUrl && student.screenshotUrl.length > 100 ? (
+                          <button
+                            onClick={() => viewScreenshot(student)}
+                            className="flex items-center gap-2 px-3 py-1.5 border border-softGrey text-darkGrey rounded-lg hover:border-darkRoyalBlue hover:text-darkRoyalBlue transition-colors"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            <span className="text-sm font-medium">View</span>
+                          </button>
+                        ) : (
+                          <span className="text-sm text-darkGrey/70">No screenshot</span>
+                        )}
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          student.status === 'verified' 
+                            ? 'text-white'
+                            : student.status === 'rejected'
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: student.status === 'verified' 
+                            ? BRAND_COLORS.teal
+                            : student.status === 'rejected'
+                            ? BRAND_COLORS.brightRed
+                            : BRAND_COLORS.darkRoyalBlue
+                        }}>
+                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                        </span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2">
+                          {student.screenshotUrl && student.screenshotUrl.length > 100 && (
+                            <>
+                              <button
+                                onClick={() => viewScreenshot(student)}
+                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                                title="View Screenshot"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => downloadScreenshot(student)}
+                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                                title="Download Screenshot"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          
+                          {student.status === 'pending' && (
+                            <button
+                              onClick={() => sendCredentialsToStudent(student)}
+                              disabled={isSendingCredentials === student.id}
+                              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              style={{ 
+                                backgroundColor: BRAND_COLORS.deepRed,
+                                color: BRAND_COLORS.white 
+                              }}
+                            >
+                              {isSendingCredentials === student.id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-4 h-4" />
+                                  Verify & Send
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          {student.status === 'pending' && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Reject payment from ${student.name}?`)) {
+                                  handleRejectPayment(student.id);
+                                }
+                              }}
+                              className="px-3 py-1.5 text-sm border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          
+                          {student.status === 'verified' && (
+                            <span className="px-3 py-1.5 text-sm bg-teal/10 text-teal rounded-lg font-medium">
+                              ✓ Verified
+                            </span>
+                          )}
+                          
+                          {student.status === 'rejected' && (
+                            <span className="px-3 py-1.5 text-sm bg-brightRed/10 text-brightRed rounded-lg font-medium">
+                              ✗ Rejected
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+                {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
+              </h3>
+              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
+                {searchTerm 
+                  ? 'Try a different search term' 
+                  : 'Students will appear here after they upload payment screenshots'}
+              </p>
+              
+              {!searchTerm && (
+                <div className="bg-lightGrey border border-softGrey rounded-lg p-4 max-w-md mx-auto">
+                  <h4 className="font-medium mb-2" style={{ color: BRAND_COLORS.darkRoyalBlue }}>How to test the system:</h4>
+                  <ol className="text-sm text-darkGrey space-y-1 list-decimal pl-4">
+                    <li>Go to any course page</li>
+                    <li>Click "Enroll Now" button</li>
+                    <li>Fill the enrollment form</li>
+                    <li>Download payment voucher</li>
+                    <li>Upload payment screenshot (JPG/PNG)</li>
+                    <li>Come back here and click "Refresh"</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {performanceMetrics.map((metric, index) => {
-                const IconComponent = metric.icon;
-                return (
-                  <div key={index} className={`p-4 rounded-lg ${metric.bgColor} border border-gray-100`}>
-                    <div className="flex items-center justify-between mb-3">
+      {/* Sent Credentials Table */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Sent Credentials
+          </h2>
+          <span className="text-sm text-darkGrey">
+            {studentCredentials.length} credentials stored
+          </span>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
+          {studentCredentials.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Student
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Course
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Credentials
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Sent Date
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                
+                <tbody>
+                  {filteredCredentials.map((credential) => (
+                    <tr 
+                      key={credential.id} 
+                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
+                    >
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-medium text-darkGrey">{credential.studentName}</p>
+                          <p className="text-sm text-darkGrey/70">{credential.studentEmail}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="font-medium text-darkGrey">{credential.course}</span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="space-y-1">
+                          <p className="text-sm">
+                            <span className="text-darkGrey/70">Username: </span>
+                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.username}</span>
+                          </p>
+                          <p className="text-sm">
+                            <span className="text-darkGrey/70">Password: </span>
+                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.password}</span>
+                          </p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <p className="text-sm text-darkGrey/70">
+                          {new Date(credential.sentDate).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-darkGrey/50">
+                          {new Date(credential.sentDate).toLocaleTimeString()}
+                        </p>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          credential.status === 'sent' 
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: credential.status === 'sent' 
+                            ? BRAND_COLORS.teal
+                            : BRAND_COLORS.brightRed
+                        }}>
+                          {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
+                        </span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => viewCredentials(credential)}
+                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          
+                          {credential.status === 'sent' && (
+                            <button
+                              onClick={() => resendCredentials(credential)}
+                              className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                              title="Resend Credentials"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => {
+                              if (confirm(`Copy credentials for ${credential.studentName} to clipboard?`)) {
+                                const text = `Username: ${credential.username}\nPassword: ${credential.password}`;
+                                navigator.clipboard.writeText(text);
+                                alert('Credentials copied to clipboard!');
+                              }
+                            }}
+                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                            title="Copy Credentials"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Key className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>No credentials sent yet</h3>
+              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
+                Verify a payment to send login credentials to students
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Screenshot Modal */}
+      {showScreenshotModal && selectedScreenshot && selectedStudentDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-softGrey">
+            <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
+              <div>
+                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                  Payment Screenshot - {selectedStudentDetails.name}
+                </h3>
+                <p className="text-sm text-darkGrey/70">
+                  Transaction ID: {selectedStudentDetails.transactionId}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowScreenshotModal(false)}
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-auto max-h-[70vh]">
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="lg:w-2/3">
+                  <div className="border border-softGrey rounded-lg overflow-hidden bg-lightGrey">
+                    <img
+                      src={selectedScreenshot}
+                      alt="Payment Screenshot"
+                      className="w-full h-auto max-h-[500px] object-contain"
+                      onError={(e) => {
+                        console.error("❌ Image failed to load:", selectedScreenshot?.substring(0, 100));
+                        e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load';
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      onClick={() => downloadScreenshot(selectedStudentDetails)}
+                      className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Screenshot
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="lg:w-1/3">
+                  <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
+                    <h4 className="font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>Payment Details</h4>
+                    
+                    <div className="space-y-3">
                       <div>
-                        <p className="text-sm text-gray-600">{metric.title}</p>
-                        <p className="text-2xl font-semibold text-gray-900 mt-1">{metric.value}</p>
+                        <p className="text-sm text-darkGrey/70">Student Name</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.name}</p>
                       </div>
-                      <IconComponent className={`w-8 h-8 ${metric.iconColor}`} />
+                      <div>
+                        <p className="text-sm text-darkGrey/70">Course</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.course}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-darkGrey/70">Amount</p>
+                        <p className="font-medium" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.amount}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-darkGrey/70">Payment Method</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.paymentMethod}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-darkGrey/70">Transaction ID</p>
+                        <p className="font-mono text-sm bg-white px-2 py-1 rounded border border-softGrey text-darkGrey">
+                          {selectedStudentDetails.transactionId}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-darkGrey/70">Status</p>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          selectedStudentDetails.status === 'verified' 
+                            ? 'text-white'
+                            : selectedStudentDetails.status === 'rejected'
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: selectedStudentDetails.status === 'verified' 
+                            ? BRAND_COLORS.teal
+                            : selectedStudentDetails.status === 'rejected'
+                            ? BRAND_COLORS.brightRed
+                            : BRAND_COLORS.darkRoyalBlue
+                        }}>
+                          {selectedStudentDetails.status.charAt(0).toUpperCase() + selectedStudentDetails.status.slice(1)}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden mb-2">
-                      <div
-                        className={`h-full rounded-full bg-gradient-to-r ${metric.color}`}
-                        style={{ width: `${metric.percentage}%` }}
-                      />
-                    </div>
-
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="font-medium text-gray-900">{metric.percentage}%</span>
+                    
+                    <div className="mt-6 space-y-3">
+                      {selectedStudentDetails.status === 'pending' && (
+                        <button
+                          onClick={() => {
+                            sendCredentialsToStudent(selectedStudentDetails);
+                            setShowScreenshotModal(false);
+                          }}
+                          disabled={isSendingCredentials === selectedStudentDetails.id}
+                          className="w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                          style={{ 
+                            backgroundColor: BRAND_COLORS.deepRed,
+                            color: BRAND_COLORS.white 
+                          }}
+                        >
+                          {isSendingCredentials === selectedStudentDetails.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Sending Credentials...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              Verify & Send Credentials
+                            </>
+                          )}
+                        </button>
+                      )}
+                      
+                      {selectedStudentDetails.status === 'pending' && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Reject payment from ${selectedStudentDetails.name}?`)) {
+                              handleRejectPayment(selectedStudentDetails.id);
+                              setShowScreenshotModal(false);
+                            }
+                          }}
+                          className="w-full py-2.5 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
+                        >
+                          ✗ Reject Payment
+                        </button>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Graphs Section */}
-            <div className="space-y-8">
-              {/* Monthly Revenue */}
-              <div className="p-4 border border-gray-100 rounded-lg">
-                <h3 className="text-gray-900 font-medium mb-4">Monthly Revenue (₹)</h3>
-                <div className="h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={graphData.monthlyData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                      <XAxis 
-                        dataKey="month" 
-                        axisLine={false} 
-                        tickLine={false}
-                        tick={{ fill: '#6b7280' }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tickFormatter={(value) => `${value/1000}k`}
-                        tick={{ fill: '#6b7280' }}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: '#f5f3ff' }} />
-                      <Bar 
-                        dataKey="revenue" 
-                        fill="#8b5cf6" 
-                        radius={[4, 4, 0, 0]} 
-                        name="Revenue"
-                        barSize={24}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Weekly Engagement */}
-              <div className="p-4 border border-gray-100 rounded-lg">
-                <h3 className="text-gray-900 font-medium mb-4">Weekly Engagement & Completion (%)</h3>
-                <div className="h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={graphData.weeklyEngagement}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                      <XAxis 
-                        dataKey="day" 
-                        axisLine={false} 
-                        tickLine={false}
-                        tick={{ fill: '#6b7280' }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        domain={[0, 100]} 
-                        tick={{ fill: '#6b7280' }}
-                      />
-                      <Tooltip content={<CustomLineTooltip />} cursor={{ stroke: '#f3f4f6', strokeWidth: 1 }} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="engagement" 
-                        stroke="#8b5cf6" 
-                        strokeWidth={2.5} 
-                        dot={{ r: 3, fill: '#8b5cf6' }} 
-                        activeDot={{ r: 5, fill: '#7c3aed' }} 
-                        name="Engagement" 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="completion" 
-                        stroke="#22c55e" 
-                        strokeWidth={2.5} 
-                        dot={{ r: 3, fill: '#22c55e' }} 
-                        activeDot={{ r: 5, fill: '#16a34a' }} 
-                        name="Completion" 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Column - Recent Activities & Summary */}
-        <div className="space-y-6">
-          {/* Recent Activities */}
-         <div className="bg-white p-6 rounded-xl">
-  <div className="flex items-center justify-between mb-5">
-    <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
-    
-  </div>
-
-  <ul className="space-y-3">
-    {dashboardData.recentActivities.length > 0 ? (
-      dashboardData.recentActivities.map((activity) => (
-        <li key={activity.id} className="flex items-start gap-3">
-          {/* Dot as bullet */}
-          <span className="w-2 h-2 mt-2 bg-purple-600 rounded-full flex-shrink-0"></span>
-          <div>
-            <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{activity.description}</p>
-            <span className="text-xs text-gray-500 mt-1">{activity.time}</span>
+      {/* Credentials Details Modal */}
+      {showCredentialsModal && selectedCredentials && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
+            <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
+              <div>
+                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                  Credentials Details
+                </h3>
+                <p className="text-sm text-darkGrey/70">
+                  {selectedCredentials.studentName}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCredentialsModal(false)}
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-darkGrey/70">Student Name</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.studentName}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-darkGrey/70">Email</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.studentEmail}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-darkGrey/70">Course</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.course}</p>
+                </div>
+                
+                <div className="bg-lightGrey p-4 rounded-lg border border-softGrey">
+                  <h4 className="font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Login Credentials</h4>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-sm text-darkGrey/70">Username</p>
+                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
+                        {selectedCredentials.username}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-darkGrey/70">Password</p>
+                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
+                        {selectedCredentials.password}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-darkGrey/70">Sent Date</p>
+                  <p className="font-medium text-darkGrey">
+                    {new Date(selectedCredentials.sentDate).toLocaleDateString()} at{' '}
+                    {new Date(selectedCredentials.sentDate).toLocaleTimeString()}
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-darkGrey/70">Status</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    selectedCredentials.status === 'sent' 
+                      ? 'text-white'
+                      : 'text-white'
+                  }`} style={{
+                    backgroundColor: selectedCredentials.status === 'sent' 
+                      ? BRAND_COLORS.teal
+                      : BRAND_COLORS.brightRed
+                  }}>
+                    {selectedCredentials.status.charAt(0).toUpperCase() + selectedCredentials.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    const text = `Username: ${selectedCredentials.username}\nPassword: ${selectedCredentials.password}`;
+                    navigator.clipboard.writeText(text);
+                    alert('Credentials copied to clipboard!');
+                  }}
+                  className="flex-1 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Key className="w-4 h-4" />
+                  Copy Credentials
+                </button>
+                
+                {selectedCredentials.status === 'sent' && (
+                  <button
+                    onClick={() => {
+                      resendCredentials(selectedCredentials);
+                      setShowCredentialsModal(false);
+                    }}
+                    className="flex-1 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                    style={{ 
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white 
+                    }}
+                  >
+                    <Send className="w-4 h-4" />
+                    Resend
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </li>
-      ))
-    ) : (
-      <div className="text-center py-8 text-gray-500 text-sm">
-        No recent activities
-      </div>
-    )}
-  </ul>
-</div>
-
-
-          {/* Quick Summary */}
-          <div className="bg-white p-6 rounded-xl">
-  <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Summary</h2>
-
-  <ul className="space-y-3">
-    {summaryItems.map((item, index) => (
-      <li key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-        <div className="flex items-center gap-3">
-          {/* Checkbox / checkmark */}
-          <span className="w-4 h-4 flex items-center justify-center bg-purple-50 border border-purple-300 rounded-sm text-purple-600 font-bold text-xs">
-            ✓
-          </span>
-          <span className="text-gray-700 text-sm">{item.title}</span>
         </div>
-        <span className="font-semibold text-gray-900">{item.value}</span>
-      </li>
-    ))}
-  </ul>
-
-  <div className="mt-6">
-    <Link href="/lms/Admin_Portal/reports">
-      <button className="w-full py-3 text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors font-medium text-sm border border-purple-200">
-        View Detailed Reports
-      </button>
-    </Link>
-  </div>
-</div>
-
-        </div>
-      </div>
-    </>
-  )
+      )}
+    </div>
+  );
 }

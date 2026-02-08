@@ -1,9 +1,10 @@
 // app/lms/Instructor_Portal/components/Header.tsx
 'use client';
 
-import { Search, Bell, HelpCircle, Menu, User } from 'lucide-react';
+import { Search, Bell, HelpCircle, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+/* eslint-disable */
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,7 @@ export default function Header() {
       try {
         const userData = localStorage.getItem('currentUser');
         const instructorUsers = JSON.parse(localStorage.getItem('instructorUsers') || '[]');
+
         const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
         
         console.log('Header - Current user from localStorage:', userData);

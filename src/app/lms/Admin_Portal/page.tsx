@@ -16,7 +16,12 @@ import {
   FileText,
   Send,
   Key,
-  Mail
+  Mail,
+  ChevronRight,
+  Bell,
+  Shield,
+  FileCheck,
+  CreditCard
 } from 'lucide-react'
 
 type PaymentStudent = {
@@ -58,6 +63,19 @@ export default function AdminDashboard() {
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<PaymentStudent | null>(null)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [selectedCredentials, setSelectedCredentials] = useState<StudentCredentials | null>(null)
+
+  // Brand Colors
+  const BRAND_COLORS = {
+    darkNavy: '#0B1C3D',
+    darkRoyalBlue: '#1E3A8A',
+    deepRed: '#B11217',
+    white: '#FFFFFF',
+    lightGrey: '#F4F6F8',
+    softGrey: '#E5E7EB',
+    darkGrey: '#1F2933',
+    teal: '#1FB6C9',
+    brightRed: '#D32F2F'
+  }
 
   // Load data function
   const loadDataFromLocalStorage = () => {
@@ -366,484 +384,568 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading payment data...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
+          <p className="mt-4 text-darkGrey">Loading payment data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payment Submissions</h1>
-          <p className="text-gray-600 mt-1">Manage student payment verifications</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (confirm('Clear all localStorage data?')) {
-                localStorage.removeItem('studentCredentials');
-                localStorage.removeItem('uploadedFiles');
-                localStorage.removeItem('paymentSubmission');
-                alert('LocalStorage cleared!');
-                loadDataFromLocalStorage();
-              }
-            }}
-            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
-          >
-            Clear Data
-          </button>
-          <button
-            onClick={loadDataFromLocalStorage}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
+    <div className="bg-white min-h-screen p-6">
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                Welcome back, Admin
+              </h1>
+              <p className="text-darkGrey mt-1">
+                Manage student payments and credentials from one dashboard
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-darkGrey">
+              <span>Admin Portal</span>
+              <ChevronRight className="w-4 h-4" />
+              <span className="font-medium">Payments</span>
+            </div>
+          </div>
+          <div className="mt-4 h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Submissions</p>
-              <p className="text-2xl font-bold mt-2">{totalSubmissions}</p>
-            </div>
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-              <Users className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Pending Verification</p>
-              <p className="text-2xl font-bold mt-2">{pendingVerifications}</p>
-            </div>
-            <div className="p-3 rounded-full bg-amber-100 text-amber-600">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Verified Payments</p>
-              <p className="text-2xl font-bold mt-2">{verifiedPayments}</p>
-            </div>
-            <div className="p-3 rounded-full bg-green-100 text-green-600">
-              <CheckCircle className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Revenue</p>
-              <p className="text-2xl font-bold mt-2">PKR {totalRevenue.toLocaleString()}</p>
-            </div>
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-              <DollarSign className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Credentials Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Sent Credentials</p>
-              <p className="text-2xl font-bold mt-2">{sentCredentials}</p>
-            </div>
-            <div className="p-3 rounded-full bg-green-100 text-green-600">
-              <Mail className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Failed Credentials</p>
-              <p className="text-2xl font-bold mt-2">{failedCredentials}</p>
-            </div>
-            <div className="p-3 rounded-full bg-red-100 text-red-600">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Rejected Payments</p>
-              <p className="text-2xl font-bold mt-2">{rejectedPayments}</p>
-            </div>
-            <div className="p-3 rounded-full bg-red-100 text-red-600">
-              <X className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, course, email, or transaction ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
-              />
+      {/* Stats Cards - Payment Overview */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Payment Overview
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Total Submissions</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{totalSubmissions}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
+                <Users className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              </div>
             </div>
           </div>
           
-          <div className="w-full md:w-48">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Pending Verification</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{pendingVerifications}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
+                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Verified Payments</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{verifiedPayments}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
+                <CheckCircle className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Total Revenue</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>PKR {totalRevenue.toLocaleString()}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
+                <CreditCard className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Payment Students Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">Payment Submissions</h2>
-          <span className="text-sm text-gray-500">
+      {/* Stats Cards - Credentials Status */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Credentials Status
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Sent Credentials</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{sentCredentials}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
+                <Mail className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Failed Credentials</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{failedCredentials}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
+                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-darkGrey">Rejected Payments</p>
+                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{rejectedPayments}</p>
+              </div>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
+                <X className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Panel */}
+      <div className="mb-8">
+        <div className="bg-white rounded-lg border border-softGrey p-5">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: BRAND_COLORS.darkGrey }} />
+                <input
+                  type="text"
+                  placeholder="Search by name, course, email, or transaction ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                />
+              </div>
+            </div>
+            
+            <div className="w-full md:w-48">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (confirm('Clear all localStorage data?')) {
+                    localStorage.removeItem('studentCredentials');
+                    localStorage.removeItem('uploadedFiles');
+                    localStorage.removeItem('paymentSubmission');
+                    alert('LocalStorage cleared!');
+                    loadDataFromLocalStorage();
+                  }
+                }}
+                className="px-4 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+              >
+                Clear Data
+              </button>
+              <button
+                onClick={loadDataFromLocalStorage}
+                className="px-4 py-2.5 rounded-lg transition-colors font-medium flex items-center gap-2"
+                style={{ 
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white 
+                }}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Submissions Table */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Payment Submissions
+          </h2>
+          <span className="text-sm text-darkGrey">
             Showing {filteredStudents.length} of {paymentStudents.length} students
           </span>
         </div>
         
-        {filteredStudents.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Student</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Course</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Amount</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Transaction ID</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Screenshot</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              
-              <tbody>
-                {filteredStudents.map((student) => (
-                  <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="font-medium text-gray-900">{student.name}</p>
-                        <p className="text-sm text-gray-500">{student.email}</p>
-                        <p className="text-xs text-gray-400">{student.phone}</p>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className="font-medium">{student.course}</span>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="font-bold text-green-600">{student.amount}</p>
-                        <p className="text-sm text-gray-500">{student.paymentMethod}</p>
-                        <p className="text-xs text-gray-400">{student.paymentDate}</p>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <p className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                        {student.transactionId}
-                      </p>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      {student.screenshotUrl && student.screenshotUrl.length > 100 ? (
-                        <button
-                          onClick={() => viewScreenshot(student)}
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-                        >
-                          <ImageIcon className="w-4 h-4" />
-                          <span className="text-sm font-medium">View Screenshot</span>
-                        </button>
-                      ) : (
-                        <span className="text-sm text-gray-500">No screenshot</span>
-                      )}
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        student.status === 'verified' 
-                          ? 'bg-green-100 text-green-800'
-                          : student.status === 'rejected'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                      </span>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        {student.screenshotUrl && student.screenshotUrl.length > 100 && (
-                          <>
-                            <button
-                              onClick={() => viewScreenshot(student)}
-                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="View Screenshot"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => downloadScreenshot(student)}
-                              className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Download Screenshot"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        
-                        {student.status === 'pending' && (
-                          <button
-                            onClick={() => sendCredentialsToStudent(student)}
-                            disabled={isSendingCredentials === student.id}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSendingCredentials === student.id ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-4 h-4" />
-                                Verify & Send Credentials
-                              </>
-                            )}
-                          </button>
-                        )}
-                        
-                        {student.status === 'pending' && (
-                          <button
-                            onClick={() => {
-                              if (confirm(`Reject payment from ${student.name}?`)) {
-                                handleRejectPayment(student.id);
-                              }
-                            }}
-                            className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
-                          >
-                            Reject
-                          </button>
-                        )}
-                        
-                        {student.status === 'verified' && (
-                          <span className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg font-medium">
-                            ✓ Verified
-                          </span>
-                        )}
-                        
-                        {student.status === 'rejected' && (
-                          <span className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg font-medium">
-                            ✗ Rejected
-                          </span>
-                        )}
-                      </div>
-                    </td>
+        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
+          {filteredStudents.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Student
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Course
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Amount
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Transaction ID
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Screenshot
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
-            </h3>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              {searchTerm 
-                ? 'Try a different search term' 
-                : 'Students will appear here after they upload payment screenshots'}
-            </p>
-            
-            {!searchTerm && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                <h4 className="font-medium text-blue-800 mb-2">How to test the system:</h4>
-                <ol className="text-sm text-blue-700 space-y-1 list-decimal pl-4">
-                  <li>Go to any course page</li>
-                  <li>Click &quot;Enroll Now&quot; button</li>
-                  <li>Fill the enrollment form</li>
-                  <li>Download payment voucher</li>
-                  <li>Upload payment screenshot (JPG/PNG)</li>
-                  <li>Come back here and click &ldquo;Refresh&ldquo;</li>
-                </ol>
-              </div>
-            )}
-          </div>
-        )}
+                </thead>
+                
+                <tbody>
+                  {filteredStudents.map((student) => (
+                    <tr 
+                      key={student.id} 
+                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
+                    >
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-medium text-darkGrey">{student.name}</p>
+                          <p className="text-sm text-darkGrey/70">{student.email}</p>
+                          <p className="text-xs text-darkGrey/50">{student.phone}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="font-medium text-darkGrey">{student.course}</span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{student.amount}</p>
+                          <p className="text-sm text-darkGrey/70">{student.paymentMethod}</p>
+                          <p className="text-xs text-darkGrey/50">{student.paymentDate}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <p className="font-mono text-sm bg-lightGrey px-2 py-1 rounded text-darkGrey">
+                          {student.transactionId}
+                        </p>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        {student.screenshotUrl && student.screenshotUrl.length > 100 ? (
+                          <button
+                            onClick={() => viewScreenshot(student)}
+                            className="flex items-center gap-2 px-3 py-1.5 border border-softGrey text-darkGrey rounded-lg hover:border-darkRoyalBlue hover:text-darkRoyalBlue transition-colors"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            <span className="text-sm font-medium">View</span>
+                          </button>
+                        ) : (
+                          <span className="text-sm text-darkGrey/70">No screenshot</span>
+                        )}
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          student.status === 'verified' 
+                            ? 'text-white'
+                            : student.status === 'rejected'
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: student.status === 'verified' 
+                            ? BRAND_COLORS.teal
+                            : student.status === 'rejected'
+                            ? BRAND_COLORS.brightRed
+                            : BRAND_COLORS.darkRoyalBlue
+                        }}>
+                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                        </span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2">
+                          {student.screenshotUrl && student.screenshotUrl.length > 100 && (
+                            <>
+                              <button
+                                onClick={() => viewScreenshot(student)}
+                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                                title="View Screenshot"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => downloadScreenshot(student)}
+                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                                title="Download Screenshot"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          
+                          {student.status === 'pending' && (
+                            <button
+                              onClick={() => sendCredentialsToStudent(student)}
+                              disabled={isSendingCredentials === student.id}
+                              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              style={{ 
+                                backgroundColor: BRAND_COLORS.deepRed,
+                                color: BRAND_COLORS.white 
+                              }}
+                            >
+                              {isSendingCredentials === student.id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-4 h-4" />
+                                  Verify & Send
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          {student.status === 'pending' && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Reject payment from ${student.name}?`)) {
+                                  handleRejectPayment(student.id);
+                                }
+                              }}
+                              className="px-3 py-1.5 text-sm border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          
+                          {student.status === 'verified' && (
+                            <span className="px-3 py-1.5 text-sm bg-teal/10 text-teal rounded-lg font-medium">
+                              ✓ Verified
+                            </span>
+                          )}
+                          
+                          {student.status === 'rejected' && (
+                            <span className="px-3 py-1.5 text-sm bg-brightRed/10 text-brightRed rounded-lg font-medium">
+                              ✗ Rejected
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+                {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
+              </h3>
+              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
+                {searchTerm 
+                  ? 'Try a different search term' 
+                  : 'Students will appear here after they upload payment screenshots'}
+              </p>
+              
+              {!searchTerm && (
+                <div className="bg-lightGrey border border-softGrey rounded-lg p-4 max-w-md mx-auto">
+                  <h4 className="font-medium mb-2" style={{ color: BRAND_COLORS.darkRoyalBlue }}>How to test the system:</h4>
+                  <ol className="text-sm text-darkGrey space-y-1 list-decimal pl-4">
+                    <li>Go to any course page</li>
+                    <li>Click "Enroll Now" button</li>
+                    <li>Fill the enrollment form</li>
+                    <li>Download payment voucher</li>
+                    <li>Upload payment screenshot (JPG/PNG)</li>
+                    <li>Come back here and click "Refresh"</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sent Credentials Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">Sent Credentials</h2>
-          <span className="text-sm text-gray-500">
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Sent Credentials
+          </h2>
+          <span className="text-sm text-darkGrey">
             {studentCredentials.length} credentials stored
           </span>
         </div>
         
-        {studentCredentials.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Student</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Course</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Credentials</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Sent Date</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              
-              <tbody>
-                {filteredCredentials.map((credential) => (
-                  <tr key={credential.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="font-medium text-gray-900">{credential.studentName}</p>
-                        <p className="text-sm text-gray-500">{credential.studentEmail}</p>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className="font-medium">{credential.course}</span>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="space-y-1">
-                        <p className="text-sm">
-                          <span className="text-gray-500">Username: </span>
-                          <span className="font-mono bg-gray-100 px-2 py-1 rounded">{credential.username}</span>
-                        </p>
-                        <p className="text-sm">
-                          <span className="text-gray-500">Password: </span>
-                          <span className="font-mono bg-gray-100 px-2 py-1 rounded">{credential.password}</span>
-                        </p>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <p className="text-sm text-gray-600">
-                        {new Date(credential.sentDate).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(credential.sentDate).toLocaleTimeString()}
-                      </p>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        credential.status === 'sent' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
-                      </span>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => viewCredentials(credential)}
-                          className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        
-                        {credential.status === 'sent' && (
-                          <button
-                            onClick={() => resendCredentials(credential)}
-                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Resend Credentials"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => {
-                            if (confirm(`Copy credentials for ${credential.studentName} to clipboard?`)) {
-                              const text = `Username: ${credential.username}\nPassword: ${credential.password}`;
-                              navigator.clipboard.writeText(text);
-                              alert('Credentials copied to clipboard!');
-                            }
-                          }}
-                          className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="Copy Credentials"
-                        >
-                          <Key className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
+          {studentCredentials.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Student
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Course
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Credentials
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Sent Date
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Status
+                    </th>
+                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Key className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No credentials sent yet</h3>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              Verify a payment to send login credentials to students
-            </p>
-          </div>
-        )}
+                </thead>
+                
+                <tbody>
+                  {filteredCredentials.map((credential) => (
+                    <tr 
+                      key={credential.id} 
+                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
+                    >
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-medium text-darkGrey">{credential.studentName}</p>
+                          <p className="text-sm text-darkGrey/70">{credential.studentEmail}</p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="font-medium text-darkGrey">{credential.course}</span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="space-y-1">
+                          <p className="text-sm">
+                            <span className="text-darkGrey/70">Username: </span>
+                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.username}</span>
+                          </p>
+                          <p className="text-sm">
+                            <span className="text-darkGrey/70">Password: </span>
+                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.password}</span>
+                          </p>
+                        </div>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <p className="text-sm text-darkGrey/70">
+                          {new Date(credential.sentDate).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-darkGrey/50">
+                          {new Date(credential.sentDate).toLocaleTimeString()}
+                        </p>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          credential.status === 'sent' 
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: credential.status === 'sent' 
+                            ? BRAND_COLORS.teal
+                            : BRAND_COLORS.brightRed
+                        }}>
+                          {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
+                        </span>
+                      </td>
+                      
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => viewCredentials(credential)}
+                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          
+                          {credential.status === 'sent' && (
+                            <button
+                              onClick={() => resendCredentials(credential)}
+                              className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                              title="Resend Credentials"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => {
+                              if (confirm(`Copy credentials for ${credential.studentName} to clipboard?`)) {
+                                const text = `Username: ${credential.username}\nPassword: ${credential.password}`;
+                                navigator.clipboard.writeText(text);
+                                alert('Credentials copied to clipboard!');
+                              }
+                            }}
+                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                            title="Copy Credentials"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Key className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>No credentials sent yet</h3>
+              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
+                Verify a payment to send login credentials to students
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Screenshot Modal */}
       {showScreenshotModal && selectedScreenshot && selectedStudentDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-softGrey">
+            <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                   Payment Screenshot - {selectedStudentDetails.name}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-darkGrey/70">
                   Transaction ID: {selectedStudentDetails.transactionId}
                 </p>
               </div>
               <button
                 onClick={() => setShowScreenshotModal(false)}
-                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -852,7 +954,7 @@ export default function AdminDashboard() {
             <div className="p-6 overflow-auto max-h-[70vh]">
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="lg:w-2/3">
-                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border border-softGrey rounded-lg overflow-hidden bg-lightGrey">
                     <img
                       src={selectedScreenshot}
                       alt="Payment Screenshot"
@@ -863,10 +965,10 @@ export default function AdminDashboard() {
                       }}
                     />
                   </div>
-                  <div className="mt-4 flex justify-center space-x-4">
+                  <div className="mt-4 flex justify-center">
                     <button
                       onClick={() => downloadScreenshot(selectedStudentDetails)}
-                      className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium flex items-center"
+                      className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download Screenshot
@@ -875,41 +977,47 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="lg:w-1/3">
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">Payment Details</h4>
+                  <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
+                    <h4 className="font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>Payment Details</h4>
                     
                     <div className="space-y-3">
                       <div>
-                        <p className="text-sm text-gray-500">Student Name</p>
-                        <p className="font-medium">{selectedStudentDetails.name}</p>
+                        <p className="text-sm text-darkGrey/70">Student Name</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.name}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Course</p>
-                        <p className="font-medium">{selectedStudentDetails.course}</p>
+                        <p className="text-sm text-darkGrey/70">Course</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.course}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Amount</p>
-                        <p className="font-medium text-green-600">{selectedStudentDetails.amount}</p>
+                        <p className="text-sm text-darkGrey/70">Amount</p>
+                        <p className="font-medium" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.amount}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Payment Method</p>
-                        <p className="font-medium">{selectedStudentDetails.paymentMethod}</p>
+                        <p className="text-sm text-darkGrey/70">Payment Method</p>
+                        <p className="font-medium text-darkGrey">{selectedStudentDetails.paymentMethod}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Transaction ID</p>
-                        <p className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                        <p className="text-sm text-darkGrey/70">Transaction ID</p>
+                        <p className="font-mono text-sm bg-white px-2 py-1 rounded border border-softGrey text-darkGrey">
                           {selectedStudentDetails.transactionId}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Status</p>
+                        <p className="text-sm text-darkGrey/70">Status</p>
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                           selectedStudentDetails.status === 'verified' 
-                            ? 'bg-green-100 text-green-800'
+                            ? 'text-white'
                             : selectedStudentDetails.status === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}>
+                            ? 'text-white'
+                            : 'text-white'
+                        }`} style={{
+                          backgroundColor: selectedStudentDetails.status === 'verified' 
+                            ? BRAND_COLORS.teal
+                            : selectedStudentDetails.status === 'rejected'
+                            ? BRAND_COLORS.brightRed
+                            : BRAND_COLORS.darkRoyalBlue
+                        }}>
                           {selectedStudentDetails.status.charAt(0).toUpperCase() + selectedStudentDetails.status.slice(1)}
                         </span>
                       </div>
@@ -923,7 +1031,11 @@ export default function AdminDashboard() {
                             setShowScreenshotModal(false);
                           }}
                           disabled={isSendingCredentials === selectedStudentDetails.id}
-                          className="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                          style={{ 
+                            backgroundColor: BRAND_COLORS.deepRed,
+                            color: BRAND_COLORS.white 
+                          }}
                         >
                           {isSendingCredentials === selectedStudentDetails.id ? (
                             <>
@@ -947,7 +1059,7 @@ export default function AdminDashboard() {
                               setShowScreenshotModal(false);
                             }
                           }}
-                          className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                          className="w-full py-2.5 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
                         >
                           ✗ Reject Payment
                         </button>
@@ -963,20 +1075,20 @@ export default function AdminDashboard() {
 
       {/* Credentials Details Modal */}
       {showCredentialsModal && selectedCredentials && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
+            <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                   Credentials Details
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-darkGrey/70">
                   {selectedCredentials.studentName}
                 </p>
               </div>
               <button
                 onClick={() => setShowCredentialsModal(false)}
-                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -985,32 +1097,32 @@ export default function AdminDashboard() {
             <div className="p-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-500">Student Name</p>
-                  <p className="font-medium">{selectedCredentials.studentName}</p>
+                  <p className="text-sm text-darkGrey/70">Student Name</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.studentName}</p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{selectedCredentials.studentEmail}</p>
+                  <p className="text-sm text-darkGrey/70">Email</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.studentEmail}</p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-gray-500">Course</p>
-                  <p className="font-medium">{selectedCredentials.course}</p>
+                  <p className="text-sm text-darkGrey/70">Course</p>
+                  <p className="font-medium text-darkGrey">{selectedCredentials.course}</p>
                 </div>
                 
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2">Login Credentials</h4>
+                <div className="bg-lightGrey p-4 rounded-lg border border-softGrey">
+                  <h4 className="font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Login Credentials</h4>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-gray-500">Username</p>
-                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border">
+                      <p className="text-sm text-darkGrey/70">Username</p>
+                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
                         {selectedCredentials.username}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Password</p>
-                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border">
+                      <p className="text-sm text-darkGrey/70">Password</p>
+                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
                         {selectedCredentials.password}
                       </p>
                     </div>
@@ -1018,20 +1130,24 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div>
-                  <p className="text-sm text-gray-500">Sent Date</p>
-                  <p className="font-medium">
+                  <p className="text-sm text-darkGrey/70">Sent Date</p>
+                  <p className="font-medium text-darkGrey">
                     {new Date(selectedCredentials.sentDate).toLocaleDateString()} at{' '}
                     {new Date(selectedCredentials.sentDate).toLocaleTimeString()}
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-gray-500">Status</p>
+                  <p className="text-sm text-darkGrey/70">Status</p>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                     selectedCredentials.status === 'sent' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
+                      ? 'text-white'
+                      : 'text-white'
+                  }`} style={{
+                    backgroundColor: selectedCredentials.status === 'sent' 
+                      ? BRAND_COLORS.teal
+                      : BRAND_COLORS.brightRed
+                  }}>
                     {selectedCredentials.status.charAt(0).toUpperCase() + selectedCredentials.status.slice(1)}
                   </span>
                 </div>
@@ -1044,7 +1160,7 @@ export default function AdminDashboard() {
                     navigator.clipboard.writeText(text);
                     alert('Credentials copied to clipboard!');
                   }}
-                  className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <Key className="w-4 h-4" />
                   Copy Credentials
@@ -1056,7 +1172,11 @@ export default function AdminDashboard() {
                       resendCredentials(selectedCredentials);
                       setShowCredentialsModal(false);
                     }}
-                    className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                    style={{ 
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white 
+                    }}
                   >
                     <Send className="w-4 h-4" />
                     Resend

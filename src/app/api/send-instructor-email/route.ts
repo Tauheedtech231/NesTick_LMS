@@ -5,9 +5,24 @@ import nodemailer from 'nodemailer'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { to, name, email, password, courses, totalStudents, loginUrl } = body
+    const { 
+      to, 
+      instructorName, 
+      email, 
+      password, 
+      courseName,
+      loginUrl 
+    } = body
 
-    // Create transporter with Gmail - FIXED CONFIGURATION
+    // Validate required fields
+    if (!to || !instructorName || !email || !password) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Create transporter with your Gmail configuration
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -16,22 +31,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Prepare course details HTML
-    const courseDetails = Array.isArray(courses) && courses.length > 0 
-      ? courses.map((course: any) => `
-        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff;">
-          <strong>${course.name || 'Unnamed Course'}</strong><br>
-          Course ID: ${course.id || 'N/A'}<br>
-          Students Enrolled: ${course.studentCount || 0}
-        </div>
-      `).join('')
-      : '<p>No courses assigned yet.</p>'
-
     // Email content
     const mailOptions = {
-      from: 'LMS System <tauheeddeveloper13@gmail.com>',
-      to,
-      subject: 'Your Instructor Account Credentials - LMS System',
+      from: '"LMS Admin Portal" <tauheeddeveloper13@gmail.com>',
+      to: to,
+      subject: `Welcome ${instructorName}! Your LMS Instructor Credentials`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -39,52 +43,38 @@ export async function POST(request: NextRequest) {
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 10px 10px; }
-                .credentials { background: #f0f9ff; padding: 20px; margin: 25px 0; border: 2px dashed #3b82f6; border-radius: 8px; }
-                .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; }
-                .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; border-radius: 4px; }
-                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #666; font-size: 12px; text-align: center; }
+                .header { background: #0B1C3D; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: #f4f6f8; padding: 30px; border-radius: 0 0 8px 8px; }
+                .credentials { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #B11217; }
+                .button { display: inline-block; background: #B11217; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+                .info-box { background: #e5e7eb; padding: 15px; border-radius: 6px; margin: 15px 0; }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1 style="margin: 0; font-size: 28px;">Welcome to LMS Instructor Portal</h1>
+                    <h1>LMS Instructor Portal</h1>
                 </div>
                 <div class="content">
-                    <h2 style="color: #333;">Dear ${name},</h2>
-                    <p>Your instructor account has been created successfully in our Learning Management System.</p>
+                    <h2>Welcome, ${instructorName}!</h2>
+                    <p>You have been added as an instructor to the Learning Management System.</p>
                     
                     <div class="credentials">
-                        <h3 style="color: #1e40af; margin-top: 0;">🔐 Your Login Credentials:</h3>
-                        <p><strong>📧 Email:</strong> ${email}</p>
-                        <p><strong>🔑 Password:</strong> <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
-                        <p><strong>🌐 Login URL:</strong> <a href="${loginUrl}" style="color: #3b82f6;">${loginUrl}</a></p>
+                        <h3>Your Login Credentials:</h3>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Password:</strong> <code>${password}</code></p>
+                        <p><strong>Assigned Course:</strong> ${courseName || 'Not Assigned'}</p>
                     </div>
                     
-                    <h3 style="color: #333;">📚 Assigned Courses:</h3>
-                    ${courseDetails}
-                    
-                    <p><strong>👥 Total Students Assigned:</strong> ${totalStudents || 0}</p>
-                    
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${loginUrl}" class="button">🚀 Login to Your Account</a>
+                    <div class="info-box">
+                        <p><strong>Important:</strong> Please login and change your password immediately.</p>
                     </div>
                     
-                    <div class="warning">
-                        <p style="margin: 0; color: #92400e; font-weight: bold;">
-                            ⚠️ Important Security Notice: Please change your password after first login.
-                        </p>
-                    </div>
+                    <a href="${loginUrl}" class="button">Login to Instructor Portal</a>
                     
-                    <p style="color: #6b7280; font-size: 14px;">
-                        If you have any questions or need assistance, please contact the system administrator.
+                    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+                        If you did not expect this email, please contact the system administrator.
                     </p>
-                </div>
-                <div class="footer">
-                    <p>This is an automated message. Please do not reply to this email.</p>
-                    <p>© ${new Date().getFullYear()} Learning Management System. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -93,22 +83,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email
-    const info = await transporter.sendMail(mailOptions)
-    console.log('Email sent successfully:', info.messageId)
+    await transporter.sendMail(mailOptions)
 
-    return NextResponse.json({
-      success: true,
-      message: 'Email sent successfully',
-      messageId: info.messageId
-    })
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Credentials sent successfully',
+        email: to 
+      },
+      { status: 200 }
+    )
 
   } catch (error: any) {
-    console.error('Error sending email:', error)
+    console.error('Email sending error:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Failed to send email',
-        details: error.toString()
+        error: error.message || 'Failed to send email' 
       },
       { status: 500 }
     )

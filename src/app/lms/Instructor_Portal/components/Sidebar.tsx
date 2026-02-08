@@ -3,31 +3,60 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Home, BookOpen, Users, FileText, BarChart3, User,
-  ClipboardCheck, FileQuestion, LogOut, ChevronLeft,
-  ChevronRight, Menu, X, Bell, Search
-} from 'lucide-react';
+  HiHome, HiBookOpen, 
+ HiUser, HiClipboardList, 
+  HiQuestionMarkCircle, HiLogout, HiChevronLeft,
+  HiChevronRight, HiMenu, HiX, HiCollection,
+  HiAcademicCap,  HiBell, HiSearch
+} from 'react-icons/hi';
 
 const navItems = [
-  { href: '/lms/Instructor_Portal/dashboard', icon: Home, label: 'Dashboard' },
+  { href: '/lms/Instructor_Portal/dashboard', icon: HiHome, label: 'Dashboard' },
+  { href: '/lms/Instructor_Portal/courses', icon: HiBookOpen, label: 'Courses' },
 
-  { href: '/lms/Instructor_Portal/students', icon: Users, label: 'Students' },
-  { href: '/lms/Instructor_Portal/materials', icon: FileText, label: 'Materials' },
-  { href: '/lms/Instructor_Portal/assignments', icon: ClipboardCheck, label: 'Assignments' },
-  { href: '/lms/Instructor_Portal/quizzes', icon: FileQuestion, label: 'Quizzes' },
-  { href: '/lms/Instructor_Portal/progress', icon: BarChart3, label: 'Progress' },
-  { href: '/lms/Instructor_Portal/profile', icon: User, label: 'Profile' },
+  { href: '/lms/Instructor_Portal/materials', icon: HiCollection, label: 'Materials' },
+  { href: '/lms/Instructor_Portal/assignments', icon: HiClipboardList, label: 'Assignments' },
+  { href: '/lms/Instructor_Portal/quizzes', icon: HiQuestionMarkCircle, label: 'Quizzes' },
+
+  { href: '/lms/Instructor_Portal/profile', icon: HiUser, label: 'Profile' },
 ];
+/* eslint-disable */
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Brand Colors from theme
+  const BRAND_COLORS = {
+    darkNavy: '#0B1C3D',
+    darkNavyAlt: '#0F172A',
+    darkRoyalBlue: '#1E293B',
+    deepBlue: '#1E40AF',
+    purple: '#7C3AED',
+    white: '#FFFFFF',
+    lightGrey: '#F4F6F8',
+    softGrey: '#E5E7EB',
+    darkGrey: '#1F2933',
+    brightRed: '#D32F2F'
+  };
 
   useEffect(() => {
+    // Get instructor data from localStorage
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      const user = JSON.parse(userData);
+      if (user.role === 'instructor') {
+        setCurrentUser(user);
+      }
+    }
+
+    // Check mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
       if (window.innerWidth >= 768) {
@@ -50,8 +79,6 @@ export default function Sidebar() {
   const toggleSidebar = () => {
     if (isMobile) {
       setMobileOpen(!mobileOpen);
-      // Toggle body scroll
-      document.body.classList.toggle('no-scroll', !mobileOpen);
     } else {
       setCollapsed(!collapsed);
     }
@@ -60,30 +87,61 @@ export default function Sidebar() {
   const closeMobileSidebar = () => {
     if (isMobile) {
       setMobileOpen(false);
-      document.body.classList.remove('no-scroll');
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    closeMobileSidebar();
+    router.push('/lms/auth/login?type=instructor');
+  };
+
+  // Get user initials
+  const getUserInitials = () => {
+    if (!currentUser) return 'I';
+    
+    if (currentUser.fullName) {
+      return currentUser.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    } else if (currentUser.username) {
+      return currentUser.username.substring(0, 2).toUpperCase();
+    } else if (currentUser.email) {
+      return currentUser.email.substring(0, 2).toUpperCase();
+    }
+    
+    return 'I';
+  };
+
   const MobileHeader = () => (
-    <div className="flex items-center justify-between p-4 bg-white border-b">
+    <div 
+      className="flex items-center justify-between p-4 border-b"
+      style={{
+        backgroundColor: BRAND_COLORS.darkNavy,
+        borderBottomColor: `${BRAND_COLORS.softGrey}20`
+      }}
+    >
       <div className="flex items-center space-x-3">
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg bg-[#6B21A8] text-white"
+          className="p-2 rounded-lg transition-all duration-200 hover:bg-white/10"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          style={{ backgroundColor: BRAND_COLORS.deepBlue }}
         >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileOpen ? (
+            <HiX className="w-6 h-6 text-white" />
+          ) : (
+            <HiMenu className="w-6 h-6 text-white" />
+          )}
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-800">Instructor Portal</h1>
+          <h1 className="text-lg font-bold text-white">Instructor Portal</h1>
         </div>
       </div>
       <div className="flex items-center space-x-2">
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Search className="w-5 h-5 text-gray-600" />
+        <button className="p-2 hover:bg-white/10 rounded-full transition-all duration-200">
+          <HiSearch className="w-5 h-5 text-white/80" />
         </button>
-        <button className="p-2 hover:bg-gray-100 rounded-full relative">
-          <Bell className="w-5 h-5 text-gray-600" />
+        <button className="p-2 hover:bg-white/10 rounded-full relative transition-all duration-200">
+          <HiBell className="w-5 h-5 text-white/80" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
       </div>
@@ -92,39 +150,75 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <>
-      {/* Logo - Desktop only */}
-      <div className="p-4 md:p-6 border-b border-purple-700 hidden md:block">
+      {/* Logo Section */}
+      <div 
+        className="p-4 md:p-6 border-b"
+        style={{ borderBottomColor: `${BRAND_COLORS.softGrey}30` }}
+      >
         <div className="flex items-center justify-between">
           {!collapsed && !isMobile && (
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: BRAND_COLORS.deepBlue }}
+              >
+                <HiAcademicCap className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-white">Instructor</h1>
-                <p className="text-xs text-purple-200">Portal</p>
+                <p className="text-xs text-white/60">Portal</p>
               </div>
             </div>
           )}
           {(collapsed || isMobile) && !isMobile && (
-            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center mx-auto">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto"
+              style={{ backgroundColor: BRAND_COLORS.deepBlue }}
+            >
+              <HiAcademicCap className="w-6 h-6 text-white" />
             </div>
           )}
           {!isMobile && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded-lg hover:bg-purple-700 transition-colors"
+              className="p-2 rounded-lg transition-all duration-200 hover:bg-white/10"
             >
               {collapsed ? (
-                <ChevronRight className="w-5 h-5 text-white" />
+                <HiChevronRight className="w-5 h-5 text-white/80" />
               ) : (
-                <ChevronLeft className="w-5 h-5 text-white" />
+                <HiChevronLeft className="w-5 h-5 text-white/80" />
               )}
             </button>
           )}
         </div>
       </div>
+
+      {/* User Profile - Desktop Only */}
+      {!isMobile && currentUser && !collapsed && (
+        <div 
+          className="px-4 py-3 border-b"
+          style={{ borderBottomColor: `${BRAND_COLORS.softGrey}30` }}
+        >
+          <div className="flex items-center space-x-3">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: BRAND_COLORS.deepBlue }}
+            >
+              <span className="text-white font-medium text-sm">
+                {getUserInitials()}
+              </span>
+            </div>
+            <div>
+              <div className="font-medium text-white text-sm truncate">
+                {currentUser.fullName || currentUser.email?.split('@')[0] || 'Instructor'}
+              </div>
+              <div className="text-xs text-white/60 truncate">
+                {currentUser.specialization || 'Instructor'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 md:space-y-2">
@@ -135,29 +229,35 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={closeMobileSidebar}
-              className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all ${
+              className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
                 isActive
-                  ? 'bg-[#F59E0B] text-[#1F2937] shadow-md'
-                  : 'text-white hover:bg-purple-700'
+                  ? 'text-white'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
+              style={{ 
+                backgroundColor: isActive ? BRAND_COLORS.deepBlue + '40' : 'transparent',
+                borderLeft: isActive ? `3px solid ${BRAND_COLORS.deepBlue}` : 'none'
+              }}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {(!collapsed || isMobile) && <span className="font-medium truncate">{item.label}</span>}
+              {(!collapsed || isMobile) && (
+                <span className="font-medium truncate">{item.label}</span>
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-purple-700">
+      <div 
+        className="p-4 border-t"
+        style={{ borderTopColor: `${BRAND_COLORS.softGrey}30` }}
+      >
         <button
-          onClick={() => {
-            console.log('Logout clicked');
-            closeMobileSidebar();
-          }}
-          className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} w-full p-3 rounded-lg text-white hover:bg-purple-700 transition-colors`}
+          onClick={handleLogout}
+          className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} w-full p-3 rounded-lg transition-all duration-200 hover:bg-white/10 text-white`}
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <HiLogout className="w-5 h-5 flex-shrink-0" />
           {(!collapsed || isMobile) && <span className="font-medium">Logout</span>}
         </button>
       </div>
@@ -179,16 +279,19 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar for Desktop and Mobile */}
-      <div className={`
-        ${isMobile 
-          ? `fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out ${
-              mobileOpen ? 'translate-x-0' : '-translate-x-full'
-            }`
-          : 'relative'
-        } 
-        flex flex-col h-screen bg-[#6B21A8] transition-all duration-300 
-        ${collapsed && !isMobile ? 'w-20' : 'w-64'}
-      `}>
+      <div 
+        className={`
+          ${isMobile 
+            ? `fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out ${
+                mobileOpen ? 'translate-x-0' : '-translate-x-full'
+              }`
+            : 'relative'
+          } 
+          flex flex-col h-screen transition-all duration-300 
+          ${collapsed && !isMobile ? 'w-20' : 'w-64'}
+        `}
+        style={{ backgroundColor: BRAND_COLORS.darkNavy }}
+      >
         <SidebarContent />
       </div>
     </>

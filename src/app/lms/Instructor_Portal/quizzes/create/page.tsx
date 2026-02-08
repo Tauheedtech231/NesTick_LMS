@@ -3,106 +3,134 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  HiArrowLeft, HiCalendar, HiBookOpen, 
-  HiSave, HiChevronDown, HiPlus, HiTrash
-} from 'react-icons/hi'
-import { toast, Toaster } from 'react-hot-toast'
+import { Save, X, Plus, Trash2, Calendar, Clock } from 'lucide-react'
 /* eslint-disable */
 
-interface Course {
-  id: string
-  title: string
-  code: string
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
 }
 
-interface MCQQuestion {
-  id: string
-  question: string
-  options: string[]
-  correctAnswer: number // index of correct option (0-3)
-  marks: number
+interface Question {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  points: number;
 }
 
 export default function CreateQuizPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [questions, setQuestions] = useState<MCQQuestion[]>([
-    { id: 'q1', question: '', options: ['', '', '', ''], correctAnswer: 0, marks: 1 }
-  ])
-  const [formData, setFormData] = useState({
-    courseId: '',
+  const [instructor, setInstructor] = useState<any>(null)
+  const [course, setCourse] = useState<any>(null)
+  
+  const [quiz, setQuiz] = useState({
     title: '',
     description: '',
-    totalMarks: 50,
-    dueDate: '',
-    instructions: '',
     duration: 30,
-    status: 'active' as 'active' | 'draft'
+    totalQuestions: 0,
+    totalPoints: 0,
+    startDate: '',
+    endDate: '',
+    status: 'draft' as 'draft' | 'published'
   })
-  const [isMounted, setIsMounted] = useState(false)
+
+  const [questions, setQuestions] = useState<Question[]>([
+    {
+      id: `q_${Date.now()}`,
+      question: '',
+      options: ['', '', '', ''],
+      correctAnswer: 0,
+      points: 1
+    }
+  ])
 
   useEffect(() => {
-    setIsMounted(true)
-    loadCourses()
-  }, [])
-
-  const loadCourses = () => {
-    try {
-      const userData = localStorage.getItem('currentUser')
-      let currentUser = null
-      if (userData) {
-        currentUser = JSON.parse(userData)
-      }
-
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-      const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]')
-      
-      let assignedCourses: Course[] = []
-      
-      if (currentUser?.email === 'instructor@gmail.com') {
-        assignedCourses = allCourses
-      } else if (currentUser?.role === 'instructor') {
-        const instructorDetails = allInstructors.find((instr: any) => 
-          instr.email === currentUser.email || instr.id === currentUser.instructorId
-        )
-        
-        if (instructorDetails?.assignedCourseIds) {
-          assignedCourses = allCourses.filter((course: Course) => 
-            instructorDetails.assignedCourseIds.includes(course.id)
-          )
+    const loadInstructorData = () => {
+      try {
+        const currentUserStr = localStorage.getItem('currentUser')
+        if (!currentUserStr) {
+          router.push('/lms/auth/login?type=instructor')
+          return
         }
+
+        const currentUser = JSON.parse(currentUserStr)
+        if (currentUser.role !== 'instructor') {
+          router.push('/lms/auth/login?type=instructor')
+          return
+        }
+
+        setInstructor(currentUser)
+
+        // Load assigned course
+        const courses = JSON.parse(localStorage.getItem('courses') || '[]')
+        const courseId = currentUser.courseId || currentUser.assignedCourseId
+        const assignedCourse = courses.find((c: any) => c.id === courseId)
+        setCourse(assignedCourse)
+        
+        // Set default dates
+        const now = new Date()
+        const defaultStart = now.toISOString().slice(0, 16)
+        const defaultEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+        
+        setQuiz(prev => ({
+          ...prev,
+          startDate: defaultStart,
+          endDate: defaultEnd
+        }))
+        
+      } catch (error) {
+        console.error('Error loading instructor data:', error)
       }
-
-      setCourses(assignedCourses)
-
-    } catch (error) {
-      console.error('Error loading courses:', error)
-      toast.error('Failed to load courses')
     }
-  }
+
+    loadInstructorData()
+  }, [router])
 
   const addQuestion = () => {
-    const newId = `q${questions.length + 1}`
-    setQuestions([
-      ...questions,
-      { id: newId, question: '', options: ['', '', '', ''], correctAnswer: 0, marks: 1 }
-    ])
+    const newQuestion: Question = {
+      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      question: '',
+      options: ['', '', '', ''],
+      correctAnswer: 0,
+      points: 1
+    }
+    setQuestions([...questions, newQuestion])
   }
 
   const removeQuestion = (index: number) => {
-    if (questions.length > 1) {
-      const newQuestions = questions.filter((_, i) => i !== index)
-      setQuestions(newQuestions)
-    } else {
-      toast.error('Quiz must have at least one question')
+    if (questions.length <= 1) {
+      alert('Quiz must have at least one question')
+      return
     }
+    const newQuestions = questions.filter((_, i) => i !== index)
+    setQuestions(newQuestions)
   }
 
-  const updateQuestion = (index: number, field: keyof MCQQuestion, value: any) => {
+  // Fixed: Properly type the updateQuestion function
+  const updateQuestion = (index: number, field: keyof Question, value: string | number | string[]) => {
     const newQuestions = [...questions]
-    newQuestions[index] = { ...newQuestions[index], [field]: value }
+    
+    if (field === 'options' && Array.isArray(value)) {
+      newQuestions[index].options = value
+    } else if (field === 'question' && typeof value === 'string') {
+      newQuestions[index].question = value
+    } else if (field === 'correctAnswer' && typeof value === 'number') {
+      newQuestions[index].correctAnswer = value
+    } else if (field === 'points' && typeof value === 'number') {
+      newQuestions[index].points = value
+    } else if (field === 'id' && typeof value === 'string') {
+      newQuestions[index].id = value
+    }
+    
     setQuestions(newQuestions)
   }
 
@@ -112,401 +140,399 @@ export default function CreateQuizPage() {
     setQuestions(newQuestions)
   }
 
-  const calculateTotalMarks = () => {
-    return questions.reduce((total, q) => total + q.marks, 0)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validation
-    if (!formData.courseId) {
-      toast.error('Please select a course')
+    if (!quiz.title.trim()) {
+      alert('Please enter quiz title')
       return
     }
-
-    if (!formData.title.trim()) {
-      toast.error('Please enter quiz title')
-      return
-    }
-
-    if (!formData.dueDate) {
-      toast.error('Please select a due date')
-      return
-    }
-
+    
     // Validate questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
       if (!q.question.trim()) {
-        toast.error(`Question ${i + 1}: Please enter question text`)
+        alert(`Please enter question ${i + 1}`)
         return
       }
-      for (let j = 0; j < q.options.length; j++) {
-        if (!q.options[j].trim()) {
-          toast.error(`Question ${i + 1}: Option ${j + 1} cannot be empty`)
-          return
-        }
-      }
-      if (q.marks <= 0) {
-        toast.error(`Question ${i + 1}: Marks must be greater than 0`)
+      
+      const hasEmptyOptions = q.options.some(opt => !opt.trim())
+      if (hasEmptyOptions) {
+        alert(`Question ${i + 1} has empty options`)
         return
       }
+    }
+    
+    if (!quiz.startDate || !quiz.endDate) {
+      alert('Please select start and end dates')
+      return
     }
 
     setLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      const quizId = `quiz_${Date.now()}`
-      const totalMarks = calculateTotalMarks()
+      // Calculate totals
+      const totalQuestions = questions.length
+      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0)
       
+      // Create quiz object
+      const quizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const newQuiz = {
         id: quizId,
-        courseId: formData.courseId,
-        title: formData.title,
-        description: formData.description,
-        type: 'quiz',
-        totalMarks: totalMarks,
-        dueDate: formData.dueDate,
-        instructions: formData.instructions,
-        duration: formData.duration,
+        ...quiz,
+        totalQuestions,
+        totalPoints,
+        instructorId: instructor.id,
+        instructorName: instructor.name || instructor.fullName,
+        courseId: instructor.courseId || instructor.assignedCourseId,
+        courseTitle: course?.title || 'Course',
+        questions,
+        attempts: 0,
+        averageScore: 0,
         createdAt: new Date().toISOString(),
-        createdBy: 'Instructor',
-        status: formData.status,
-        questions: questions,
-        submissions: []
+        updatedAt: new Date().toISOString()
       }
 
+      // Save to localStorage
       const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-      localStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]))
-      
-      toast.success('Quiz created successfully!')
-      
-      setTimeout(() => {
-        router.push('/lms/Instructor_Portal/quizzes')
-      }, 1000)
+      const updatedQuizzes = [...existingQuizzes, newQuiz]
+      localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes))
 
+      // Also save to instructor_quizzes
+      const existingInstructorQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
+      localStorage.setItem('instructor_quizzes', JSON.stringify([...existingInstructorQuizzes, newQuiz]))
+
+      // Save activity
+      const activity = {
+        id: `activity_${Date.now()}`,
+        type: 'quiz',
+        title: newQuiz.title,
+        description: 'Quiz created',
+        courseId: instructor.courseId || instructor.assignedCourseId,
+        instructorId: instructor.id,
+        timestamp: new Date().toISOString(),
+        action: 'created',
+        metadata: newQuiz
+      }
+
+      const existingActivities = JSON.parse(localStorage.getItem('instructor_activities') || '[]')
+      const updatedActivities = [...existingActivities, activity]
+      localStorage.setItem('instructor_activities', JSON.stringify(updatedActivities))
+
+      alert(`Quiz ${quiz.status === 'published' ? 'published' : 'saved as draft'} successfully!`)
+      router.push('/lms/Instructor_Portal/quizzes')
+      
     } catch (error) {
       console.error('Error creating quiz:', error)
-      toast.error('Failed to create quiz')
+      alert('Failed to create quiz')
     } finally {
       setLoading(false)
     }
   }
 
-  const getCourseName = (courseId: string) => {
-    const course = courses.find(c => c.id === courseId)
-    return course ? `${course.title} (${course.code})` : ''
-  }
-
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
+  if (!instructor) {
+    return <div className="min-h-screen bg-white p-6">Loading...</div>
   }
 
   return (
-    <>
-      <Toaster position="top-center" />
-      
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <Link
-              href="/lms/Instructor_Portal/quizzes"
-              className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-            >
-              <HiArrowLeft className="w-5 h-5 mr-2" />
-              <span>Back to Quizzes</span>
-            </Link>
-            
-            <h1 className="text-2xl font-bold text-gray-900">Create Quiz</h1>
-            <p className="text-gray-600 mt-1">
-              Create a new MCQ-based quiz with auto-grading
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="bg-white border border-gray-300 rounded-lg p-6">
-            {/* Course Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Course *
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.courseId}
-                  onChange={(e) => setFormData({...formData, courseId: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                  required
-                >
-                  <option value="">Select a course</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title} ({course.code})
-                    </option>
-                  ))}
-                </select>
-                <HiChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
+    <div className="min-h-screen bg-white p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/lms/Instructor_Portal/quizzes"
+                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                  Create Quiz
+                </h1>
+                <p className="text-darkGrey mt-1">
+                  For: {course?.title || 'Course'}
+                </p>
               </div>
             </div>
+          </div>
+          <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+        </div>
+      </div>
 
-            {/* Title */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quiz Title *
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+        {/* Quiz Details */}
+        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            Quiz Details
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Title *
               </label>
               <input
                 type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Enter quiz title"
                 required
+                value={quiz.title}
+                onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="e.g., Chapter 1 Assessment"
               />
             </div>
 
-            {/* Description */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
                 Description
               </label>
               <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                value={quiz.description}
+                onChange={(e) => setQuiz({ ...quiz, description: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                 placeholder="Brief description of the quiz..."
               />
             </div>
 
-            {/* Instructions */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Instructions
-              </label>
-              <textarea
-                value={formData.instructions}
-                onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-                rows={4}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Detailed instructions for students..."
-              />
-            </div>
-
-            {/* MCQ Questions Section */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  MCQ Questions ({questions.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={addQuestion}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                >
-                  <HiPlus className="w-5 h-5" />
-                  Add Question
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {questions.map((question, qIndex) => (
-                  <div key={question.id} className="border border-gray-300 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <h4 className="font-medium text-gray-900">
-                        Question {qIndex + 1}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(qIndex)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <HiTrash className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Question Text */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Question Text *
-                      </label>
-                      <textarea
-                        value={question.question}
-                        onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
-                        rows={2}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                        placeholder="Enter your question here..."
-                        required
-                      />
-                    </div>
-
-                    {/* Options */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Options *
-                      </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {question.options.map((option, oIndex) => (
-                          <div key={oIndex} className="flex items-center gap-3">
-                            <input
-                              type="radio"
-                              name={`correctAnswer_${qIndex}`}
-                              checked={question.correctAnswer === oIndex}
-                              onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
-                              className="w-5 h-5 text-purple-600"
-                            />
-                            <input
-                              type="text"
-                              value={option}
-                              onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                              className="flex-1 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                              placeholder={`Option ${oIndex + 1}`}
-                              required
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Select the radio button next to the correct answer
-                      </p>
-                    </div>
-
-                    {/* Marks */}
-                    <div className="w-32">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Marks *
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={question.marks}
-                        onChange={(e) => updateQuestion(qIndex, 'marks', parseInt(e.target.value) || 1)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                        required
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quiz Details */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Marks
-                </label>
-                <input
-                  type="number"
-                  value={calculateTotalMarks()}
-                  readOnly
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-medium"
-                />
-                <p className="text-sm text-gray-500 mt-1">Auto-calculated from questions</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="300"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({...formData, duration: parseInt(e.target.value) || 30})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Due Date *
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Duration (minutes) *
                 </label>
                 <div className="relative">
-                  <HiCalendar className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
                   <input
-                    type="datetime-local"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    type="number"
                     required
+                    min="1"
+                    max="300"
+                    value={quiz.duration}
+                    onChange={(e) => setQuiz({ ...quiz, duration: parseInt(e.target.value) })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Start Date & Time *
                 </label>
                 <div className="relative">
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
-                  </select>
-                  <HiChevronDown className="absolute right-3 top-3.5 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
+                  <input
+                    type="datetime-local"
+                    required
+                    value={quiz.startDate}
+                    onChange={(e) => setQuiz({ ...quiz, startDate: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  End Date & Time *
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
+                  <input
+                    type="datetime-local"
+                    required
+                    value={quiz.endDate}
+                    onChange={(e) => setQuiz({ ...quiz, endDate: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Course Info */}
-            {formData.courseId && (
-              <div className="mb-6 p-4 bg-gray-50 border border-gray-300 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">Selected Course</h3>
-                <div className="flex items-center gap-3">
-                  <HiBookOpen className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-900">{getCourseName(formData.courseId)}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-6 border-t border-gray-300">
-              <Link
-                href="/lms/Instructor_Portal/quizzes"
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            <div>
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Status
+              </label>
+              <select
+                value={quiz.status}
+                onChange={(e) => setQuiz({ ...quiz, status: e.target.value as 'draft' | 'published' })}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
               >
-                Cancel
-              </Link>
-              
-              <button
-                type="submit"
-                disabled={loading}
-                className={`px-6 py-3 rounded-lg font-medium flex-1 flex items-center justify-center gap-2 ${
-                  loading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <HiSave className="w-5 h-5" />
-                    Create Quiz
-                  </>
-                )}
-              </button>
+                <option value="draft">Save as Draft (Hidden from students)</option>
+                <option value="published">Publish Now (Visible to students)</option>
+              </select>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
-    </>
+
+        {/* Questions */}
+        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+              Questions ({questions.length})
+            </h2>
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="flex items-center gap-2 px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Question
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {questions.map((question, qIndex) => (
+              <div key={question.id} className="p-4 border border-softGrey rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-darkGrey">Question {qIndex + 1}</h3>
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(qIndex)}
+                      className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-darkGrey mb-2">
+                      Question *
+                    </label>
+                    <textarea
+                      required
+                      value={question.question}
+                      onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
+                      rows={2}
+                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                      placeholder="Enter the question..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-darkGrey mb-2">
+                        Points *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        max="100"
+                        value={question.points}
+                        onChange={(e) => updateQuestion(qIndex, 'points', parseInt(e.target.value))}
+                        className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-darkGrey mb-2">
+                        Correct Answer *
+                      </label>
+                      <select
+                        value={question.correctAnswer}
+                        onChange={(e) => updateQuestion(qIndex, 'correctAnswer', parseInt(e.target.value))}
+                        className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+                      >
+                        {question.options.map((_, index) => (
+                          <option key={index} value={index}>
+                            Option {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-darkGrey mb-2">
+                      Options *
+                    </label>
+                    <div className="space-y-2">
+                      {question.options.map((option, oIndex) => (
+                        <div key={oIndex} className="flex items-center gap-2">
+                          <div className="w-6 h-6 flex items-center justify-center bg-lightGrey rounded text-sm">
+                            {String.fromCharCode(65 + oIndex)}
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            value={option}
+                            onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                            className="flex-1 px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                            placeholder={`Option ${oIndex + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quiz Summary */}
+        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            Quiz Summary
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-lightGrey rounded-lg">
+              <div className="text-2xl font-bold text-darkNavy">{questions.length}</div>
+              <div className="text-sm text-darkGrey/70">Total Questions</div>
+            </div>
+            <div className="text-center p-4 bg-lightGrey rounded-lg">
+              <div className="text-2xl font-bold text-darkNavy">
+                {questions.reduce((sum, q) => sum + q.points, 0)}
+              </div>
+              <div className="text-sm text-darkGrey/70">Total Points</div>
+            </div>
+            <div className="text-center p-4 bg-lightGrey rounded-lg">
+              <div className="text-2xl font-bold text-darkNavy">{quiz.duration}</div>
+              <div className="text-sm text-darkGrey/70">Minutes</div>
+            </div>
+            <div className="text-center p-4 bg-lightGrey rounded-lg">
+              <div className="text-2xl font-bold text-darkNavy">
+                {questions.filter(q => q.question.trim()).length}/{questions.length}
+              </div>
+              <div className="text-sm text-darkGrey/70">Questions Ready</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex justify-end gap-4">
+          <Link
+            href="/lms/Instructor_Portal/quizzes"
+            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ 
+              backgroundColor: BRAND_COLORS.deepRed,
+              color: BRAND_COLORS.white 
+            }}
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {quiz.status === 'published' ? 'Publishing...' : 'Saving...'}
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                {quiz.status === 'published' ? 'Publish Quiz' : 'Save as Draft'}
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
