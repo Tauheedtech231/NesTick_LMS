@@ -101,7 +101,10 @@ export default function InstructorsPage() {
 
   // Get stats
   const activeInstructors = instructors.filter(i => i.status === 'active').length
-  const totalStudents = instructors.reduce((sum, i) => sum + i.totalStudents, 0)
+  console.log("active", activeInstructors)
+const totalStudents = instructors.reduce((sum, i) => sum + (i.totalStudents || 0), 0);
+console.log("total students", totalStudents);
+
   const averageRating = instructors.length > 0 
     ? (instructors.reduce((sum, i) => sum + i.rating, 0) / instructors.length).toFixed(1)
     : '0.0'

@@ -65,6 +65,7 @@ export default function CoursesPage() {
     const loadCourses = () => {
       try {
         const savedCourses = localStorage.getItem('lms_courses')
+        console.log("saved",savedCourses)
         if (savedCourses) {
           setCourses(JSON.parse(savedCourses))
         } else {

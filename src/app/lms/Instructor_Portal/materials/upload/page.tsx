@@ -12,7 +12,8 @@ import {
   FileText, 
   Video, 
   File, 
-  
+  Download,
+  Play,
   AlertCircle,
   CheckCircle,
   ArrowLeft
@@ -30,14 +31,22 @@ const BRAND_COLORS = {
   brightRed: '#D32F2F'
 }
 
-interface FileItem {
+interface CloudinaryFile {
   id: string;
   name: string;
   type: 'slides' | 'video' | 'pdf' | 'document' | 'image' | 'other';
   url: string;
+  public_id?: string;
+  cloudinary_url: string;
   size?: string;
+  format?: string;
   file?: File;
+  isVideo?: boolean;
+  isDocument?: boolean;
+  uploadProgress: number;
+  uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'error';
 }
+
 /* eslint-disable */
 
 export default function UploadMaterialsPage() {
@@ -57,17 +66,17 @@ export default function UploadMaterialsPage() {
     tagInput: ''
   })
 
-  const [files, setFiles] = useState<FileItem[]>([
+  const [files, setFiles] = useState<CloudinaryFile[]>([
     {
       id: `file_${Date.now()}`,
       name: '',
       type: 'slides',
       url: '',
-      size: '0 MB'
+      cloudinary_url: '',
+      uploadProgress: 0,
+      uploadStatus: 'pending'
     }
   ])
-
-  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({})
 
   useEffect(() => {
     const loadInstructorData = () => {
@@ -93,8 +102,6 @@ export default function UploadMaterialsPage() {
         
         if (assignedCourse) {
           setCourse(assignedCourse)
-
-          // Load modules for this course
           const courseModules = assignedCourse.modules || []
           setModules(courseModules)
         }
@@ -107,25 +114,46 @@ export default function UploadMaterialsPage() {
     loadInstructorData()
   }, [router])
 
-  const addFile = (type: FileItem['type'] = 'slides') => {
-    const newFile: FileItem = {
+  const addFile = (type: CloudinaryFile['type'] = 'slides') => {
+    const newFile: CloudinaryFile = {
       id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: '',
       type: type,
       url: '',
-      size: '0 MB'
+      cloudinary_url: '',
+      uploadProgress: 0,
+      uploadStatus: 'pending'
     }
     setFiles([...files, newFile])
   }
 
-  const removeFile = (id: string) => {
+  const removeFile = async (id: string) => {
+    const file = files.find(f => f.id === id)
+    
+    // If file was uploaded to Cloudinary, try to delete it
+    if (file?.public_id) {
+      try {
+        await fetch('/api/upload/cloudinary', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ public_id: file.public_id })
+        })
+      } catch (error) {
+        console.error('Error deleting file from Cloudinary:', error)
+      }
+    }
+
     if (files.length <= 1) {
       setFiles([{
         id: `file_${Date.now()}`,
         name: '',
         type: 'slides',
         url: '',
-        size: '0 MB'
+        cloudinary_url: '',
+        uploadProgress: 0,
+        uploadStatus: 'pending'
       }])
       return
     }
@@ -133,17 +161,79 @@ export default function UploadMaterialsPage() {
     setFiles(newFiles)
   }
 
-  const updateFile = (id: string, field: keyof FileItem, value: any) => {
-    const newFiles = files.map(f => {
-      if (f.id === id) {
-        return { ...f, [field]: value }
-      }
-      return f
-    })
-    setFiles(newFiles)
+  const updateFile = (id: string, field: keyof CloudinaryFile, value: any) => {
+    setFiles(prev => prev.map(f => 
+      f.id === id ? { ...f, [field]: value } : f
+    ))
   }
 
-  const handleFileUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const getFileType = (fileName: string): CloudinaryFile['type'] => {
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    
+    if (ext === 'pdf') return 'pdf'
+    if (['ppt', 'pptx', 'key', 'odp'].includes(ext || '')) return 'slides'
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv'].includes(ext || '')) return 'video'
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext || '')) return 'image'
+    if (['doc', 'docx', 'txt', 'rtf', 'odt'].includes(ext || '')) return 'document'
+    return 'other'
+  }
+
+  const uploadFileToCloudinary = async (fileId: string, file: File): Promise<string> => {
+    updateFile(fileId, 'uploadStatus', 'uploading')
+    updateFile(fileId, 'uploadProgress', 10)
+
+    try {
+      // Determine folder based on file type
+      const fileType = getFileType(file.name)
+      const folder = fileType === 'video' ? 'video' : 'raw'
+
+      // Create FormData
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
+
+      // Upload to our API endpoint
+      const response = await fetch('/api/upload/cloudinary', {
+        method: 'POST',
+        body: formData
+      })
+
+      updateFile(fileId, 'uploadProgress', 70)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      // Update file with Cloudinary URL
+      updateFile(fileId, 'cloudinary_url', result.url)
+      updateFile(fileId, 'public_id', result.public_id)
+      updateFile(fileId, 'format', result.format)
+      updateFile(fileId, 'uploadProgress', 100)
+      updateFile(fileId, 'uploadStatus', 'uploaded')
+      
+      // Set appropriate properties based on file type
+      const isVideo = result.resource_type === 'video'
+      updateFile(fileId, 'isVideo', isVideo)
+      updateFile(fileId, 'isDocument', !isVideo)
+
+      return result.url
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      updateFile(fileId, 'uploadStatus', 'error')
+      updateFile(fileId, 'uploadProgress', 0)
+      throw error
+    }
+  }
+
+  const handleFileUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -153,32 +243,11 @@ export default function UploadMaterialsPage() {
     updateFile(id, 'file', file)
     updateFile(id, 'size', `${(file.size / (1024 * 1024)).toFixed(2)} MB`)
 
-    // Simulate upload progress
-    simulateUpload(id)
-  }
-
-  const getFileType = (fileName: string): FileItem['type'] => {
-    const ext = fileName.split('.').pop()?.toLowerCase()
-    
-    if (ext === 'pdf') return 'pdf'
-    if (['ppt', 'pptx', 'key'].includes(ext || '')) return 'slides'
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext || '')) return 'video'
-    if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext || '')) return 'image'
-    if (['doc', 'docx', 'txt', 'rtf'].includes(ext || '')) return 'document'
-    return 'other'
-  }
-
-  const simulateUpload = (fileId: string) => {
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += 10
-      setUploadProgress(prev => ({ ...prev, [fileId]: progress }))
-      
-      if (progress >= 100) {
-        clearInterval(interval)
-        updateFile(fileId, 'url', `https://example.com/uploads/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
-      }
-    }, 200)
+    try {
+      await uploadFileToCloudinary(id, file)
+    } catch (error) {
+      alert(`Failed to upload ${file.name}. Please try again.`)
+    }
   }
 
   const addTag = () => {
@@ -201,16 +270,20 @@ export default function UploadMaterialsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // All fields are optional - minimum validation
-    if (files.length === 0) {
-      alert('Please add at least one file')
+    // Check if all files are uploaded
+    const pendingUploads = files.filter(f => f.uploadStatus !== 'uploaded' && f.file)
+    if (pendingUploads.length > 0) {
+      alert('Please wait for all files to finish uploading')
       return
     }
 
     setLoading(true)
 
     try {
-      // Create material object with optional fields
+      // Filter out files that have been uploaded to Cloudinary
+      const uploadedFiles = files.filter(f => f.cloudinary_url && f.uploadStatus === 'uploaded')
+
+      // Create material object
       const materialId = `material_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const newMaterial = {
         id: materialId,
@@ -222,21 +295,26 @@ export default function UploadMaterialsPage() {
         moduleTitle: formData.moduleId ? modules.find(m => m.id === formData.moduleId)?.title : undefined,
         instructorId: instructor?.id,
         instructorName: instructor?.name,
-        type: files[0]?.type || 'other',
-        files: files.map(f => ({
+        files: uploadedFiles.map(f => ({
+          id: f.id,
           name: f.name || 'Unnamed file',
-          url: f.url || '',
+          url: f.cloudinary_url,
+          public_id: f.public_id,
           type: f.type,
+          isVideo: f.isVideo || false,
+          isDocument: f.isDocument || false,
+          format: f.format,
           size: f.size || '0 MB'
         })),
         tags: formData.tags,
         status: formData.status,
         downloads: 0,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        storage: 'cloudinary' // Mark that this is stored in Cloudinary
       }
 
-      // Save to localStorage
+      // Save material metadata to localStorage (not the files themselves)
       const existingMaterials = JSON.parse(localStorage.getItem('instructor_materials') || '[]')
       const updatedMaterials = [...existingMaterials, newMaterial]
       localStorage.setItem('instructor_materials', JSON.stringify(updatedMaterials))
@@ -245,10 +323,71 @@ export default function UploadMaterialsPage() {
       router.push('/lms/Instructor_Portal/materials')
       
     } catch (error) {
-      console.error('Error uploading materials:', error)
-      alert('Failed to upload materials')
+      console.error('Error saving materials:', error)
+      alert('Failed to save materials')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const renderFilePreview = (file: CloudinaryFile) => {
+    if (!file.cloudinary_url) return null
+
+    if (file.isVideo) {
+      return (
+        <div className="mt-2 p-2 bg-black rounded-lg">
+          <video 
+            controls 
+            className="w-full rounded max-h-48"
+            src={file.cloudinary_url}
+            title={file.name}
+          >
+            Your browser does not support the video tag.
+          </video>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs text-white/70 truncate">{file.name}</span>
+            <button
+              type="button"
+              onClick={() => window.open(file.cloudinary_url, '_blank')}
+              className="text-white hover:text-blue-300"
+              title="Open in new tab"
+            >
+              <Play className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )
+    } else {
+      return (
+        <div className="mt-2 p-2 bg-lightGrey rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded ${
+                file.type === 'slides' ? 'bg-blue-100 text-blue-600' :
+                file.type === 'pdf' ? 'bg-amber-100 text-amber-600' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {file.type === 'slides' ? <FileText className="w-4 h-4" /> :
+                 file.type === 'pdf' ? <File className="w-4 h-4" /> :
+                 <FileText className="w-4 h-4" />}
+              </div>
+              <div className="max-w-[200px]">
+                <p className="text-xs font-medium text-darkGrey truncate">{file.name}</p>
+                <p className="text-xs text-darkGrey/70">{file.format?.toUpperCase() || file.type}</p>
+              </div>
+            </div>
+            <a
+              href={file.cloudinary_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 text-darkRoyalBlue hover:bg-white rounded"
+              title="Download file"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      )
     }
   }
 
@@ -311,21 +450,6 @@ export default function UploadMaterialsPage() {
             </div>
           </div>
           <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
-        </div>
-      </div>
-
-      {/* Notice */}
-      <div className="mb-6 p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-2 md:gap-3">
-          <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="font-medium text-blue-900 mb-1 text-sm md:text-base">All Fields are Optional</h3>
-            <ul className="text-xs md:text-sm text-blue-800 space-y-0.5 md:space-y-1">
-              <li>• Add materials at your convenience</li>
-              <li>• No mandatory fields - upload what you have</li>
-              <li>• Save as draft or publish immediately</li>
-            </ul>
-          </div>
         </div>
       </div>
 
@@ -447,10 +571,10 @@ export default function UploadMaterialsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 md:mb-4 gap-3">
             <div>
               <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                Upload Files
+                Upload Files to Cloudinary
               </h2>
               <p className="text-xs md:text-sm text-darkGrey/70 mt-1">
-                Add one or more files (all optional)
+                Files are securely stored in Cloudinary
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
@@ -483,8 +607,9 @@ export default function UploadMaterialsPage() {
 
           <div className="space-y-3 md:space-y-4">
             {files.map((file, index) => {
-              const progress = uploadProgress[file.id] || 0
-              const isUploaded = file.url.trim() !== ''
+              const isUploading = file.uploadStatus === 'uploading'
+              const isUploaded = file.uploadStatus === 'uploaded'
+              const hasError = file.uploadStatus === 'error'
               
               return (
                 <div key={file.id} className="p-3 md:p-4 border border-softGrey rounded-lg">
@@ -509,6 +634,21 @@ export default function UploadMaterialsPage() {
                           {file.type.charAt(0).toUpperCase() + file.type.slice(1)}
                         </span>
                       </div>
+                      {isUploading && (
+                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full">
+                          Uploading...
+                        </span>
+                      )}
+                      {isUploaded && (
+                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">
+                          Uploaded
+                        </span>
+                      )}
+                      {hasError && (
+                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full">
+                          Failed
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -530,53 +670,80 @@ export default function UploadMaterialsPage() {
                         onChange={(e) => updateFile(file.id, 'name', e.target.value)}
                         className="w-full px-3 md:px-4 py-2 text-sm md:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                         placeholder="File name (optional)"
+                        disabled={isUploaded}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-darkGrey mb-1">
-                        Upload File
+                        Upload File to Cloudinary
                       </label>
                       <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
                         <label className="flex-1 cursor-pointer">
-                          <div className="border-2 border-dashed border-softGrey rounded-lg p-3 md:p-4 text-center hover:border-darkRoyalBlue transition-colors">
-                            <Upload className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 text-darkGrey/60" />
-                            <span className="text-xs md:text-sm text-darkGrey block truncate">
-                              {file.file ? file.file.name : 'Click to choose file (optional)'}
+                          <div className={`border-2 border-dashed rounded-lg p-3 md:p-4 text-center transition-colors ${
+                            hasError ? 'border-red-300 bg-red-50' :
+                            isUploaded ? 'border-green-300 bg-green-50' :
+                            isUploading ? 'border-blue-300 bg-blue-50' :
+                            'border-softGrey hover:border-darkRoyalBlue'
+                          }`}>
+                            <Upload className={`w-5 h-5 md:w-6 md:h-6 mx-auto mb-1 md:mb-2 ${
+                              hasError ? 'text-red-400' :
+                              isUploaded ? 'text-green-400' :
+                              isUploading ? 'text-blue-400' :
+                              'text-darkGrey/60'
+                            }`} />
+                            <span className={`text-xs md:text-sm block truncate ${
+                              hasError ? 'text-red-600' :
+                              isUploaded ? 'text-green-600' :
+                              isUploading ? 'text-blue-600' :
+                              'text-darkGrey'
+                            }`}>
+                              {file.file ? file.file.name : 
+                               hasError ? 'Upload failed. Click to retry' :
+                               isUploaded ? 'Uploaded successfully!' :
+                               isUploading ? 'Uploading...' :
+                               'Click to choose file'}
                             </span>
+                            {!file.file && (
+                              <p className="text-xs text-darkGrey/50 mt-1">
+                                Supports videos, PDFs, slides, documents
+                              </p>
+                            )}
                             <input
                               type="file"
                               onChange={(e) => handleFileUpload(file.id, e)}
                               className="hidden"
+                              disabled={isUploading || isUploaded}
                               accept={
-                                file.type === 'slides' ? '.ppt,.pptx,.pdf,.key' :
-                                file.type === 'video' ? '.mp4,.mov,.avi,.mkv,.webm' :
+                                file.type === 'slides' ? '.ppt,.pptx,.pdf,.key,.odp' :
+                                file.type === 'video' ? '.mp4,.mov,.avi,.mkv,.webm,.wmv,.flv' :
                                 file.type === 'pdf' ? '.pdf' :
-                                file.type === 'image' ? '.jpg,.jpeg,.png,.gif,.svg' :
+                                file.type === 'image' ? '.jpg,.jpeg,.png,.gif,.svg,.webp' :
+                                file.type === 'document' ? '.doc,.docx,.txt,.rtf,.odt' :
                                 '*'
                               }
                             />
                           </div>
                         </label>
                         
-                        {isUploaded ? (
-                          <div className="flex items-center gap-1.5 md:gap-2 text-green-600">
-                            <CheckCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
-                            <span className="text-xs md:text-sm">Uploaded</span>
-                          </div>
-                        ) : progress > 0 ? (
-                          <div className="w-full md:w-32">
+                        {/* Upload Progress */}
+                        {(isUploading || hasError) && (
+                          <div className="w-full md:w-48">
                             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                               <div 
-                                className="h-full bg-green-500 transition-all duration-300"
-                                style={{ width: `${progress}%` }}
+                                className={`h-full transition-all duration-300 ${
+                                  hasError ? 'bg-red-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${file.uploadProgress}%` }}
                               ></div>
                             </div>
-                            <div className="text-xs text-darkGrey/70 mt-1 text-center">
-                              {progress}%
+                            <div className={`text-xs mt-1 text-center ${
+                              hasError ? 'text-red-600' : 'text-darkGrey/70'
+                            }`}>
+                              {hasError ? 'Upload failed' : `${file.uploadProgress}%`}
                             </div>
                           </div>
-                        ) : null}
+                        )}
                       </div>
                       
                       {file.size && (
@@ -584,6 +751,9 @@ export default function UploadMaterialsPage() {
                           Size: {file.size}
                         </p>
                       )}
+
+                      {/* File Preview */}
+                      {renderFilePreview(file)}
                     </div>
                   </div>
                 </div>
@@ -613,11 +783,14 @@ export default function UploadMaterialsPage() {
               </div>
               <div className="text-center p-2 md:p-3 bg-white rounded">
                 <div className="text-base md:text-lg font-bold text-darkNavy">
-                  {files.filter(f => f.url.trim() !== '').length}
+                  {files.filter(f => f.uploadStatus === 'uploaded').length}
                 </div>
-                <div className="text-xs text-darkGrey/70">Ready</div>
+                <div className="text-xs text-darkGrey/70">Uploaded</div>
               </div>
             </div>
+            <p className="text-xs text-darkGrey/70 mt-2">
+              Files are stored securely in Cloudinary. Videos will be streamable, documents downloadable.
+            </p>
           </div>
         </div>
 
@@ -631,7 +804,7 @@ export default function UploadMaterialsPage() {
           </Link>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || files.filter(f => f.file && f.uploadStatus !== 'uploaded').length > 0}
             className="w-full md:w-auto px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
             style={{ 
               backgroundColor: BRAND_COLORS.deepRed,

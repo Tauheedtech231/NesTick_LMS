@@ -21,7 +21,12 @@ import {
   Bell,
   Shield,
   FileCheck,
-  CreditCard
+  CreditCard,
+  Trash2,
+  User,
+  Calendar,
+  Phone,
+  FileSpreadsheet
 } from 'lucide-react'
 
 type PaymentStudent = {
@@ -63,6 +68,8 @@ export default function AdminDashboard() {
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<PaymentStudent | null>(null)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [selectedCredentials, setSelectedCredentials] = useState<StudentCredentials | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<{type: 'student' | 'credential', id: string, name: string} | null>(null)
 
   // Brand Colors
   const BRAND_COLORS = {
@@ -200,6 +207,40 @@ export default function AdminDashboard() {
     alert('Payment rejected!');
   }
 
+  // Handle delete item
+  const handleDeleteItem = () => {
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === 'student') {
+      // Delete student from state
+      setPaymentStudents(prev => prev.filter(student => student.id !== itemToDelete.id));
+      
+      // Also remove from credentials if exists
+      setStudentCredentials(prev => prev.filter(cred => cred.studentId !== itemToDelete.id));
+      
+      // Remove from localStorage
+      const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+      const paymentSubmission = JSON.parse(localStorage.getItem('paymentSubmission') || '[]');
+      
+      const newUploadedFiles = uploadedFiles.filter((file: any) => file.id !== itemToDelete.id);
+      const newPaymentSubmission = paymentSubmission.filter((sub: any) => sub.id !== itemToDelete.id);
+      
+      localStorage.setItem('uploadedFiles', JSON.stringify(newUploadedFiles));
+      localStorage.setItem('paymentSubmission', JSON.stringify(newPaymentSubmission));
+    } else {
+      // Delete credential
+      setStudentCredentials(prev => prev.filter(cred => cred.id !== itemToDelete.id));
+      
+      const credentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
+      const newCredentials = credentials.filter((cred: StudentCredentials) => cred.id !== itemToDelete.id);
+      localStorage.setItem('studentCredentials', JSON.stringify(newCredentials));
+    }
+    
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+    alert(`${itemToDelete.type === 'student' ? 'Student' : 'Credential'} deleted successfully!`);
+  }
+
   // Send credentials to student
   const sendCredentialsToStudent = async (student: PaymentStudent) => {
     if (!student.email || student.email === 'Not available') {
@@ -277,6 +318,7 @@ export default function AdminDashboard() {
       setStudentCredentials(updatedCredentials);
     } finally {
       setIsSendingCredentials(null);
+      setShowScreenshotModal(false);
     }
   }
 
@@ -382,7 +424,7 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center min-h-screen bg-white p-4">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
           <p className="mt-4 text-darkGrey">Loading payment data...</p>
@@ -392,22 +434,22 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="bg-white min-h-screen p-6">
+    <div className="bg-white min-h-screen p-4 sm:p-6">
       {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Welcome back, Admin
               </h1>
-              <p className="text-darkGrey mt-1">
+              <p className="text-darkGrey mt-1 text-sm sm:text-base">
                 Manage student payments and credentials from one dashboard
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-darkGrey">
-              <span>Admin Portal</span>
-              <ChevronRight className="w-4 h-4" />
+              <span className="hidden sm:inline">Admin Portal</span>
+              <ChevronRight className="w-4 h-4 hidden sm:inline" />
               <span className="font-medium">Payments</span>
             </div>
           </div>
@@ -416,55 +458,55 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards - Payment Overview */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
           Payment Overview
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Total Submissions</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{totalSubmissions}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Total Submissions</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{totalSubmissions}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-                <Users className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Pending Verification</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{pendingVerifications}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Pending Verification</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{pendingVerifications}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
-                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.deepRed }} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Verified Payments</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{verifiedPayments}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Verified Payments</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{verifiedPayments}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-                <CheckCircle className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.teal }} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Total Revenue</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>PKR {totalRevenue.toLocaleString()}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Total Revenue</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>PKR {totalRevenue.toLocaleString()}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-                <CreditCard className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
               </div>
             </div>
           </div>
@@ -472,43 +514,43 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards - Credentials Status */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
           Credentials Status
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Sent Credentials</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{sentCredentials}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Sent Credentials</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{sentCredentials}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-                <Mail className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.teal }} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Failed Credentials</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{failedCredentials}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Failed Credentials</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{failedCredentials}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
-                <AlertCircle className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.brightRed }} />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg border border-softGrey p-5 hover:border-deepRed transition-colors duration-200">
+          <div className="bg-white rounded-lg border border-softGrey p-4 hover:border-deepRed transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-darkGrey">Rejected Payments</p>
-                <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{rejectedPayments}</p>
+                <p className="text-xs sm:text-sm font-medium text-darkGrey">Rejected Payments</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>{rejectedPayments}</p>
               </div>
               <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.brightRed}10` }}>
-                <X className="w-5 h-5" style={{ color: BRAND_COLORS.brightRed }} />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.brightRed }} />
               </div>
             </div>
           </div>
@@ -516,39 +558,43 @@ export default function AdminDashboard() {
       </div>
 
       {/* Control Panel */}
-      <div className="mb-8">
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: BRAND_COLORS.darkGrey }} />
-                <input
-                  type="text"
-                  placeholder="Search by name, course, email, or transaction ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
-                />
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-5">
+          <div className="flex flex-col gap-4">
+            {/* Search and Filter Row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.darkGrey }} />
+                  <input
+                    type="text"
+                    placeholder="Search by name, course, email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
+                  />
+                </div>
+              </div>
+              
+              <div className="w-full sm:w-48">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white text-sm sm:text-base"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="verified">Verified</option>
+                  <option value="rejected">Rejected</option>
+                </select>
               </div>
             </div>
             
-            <div className="w-full md:w-48">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="verified">Verified</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-            
-            <div className="flex gap-3">
+            {/* Button Row */}
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
-                  if (confirm('Clear all localStorage data?')) {
+                  if (confirm('Clear all localStorage data? This will delete all students and credentials.')) {
                     localStorage.removeItem('studentCredentials');
                     localStorage.removeItem('uploadedFiles');
                     localStorage.removeItem('paymentSubmission');
@@ -556,482 +602,336 @@ export default function AdminDashboard() {
                     loadDataFromLocalStorage();
                   }
                 }}
-                className="px-4 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+                className="px-4 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-sm sm:text-base"
               >
-                Clear Data
+                Clear All Data
               </button>
               <button
                 onClick={loadDataFromLocalStorage}
-                className="px-4 py-2.5 rounded-lg transition-colors font-medium flex items-center gap-2"
+                className="px-4 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
                 style={{ 
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white 
                 }}
               >
-                <RefreshCw className="w-4 h-4" />
-                Refresh
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                Refresh Data
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Payment Submissions Table */}
+      {/* Payment Submissions - Mobile Cards View */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+          <h2 className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
             Payment Submissions
           </h2>
-          <span className="text-sm text-darkGrey">
-            Showing {filteredStudents.length} of {paymentStudents.length} students
+          <span className="text-xs sm:text-sm text-darkGrey">
+            {filteredStudents.length} students
           </span>
         </div>
         
-        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
-          {filteredStudents.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Student
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Course
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Amount
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Transaction ID
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Screenshot
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Status
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                
-                <tbody>
-                  {filteredStudents.map((student) => (
-                    <tr 
-                      key={student.id} 
-                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
-                    >
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-medium text-darkGrey">{student.name}</p>
-                          <p className="text-sm text-darkGrey/70">{student.email}</p>
-                          <p className="text-xs text-darkGrey/50">{student.phone}</p>
-                        </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <span className="font-medium text-darkGrey">{student.course}</span>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{student.amount}</p>
-                          <p className="text-sm text-darkGrey/70">{student.paymentMethod}</p>
-                          <p className="text-xs text-darkGrey/50">{student.paymentDate}</p>
-                        </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <p className="font-mono text-sm bg-lightGrey px-2 py-1 rounded text-darkGrey">
-                          {student.transactionId}
-                        </p>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        {student.screenshotUrl && student.screenshotUrl.length > 100 ? (
-                          <button
-                            onClick={() => viewScreenshot(student)}
-                            className="flex items-center gap-2 px-3 py-1.5 border border-softGrey text-darkGrey rounded-lg hover:border-darkRoyalBlue hover:text-darkRoyalBlue transition-colors"
-                          >
-                            <ImageIcon className="w-4 h-4" />
-                            <span className="text-sm font-medium">View</span>
-                          </button>
-                        ) : (
-                          <span className="text-sm text-darkGrey/70">No screenshot</span>
-                        )}
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          student.status === 'verified' 
-                            ? 'text-white'
-                            : student.status === 'rejected'
-                            ? 'text-white'
-                            : 'text-white'
-                        }`} style={{
-                          backgroundColor: student.status === 'verified' 
-                            ? BRAND_COLORS.teal
-                            : student.status === 'rejected'
-                            ? BRAND_COLORS.brightRed
-                            : BRAND_COLORS.darkRoyalBlue
-                        }}>
-                          {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                        </span>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2">
-                          {student.screenshotUrl && student.screenshotUrl.length > 100 && (
-                            <>
-                              <button
-                                onClick={() => viewScreenshot(student)}
-                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                                title="View Screenshot"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => downloadScreenshot(student)}
-                                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                                title="Download Screenshot"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          
-                          {student.status === 'pending' && (
-                            <button
-                              onClick={() => sendCredentialsToStudent(student)}
-                              disabled={isSendingCredentials === student.id}
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              style={{ 
-                                backgroundColor: BRAND_COLORS.deepRed,
-                                color: BRAND_COLORS.white 
-                              }}
-                            >
-                              {isSendingCredentials === student.id ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Sending...
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-4 h-4" />
-                                  Verify & Send
-                                </>
-                              )}
-                            </button>
-                          )}
-                          
-                          {student.status === 'pending' && (
-                            <button
-                              onClick={() => {
-                                if (confirm(`Reject payment from ${student.name}?`)) {
-                                  handleRejectPayment(student.id);
-                                }
-                              }}
-                              className="px-3 py-1.5 text-sm border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
-                            >
-                              Reject
-                            </button>
-                          )}
-                          
-                          {student.status === 'verified' && (
-                            <span className="px-3 py-1.5 text-sm bg-teal/10 text-teal rounded-lg font-medium">
-                              ✓ Verified
-                            </span>
-                          )}
-                          
-                          {student.status === 'rejected' && (
-                            <span className="px-3 py-1.5 text-sm bg-brightRed/10 text-brightRed rounded-lg font-medium">
-                              ✗ Rejected
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
-                {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
-              </h3>
-              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
-                {searchTerm 
-                  ? 'Try a different search term' 
-                  : 'Students will appear here after they upload payment screenshots'}
-              </p>
-              
-              {!searchTerm && (
-                <div className="bg-lightGrey border border-softGrey rounded-lg p-4 max-w-md mx-auto">
-                  <h4 className="font-medium mb-2" style={{ color: BRAND_COLORS.darkRoyalBlue }}>How to test the system:</h4>
-                  <ol className="text-sm text-darkGrey space-y-1 list-decimal pl-4">
-                    <li>Go to any course page</li>
-                    <li>Click "Enroll Now" button</li>
-                    <li>Fill the enrollment form</li>
-                    <li>Download payment voucher</li>
-                    <li>Upload payment screenshot (JPG/PNG)</li>
-                    <li>Come back here and click "Refresh"</li>
-                  </ol>
+        {filteredStudents.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredStudents.map((student) => (
+              <div key={student.id} className="bg-white rounded-lg border border-softGrey p-4 hover:shadow-md transition-shadow">
+                {/* Top Row - Student Info and Status */}
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-darkGrey text-base sm:text-lg">{student.name}</h3>
+                    <p className="text-sm text-darkGrey/70">{student.course}</p>
+                    <p className="text-xs text-darkGrey/50 mt-1">{student.email}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
+                    student.status === 'verified' 
+                      ? 'text-white'
+                      : student.status === 'rejected'
+                      ? 'text-white'
+                      : 'text-white'
+                  }`} style={{
+                    backgroundColor: student.status === 'verified' 
+                      ? BRAND_COLORS.teal
+                      : student.status === 'rejected'
+                      ? BRAND_COLORS.brightRed
+                      : BRAND_COLORS.darkRoyalBlue
+                  }}>
+                    {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+
+                {/* Middle Row - Payment Details */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <p className="text-xs text-darkGrey/70">Amount</p>
+                    <p className="font-bold text-sm sm:text-base" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{student.amount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-darkGrey/70">Payment Method</p>
+                    <p className="font-medium text-darkGrey text-sm">{student.paymentMethod}</p>
+                  </div>
+                </div>
+
+                {/* Transaction ID */}
+                <div className="mb-3">
+                  <p className="text-xs text-darkGrey/70">Transaction ID</p>
+                  <p className="font-mono text-xs bg-lightGrey px-2 py-1 rounded text-darkGrey truncate">
+                    {student.transactionId}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center pt-3 border-t border-softGrey">
+                  <button
+                    onClick={() => {
+                      setItemToDelete({
+                        type: 'student',
+                        id: student.id,
+                        name: student.name
+                      });
+                      setShowDeleteModal(true);
+                    }}
+                    className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                    title="Delete Student"
+                  >
+                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                  
+                  {student.screenshotUrl && student.screenshotUrl.length > 100 && (
+                    <button
+                      onClick={() => viewScreenshot(student)}
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-sm flex items-center gap-1 sm:gap-2"
+                    >
+                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">View</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 sm:py-12 bg-white rounded-lg border border-softGrey">
+            <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+            <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+              {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
+            </h3>
+            <p className="text-darkGrey/70 mb-6 max-w-md mx-auto text-sm sm:text-base">
+              {searchTerm 
+                ? 'Try a different search term' 
+                : 'Students will appear here after they upload payment screenshots'}
+            </p>
+            
+            {!searchTerm && (
+              <div className="bg-lightGrey border border-softGrey rounded-lg p-4 max-w-md mx-auto">
+                <h4 className="font-medium mb-2 text-sm sm:text-base" style={{ color: BRAND_COLORS.darkRoyalBlue }}>How to test the system:</h4>
+                <ol className="text-xs sm:text-sm text-darkGrey space-y-1 list-decimal pl-4">
+                  <li>Go to any course page</li>
+                  <li>Click "Enroll Now" button</li>
+                  <li>Fill the enrollment form</li>
+                  <li>Upload payment screenshot (JPG/PNG)</li>
+                  <li>Come back here and click "Refresh Data"</li>
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Sent Credentials Table */}
+      {/* Sent Credentials - Mobile Cards View */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+          <h2 className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
             Sent Credentials
           </h2>
-          <span className="text-sm text-darkGrey">
-            {studentCredentials.length} credentials stored
+          <span className="text-xs sm:text-sm text-darkGrey">
+            {studentCredentials.length} credentials
           </span>
         </div>
         
-        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
-          {studentCredentials.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Student
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Course
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Credentials
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Sent Date
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Status
-                    </th>
-                    <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                
-                <tbody>
-                  {filteredCredentials.map((credential) => (
-                    <tr 
-                      key={credential.id} 
-                      className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
+        {studentCredentials.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredCredentials.map((credential) => (
+              <div key={credential.id} className="bg-white rounded-lg border border-softGrey p-4 hover:shadow-md transition-shadow">
+                {/* Top Row - Student Info */}
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-semibold text-darkGrey text-base sm:text-lg">{credential.studentName}</h3>
+                    <p className="text-sm text-darkGrey/70">{credential.course}</p>
+                    <p className="text-xs text-darkGrey/50 mt-1">{credential.studentEmail}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
+                    credential.status === 'sent' 
+                      ? 'text-white'
+                      : 'text-white'
+                  }`} style={{
+                    backgroundColor: credential.status === 'sent' 
+                      ? BRAND_COLORS.teal
+                      : BRAND_COLORS.brightRed
+                  }}>
+                    {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
+                  </span>
+                </div>
+
+                {/* Credentials */}
+                <div className="mb-3">
+                  <p className="text-xs text-darkGrey/70 mb-1">Credentials</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-darkGrey/70 w-16">Username:</span>
+                      <span className="font-mono text-xs bg-lightGrey px-2 py-1 rounded text-darkGrey flex-1 truncate">
+                        {credential.username}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-darkGrey/70 w-16">Password:</span>
+                      <span className="font-mono text-xs bg-lightGrey px-2 py-1 rounded text-darkGrey flex-1 truncate">
+                        {credential.password}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sent Date */}
+                <div className="mb-3">
+                  <p className="text-xs text-darkGrey/70">Sent Date</p>
+                  <p className="text-sm text-darkGrey">
+                    {new Date(credential.sentDate).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center pt-3 border-t border-softGrey">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setItemToDelete({
+                          type: 'credential',
+                          id: credential.id,
+                          name: credential.studentName
+                        });
+                        setShowDeleteModal(true);
+                      }}
+                      className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                      title="Delete Credentials"
                     >
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-medium text-darkGrey">{credential.studentName}</p>
-                          <p className="text-sm text-darkGrey/70">{credential.studentEmail}</p>
-                        </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <span className="font-medium text-darkGrey">{credential.course}</span>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="space-y-1">
-                          <p className="text-sm">
-                            <span className="text-darkGrey/70">Username: </span>
-                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.username}</span>
-                          </p>
-                          <p className="text-sm">
-                            <span className="text-darkGrey/70">Password: </span>
-                            <span className="font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey">{credential.password}</span>
-                          </p>
-                        </div>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <p className="text-sm text-darkGrey/70">
-                          {new Date(credential.sentDate).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-darkGrey/50">
-                          {new Date(credential.sentDate).toLocaleTimeString()}
-                        </p>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          credential.status === 'sent' 
-                            ? 'text-white'
-                            : 'text-white'
-                        }`} style={{
-                          backgroundColor: credential.status === 'sent' 
-                            ? BRAND_COLORS.teal
-                            : BRAND_COLORS.brightRed
-                        }}>
-                          {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
-                        </span>
-                      </td>
-                      
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => viewCredentials(credential)}
-                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          
-                          {credential.status === 'sent' && (
-                            <button
-                              onClick={() => resendCredentials(credential)}
-                              className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                              title="Resend Credentials"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => {
-                              if (confirm(`Copy credentials for ${credential.studentName} to clipboard?`)) {
-                                const text = `Username: ${credential.username}\nPassword: ${credential.password}`;
-                                navigator.clipboard.writeText(text);
-                                alert('Credentials copied to clipboard!');
-                              }
-                            }}
-                            className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                            title="Copy Credentials"
-                          >
-                            <Key className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Key className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-              <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>No credentials sent yet</h3>
-              <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
-                Verify a payment to send login credentials to students
-              </p>
-            </div>
-          )}
-        </div>
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        const text = `Username: ${credential.username}\nPassword: ${credential.password}`;
+                        navigator.clipboard.writeText(text);
+                        alert('Credentials copied to clipboard!');
+                      }}
+                      className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                      title="Copy Credentials"
+                    >
+                      <Key className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={() => viewCredentials(credential)}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-sm flex items-center gap-1 sm:gap-2"
+                  >
+                    <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">View Details</span>
+                    <span className="sm:hidden">View</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 sm:py-12 bg-white rounded-lg border border-softGrey">
+            <Key className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+            <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>No credentials sent yet</h3>
+            <p className="text-darkGrey/70 mb-6 max-w-md mx-auto text-sm sm:text-base">
+              Verify a payment to send login credentials to students
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Screenshot Modal */}
+      {/* Screenshot Modal with Actions */}
       {showScreenshotModal && selectedScreenshot && selectedStudentDetails && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-softGrey">
             <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
-              <div>
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
                   Payment Screenshot - {selectedStudentDetails.name}
                 </h3>
-                <p className="text-sm text-darkGrey/70">
+                <p className="text-xs sm:text-sm text-darkGrey/70 truncate">
                   Transaction ID: {selectedStudentDetails.transactionId}
                 </p>
               </div>
               <button
                 onClick={() => setShowScreenshotModal(false)}
-                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors ml-2 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6 overflow-auto max-h-[70vh]">
-              <div className="flex flex-col lg:flex-row gap-6">
+            <div className="p-4 sm:p-6 overflow-auto max-h-[calc(90vh-100px)]">
+              <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+                {/* Screenshot Section */}
                 <div className="lg:w-2/3">
                   <div className="border border-softGrey rounded-lg overflow-hidden bg-lightGrey">
                     <img
                       src={selectedScreenshot}
                       alt="Payment Screenshot"
-                      className="w-full h-auto max-h-[500px] object-contain"
+                      className="w-full h-auto max-h-[300px] sm:max-h-[400px] object-contain"
                       onError={(e) => {
-                        console.error("❌ Image failed to load:", selectedScreenshot?.substring(0, 100));
+                        console.error("❌ Image failed to load");
                         e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load';
                       }}
                     />
                   </div>
-                  <div className="mt-4 flex justify-center">
-                    <button
-                      onClick={() => downloadScreenshot(selectedStudentDetails)}
-                      className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Screenshot
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="lg:w-1/3">
-                  <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
-                    <h4 className="font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>Payment Details</h4>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Student Name</p>
-                        <p className="font-medium text-darkGrey">{selectedStudentDetails.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Course</p>
-                        <p className="font-medium text-darkGrey">{selectedStudentDetails.course}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Amount</p>
-                        <p className="font-medium" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.amount}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Payment Method</p>
-                        <p className="font-medium text-darkGrey">{selectedStudentDetails.paymentMethod}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Transaction ID</p>
-                        <p className="font-mono text-sm bg-white px-2 py-1 rounded border border-softGrey text-darkGrey">
-                          {selectedStudentDetails.transactionId}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-darkGrey/70">Status</p>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          selectedStudentDetails.status === 'verified' 
-                            ? 'text-white'
-                            : selectedStudentDetails.status === 'rejected'
-                            ? 'text-white'
-                            : 'text-white'
-                        }`} style={{
-                          backgroundColor: selectedStudentDetails.status === 'verified' 
-                            ? BRAND_COLORS.teal
-                            : selectedStudentDetails.status === 'rejected'
-                            ? BRAND_COLORS.brightRed
-                            : BRAND_COLORS.darkRoyalBlue
-                        }}>
-                          {selectedStudentDetails.status.charAt(0).toUpperCase() + selectedStudentDetails.status.slice(1)}
-                        </span>
-                      </div>
+                  
+                  {/* Action Buttons - All buttons now inside modal */}
+                  <div className="mt-4 space-y-3">
+                    {/* Download Button */}
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => downloadScreenshot(selectedStudentDetails)}
+                        className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center text-sm sm:text-base"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Screenshot
+                      </button>
                     </div>
                     
-                    <div className="mt-6 space-y-3">
-                      {selectedStudentDetails.status === 'pending' && (
+                    {/* Delete Button */}
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => {
+                          setShowScreenshotModal(false);
+                          setItemToDelete({
+                            type: 'student',
+                            id: selectedStudentDetails.id,
+                            name: selectedStudentDetails.name
+                          });
+                          setShowDeleteModal(true);
+                        }}
+                        className="px-4 py-2 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium flex items-center text-sm sm:text-base"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Student
+                      </button>
+                    </div>
+                    
+                    {/* Verify/Reject Buttons - Only for pending status */}
+                    {selectedStudentDetails.status === 'pending' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                         <button
-                          onClick={() => {
-                            sendCredentialsToStudent(selectedStudentDetails);
-                            setShowScreenshotModal(false);
-                          }}
+                          onClick={() => sendCredentialsToStudent(selectedStudentDetails)}
                           disabled={isSendingCredentials === selectedStudentDetails.id}
-                          className="w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                          className="w-full py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                           style={{ 
                             backgroundColor: BRAND_COLORS.deepRed,
                             color: BRAND_COLORS.white 
@@ -1040,7 +940,7 @@ export default function AdminDashboard() {
                           {isSendingCredentials === selectedStudentDetails.id ? (
                             <>
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Sending Credentials...
+                              Sending...
                             </>
                           ) : (
                             <>
@@ -1049,9 +949,7 @@ export default function AdminDashboard() {
                             </>
                           )}
                         </button>
-                      )}
-                      
-                      {selectedStudentDetails.status === 'pending' && (
+                        
                         <button
                           onClick={() => {
                             if (confirm(`Reject payment from ${selectedStudentDetails.name}?`)) {
@@ -1059,10 +957,105 @@ export default function AdminDashboard() {
                               setShowScreenshotModal(false);
                             }
                           }}
-                          className="w-full py-2.5 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium"
+                          className="w-full py-3 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium text-sm sm:text-base"
                         >
                           ✗ Reject Payment
                         </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Student Details Section */}
+                <div className="lg:w-1/3">
+                  <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
+                    <h4 className="font-semibold mb-3 text-sm sm:text-base" style={{ color: BRAND_COLORS.darkNavy }}>
+                      Student Details
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-start">
+                        <User className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Name</p>
+                          <p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.name}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <FileSpreadsheet className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Course</p>
+                          <p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.course}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <DollarSign className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Amount</p>
+                          <p className="font-bold text-sm" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.amount}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <CreditCard className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Payment Method</p>
+                          <p className="font-medium text-darkGrey text-sm">{selectedStudentDetails.paymentMethod}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <Calendar className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Transaction ID</p>
+                          <p className="font-mono text-xs bg-white px-2 py-1 rounded border border-softGrey text-darkGrey truncate">
+                            {selectedStudentDetails.transactionId}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start">
+                        <CheckCircle className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-darkGrey/70">Status</p>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            selectedStudentDetails.status === 'verified' 
+                              ? 'text-white'
+                              : selectedStudentDetails.status === 'rejected'
+                              ? 'text-white'
+                              : 'text-white'
+                          }`} style={{
+                            backgroundColor: selectedStudentDetails.status === 'verified' 
+                              ? BRAND_COLORS.teal
+                              : selectedStudentDetails.status === 'rejected'
+                              ? BRAND_COLORS.brightRed
+                              : BRAND_COLORS.darkRoyalBlue
+                          }}>
+                            {selectedStudentDetails.status.charAt(0).toUpperCase() + selectedStudentDetails.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {selectedStudentDetails.email && selectedStudentDetails.email !== 'Not available' && (
+                        <div className="flex items-start">
+                          <Mail className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-darkGrey/70">Email</p>
+                            <p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.email}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedStudentDetails.phone && selectedStudentDetails.phone !== 'Not available' && (
+                        <div className="flex items-start">
+                          <Phone className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-darkGrey/70">Phone</p>
+                            <p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.phone}</p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1078,51 +1071,51 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
             <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
-              <div>
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
                   Credentials Details
                 </h3>
-                <p className="text-sm text-darkGrey/70">
+                <p className="text-xs sm:text-sm text-darkGrey/70 truncate">
                   {selectedCredentials.studentName}
                 </p>
               </div>
               <button
                 onClick={() => setShowCredentialsModal(false)}
-                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors"
+                className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors ml-2 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-darkGrey/70">Student Name</p>
-                  <p className="font-medium text-darkGrey">{selectedCredentials.studentName}</p>
+                  <p className="text-xs sm:text-sm text-darkGrey/70">Student Name</p>
+                  <p className="font-medium text-darkGrey text-sm sm:text-base">{selectedCredentials.studentName}</p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-darkGrey/70">Email</p>
-                  <p className="font-medium text-darkGrey">{selectedCredentials.studentEmail}</p>
+                  <p className="text-xs sm:text-sm text-darkGrey/70">Email</p>
+                  <p className="font-medium text-darkGrey text-sm sm:text-base truncate">{selectedCredentials.studentEmail}</p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-darkGrey/70">Course</p>
-                  <p className="font-medium text-darkGrey">{selectedCredentials.course}</p>
+                  <p className="text-xs sm:text-sm text-darkGrey/70">Course</p>
+                  <p className="font-medium text-darkGrey text-sm sm:text-base">{selectedCredentials.course}</p>
                 </div>
                 
                 <div className="bg-lightGrey p-4 rounded-lg border border-softGrey">
-                  <h4 className="font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Login Credentials</h4>
-                  <div className="space-y-2">
+                  <h4 className="font-semibold mb-2 text-sm sm:text-base" style={{ color: BRAND_COLORS.darkNavy }}>Login Credentials</h4>
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-sm text-darkGrey/70">Username</p>
-                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
+                      <p className="text-xs sm:text-sm text-darkGrey/70 mb-1">Username</p>
+                      <p className="font-mono text-sm sm:text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey break-all">
                         {selectedCredentials.username}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-darkGrey/70">Password</p>
-                      <p className="font-mono text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey">
+                      <p className="text-xs sm:text-sm text-darkGrey/70 mb-1">Password</p>
+                      <p className="font-mono text-sm sm:text-lg bg-white px-3 py-2 rounded border border-softGrey text-darkGrey break-all">
                         {selectedCredentials.password}
                       </p>
                     </div>
@@ -1130,15 +1123,15 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div>
-                  <p className="text-sm text-darkGrey/70">Sent Date</p>
-                  <p className="font-medium text-darkGrey">
+                  <p className="text-xs sm:text-sm text-darkGrey/70">Sent Date</p>
+                  <p className="font-medium text-darkGrey text-sm sm:text-base">
                     {new Date(selectedCredentials.sentDate).toLocaleDateString()} at{' '}
                     {new Date(selectedCredentials.sentDate).toLocaleTimeString()}
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-sm text-darkGrey/70">Status</p>
+                  <p className="text-xs sm:text-sm text-darkGrey/70">Status</p>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                     selectedCredentials.status === 'sent' 
                       ? 'text-white'
@@ -1153,14 +1146,14 @@ export default function AdminDashboard() {
                 </div>
               </div>
               
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     const text = `Username: ${selectedCredentials.username}\nPassword: ${selectedCredentials.password}`;
                     navigator.clipboard.writeText(text);
                     alert('Credentials copied to clipboard!');
                   }}
-                  className="flex-1 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   <Key className="w-4 h-4" />
                   Copy Credentials
@@ -1172,7 +1165,7 @@ export default function AdminDashboard() {
                       resendCredentials(selectedCredentials);
                       setShowCredentialsModal(false);
                     }}
-                    className="flex-1 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
                     style={{ 
                       backgroundColor: BRAND_COLORS.deepRed,
                       color: BRAND_COLORS.white 
@@ -1182,6 +1175,61 @@ export default function AdminDashboard() {
                     Resend
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && itemToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
+            <div className="p-4 border-b border-softGrey bg-lightGrey rounded-t-xl">
+              <h3 className="text-lg font-semibold text-center" style={{ color: BRAND_COLORS.darkNavy }}>
+                Confirm Delete
+              </h3>
+            </div>
+            
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brightRed/10 flex items-center justify-center">
+                <Trash2 className="w-8 h-8" style={{ color: BRAND_COLORS.brightRed }} />
+              </div>
+              
+              <h4 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                Delete {itemToDelete.type === 'student' ? 'Student' : 'Credentials'}?
+              </h4>
+              
+              <p className="text-darkGrey mb-4">
+                Are you sure you want to delete <span className="font-semibold">{itemToDelete.name}</span>? 
+                {itemToDelete.type === 'student' ? ' This will also remove any associated credentials.' : ''}
+              </p>
+              
+              <p className="text-sm text-brightRed mb-6">
+                This action cannot be undone.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                  }}
+                  className="flex-1 py-3 border border-softGrey text-darkGrey rounded-lg hover:bg-lightGrey transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  onClick={handleDeleteItem}
+                  className="flex-1 py-3 rounded-lg font-medium transition-colors"
+                  style={{ 
+                    backgroundColor: BRAND_COLORS.brightRed,
+                    color: BRAND_COLORS.white 
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>

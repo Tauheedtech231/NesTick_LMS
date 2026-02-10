@@ -37,6 +37,12 @@ export default function Sidebar() {
       path: '/lms/Student_Portal/my-courses',
     },
     {
+      id: 'Assignments',
+      label: 'Assignments',
+      icon: HiDocumentText,
+      path: '/lms/Student_Portal/assignments',
+    },
+    {
       id: 'mock-quizzes',
       label: 'Mock Quizzes',
       icon: HiDocumentText,

@@ -1,15 +1,15 @@
 // app/lms/Instructor_Portal/components/Header.tsx
 'use client';
 
-import { Search, Bell, HelpCircle, User } from 'lucide-react';
+import { Bell, HelpCircle, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 /* eslint-disable */
-
 export default function Header() {
-  const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,12 +18,7 @@ export default function Header() {
       try {
         const userData = localStorage.getItem('currentUser');
         const instructorUsers = JSON.parse(localStorage.getItem('instructorUsers') || '[]');
-
         const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
-        
-        console.log('Header - Current user from localStorage:', userData);
-        console.log('Header - Instructor users:', instructorUsers);
-        console.log('Header - All instructors:', allInstructors);
 
         if (userData) {
           const user = JSON.parse(userData);
@@ -81,8 +76,6 @@ export default function Header() {
             });
           }
         } else {
-          console.log('No user found in localStorage, checking for fallback...');
-          
           // Check for last instructor login as fallback
           const lastInstructorLogin = localStorage.getItem('lastInstructorLogin');
           if (lastInstructorLogin) {
@@ -156,6 +149,7 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('lastInstructorLogin');
+    setMobileMenuOpen(false);
     router.push('/lms/auth/login?type=instructor');
   };
 
@@ -197,13 +191,12 @@ export default function Header() {
 
   if (loading) {
     return (
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center justify-between">
-          <div className="flex-1 max-w-xl">
-            <div className="h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
+          <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
           </div>
         </div>
       </header>
@@ -211,40 +204,136 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Left: Search */}
-        <div className="flex-1 max-w-xl">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search students, courses, or assignments..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-            />
+    <header className="bg-white border-b border-gray-200">
+      {/* Desktop Header */}
+      <div className="hidden sm:block">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Welcome Message */}
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">
+                Welcome, {getUserDisplayName()}
+              </h1>
+              <p className="text-sm text-gray-600">
+               {getUserRole()}
+              </p>
+            </div>
+
+            {/* Right: Actions & Profile */}
+            <div className="flex items-center space-x-4">
+           
+              
+            
+              
+             
+              
+              {/* Profile with Dropdown */}
+              <div className="relative group">
+                <div className="flex items-center space-x-3 cursor-pointer">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {getUserDisplayName()}
+                      {currentUser?.isDemoAccount && (
+                        <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          Demo
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">{currentUser?.email}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold relative">
+                    {currentUser?.initials || 'I'}
+                    {currentUser?.isDemoAccount && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"></div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 hidden group-hover:block">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
+                    <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+                    {currentUser?.isDemoAccount && (
+                      <p className="text-xs text-yellow-600 mt-1">Demo Account</p>
+                    )}
+                  </div>
+                  
+                  <div className="py-1">
+                    <Link
+                      href="/lms/Instructor_Portal/profile"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purple-600"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      View Profile
+                    </Link>
+                    
+                    <div className="border-t border-gray-100 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Header */}
+      <div className="sm:hidden">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 text-gray-600 hover:text-purple-600"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+
+            {/* Mobile Title */}
+            <div className="text-center">
+              <h1 className="text-base font-semibold text-gray-900">Instructor Portal</h1>
+              <p className="text-xs text-gray-600">{getUserRole()}</p>
+            </div>
+
+            {/* Mobile Profile */}
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => router.push('/lms/Instructor_Portal/notifications')}
+                className="p-1.5 text-gray-600 hover:text-purple-600 relative"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <div 
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {currentUser?.initials || 'I'}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Right: Actions & Profile */}
-        <div className="flex items-center space-x-4">
-          <button className="p-2 text-gray-600 hover:text-[#6B21A8] hover:bg-gray-100 rounded-lg transition-colors relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
-          <button className="p-2 text-gray-600 hover:text-[#6B21A8] hover:bg-gray-100 rounded-lg transition-colors">
-            <HelpCircle className="w-5 h-5" />
-          </button>
-          
-          <div className="h-8 w-px bg-gray-300"></div>
-          
-          {/* Profile with Dropdown */}
-          <div className="relative group">
-            <div className="flex items-center space-x-3 cursor-pointer">
-              <div className="text-right hidden md:block">
-                <p className="text-sm font-medium text-gray-900">
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="border-t border-gray-200 bg-white px-4 py-3">
+            {/* User Info */}
+            <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-100">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold">
+                {currentUser?.initials || 'I'}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
                   {getUserDisplayName()}
                   {currentUser?.isDemoAccount && (
                     <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
@@ -252,81 +341,53 @@ export default function Header() {
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-gray-500">{getUserRole()}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#6B21A8] to-purple-500 flex items-center justify-center text-white font-semibold relative">
-                {currentUser?.initials || 'I'}
-                {currentUser?.isDemoAccount && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"></div>
-                )}
+                <p className="text-sm text-gray-600">{currentUser?.email}</p>
               </div>
             </div>
-            
-            {/* Dropdown Menu */}
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 hidden group-hover:block">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
-                <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
-                {currentUser?.isDemoAccount && (
-                  <p className="text-xs text-yellow-600 mt-1">Demo Account</p>
-                )}
-              </div>
-              
-              <div className="py-1">
-                <button
-                  onClick={() => router.push('/lms/Instructor_Portal/profile')}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#6B21A8]"
-                >
-                  <User className="w-4 h-4 inline mr-2" />
-                  View Profile
-                </button>
-                
-                <button
-                  onClick={() => router.push('/lms/Instructor_Portal/settings')}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#6B21A8]"
-                >
-                  <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Settings
-                </button>
-                
-                <div className="border-t border-gray-100 mt-1 pt-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Logout
-                  </button>
-                </div>
-              </div>
+
+            {/* Menu Links */}
+            <div className="space-y-1">
+              <Link
+                href="/lms/Instructor_Portal/profile"
+                className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purple-600 rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <User className="w-4 h-4 mr-3" />
+                View Profile
+              </Link>
+
+              <Link
+                href="/lms/Instructor_Portal/help"
+                className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-purple-600 rounded-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <HelpCircle className="w-4 h-4 mr-3" />
+                Help & Support
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+              >
+                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </button>
             </div>
+
+            {/* Course Info (if available) */}
+            {currentUser?.instructorDetails?.assignedCourse && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-700 mb-1">Assigned Course</p>
+                <p className="text-sm text-gray-900">{currentUser.instructorDetails.assignedCourse.title}</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {currentUser.instructorDetails.assignedCourse.duration} • {currentUser.instructorDetails.totalStudents || 0} students
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-      
-      {/* Mobile Profile Info */}
-      <div className="md:hidden mt-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#6B21A8] to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
-            {currentUser?.initials || 'I'}
-          </div>
-          <div>
-            <p className="font-medium text-gray-900">
-              {getUserDisplayName()}
-              {currentUser?.isDemoAccount && (
-                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                  Demo
-                </span>
-              )}
-            </p>
-            <p className="text-sm text-gray-500">{getUserRole()}</p>
-          </div>
-        </div>
+        )}
       </div>
     </header>
   );

@@ -100,14 +100,12 @@ const dashboardItems = {
     { title: 'Dashboard', href: '/lms/Student_Portal', icon: HiBookOpen },
   ],
   instructor: [
-    { title: 'My Classes', href: '/dashboard/classes', icon: HiBookOpen },
-    { title: 'Students', href: '/dashboard/students', icon: HiAcademicCap },
-    { title: 'Profile', href: '/dashboard/profile', icon: HiUserCircle }
+    { title: 'Dashboard', href: '/lms/Instructor_Portal', icon: HiBookOpen },
+   
   ],
   admin: [
     { title: 'Dashboard', href: '/lms/Admin_Portal', icon: HiBookOpen },
-    { title: 'Users', href: '/dashboard/users', icon: HiUserCircle },
-    { title: 'Settings', href: '/dashboard/settings', icon: HiCog }
+   
   ]
 };
 

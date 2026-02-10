@@ -1,4 +1,4 @@
-// app/mock-quizzes/page.tsx
+// app/lms/Student_Portal/mock-quizzes/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,519 +10,821 @@ import {
   HiCheckCircle, 
   HiXCircle,
   HiPlay,
-  HiChartBar
+  HiChartBar,
+  HiAcademicCap,
+  HiUser,
+  HiCalendar,
+  HiArrowRight,
+  HiStar,
+  HiOutlineFire,
+  
+  HiArrowLeft,
+  HiDownload
 } from 'react-icons/hi';
-import QuizBlock from '../components/QuizBlock';
+import Link from 'next/link';
+/* eslint-disable */
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6CB'
+};
 
-type Quiz = {
+interface Quiz {
   id: string;
   title: string;
   description: string;
   course: string;
-  questions: Question[];
+  courseId: string;
+  instructorName: string;
+  totalQuestions: number;
   passingScore: number;
   studentScore?: number;
   isPassed: boolean;
   attempts: number;
-  timeLimit: number;
-};
+  timeLimit: number; // in minutes
+  difficulty: 'easy' | 'medium' | 'hard';
+  tags: string[];
+  createdAt: string;
+  status: 'not_attempted' | 'in_progress' | 'completed';
+  lastAttempt?: string;
+  averageScore?: number;
+}
 
-type Question = {
+interface QuizResult {
   id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation: string;
-};
-
-type QuizResult = {
   quizId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
   score: number;
+  totalQuestions: number;
+  correctAnswers: number;
   isPassed: boolean;
-  attempts: number;
-  lastAttempt: string;
-};
+  timeSpent: number; // in seconds
+  submittedAt: string;
+  answers: {
+    questionId: string;
+    selectedOption: number;
+    isCorrect: boolean;
+    pointsEarned: number;
+  }[];
+}
 
-export default function MockQuizzesPage() {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([
-    {
-      id: 'quiz-1',
-      title: 'Pipe Fitting Fundamentals',
-      description: 'Test your basic knowledge of pipe fitting concepts',
-      course: 'Industrial Pipe Fitting',
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the purpose of pipe threading?',
-          options: [
-            'To decorate the pipe',
-            'To create leak-proof connections',
-            'To increase pipe diameter',
-            'To reduce pipe weight'
-          ],
-          correctAnswer: 1,
-          explanation: 'Threading creates leak-proof connections between pipes'
-        },
-        {
-          id: 'q2',
-          question: 'Which tool is used for precise pipe cutting?',
-          options: [
-            'Hacksaw',
-            'Pipe Cutter',
-            'Angle Grinder',
-            'All of the above'
-          ],
-          correctAnswer: 1,
-          explanation: 'Pipe cutter provides the most precise cuts'
-        }
-      ],
-      passingScore: 70,
-      studentScore: 85,
-      isPassed: true,
-      attempts: 2,
-      timeLimit: 30
-    },
-    {
-      id: 'quiz-2',
-      title: 'Welding Safety Quiz',
-      description: 'Test your knowledge of welding safety procedures',
-      course: 'Professional Welding',
-      questions: [
-        {
-          id: 'q1',
-          question: 'What type of helmet is required for welding?',
-          options: [
-            'Regular safety glasses',
-            'Auto-darkening welding helmet',
-            'Sunglasses',
-            'Face shield only'
-          ],
-          correctAnswer: 1,
-          explanation: 'Auto-darkening welding helmet protects eyes from arc flash'
-        }
-      ],
-      passingScore: 70,
-      studentScore: 78,
-      isPassed: true,
-      attempts: 1,
-      timeLimit: 20
-    },
-    {
-      id: 'quiz-3',
-      title: 'OSHA Regulations',
-      description: 'Test your knowledge of OSHA safety regulations',
-      course: 'Safety Inspector Certification',
-      questions: [
-        {
-          id: 'q1',
-          question: 'What does OSHA stand for?',
-          options: [
-            'Occupational Safety and Health Administration',
-            'Operational Safety and Health Authority',
-            'Organization for Safety and Health Advancement',
-            'Official Safety and Health Association'
-          ],
-          correctAnswer: 0,
-          explanation: 'OSHA stands for Occupational Safety and Health Administration'
-        }
-      ],
-      passingScore: 70,
-      studentScore: 92,
-      isPassed: true,
-      attempts: 1,
-      timeLimit: 25
-    },
-    {
-      id: 'practice-1',
-      title: 'Pipe Materials Practice',
-      description: 'Practice quiz on different pipe materials',
-      course: 'Industrial Pipe Fitting',
-      questions: [
-        {
-          id: 'p1',
-          question: 'Which material is best for high-pressure applications?',
-          options: ['PVC', 'Copper', 'Steel', 'Aluminum'],
-          correctAnswer: 2,
-          explanation: 'Steel is best for high-pressure applications'
-        }
-      ],
-      passingScore: 70,
-      studentScore: undefined,
-      isPassed: false,
-      attempts: 0,
-      timeLimit: 15
-    },
-    {
-      id: 'practice-2',
-      title: 'Welding Techniques Practice',
-      description: 'Practice different welding techniques',
-      course: 'Professional Welding',
-      questions: [
-        {
-          id: 'p1',
-          question: 'Which welding technique is best for thin materials?',
-          options: ['MIG', 'TIG', 'Arc', 'Spot'],
-          correctAnswer: 1,
-          explanation: 'TIG welding is best for thin materials'
-        }
-      ],
-      passingScore: 70,
-      studentScore: undefined,
-      isPassed: false,
-      attempts: 0,
-      timeLimit: 15
-    }
-  ]);
-
+export default function StudentMockQuizzesPage() {
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
-  const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
-  const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
-  const [quizTime, setQuizTime] = useState<number>(0);
-  const [quizTimer, setQuizTimer] = useState<NodeJS.Timeout | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState<'all' | 'not_attempted' | 'completed' | 'failed'>('all');
+  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState({
+    totalQuizzes: 0,
+    completedQuizzes: 0,
+    averageScore: 0,
+    totalAttempts: 0,
+    passingRate: 0,
+    totalStudyTime: 0
+  });
 
   useEffect(() => {
-    setFilteredQuizzes(quizzes);
-    
-    // Load quiz results from localStorage
-    const savedResults = localStorage.getItem('quizResults');
-    if (savedResults) {
-      setQuizResults(JSON.parse(savedResults));
-    }
+    const loadData = () => {
+      try {
+        // Load user data
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          const userData = JSON.parse(currentUserStr);
+          setUser(userData);
+          
+          // Load student courses
+          const studentCourses = JSON.parse(localStorage.getItem('studentCourses') || '[]');
+          
+          // Load quizzes from localStorage
+          const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]');
+          const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
+          
+          // Load quiz results
+          const allQuizResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]');
+          setQuizResults(allQuizResults);
+          
+          // Map quizzes to student's courses
+          const studentQuizData: Quiz[] = [];
+
+          studentCourses.forEach((course: any) => {
+            const courseQuizzes = allQuizzes
+              .filter((quiz: any) => {
+                // Match by course ID or title
+                const matchesCourseId = quiz.courseId === course.id;
+                const matchesCourseTitle = quiz.courseTitle?.toLowerCase() === course.title?.toLowerCase();
+                return (matchesCourseId || matchesCourseTitle) && quiz.status === 'published';
+              })
+              .map((quiz: any) => {
+                // Find instructor
+                const instructor = allInstructors.find((inst: any) => 
+                  inst.id === quiz.instructorId
+                ) || { name: quiz.instructorName || 'Instructor' };
+                
+                // Check student quiz results
+                const studentResult = allQuizResults.find((result: any) => 
+                  result.quizId === quiz.id && 
+                  (result.studentEmail === userData.email || result.studentId === userData.id)
+                );
+                
+                // Determine status and score
+                let status: 'not_attempted' | 'in_progress' | 'completed' = 'not_attempted';
+                let studentScore = undefined;
+                let isPassed = false;
+                let attempts = 0;
+                let lastAttempt = undefined;
+                
+                if (studentResult) {
+                  status = 'completed';
+                  studentScore = studentResult.score;
+                  isPassed = studentResult.isPassed;
+                  attempts = 1; // This could be calculated from multiple attempts
+                  lastAttempt = studentResult.submittedAt;
+                }
+                
+                return {
+                  id: quiz.id,
+                  title: quiz.title,
+                  description: quiz.description || 'Test your knowledge with this quiz',
+                  course: course.title,
+                  courseId: course.id,
+                  instructorName: instructor.name,
+                  totalQuestions: quiz.totalQuestions || quiz.questions?.length || 10,
+                  passingScore: quiz.passingScore || 70,
+                  studentScore,
+                  isPassed,
+                  attempts,
+                  timeLimit: quiz.timeLimit || 30,
+                  difficulty: quiz.difficulty || 'medium',
+                  tags: quiz.tags || ['assessment'],
+                  createdAt: quiz.createdAt || new Date().toISOString(),
+                  status,
+                  lastAttempt,
+                  averageScore: quiz.averageScore || 0
+                };
+              });
+            
+            studentQuizData.push(...courseQuizzes);
+          });
+
+          // If no quizzes found in courses, show sample quizzes
+          if (studentQuizData.length === 0) {
+            const sampleQuizzes: Quiz[] = [
+              {
+                id: 'quiz-1',
+                title: 'Pipe Fitting Fundamentals',
+                description: 'Test your basic knowledge of pipe fitting concepts and tools',
+                course: 'Industrial Pipe Fitting',
+                courseId: 'course-1',
+                instructorName: 'John Smith',
+                totalQuestions: 15,
+                passingScore: 70,
+                attempts: 0,
+                timeLimit: 30,
+                difficulty: 'easy',
+                tags: ['pipe fitting', 'basics', 'tools'],
+                createdAt: '2024-01-15',
+                status: 'not_attempted',
+                averageScore: 0,
+                isPassed: false
+              },
+              {
+                id: 'quiz-2',
+                title: 'Welding Safety Certification',
+                description: 'Advanced welding safety procedures and protocols',
+                course: 'Professional Welding',
+                courseId: 'course-2',
+                instructorName: 'Sarah Johnson',
+                totalQuestions: 20,
+                passingScore: 80,
+                studentScore: 85,
+                isPassed: true,
+                attempts: 1,
+                timeLimit: 45,
+                difficulty: 'medium',
+                tags: ['welding', 'safety', 'certification'],
+                createdAt: '2024-01-20',
+                status: 'completed',
+                lastAttempt: '2024-01-25',
+                averageScore: 78
+              },
+              {
+                id: 'quiz-3',
+                title: 'OSHA Regulations Assessment',
+                description: 'Comprehensive OSHA safety regulations test',
+                course: 'Safety Inspector Certification',
+                courseId: 'course-3',
+                instructorName: 'Michael Brown',
+                totalQuestions: 25,
+                passingScore: 75,
+                studentScore: 65,
+                isPassed: false,
+                attempts: 1,
+                timeLimit: 60,
+                difficulty: 'hard',
+                tags: ['OSHA', 'regulations', 'safety'],
+                createdAt: '2024-02-01',
+                status: 'completed',
+                lastAttempt: '2024-02-05',
+                averageScore: 72
+              },
+              {
+                id: 'quiz-4',
+                title: 'Electrical Circuits Practice',
+                description: 'Practice quiz on electrical circuits and components',
+                course: 'Industrial Pipe Fitting',
+                courseId: 'course-1',
+                instructorName: 'John Smith',
+                totalQuestions: 10,
+                passingScore: 60,
+                attempts: 0,
+                timeLimit: 20,
+                difficulty: 'easy',
+                tags: ['electrical', 'circuits', 'practice'],
+                createdAt: '2024-02-10',
+                status: 'not_attempted',
+                averageScore: 0,
+                isPassed: false
+              }
+            ];
+            
+            setQuizzes(sampleQuizzes);
+            setFilteredQuizzes(sampleQuizzes);
+          } else {
+            setQuizzes(studentQuizData);
+            setFilteredQuizzes(studentQuizData);
+          }
+
+          // Calculate stats
+          const completedQuizzes = studentQuizData.filter(q => q.status === 'completed');
+          const passedQuizzes = completedQuizzes.filter(q => q.isPassed);
+          const totalScore = completedQuizzes.reduce((sum, q) => sum + (q.studentScore || 0), 0);
+          const totalAttempts = studentQuizData.reduce((sum, q) => sum + q.attempts, 0);
+          const averageScore = completedQuizzes.length > 0 ? Math.round(totalScore / completedQuizzes.length) : 0;
+          const passingRate = completedQuizzes.length > 0 ? Math.round((passedQuizzes.length / completedQuizzes.length) * 100) : 0;
+
+          setStats({
+            totalQuizzes: studentQuizData.length,
+            completedQuizzes: completedQuizzes.length,
+            averageScore,
+            totalAttempts,
+            passingRate,
+            totalStudyTime: totalAttempts * 30 // Estimate 30 minutes per attempt
+          });
+        }
+      } catch (error) {
+        console.error('Error loading quizzes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   useEffect(() => {
-    // Apply filters
     let filtered = quizzes;
 
+    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(quiz =>
         quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quiz.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.description.toLowerCase().includes(searchTerm.toLowerCase())
+        quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quiz.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    if (selectedCourse !== 'all') {
-      filtered = filtered.filter(quiz => quiz.course === selectedCourse);
+    // Apply status filter
+    if (filter === 'not_attempted') {
+      filtered = filtered.filter(q => q.status === 'not_attempted');
+    } else if (filter === 'completed') {
+      filtered = filtered.filter(q => q.status === 'completed' && q.isPassed);
+    } else if (filter === 'failed') {
+      filtered = filtered.filter(q => q.status === 'completed' && !q.isPassed);
     }
 
-    if (selectedStatus !== 'all') {
-      if (selectedStatus === 'passed') {
-        filtered = filtered.filter(quiz => quiz.isPassed);
-      } else if (selectedStatus === 'failed') {
-        filtered = filtered.filter(quiz => quiz.studentScore !== undefined && !quiz.isPassed);
-      } else if (selectedStatus === 'not_attempted') {
-        filtered = filtered.filter(quiz => quiz.studentScore === undefined);
-      }
+    // Apply course filter
+    if (selectedCourse !== 'all') {
+      filtered = filtered.filter(q => q.course === selectedCourse);
     }
 
     setFilteredQuizzes(filtered);
-  }, [searchTerm, selectedCourse, selectedStatus, quizzes]);
+  }, [searchTerm, filter, selectedCourse, quizzes]);
 
-  const courses = Array.from(new Set(quizzes.map(q => q.course)));
-  const totalQuizzes = quizzes.length;
-  const passedQuizzes = quizzes.filter(q => q.isPassed).length;
-  const averageScore = quizzes.length > 0 
-    ? Math.round(quizzes.reduce((sum, q) => sum + (q.studentScore || 0), 0) / quizzes.length)
-    : 0;
-  const totalAttempts = quizzes.reduce((sum, q) => sum + q.attempts, 0);
-
-  const handleStartQuiz = (quizId: string) => {
-    const quiz = quizzes.find(q => q.id === quizId);
-    if (quiz) {
-      setActiveQuiz(quiz);
-      setUserAnswers({});
-      setQuizTime(quiz.timeLimit * 60); // Convert minutes to seconds
-      
-      // Start timer
-      const timer = setInterval(() => {
-        setQuizTime(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleSubmitQuiz();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      setQuizTimer(timer);
+  const getStatusBadge = (quiz: Quiz) => {
+    if (quiz.status === 'not_attempted') {
+      return {
+        text: 'Not Attempted',
+        color: 'bg-gray-100 text-gray-800 border border-gray-200',
+        icon: <HiClock className="w-3 h-3" />
+      };
+    } else if (quiz.status === 'completed' && quiz.isPassed) {
+      return {
+        text: 'Passed',
+        color: 'bg-green-100 text-green-800 border border-green-200',
+        icon: <HiCheckCircle className="w-3 h-3" />
+      };
+    } else {
+      return {
+        text: 'Failed',
+        color: 'bg-red-100 text-red-800 border border-red-200',
+        icon: <HiXCircle className="w-3 h-3" />
+      };
     }
   };
 
-  const handleAnswerSelect = (questionId: string, answerIndex: number) => {
-    setUserAnswers(prev => ({
-      ...prev,
-      [questionId]: answerIndex
-    }));
-  };
-
-  const handleSubmitQuiz = () => {
-    if (!activeQuiz || quizTimer) {
-      if (quizTimer) clearInterval(quizTimer);
-      setQuizTimer(null);
-    }
-
-    if (!activeQuiz) return;
-
-    // Calculate score
-    let correctAnswers = 0;
-    activeQuiz.questions.forEach(question => {
-      if (userAnswers[question.id] === question.correctAnswer) {
-        correctAnswers++;
-      }
-    });
-
-    const score = Math.round((correctAnswers / activeQuiz.questions.length) * 100);
-    const isPassed = score >= activeQuiz.passingScore;
-
-    // Update quiz result
-    const newResult: QuizResult = {
-      quizId: activeQuiz.id,
-      score,
-      isPassed,
-      attempts: 1,
-      lastAttempt: new Date().toISOString()
-    };
-
-    const updatedResults = [...quizResults, newResult];
-    setQuizResults(updatedResults);
-    localStorage.setItem('quizResults', JSON.stringify(updatedResults));
-
-    // Update quizzes
-    const updatedQuizzes = quizzes.map(quiz => {
-      if (quiz.id === activeQuiz.id) {
+  const getDifficultyBadge = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy':
         return {
-          ...quiz,
-          studentScore: score,
-          isPassed,
-          attempts: quiz.attempts + 1
+          text: 'Easy',
+          color: 'bg-green-50 text-green-700 border border-green-200'
         };
-      }
-      return quiz;
-    });
-
-    setQuizzes(updatedQuizzes);
-    
-    // Show result
-    alert(`Quiz submitted!\nYour score: ${score}%\n${isPassed ? '🎉 Congratulations! You passed!' : '❌ You need more practice.'}`);
-    
-    // Reset
-    setActiveQuiz(null);
-    setUserAnswers({});
-    setQuizTime(0);
+      case 'medium':
+        return {
+          text: 'Medium',
+          color: 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+        };
+      case 'hard':
+        return {
+          text: 'Hard',
+          color: 'bg-red-50 text-red-700 border border-red-200'
+        };
+      default:
+        return {
+          text: 'Medium',
+          color: 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+        };
+    }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const getTimeString = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
+
+  const downloadQuizReport = (quiz: Quiz) => {
+    const quizResult = quizResults.find(r => r.quizId === quiz.id);
+    
+    let content = `Quiz Report\n`;
+    content += `===========\n\n`;
+    content += `Quiz: ${quiz.title}\n`;
+    content += `Course: ${quiz.course}\n`;
+    content += `Instructor: ${quiz.instructorName}\n`;
+    content += `Difficulty: ${quiz.difficulty}\n`;
+    content += `Time Limit: ${quiz.timeLimit} minutes\n`;
+    content += `Passing Score: ${quiz.passingScore}%\n\n`;
+    
+    if (quizResult) {
+      content += `Student: ${quizResult.studentName} (${quizResult.studentEmail})\n`;
+      content += `Score: ${quizResult.score}%\n`;
+      content += `Status: ${quizResult.isPassed ? 'PASSED' : 'FAILED'}\n`;
+      content += `Correct Answers: ${quizResult.correctAnswers}/${quizResult.totalQuestions}\n`;
+      content += `Time Spent: ${Math.floor(quizResult.timeSpent / 60)}:${(quizResult.timeSpent % 60).toString().padStart(2, '0')}\n`;
+      content += `Submitted: ${new Date(quizResult.submittedAt).toLocaleString()}\n\n`;
+      
+      content += `Answer Summary:\n`;
+      content += `---------------\n`;
+      quizResult.answers.forEach((answer, index) => {
+        content += `Q${index + 1}: ${answer.isCorrect ? '✓' : '✗'} (${answer.pointsEarned} points)\n`;
+      });
+    } else {
+      content += `Status: Not Attempted\n`;
+      content += `This quiz has not been attempted yet.\n`;
+    }
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${quiz.title.replace(/\s+/g, '_')}_report.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const getCourses = () => {
+    const courses = Array.from(new Set(quizzes.map(q => q.course)));
+    return courses;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <div className="animate-pulse">
+          <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
+          <div className="h-32 bg-gray-100 rounded-lg mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-48 bg-gray-100 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header Stats */}
-     <div className="bg-gray-50 rounded-xl p-6 flex flex-col sm:flex-row gap-6">
-  {/* Stat items */}
-  {[
-    { label: 'Total Quizzes', value: totalQuizzes, color: 'purple' },
-    { label: 'Passed Quizzes', value: passedQuizzes, color: 'green' },
-    { label: 'Average Score', value: `${averageScore}%`, color: 'blue' },
-    { label: 'Total Attempts', value: totalAttempts, color: 'yellow' },
-  ].map((stat, idx) => (
-    <div key={idx} className="flex-1 flex flex-col">
-      {/* Top: Label */}
-      <span className="text-sm text-gray-500">{stat.label}</span>
-      
-      {/* Center: Value */}
-      <span className={`text-2xl font-bold text-gray-900 mt-1`}>{stat.value}</span>
-      
-    
-    </div>
-  ))}
-</div>
-
-
-      {/* Search and Filter */}
-    <div className="rounded-xl border border-gray-200 p-6">
-  <div className="flex flex-col md:flex-row gap-4">
-    {/* Search Input */}
-    <div className="flex-1">
-      <div className="relative">
-        <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search quizzes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
-        />
-      </div>
-    </div>
-
-    {/* Filters */}
-    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-      <select
-        value={selectedCourse}
-        onChange={(e) => setSelectedCourse(e.target.value)}
-        className="w-full sm:w-auto px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
-      >
-        <option value="all">All Courses</option>
-        {courses.map(course => (
-          <option key={course} value={course}>{course}</option>
-        ))}
-      </select>
-
-      <select
-        value={selectedStatus}
-        onChange={(e) => setSelectedStatus(e.target.value)}
-        className="w-full sm:w-auto px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
-      >
-        <option value="all">All Status</option>
-        <option value="passed">Passed</option>
-        <option value="failed">Failed</option>
-        <option value="not_attempted">Not Attempted</option>
-      </select>
-
-      <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-        <HiFilter className="w-5 h-5" />
-        <span className="font-medium">Filter</span>
-      </button>
-    </div>
-  </div>
-</div>
-
-
-      {/* Quizzes Grid */}
-      <div className="space-y-6">
-        {filteredQuizzes.map(quiz => (
-          <QuizBlock
-            key={quiz.id}
-            {...quiz}
-            onStartQuiz={handleStartQuiz}
-          />
-        ))}
-      </div>
-
-      {filteredQuizzes.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <HiBookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No quizzes found</h3>
-          <p className="text-gray-600 mb-6">Try adjusting your search or filter criteria</p>
-          <button
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedCourse('all');
-              setSelectedStatus('all');
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-900 transition-colors"
-          >
-            Clear Filters
-          </button>
-        </div>
-      )}
-
-      {/* Active Quiz Modal */}
-      {activeQuiz && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
+      {/* Mobile Header */}
+      <div className="lg:hidden mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Link
+                href="/lms/Student_Portal"
+                className="p-2 text-gray-600 hover:text-darkRoyalBlue hover:bg-gray-50 rounded-lg"
+              >
+                <HiArrowLeft className="w-5 h-5" />
+              </Link>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{activeQuiz.title}</h2>
-                <p className="text-sm text-gray-600">{activeQuiz.course}</p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg font-mono font-bold">
-                  {formatTime(quizTime)}
-                </div>
-                <button
-                  onClick={() => {
-                    if (quizTimer) clearInterval(quizTimer);
-                    setActiveQuiz(null);
-                    setUserAnswers({});
-                    setQuizTime(0);
-                  }}
-                  className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 overflow-auto max-h-[70vh]">
-              <div className="space-y-6">
-                {activeQuiz.questions.map((question, index) => (
-                  <div key={question.id} className="p-4 border border-gray-200 rounded-lg">
-                    <p className="font-medium text-gray-900 mb-4">
-                      Q{index + 1}: {question.question}
-                    </p>
-                    <div className="space-y-2">
-                      {question.options.map((option, optionIndex) => (
-                        <button
-                          key={optionIndex}
-                          onClick={() => handleAnswerSelect(question.id, optionIndex)}
-                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                            userAnswers[question.id] === optionIndex
-                              ? 'border-purple-500 bg-purple-50'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <div className={`w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
-                              userAnswers[question.id] === optionIndex
-                                ? 'border-purple-500 bg-purple-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {userAnswers[question.id] === optionIndex && (
-                                <div className="w-2 h-2 bg-white rounded-full" />
-                              )}
-                            </div>
-                            <span className="text-gray-700">{option}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-600">
-                  Answered: {Object.keys(userAnswers).length} / {activeQuiz.questions.length}
+                <h1 className="text-xl font-bold mb-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                  Mock Quizzes
+                </h1>
+                <p className="text-xs text-gray-600">
+                  Practice and assessment quizzes
                 </p>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    if (quizTimer) clearInterval(quizTimer);
-                    setActiveQuiz(null);
-                    setUserAnswers({});
-                    setQuizTime(0);
-                  }}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitQuiz}
-                  disabled={Object.keys(userAnswers).length !== activeQuiz.questions.length}
-                  className={`px-6 py-2.5 rounded-lg font-medium ${
-                    Object.keys(userAnswers).length === activeQuiz.questions.length
-                      ? 'bg-gradient-to-r from-green-600 to-green-800 text-white hover:from-green-700 hover:to-green-900'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  Submit Quiz
-                </button>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden lg:block mb-8">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                Mock Quizzes
+              </h1>
+              <p className="text-gray-600">
+                Practice quizzes and assessments for your courses
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">
+                {quizzes.length} total quizzes
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Quizzes</p>
+              <h3 className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                {stats.totalQuizzes}
+              </h3>
+            </div>
+            <HiBookOpen className="w-8 h-8" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Completed</p>
+              <h3 className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                {stats.completedQuizzes}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {stats.passingRate}% passing rate
+              </p>
+            </div>
+            <HiCheckCircle className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Average Score</p>
+              <h3 className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                {stats.averageScore}%
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {stats.totalAttempts} attempts
+              </p>
+            </div>
+            <HiChartBar className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Study Time</p>
+              <h3 className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                {Math.floor(stats.totalStudyTime / 60)}h {stats.totalStudyTime % 60}m
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Total time spent
+              </p>
+            </div>
+            <HiClock className="w-8 h-8 text-teal" style={{ color: BRAND_COLORS.teal }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters - Mobile */}
+      <div className="lg:hidden mb-6 space-y-3">
+        <div className="relative">
+          <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search quizzes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        <div className="flex overflow-x-auto -mx-1 pb-2">
+          <div className="flex gap-1 flex-nowrap px-1">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter('not_attempted')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${filter === 'not_attempted' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              Not Attempted
+            </button>
+            <button
+              onClick={() => setFilter('completed')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              Passed
+            </button>
+            <button
+              onClick={() => setFilter('failed')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${filter === 'failed' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              Failed
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filters - Desktop */}
+      <div className="hidden lg:flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1 relative">
+          <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search quizzes by title, course, or tags..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+          />
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">All Courses</option>
+            {getCourses().map(course => (
+              <option key={course} value={course}>{course}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilter('not_attempted')}
+            className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'not_attempted' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            Not Attempted
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            Passed
+          </button>
+          <button
+            onClick={() => setFilter('failed')}
+            className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'failed' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            Failed
+          </button>
+        </div>
+      </div>
+
+      {/* Quizzes List */}
+      <div className="space-y-4">
+        {filteredQuizzes.length > 0 ? (
+          filteredQuizzes.map(quiz => {
+            const statusBadge = getStatusBadge(quiz);
+            const difficultyBadge = getDifficultyBadge(quiz.difficulty);
+            
+            return (
+              <div 
+                key={quiz.id} 
+                className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${statusBadge.color}`}>
+                            {statusBadge.icon}
+                            {statusBadge.text}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${difficultyBadge.color}`}>
+                            {difficultyBadge.text}
+                          </span>
+                          {quiz.status === 'completed' && quiz.studentScore && (
+                            <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                              quiz.isPassed ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+                            }`}>
+                              Score: {quiz.studentScore}%
+                            </span>
+                          )}
+                        </div>
+                        
+                        <h3 className="text-lg md:text-xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                          {quiz.title}
+                        </h3>
+                        <p className="text-gray-600 mb-4 text-sm md:text-base line-clamp-2">
+                          {quiz.description}
+                        </p>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-base md:text-lg font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+                          {quiz.totalQuestions} Qs
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {getTimeString(quiz.timeLimit)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <HiBookOpen className="w-4 h-4 mr-2" />
+                        <span className="font-medium">{quiz.course}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600">
+                        <HiUser className="w-4 h-4 mr-2" />
+                        <span>{quiz.instructorName}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600">
+                        <HiCalendar className="w-4 h-4 mr-2" />
+                        <span>Passing: {quiz.passingScore}%</span>
+                      </div>
+                    </div>
+                    
+                    {/* Tags */}
+                    {quiz.tags && quiz.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {quiz.tags.slice(0, 3).map(tag => (
+                          <span 
+                            key={tag}
+                            className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {quiz.lastAttempt && (
+                      <div className="text-sm text-gray-500">
+                        Last attempt: {new Date(quiz.lastAttempt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="lg:w-48 flex flex-col gap-2">
+                    {quiz.status === 'not_attempted' ? (
+                      <Link
+                        href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/attempt`}
+                        className="w-full py-2.5 px-4 rounded-lg font-medium text-white text-center flex items-center justify-center gap-2 transition-colors"
+                        style={{ 
+                          backgroundColor: BRAND_COLORS.deepRed
+                        }}
+                      >
+                        <HiPlay className="w-4 h-4" />
+                        Start Quiz
+                      </Link>
+                    ) : quiz.status === 'completed' && quiz.isPassed ? (
+                      <div className="space-y-2">
+                        <Link
+                          href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/result`}
+                          className="w-full py-2.5 px-4 rounded-lg font-medium text-white text-center flex items-center justify-center gap-2 transition-colors"
+                          style={{ 
+                            backgroundColor: BRAND_COLORS.darkRoyalBlue
+                          }}
+                        >
+                          <HiChartBar className="w-4 h-4" />
+                          View Results
+                        </Link>
+                        <button
+                          onClick={() => downloadQuizReport(quiz)}
+                          className="w-full py-2.5 px-4 rounded-lg font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <HiDownload className="w-4 h-4" />
+                          Download Report
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Link
+                          href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/attempt`}
+                          className="w-full py-2.5 px-4 rounded-lg font-medium text-white text-center flex items-center justify-center gap-2 transition-colors"
+                          style={{ 
+                            backgroundColor: BRAND_COLORS.deepRed
+                          }}
+                        >
+                          <HiPlay className="w-4 h-4" />
+                          Retake Quiz
+                        </Link>
+                        <Link
+                          href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/review`}
+                          className="w-full py-2.5 px-4 rounded-lg font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition-colors"
+                        >
+                          Review Answers
+                        </Link>
+                      </div>
+                    )}
+                    
+                    <Link
+                      href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/details`}
+                      className="w-full py-2.5 px-4 rounded-lg font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition-colors"
+                    >
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+            <HiBookOpen className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+            <h3 className="text-xl font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+              No quizzes found
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm ? 'Try a different search term' : 'No quizzes available for your courses'}
+            </p>
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilter('all');
+                  setSelectedCourse('all');
+                }}
+                className="px-6 py-2 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Floating Action Button */}
+      {filteredQuizzes.length > 0 && (
+        <div className="lg:hidden fixed bottom-6 right-6 z-10">
+          <Link
+            href="/lms/Student_Portal/mock-quizzes/practice"
+            className="bg-darkRoyalBlue text-white p-4 rounded-full shadow-lg hover:bg-darkRoyalBlue/90 transition-colors flex items-center justify-center"
+          >
+            <HiOutlineFire className="w-6 h-6" />
+          </Link>
         </div>
       )}
     </div>

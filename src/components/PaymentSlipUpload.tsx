@@ -24,6 +24,7 @@ const BRAND_COLORS = {
 };
 
 interface PaymentSlipUploadProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   enrollmentData: any;
   onComplete: () => void;
 }
@@ -184,6 +185,7 @@ export default function PaymentSlipUpload({ enrollmentData, onComplete }: Paymen
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const storePaymentSubmission = (fileMetadata: any) => {
     try {
       // Create payment data
