@@ -1,18 +1,17 @@
 // app/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect, SetStateAction } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   HiBookOpen, 
   HiCheckCircle, 
   HiClock, 
-  HiAcademicCap, 
   HiDocumentText,
   HiChartBar,
   HiArrowRight,
-  HiCalendar,
   HiUser,
-  HiStar
+  HiStar,
+  HiAcademicCap
 } from 'react-icons/hi';
 import Link from 'next/link';
 /* eslint-disable */
@@ -63,10 +62,10 @@ const KPICard = ({
     <div className={`bg-white rounded-xl border border-gray-200 ${sizeClasses[size]} shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-gray-600 text-sm">{title}</p>
-          <h3 className="font-bold text-2xl mt-1">{value}</h3>
+          <p className="text-gray-600 text-xs sm:text-sm">{title}</p>
+          <h3 className="font-bold text-xl sm:text-2xl mt-1">{value}</h3>
           {change && (
-            <p className={`text-sm mt-1 ${
+            <p className={`text-xs sm:text-sm mt-1 ${
               changeType === 'positive' ? 'text-green-600' : 
               changeType === 'negative' ? 'text-red-600' : 
               'text-gray-600'
@@ -114,13 +113,12 @@ const ProgressBar = ({
   );
 };
 
-// ✅ Course Card Component
+// ✅ Course Card Component - INSTRUCTOR HIDDEN
 const CourseCard = ({ 
   id,
   title,
   category,
   progress,
-  instructorName,
   duration,
   image,
   compact = false
@@ -129,15 +127,14 @@ const CourseCard = ({
   title: string;
   category: string;
   progress: number;
-  instructorName: string;
   duration: string;
   image?: string;
   compact?: boolean;
 }) => {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow ${compact ? 'p-4' : 'p-6'}`}>
+    <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow ${compact ? 'p-3 sm:p-4' : 'p-4 sm:p-6'}`}>
       {image && !compact && (
-        <div className="h-40 overflow-hidden mb-4 rounded-lg">
+        <div className="h-32 sm:h-40 overflow-hidden mb-3 sm:mb-4 rounded-lg">
           <img 
             src={image} 
             alt={title}
@@ -147,7 +144,7 @@ const CourseCard = ({
       )}
       
       <div>
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex justify-between items-start mb-2 sm:mb-3">
           <span 
             className="text-xs font-semibold px-2 py-1 rounded"
             style={{ 
@@ -158,24 +155,17 @@ const CourseCard = ({
             {category}
           </span>
           <span className="text-xs font-medium text-gray-500">
-            {progress}% Complete
+            {progress}%
           </span>
         </div>
         
-        <h3 className={`font-bold text-gray-900 mb-2 ${compact ? 'text-sm' : 'text-base'}`}>
+        <h3 className={`font-bold text-gray-900 mb-2 ${compact ? 'text-sm' : 'text-base sm:text-lg'}`}>
           {title}
         </h3>
         
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-            <HiUser className="w-3 h-3 text-gray-600" />
-          </div>
-          <p className="text-xs text-gray-600">{instructorName}</p>
-        </div>
-        
-        <div className="flex items-center text-xs text-gray-500 mb-3">
-          <HiClock className="w-3 h-3 mr-1" />
-          {duration}
+        <div className="flex items-center text-xs text-gray-500 mb-2 sm:mb-3">
+          <HiClock className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{duration}</span>
         </div>
         
         <div className="mb-3">
@@ -189,16 +179,16 @@ const CourseCard = ({
         </div>
         
         <Link
-          href={`/lms/Student_Portal/courses/${id}`}
+          href={`/lms/Student_Portal/my-courses`}
           className={`w-full flex items-center justify-center gap-2 font-medium rounded-lg transition-colors ${
-            compact ? 'py-2 text-xs' : 'py-2.5 text-sm'
+            compact ? 'py-1.5 sm:py-2 text-xs' : 'py-2 sm:py-2.5 text-sm'
           }`}
           style={{ 
             backgroundColor: BRAND_COLORS.deepRed,
             color: BRAND_COLORS.white 
           }}
         >
-          {compact ? 'View Course' : 'Continue Learning'}
+          <span>{compact ? 'View' : 'Continue Learning'}</span>
           <HiArrowRight className="w-3 h-3" />
         </Link>
       </div>
@@ -224,376 +214,208 @@ export default function DashboardPage() {
     averageScore: 0
   });
 
-  useEffect(() => {
-    const loadDashboardData = () => {
-      try {
-        // ✅ Load user data
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (currentUserStr) {
-          const userData = JSON.parse(currentUserStr);
-          setUser(userData);
-          
-          // ✅ Load student courses with REAL data matching
-          loadStudentCourses(userData);
-        }
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ========== 🔥 REAL INSTRUCTOR LOGIC (KEPT INTERNALLY, NOT DISPLAYED) ==========
+  const findRealInstructorByCourseTitle = (courseTitle: string) => {
+    try {
+      if (!courseTitle) return null;
+      const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
+      const realInstructors = allInstructors.filter((inst: any) => 
+        !inst.id?.includes('demo') && 
+        !inst.name?.includes('Demo') &&
+        !inst.name?.includes('demo') &&
+        inst.name !== 'Instructor' &&
+        inst.name !== 'Not Assigned'
+      );
+      const instructor = realInstructors.find((inst: any) => {
+        const instCourseTitle = inst.assignedCourse?.title?.toLowerCase().trim();
+        const searchTitle = courseTitle?.toLowerCase().trim();
+        return instCourseTitle === searchTitle;
+      });
+      return instructor || null;
+    } catch (error) {
+      console.error('Error finding instructor:', error);
+      return null;
+    }
+  };
 
-    loadDashboardData();
-  }, []);
-
-  // ✅ REAL DATA ONLY: Load student courses with Course ID and Name Matching
+  // ========== 🔥 Load student courses (instructor data used internally only) ==========
   const loadStudentCourses = (studentData: any) => {
     try {
-      console.log('🔍 Loading REAL courses for student:', studentData.email);
-      
-      // Get REAL courses from localStorage
+      console.log('🔍 Dashboard: Loading REAL courses for student:', studentData.email);
+      console.log('⚠️ Student courseId "' + studentData.courseId + '" IGNORED! Using title match only.');
+
       const industrialCourses = JSON.parse(localStorage.getItem('industrial_training_courses') || '[]');
       const lmsCourses = JSON.parse(localStorage.getItem('lms_courses') || '[]');
       const allCourses = [...industrialCourses, ...lmsCourses];
       
-      console.log('📚 Total courses in system:', allCourses.length);
-      
-      // Get REAL instructors
-      const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
-      console.log('👨‍🏫 Total instructors in system:', allInstructors.length);
-      
       let enrolledCourses = [];
 
-      // 🔍 Method 1: Check studentCredentials (Admin sent REAL data)
+      // Check existing stored courses
+      const existingCoursesStr = localStorage.getItem('studentCourses');
+      if (existingCoursesStr) {
+        const existingCourses = JSON.parse(existingCoursesStr);
+        const hasRealInstructor = existingCourses.some((c: any) => 
+          !c.instructorName?.includes('Demo') && 
+          !c.instructorName?.includes('demo') &&
+          !c.instructorId?.includes('demo') &&
+          c.instructorName !== 'Not Assigned' &&
+          c.instructorName !== 'Instructor' &&
+          c.instructorId !== ''
+        );
+        if (hasRealInstructor) {
+          console.log('✅ Dashboard: Using existing REAL instructor data from localStorage');
+          setCourses(existingCourses);
+          loadAssignmentsAndQuizzes(existingCourses, studentData);
+          calculateStats(existingCourses);
+          return;
+        }
+      }
+
+      // Fresh load
+      const studentCourseTitle = studentData.course;
+      const courseInfo = allCourses.find((c: any) => 
+        c.title?.toLowerCase().trim() === studentCourseTitle?.toLowerCase().trim()
+      );
+
+      if (courseInfo) {
+        const instructor = findRealInstructorByCourseTitle(courseInfo.title);
+        enrolledCourses.push({
+          id: courseInfo.id,
+          title: courseInfo.title,
+          category: courseInfo.category || 'Training',
+          duration: courseInfo.duration || 'N/A',
+          instructorId: instructor?.id || '',
+          instructorName: instructor?.name || 'Not Assigned', // kept for internal use
+          progress: 0,
+          status: 'not_started',
+          enrolledDate: studentData.registrationDate || new Date().toISOString(),
+          studyHours: 0,
+          price: courseInfo.price,
+          image: courseInfo.image,
+          rating: courseInfo.rating
+        });
+      }
+
+      // Courses from credentials
       const studentCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
-      console.log('📋 Student credentials found:', studentCredentials.length);
-      
       const credentialCourses = studentCredentials
-        .filter((cred: any) => {
-          // Match by email OR username
-          const matchesEmail = cred.studentEmail?.toLowerCase() === studentData.email?.toLowerCase();
-          const matchesUsername = cred.username?.toLowerCase() === studentData.username?.toLowerCase();
-          return matchesEmail || matchesUsername;
-        })
+        .filter((cred: any) => 
+          cred.studentEmail?.toLowerCase() === studentData.email?.toLowerCase() || 
+          cred.username?.toLowerCase() === studentData.username?.toLowerCase()
+        )
         .map((cred: any) => {
-          console.log('Processing credential for course:', cred.course);
-          
-          // ✅ Find course by ID OR by Title (BOTH MATCHING)
-          let courseInfo = null;
-          
-          // First try by ID
-          if (cred.courseId) {
-            courseInfo = allCourses.find((c: any) => c.id === cred.courseId);
-          }
-          
-          // If not found by ID, try by title
-          if (!courseInfo && cred.course) {
-            courseInfo = allCourses.find((c: any) => 
-              c.title?.toLowerCase() === cred.course?.toLowerCase()
-            );
-          }
-          
-          // If still no course found, skip (NO DEMO DATA)
-          if (!courseInfo) {
-            console.log('❌ No matching course found for:', cred.course);
-            return null;
-          }
-          
-          console.log('✅ Found course:', courseInfo.title);
-          
-          // ✅ Find REAL instructor for this course
-          let courseInstructor = null;
-          
-          // First try: Instructor assigned to this course ID
-          if (cred.courseId) {
-            courseInstructor = allInstructors.find((inst: any) => 
-              inst.courseId === cred.courseId
-            );
-          }
-          
-          // Second try: Instructor assigned to course title
-          if (!courseInstructor) {
-            courseInstructor = allInstructors.find((inst: any) => 
-              inst.assignedCourse?.title === cred.course ||
-              inst.assignedCourse?.id === cred.courseId
-            );
-          }
-          
-          // If no instructor found, check if instructor created quizzes for this course
-          if (!courseInstructor) {
-            const instructorQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]');
-            const quizForCourse = instructorQuizzes.find((q: any) => 
-              q.courseId === cred.courseId || q.courseTitle === cred.course
-            );
-            
-            if (quizForCourse) {
-              courseInstructor = allInstructors.find((inst: any) => 
-                inst.id === quizForCourse.instructorId ||
-                inst.name === quizForCourse.instructorName
-              );
-            }
-          }
-          
-          // If still no instructor, check assignments
-          if (!courseInstructor) {
-            const instructorAssignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]');
-            const assignmentForCourse = instructorAssignments.find((a: any) => 
-              a.courseId === cred.courseId || a.courseTitle === cred.course
-            );
-            
-            if (assignmentForCourse) {
-              courseInstructor = allInstructors.find((inst: any) => 
-                inst.id === assignmentForCourse.instructorId ||
-                inst.name === assignmentForCourse.instructorName
-              );
-            }
-          }
-          
-          // If NO REAL instructor found, leave instructorName empty (NO FAKE DATA)
-          const instructorName = courseInstructor ? courseInstructor.name : '';
-
-          return {
-            id: cred.courseId || courseInfo.id,
-            title: courseInfo.title || cred.course,
-            category: courseInfo.category || 'Training',
-            duration: courseInfo.duration || 'N/A',
-            instructorId: courseInstructor?.id || '',
-            instructorName: instructorName, // Empty if no real instructor
-            progress: 0,
-            status: 'not_started',
-            enrolledDate: cred.sentDate || new Date().toISOString(),
-            studyHours: 0,
-            price: courseInfo.price,
-            image: courseInfo.image,
-            rating: courseInfo.rating
-          };
-        })
-        .filter(Boolean); // Remove null entries
-
-      enrolledCourses = [...credentialCourses];
-      console.log('✅ Credential courses loaded:', credentialCourses.length);
-
-      // 🔍 Method 2: Check uploadedFiles (Payment submissions)
-      const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
-      const paymentCourses = uploadedFiles
-        .filter((file: any) => file.email?.toLowerCase() === studentData.email?.toLowerCase())
-        .map((file: any) => {
-          // Find course by title
           const courseInfo = allCourses.find((c: any) => 
-            c.title?.toLowerCase() === file.course?.toLowerCase()
+            c.title?.toLowerCase().trim() === cred.course?.toLowerCase().trim()
           );
-          
-          if (!courseInfo) return null;
-          
-          // Find instructor for this course
-          let courseInstructor = allInstructors.find((inst: any) => 
-            inst.courseId === courseInfo.id ||
-            inst.assignedCourse?.title === file.course
-          );
-          
-          const instructorName = courseInstructor ? courseInstructor.name : '';
-          
-          return {
-            id: courseInfo.id,
-            title: courseInfo.title,
-            category: courseInfo.category || 'Training',
-            duration: courseInfo.duration || 'N/A',
-            instructorId: courseInstructor?.id || '',
-            instructorName: instructorName,
-            progress: 0,
-            status: 'not_started',
-            enrolledDate: file.paymentDate || file.uploadDate || new Date().toISOString(),
-            studyHours: 0,
-            price: courseInfo.price,
-            image: courseInfo.image,
-            rating: courseInfo.rating
-          };
+          if (courseInfo) {
+            const instructor = findRealInstructorByCourseTitle(courseInfo.title);
+            return {
+              id: courseInfo.id,
+              title: courseInfo.title,
+              category: courseInfo.category || 'Training',
+              duration: courseInfo.duration || 'N/A',
+              instructorId: instructor?.id || '',
+              instructorName: instructor?.name || 'Not Assigned',
+              progress: 0,
+              status: 'not_started',
+              enrolledDate: cred.sentDate || new Date().toISOString(),
+              studyHours: 0,
+              price: courseInfo.price,
+              image: courseInfo.image,
+              rating: courseInfo.rating
+            };
+          }
+          return null;
         })
         .filter(Boolean);
 
-      enrolledCourses = [...enrolledCourses, ...paymentCourses];
-      console.log('✅ Payment courses loaded:', paymentCourses.length);
+      enrolledCourses = [...enrolledCourses, ...credentialCourses];
 
       // Remove duplicates
-      const uniqueCourses = Array.from(
-        new Map(enrolledCourses.map(course => [course.id, course])).values()
-      );
-
-      console.log('🎯 Final enrolled courses:', uniqueCourses.map(c => ({
-        id: c.id,
-        title: c.title,
-        instructor: c.instructorName || 'No instructor assigned'
-      })));
-
-      setCourses(uniqueCourses);
+      const courseMap = new Map();
+      enrolledCourses.forEach(course => {
+        const existing = courseMap.get(course.id);
+        if (!existing) {
+          courseMap.set(course.id, course);
+        } else {
+          if (existing.instructorName.includes('Demo') || existing.instructorName === 'Not Assigned') {
+            if (!course.instructorName.includes('Demo') && course.instructorName !== 'Not Assigned') {
+              courseMap.set(course.id, course);
+            }
+          }
+        }
+      });
       
-      // Save to localStorage
+      const uniqueCourses = Array.from(courseMap.values());
+      console.log('🎯 Dashboard: Final enrolled courses:', uniqueCourses.map(c => c.title));
+      setCourses(uniqueCourses);
       localStorage.setItem('studentCourses', JSON.stringify(uniqueCourses));
-
-      // ✅ Now load REAL assignments and quizzes
       loadAssignmentsAndQuizzes(uniqueCourses, studentData);
-
-      // Calculate stats
-      const totalCourses = uniqueCourses.length;
-      const completedCourses = uniqueCourses.filter((c: any) => c.status === 'completed').length;
-      const inProgressCourses = uniqueCourses.filter((c: any) => c.status === 'in_progress').length;
-      const totalStudyHours = uniqueCourses.reduce((sum: number, c: any) => sum + c.studyHours, 0);
-
-      setStats(prev => ({
-        ...prev,
-        totalCourses,
-        completedCourses,
-        inProgressCourses,
-        totalStudyHours
-      }));
+      calculateStats(uniqueCourses);
 
     } catch (error) {
       console.error('Error loading student courses:', error);
     }
   };
 
-  // ✅ REAL DATA ONLY: Load assignments and quizzes
+  // ✅ Load assignments and quizzes
   const loadAssignmentsAndQuizzes = (studentCourses: any[], studentData: any) => {
     try {
-      console.log('🔍 Loading REAL assignments/quizzes for', studentCourses.length, 'courses');
-      
       const studentEmail = studentData.email;
       if (!studentEmail) return;
 
-      // Load REAL data
       const allAssignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]');
       const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]');
       const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
       
-      console.log('📝 Total assignments in system:', allAssignments.length);
-      console.log('🧪 Total quizzes in system:', allQuizzes.length);
-      
-      const studentAssignments: SetStateAction<any[]> = [];
-      const studentQuizzes: SetStateAction<any[]> = [];
+      const studentAssignments: any[] = [];
+      const studentQuizzes: any[] = [];
 
       studentCourses.forEach(course => {
-        console.log('Checking course for assignments/quizzes:', course.title);
-        
-        // 🔍 Find REAL assignments for this course
         const courseAssignments = allAssignments
           .filter((assignment: any) => {
-            // Multiple REAL matching strategies
             const matchesExactId = assignment.courseId === course.id;
             const matchesCourseTitle = assignment.courseTitle?.toLowerCase() === course.title?.toLowerCase();
-            
-            return matchesExactId || matchesCourseTitle;
+            return (matchesExactId || matchesCourseTitle) && assignment.status === 'published';
           })
-          .filter((assignment: any) => assignment.status === 'published')
           .map((assignment: any) => {
-            // Find REAL instructor
-            let assignmentInstructor = null;
-            
-            // First try by instructor ID
-            if (assignment.instructorId) {
-              assignmentInstructor = allInstructors.find((inst: any) => 
-                inst.id === assignment.instructorId
-              );
-            }
-            
-            // Then try by name
-            if (!assignmentInstructor && assignment.instructorName) {
-              assignmentInstructor = allInstructors.find((inst: any) => 
-                inst.name === assignment.instructorName
-              );
-            }
-            
-            // NO FAKE DATA - if no instructor found, use empty string
-            const instructorName = assignmentInstructor ? assignmentInstructor.name : '';
-            
+            const assignmentInstructor = allInstructors.find((inst: any) => 
+              inst.id === assignment.instructorId
+            );
             return {
               ...assignment,
               courseTitle: course.title,
-              instructorName: instructorName,
+              instructorName: assignmentInstructor?.name || assignment.instructorName || '',
               studentStatus: 'not_started',
               studentScore: null
             };
           });
 
-        // 🔍 Find REAL quizzes for this course
         const courseQuizzes = allQuizzes
           .filter((quiz: any) => {
-            // Multiple REAL matching strategies
             const matchesExactId = quiz.courseId === course.id;
             const matchesCourseTitle = quiz.courseTitle?.toLowerCase() === course.title?.toLowerCase();
-            
-            return matchesExactId || matchesCourseTitle;
+            return (matchesExactId || matchesCourseTitle) && quiz.status === 'published';
           })
-          .filter((quiz: any) => quiz.status === 'published')
           .map((quiz: any) => {
-            // Find REAL instructor
-            let quizInstructor = null;
-            
-            // First try by instructor ID
-            if (quiz.instructorId) {
-              quizInstructor = allInstructors.find((inst: any) => 
-                inst.id === quiz.instructorId
-              );
-            }
-            
-            // Then try by name
-            if (!quizInstructor && quiz.instructorName) {
-              quizInstructor = allInstructors.find((inst: any) => 
-                inst.name === quiz.instructorName
-              );
-            }
-            
-            // NO FAKE DATA - if no instructor found, use empty string
-            const instructorName = quizInstructor ? quizInstructor.name : '';
-            
+            const quizInstructor = allInstructors.find((inst: any) => 
+              inst.id === quiz.instructorId
+            );
             return {
               ...quiz,
               courseTitle: course.title,
-              instructorName: instructorName,
+              instructorName: quizInstructor?.name || quiz.instructorName || '',
               studentStatus: 'not_attempted',
               studentScore: null
             };
           });
 
-        console.log(`📊 Course "${course.title}": ${courseAssignments.length} assignments, ${courseQuizzes.length} quizzes`);
-        
         studentAssignments.push(...courseAssignments);
         studentQuizzes.push(...courseQuizzes);
       });
 
-      // Calculate REAL stats
-      const pendingAssignments = studentAssignments.filter(a => 
-        a.studentStatus === 'not_started'
-      ).length;
-
-      const upcomingQuizzes = studentQuizzes.filter(q => 
-        q.studentStatus === 'not_attempted'
-      ).length;
-
-      console.log('📈 Stats calculated:', {
-        assignments: studentAssignments.length,
-        quizzes: studentQuizzes.length,
-        pendingAssignments,
-        upcomingQuizzes
-      });
-
-      // Log REAL data examples
-      if (studentAssignments.length > 0) {
-        const sampleAssignment = studentAssignments[0];
-        console.log('📄 Sample assignment:', {
-          title: sampleAssignment.title,
-          course: sampleAssignment.courseTitle,
-          instructor: sampleAssignment.instructorName || 'No instructor data'
-        });
-      }
-
-      if (studentQuizzes.length > 0) {
-        const sampleQuiz = studentQuizzes[0];
-        console.log('🧪 Sample quiz:', {
-          title: sampleQuiz.title,
-          course: sampleQuiz.courseTitle,
-          instructor: sampleQuiz.instructorName || 'No instructor data'
-        });
-      }
+      const pendingAssignments = studentAssignments.filter(a => a.studentStatus === 'not_started').length;
+      const upcomingQuizzes = studentQuizzes.filter(q => q.studentStatus === 'not_attempted').length;
 
       setAssignments(studentAssignments);
       setQuizzes(studentQuizzes);
@@ -611,6 +433,41 @@ export default function DashboardPage() {
     }
   };
 
+  // ✅ Calculate stats (no instructor display)
+  const calculateStats = (courseList: any[]) => {
+    const totalCourses = courseList.length;
+    const completedCourses = courseList.filter((c: any) => c.status === 'completed').length;
+    const inProgressCourses = courseList.filter((c: any) => c.status === 'in_progress').length;
+    const totalStudyHours = courseList.reduce((sum: number, c: any) => sum + (c.studyHours || 0), 0);
+
+    setStats(prev => ({
+      ...prev,
+      totalCourses,
+      completedCourses,
+      inProgressCourses,
+      totalStudyHours
+    }));
+  };
+
+  useEffect(() => {
+    const loadDashboardData = () => {
+      try {
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (currentUserStr) {
+          const userData = JSON.parse(currentUserStr);
+          setUser(userData);
+          loadStudentCourses(userData);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
   const getLastAccessedCourse = () => {
     return courses
       .filter(course => course.status !== 'completed')
@@ -619,7 +476,7 @@ export default function DashboardPage() {
 
   const getOverallProgress = () => {
     if (courses.length === 0) return 0;
-    const totalProgress = courses.reduce((sum, course) => sum + course.progress, 0);
+    const totalProgress = courses.reduce((sum, course) => sum + (course.progress || 0), 0);
     return Math.round(totalProgress / courses.length);
   };
 
@@ -639,68 +496,66 @@ export default function DashboardPage() {
 
   const lastAccessedCourse = getLastAccessedCourse();
   const overallProgress = getOverallProgress();
-
-  // ✅ Start assignment links ONLY in stats, not in UI
   const upcomingAssignmentsCount = assignments.filter(a => a.studentStatus === 'not_started').length;
   const upcomingQuizzesCount = quizzes.filter(q => q.studentStatus === 'not_attempted').length;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Welcome Section */}
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
+      {/* Welcome Section - Mobile Optimized */}
       <div 
-        className="rounded-2xl p-6 text-white"
+        className="rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white"
         style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
       >
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2">
-              Welcome back, {user?.fullName || 'Student'}!
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">
+              Welcome back, {user?.fullName?.split(' ')[0] || 'Student'}!
             </h1>
-            <p className="opacity-90">
+            <p className="text-xs sm:text-sm opacity-90">
               {courses.length > 0 
-                ? `You have ${courses.length} enrolled courses` 
+                ? `${courses.length} enrolled course${courses.length > 1 ? 's' : ''}` 
                 : 'No courses enrolled yet'}
             </p>
           </div>
-          <div className="text-right lg:text-right">
-            <p className="text-sm opacity-90">Learner ID</p>
-            <p className="text-lg font-bold">{user?.learnerId || ''}</p>
-            <p className="text-xs opacity-75 mt-1">
-              {user?.registrationDate ? `Joined ${new Date(user.registrationDate).toLocaleDateString()}` : ''}
+          <div className="text-left sm:text-right">
+            <p className="text-xs opacity-90">Learner ID</p>
+            <p className="text-sm sm:text-base font-bold">{user?.learnerId || ''}</p>
+            <p className="text-xs opacity-75 mt-0.5 sm:mt-1">
+              {user?.registrationDate ? `Joined ${new Date(user.registrationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
             </p>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards - ONLY STATS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* KPI Cards - Mobile Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
-          title="Total Courses"
+          title="Courses"
           value={stats.totalCourses}
           icon={HiBookOpen}
           color="bg-gradient-to-r from-purple-500 to-purple-600"
           size="sm"
         />
         <KPICard
-          title="Pending Assignments"
+          title="Assignments"
           value={stats.pendingAssignments}
           icon={HiDocumentText}
           color="bg-gradient-to-r from-red-500 to-red-600"
-          change={upcomingAssignmentsCount > 0 ? 'Start now' : 'All done'}
+          change={upcomingAssignmentsCount > 0 ? `${upcomingAssignmentsCount} due` : 'All done'}
           changeType={upcomingAssignmentsCount > 0 ? 'negative' : 'positive'}
           size="sm"
         />
         <KPICard
-          title="Upcoming Quizzes"
+          title="Quizzes"
           value={stats.upcomingQuizzes}
           icon={HiChartBar}
           color="bg-gradient-to-r from-yellow-500 to-yellow-600"
-          change={upcomingQuizzesCount > 0 ? 'Prepare now' : 'None scheduled'}
+          change={upcomingQuizzesCount > 0 ? `${upcomingQuizzesCount} ready` : 'None'}
           changeType={upcomingQuizzesCount > 0 ? 'negative' : 'positive'}
           size="sm"
         />
         <KPICard
-          title="Overall Progress"
+          title="Progress"
           value={`${overallProgress}%`}
           icon={HiCheckCircle}
           color="bg-gradient-to-r from-green-500 to-green-600"
@@ -708,80 +563,41 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Quick Access */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Quick Access & Courses - Instructor completely hidden */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Quick Access - No instructor, no "My Courses" link */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border p-6" style={{ borderColor: BRAND_COLORS.softGrey }}>
-            <h2 className="text-lg font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          <div className="bg-transparent">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 px-1" style={{ color: BRAND_COLORS.darkNavy }}>
               Quick Access
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-1">
               {lastAccessedCourse ? (
                 <Link
-                  href={`/lms/Student_Portal/courses/${lastAccessedCourse.id}`}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:shadow-sm transition-all"
-                  style={{ 
-                    borderColor: BRAND_COLORS.softGrey,
-                    backgroundColor: `${BRAND_COLORS.lightGrey}`
-                  }}
+                  href={`/lms/Student_Portal/Materials`}
+                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                    >
-                      <HiBookOpen className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Continue Learning</p>
-                      <p className="text-xs text-gray-600 truncate">{lastAccessedCourse.title}</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900">Materials</p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{lastAccessedCourse.title}</p>
+                    {/* 🔥 INSTRUCTOR LINE COMPLETELY REMOVED */}
                   </div>
                   <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: BRAND_COLORS.deepRed }} />
                 </Link>
               ) : (
-                <div className="p-4 rounded-lg border text-center" style={{ borderColor: BRAND_COLORS.softGrey }}>
-                  <p className="text-sm text-gray-600">No active courses</p>
+                <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+                  <p className="text-xs text-gray-500">No active courses</p>
                 </div>
               )}
-
-              <Link
-                href="/lms/Student_Portal/my-courses"
-                className="flex items-center justify-between p-4 rounded-lg border hover:shadow-sm transition-all"
-                style={{ borderColor: BRAND_COLORS.softGrey }}
-              >
-                <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
-                  >
-                    <HiBookOpen className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">My Courses</p>
-                    <p className="text-xs text-gray-600">{stats.totalCourses} enrolled</p>
-                  </div>
-                </div>
-                <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-              </Link>
 
               {stats.pendingAssignments > 0 && (
                 <Link
                   href="/lms/Student_Portal/assignments"
-                  className="flex items-center justify-between p-4 rounded-lg border hover:shadow-sm transition-all"
-                  style={{ borderColor: BRAND_COLORS.softGrey }}
+                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: BRAND_COLORS.teal }}
-                    >
-                      <HiDocumentText className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">My Assignments</p>
-                      <p className="text-xs text-gray-600">{stats.pendingAssignments} pending</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900">Assignments</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{stats.pendingAssignments} pending</p>
                   </div>
                   <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: BRAND_COLORS.teal }} />
                 </Link>
@@ -790,20 +606,11 @@ export default function DashboardPage() {
               {stats.upcomingQuizzes > 0 && (
                 <Link
                   href="/lms/Student_Portal/quizzes"
-                  className="flex items-center justify-between p-4 rounded-lg border hover:shadow-sm transition-all"
-                  style={{ borderColor: BRAND_COLORS.softGrey }}
+                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: '#8B5CF6' }}
-                    >
-                      <HiChartBar className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">My Quizzes</p>
-                      <p className="text-xs text-gray-600">{stats.upcomingQuizzes} upcoming</p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900">Quizzes</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{stats.upcomingQuizzes} ready</p>
                   </div>
                   <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: '#8B5CF6' }} />
                 </Link>
@@ -812,104 +619,95 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Courses List */}
+        {/* Courses List - Instructor hidden in CourseCard */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border p-6" style={{ borderColor: BRAND_COLORS.softGrey }}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-base sm:text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 My Courses ({courses.length})
               </h2>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Overall Progress</p>
-                <span className="text-2xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+              <div className="text-left sm:text-right">
+                <p className="text-xs text-gray-600">Overall Progress</p>
+                <span className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
                   {overallProgress}%
                 </span>
               </div>
             </div>
             
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <ProgressBar progress={overallProgress} size="lg" animate={true} />
             </div>
 
             {courses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {courses.slice(0, 4).map(course => (
                   <CourseCard
                     key={course.id}
                     id={course.id}
                     title={course.title}
                     category={course.category}
-                    progress={course.progress}
-                    instructorName={course.instructorName || 'Instructor not assigned'}
+                    progress={course.progress || 0}
                     duration={course.duration}
                     image={course.image}
                     compact={true}
+                    // 🔥 instructorName prop removed from CourseCard
                   />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <HiBookOpen className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+              <div className="text-center py-8 sm:py-12">
+                <HiBookOpen className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+                <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
                   No courses enrolled
                 </h3>
-                <p className="text-gray-600 mb-6">You haven't enrolled in any courses yet.</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
+                  You haven't enrolled in any courses yet.
+                </p>
                 <Link
                   href="/courses"
-                  className="inline-flex px-6 py-3 rounded-lg font-medium transition-colors"
+                  className="inline-flex px-5 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-colors"
                   style={{ 
                     backgroundColor: BRAND_COLORS.deepRed,
                     color: BRAND_COLORS.white 
                   }}
                 >
-                  Browse Available Courses
+                  Browse Courses
                 </Link>
               </div>
             )}
             
-            {courses.length > 4 && (
-              <div className="mt-6 pt-6 border-t text-center" style={{ borderColor: BRAND_COLORS.softGrey }}>
-                <Link
-                  href="/lms/Student_Portal/my-courses"
-                  className="inline-flex items-center gap-2 text-sm font-medium"
-                  style={{ color: BRAND_COLORS.darkRoyalBlue }}
-                >
-                  View all {courses.length} courses
-                  <HiArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            )}
+      
           </div>
         </div>
       </div>
 
-      {/* Stats Summary */}
-      <div className="bg-white rounded-xl border p-6" style={{ borderColor: BRAND_COLORS.softGrey }}>
-        <h2 className="text-lg font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-          Learning Statistics
+      {/* Stats Summary - Mobile Optimized */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Learning Stats
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-sm text-gray-600">Study Hours</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+            <p className="text-xs text-gray-600">Study Hours</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
               {stats.totalStudyHours}
             </p>
           </div>
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-sm text-gray-600">Completed</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+            <p className="text-xs text-gray-600">Completed</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
               {stats.completedCourses}
             </p>
           </div>
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-sm text-gray-600">In Progress</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+            <p className="text-xs text-gray-600">In Progress</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
               {stats.inProgressCourses}
             </p>
           </div>
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-sm text-gray-600">Submitted Work</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+            <p className="text-xs text-gray-600">Submitted</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
               {stats.assignmentsSubmitted}
             </p>
           </div>

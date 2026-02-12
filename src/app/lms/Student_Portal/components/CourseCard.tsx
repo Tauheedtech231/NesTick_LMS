@@ -1,4 +1,4 @@
-// components/CourseCard.tsx
+// app/lms/Student_Portal/components/CourseCard.tsx
 'use client';
 
 import { HiPlay, HiBookOpen, HiClock, HiCheckCircle, HiArrowRight } from 'react-icons/hi';
@@ -17,11 +17,12 @@ type CourseCardProps = {
   description: string;
   progress: number;
   status: 'not_started' | 'in_progress' | 'completed';
-  modules: Module[];
+  modules?: Module[];  // ✅ Make optional with ?
   totalModules: number;
   completedModules: number;
   studyHours: number;
   category: string;
+  image?: string;
   lastAccessed?: string;
   compact?: boolean;
 };
@@ -33,7 +34,7 @@ export default function CourseCard({
   description,
   progress,
   status,
-  modules,
+  modules = [],  // ✅ Default empty array
   totalModules,
   completedModules,
   studyHours,
@@ -41,6 +42,7 @@ export default function CourseCard({
   lastAccessed,
   compact = false,
 }: CourseCardProps) {
+  
   const getStatusColor = () => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
@@ -56,6 +58,11 @@ export default function CourseCard({
       default: return <HiBookOpen className="w-3 h-3 lg:w-4 lg:h-4" />;
     }
   };
+
+  // ✅ Safe check for modules
+  const hasModules = modules && Array.isArray(modules) && modules.length > 0;
+  const recentModules = hasModules ? modules.slice(0, 2) : [];
+  const remainingModules = hasModules ? modules.length - 2 : 0;
 
   return (
     <div className={`bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow ${
@@ -120,12 +127,12 @@ export default function CourseCard({
           </div>
         </div>
 
-        {/* Module Progress (Only for larger cards) */}
-        {!compact && modules.length > 0 && (
+        {/* Module Progress - FIXED: Safe check for modules */}
+        {!compact && hasModules && (
           <div className="mb-3 lg:mb-4">
             <p className="text-sm font-medium text-gray-700 mb-2">Recent Modules</p>
             <div className="space-y-1.5">
-              {modules.slice(0, 2).map((module) => (
+              {recentModules.map((module) => (
                 <div key={module.id} className="flex items-center justify-between">
                   <span className="text-xs lg:text-sm text-gray-600 truncate pr-2">
                     {module.title}
@@ -135,29 +142,29 @@ export default function CourseCard({
                   }`} />
                 </div>
               ))}
-              {modules.length > 2 && (
+              {remainingModules > 0 && (
                 <p className="text-xs text-gray-500 text-center pt-1">
-                  +{modules.length - 2} more modules
+                  +{remainingModules} more {remainingModules === 1 ? 'module' : 'modules'}
                 </p>
               )}
             </div>
           </div>
         )}
 
-        {/* Action Button */}
-        <div className="mt-auto">
-          <Link
-            href={`/my-courses/${id}`}
-            className={`w-full flex items-center justify-center gap-2 rounded-lg font-medium transition-colors ${
-              compact 
-                ? 'py-2 px-3 text-sm bg-gradient-to-r from-purple-600 to-purple-800 text-white hover:from-purple-700 hover:to-purple-900'
-                : 'py-2.5 px-4 text-sm lg:text-base bg-gradient-to-r from-purple-600 to-purple-800 text-white hover:from-purple-700 hover:to-purple-900'
-            }`}
-          >
-            {status === 'completed' ? 'Review Course' : 'Continue Learning'}
-            <HiArrowRight className="w-3 h-3 lg:w-4 lg:h-4" />
-          </Link>
-        </div>
+        {/* Fallback when no modules - Show simple progress info */}
+        {!compact && !hasModules && (
+          <div className="mb-3 lg:mb-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600 text-center">
+              {progress === 100 
+                ? '🎉 Course completed! Review your achievements.' 
+                : progress > 0 
+                ? '📚 Continue learning to unlock modules' 
+                : '🚀 Start your learning journey'}
+            </p>
+          </div>
+        )}
+
+      
       </div>
     </div>
   );

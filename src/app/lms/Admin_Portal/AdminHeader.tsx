@@ -54,25 +54,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     }
   ]
 
-  // User dropdown items
-  const userDropdownItems = [
-    {
-      title: 'Account',
-      items: [
-        { href: '/lms/Admin_Portal/profile', label: 'My Profile', icon: HiUserCircle },
-        { href: '/lms/Admin_Portal/settings', label: 'Settings', icon: HiCog },
-        { href: '/lms/Admin_Portal/notifications', label: 'Notifications', icon: HiBell },
-      ]
-    },
-    {
-      title: 'Quick Actions',
-      items: [
-        { href: '/lms/Admin_Portal/dashboard', label: 'Dashboard', icon: HiViewGrid },
-        { href: '/lms/Admin_Portal/reports', label: 'View Reports', icon: HiChartBar },
-        { href: '/lms/Admin_Portal/payments', label: 'Payment History', icon: HiCreditCard },
-      ]
-    }
-  ]
+
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || 'null')
@@ -300,31 +282,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                     </div>
                   </div>
 
-                  {/* User Dropdown Items */}
-                  <div className="p-2 max-h-[40vh] overflow-y-auto">
-                    {userDropdownItems.map((section, idx) => (
-                      <div key={idx} className="mb-2">
-                        <div className="px-3 py-1 text-xs font-medium uppercase tracking-wider text-gray-500">
-                          {section.title}
-                        </div>
-                        <div className="space-y-1">
-                          {section.items.map((item, itemIdx) => (
-                            <Link
-                              key={itemIdx}
-                              href={item.href}
-                              onClick={() => setIsUserDropdownOpen(false)}
-                              className="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-all duration-200 hover:bg-lightGrey text-darkGrey"
-                            >
-                              <item.icon className="w-4 h-4 text-gray-500" />
-                              <span>
-                                {item.label}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                
 
                   {/* Logout Button */}
                   <div className="p-3 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
@@ -459,23 +417,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 </Link>
               </div>
 
-              {/* Quick Links */}
-              <div className="mt-6 pt-4 border-t" style={{ borderColor: `${BRAND_COLORS.softGrey}30` }}>
-                <div className="font-medium text-white/80 mb-2">Quick Links</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {userDropdownItems[1].items.slice(0, 4).map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={toggleMobileMenu}
-                      className="flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 hover:bg-white/5"
-                    >
-                      <item.icon className="w-5 h-5 mb-1 text-white/80" />
-                      <span className="text-xs text-center text-white/80">{item.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
+            
             </div>
 
             {/* Mobile Logout Button */}

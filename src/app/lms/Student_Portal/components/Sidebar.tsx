@@ -15,6 +15,8 @@ import {
   HiMenu,
   HiX,
 } from 'react-icons/hi';
+import { SiMaterialdesignicons } from 'react-icons/si';
+import { FolderIcon } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -37,11 +39,18 @@ export default function Sidebar() {
       path: '/lms/Student_Portal/my-courses',
     },
     {
+      id: 'Materials',
+      label: 'Materials',
+      icon: FolderIcon,
+      path: '/lms/Student_Portal/Materials',
+    },
+    {
       id: 'Assignments',
       label: 'Assignments',
       icon: HiDocumentText,
       path: '/lms/Student_Portal/assignments',
     },
+    
     {
       id: 'mock-quizzes',
       label: 'Mock Quizzes',
