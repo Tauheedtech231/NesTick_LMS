@@ -12,7 +12,6 @@ import {
   BookOpen,
   Users,
   Edit,
-  
   Trash2,
   MoreVertical,
   CheckCircle,
@@ -101,10 +100,7 @@ export default function InstructorsPage() {
 
   // Get stats
   const activeInstructors = instructors.filter(i => i.status === 'active').length
-  console.log("active", activeInstructors)
-const totalStudents = instructors.reduce((sum, i) => sum + (i.totalStudents || 0), 0);
-console.log("total students", totalStudents);
-
+  const totalStudents = instructors.reduce((sum, i) => sum + (i.totalStudents || 0), 0)
   const averageRating = instructors.length > 0 
     ? (instructors.reduce((sum, i) => sum + i.rating, 0) / instructors.length).toFixed(1)
     : '0.0'
@@ -156,337 +152,260 @@ console.log("total students", totalStudents);
   return (
     <div className="min-h-screen bg-white p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+      <div className="mb-8 px-4 sm:px-6">
+        <div className="bg-white rounded-2xl border border-softGrey p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-extrabold truncate" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Instructor Management
               </h1>
-              <p className="text-darkGrey mt-1">
+              <p className="text-sm sm:text-base text-darkGrey mt-1 truncate">
                 Manage all instructors, view details, and assign courses
               </p>
             </div>
+
             <Link
               href="/lms/Admin_Portal/instructors/add"
-              className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-3 rounded-xl font-medium text-sm sm:text-base transition-all hover:scale-105 hover:shadow-md"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
-                color: BRAND_COLORS.white 
+                color: BRAND_COLORS.white
               }}
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               Add New Instructor
             </Link>
           </div>
-          <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+
+          <div className="h-1 w-14 rounded-full mx-auto sm:mx-0" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-softGrey p-5 shadow-sm transition-shadow max-w-full mx-auto mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          {/* Total Instructors */}
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }} />
             <div>
-              <p className="text-sm font-medium text-darkGrey">Total Instructors</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+              <p className="text-sm sm:text-base font-medium text-darkGrey truncate">Total Instructors</p>
+              <p className="text-xl sm:text-2xl font-bold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
                 {instructors.length}
               </p>
             </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-              <User className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-            </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
+          {/* Active Instructors */}
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: BRAND_COLORS.teal }} />
             <div>
-              <p className="text-sm font-medium text-darkGrey">Active Instructors</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+              <p className="text-sm sm:text-base font-medium text-darkGrey truncate">Active Instructors</p>
+              <p className="text-xl sm:text-2xl font-bold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
                 {activeInstructors}
               </p>
             </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <CheckCircle className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
-            </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
+          {/* Average Rating */}
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: BRAND_COLORS.teal }} />
             <div>
-              <p className="text-sm font-medium text-darkGrey">Total Students</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-                {totalStudents}
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-              <Users className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-darkGrey">Average Rating</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+              <p className="text-sm sm:text-base font-medium text-darkGrey truncate">Average Rating</p>
+              <p className="text-xl sm:text-2xl font-bold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
                 {averageRating}
               </p>
             </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <Star className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+          </div>
+
+          {/* Total Students */}
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: BRAND_COLORS.deepRed }} />
+            <div>
+              <p className="text-sm sm:text-base font-medium text-darkGrey truncate">Total Students</p>
+              <p className="text-xl sm:text-2xl font-bold truncate" style={{ color: BRAND_COLORS.darkNavy }}>
+                {totalStudents}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white rounded-lg border border-softGrey p-5 mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: BRAND_COLORS.darkGrey }} />
-              <input
-                type="text"
-                placeholder="Search instructors by name, email, or specialization..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
-              />
-            </div>
-          </div>
-          
-          <div className="w-full md:w-48">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: BRAND_COLORS.darkGrey }} />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white appearance-none"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
+      {/* Search and Filter Bar */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/40" />
+          <input
+            type="text"
+            placeholder="Search instructors by name, email, specialization..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 focus:border-darkRoyalBlue"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="w-5 h-5 text-darkGrey/60" />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-softGrey rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
       </div>
 
-      {/* Instructors Grid */}
+      {/* Instructors Table */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-            All Instructors ({filteredInstructors.length})
-          </h2>
-          <span className="text-sm text-darkGrey">
-            Showing {filteredInstructors.length} of {instructors.length} instructors
-          </span>
-        </div>
+        <h2 className="text-lg sm:text-xl font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          All Instructors ({filteredInstructors.length})
+        </h2>
 
         {filteredInstructors.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredInstructors.map((instructor) => (
-              <div 
-                key={instructor.id}
-                className="bg-white rounded-lg border border-softGrey overflow-hidden hover:shadow-md transition-shadow duration-200"
-              >
-                {/* Card Header */}
-                <div className="p-5 border-b border-softGrey">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center" 
-                        style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
-                        <User className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
+          <div className="overflow-x-auto rounded-lg border border-softGrey">
+            <table className="min-w-full table-fixed divide-y divide-softGrey">
+              <thead className="bg-darkRoyalBlue">
+                <tr>
+                  <th className="w-1/4 px-4 py-3 text-left text-sm font-medium text-white">Name</th>
+                  <th className="w-1/6 px-4 py-3 text-left text-sm font-medium text-white">Email</th>
+                  <th className="w-1/6 px-4 py-3 text-left text-sm font-medium text-white">Specialization</th>
+                  <th className="w-1/12 px-4 py-3 text-left text-sm font-medium text-white">Status</th>
+                  <th className="w-1/12 px-4 py-3 text-left text-sm font-medium text-white">Rating</th>
+                  <th className="w-1/4 px-4 py-3 text-left text-sm font-medium text-white">Assigned Course</th>
+                  <th className="w-1/12 px-4 py-3 text-left text-sm font-medium text-white">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-softGrey">
+                {filteredInstructors.map((instructor) => (
+                  <tr key={instructor.id} className="hover:bg-lightGrey transition-colors">
+                    {/* Name with avatar */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}
+                        >
+                          <User className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-darkGrey truncate">{instructor.name}</div>
+                          <div className="text-xs text-darkGrey/70 truncate">{instructor.qualification}</div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-darkGrey">{instructor.name}</h3>
-                        <p className="text-sm text-darkGrey/70">{instructor.qualification}</p>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <button
-                        onClick={() => setSelectedInstructor(instructor === selectedInstructor ? null : instructor)}
-                        className="p-1 hover:bg-lightGrey rounded-lg"
+                    </td>
+
+                    {/* Email */}
+                    <td className="px-4 py-3 text-sm text-darkGrey truncate" title={instructor.email}>
+                      {instructor.email}
+                    </td>
+
+                    {/* Specialization */}
+                    <td className="px-4 py-3 text-sm text-darkGrey truncate" title={instructor.specialization}>
+                      {instructor.specialization}
+                    </td>
+
+                    {/* Status badge */}
+                    <td className="px-4 py-3">
+                      <span
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                        style={{
+                          backgroundColor: `${getStatusColor(instructor.status)}20`,
+                          color: getStatusColor(instructor.status)
+                        }}
                       >
-                        <MoreVertical className="w-5 h-5 text-darkGrey/70" />
-                      </button>
-                      
-                      {/* Dropdown Menu */}
-                      {selectedInstructor?.id === instructor.id && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg border border-softGrey shadow-lg z-10">
-                          <div className="py-1">
-                            <Link
-                              href={`/lms/Admin_Portal/instructors/edit/${instructor.id}`}
-                              className="flex items-center gap-2 px-4 py-2 text-sm text-darkGrey hover:bg-lightGrey hover:text-darkRoyalBlue"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Edit Instructor
-                            </Link>
-                            <button
-                              onClick={() => {
-                                setSelectedInstructor(instructor)
-                                setShowDeleteModal(true)
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 text-sm text-brightRed hover:bg-brightRed/5 w-full text-left"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete Instructor
-                            </button>
+                        {instructor.status === "active" ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                    </td>
+
+                    {/* Rating stars */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3 h-3 ${
+                              i < Math.floor(instructor.rating) ? "text-amber-400 fill-amber-400" : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                        <span className="text-xs font-medium text-darkGrey ml-1">
+                          {instructor.rating.toFixed(1)}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Assigned Course */}
+                    <td className="px-4 py-3 text-sm text-darkGrey">
+                      {instructor.assignedCourse ? (
+                        <div className="space-y-1">
+                          <div className="font-medium truncate" title={instructor.assignedCourse.title}>
+                            {instructor.assignedCourse.title}
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-darkGrey/70">
+                            <span className="truncate max-w-[60%]" title={instructor.assignedCourse.category}>
+                              {instructor.assignedCourse.category}
+                            </span>
+                            <span className="whitespace-nowrap ml-2">{instructor.assignedCourse.duration}</span>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  <div className="flex justify-between items-center">
-                    <span
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: `${getStatusColor(instructor.status)}20`,
-                        color: getStatusColor(instructor.status)
-                      }}
-                    >
-                      {instructor.status === 'active' ? (
-                        <>
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Active
-                        </>
                       ) : (
-                        <>
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Inactive
-                        </>
+                        <span className="text-darkGrey/50">—</span>
                       )}
-                    </span>
-                    
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${i < Math.floor(instructor.rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
-                        />
-                      ))}
-                      <span className="text-xs font-medium text-darkGrey ml-1">
-                        {instructor.rating.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                    </td>
 
-                {/* Card Body */}
-                <div className="p-5">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-4 h-4 text-darkGrey/70" />
-                      <span className="text-darkGrey/80">{instructor.email}</span>
-                    </div>
-                    
-                    {instructor.phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="w-4 h-4 text-darkGrey/70" />
-                        <span className="text-darkGrey/80">{instructor.phone}</span>
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Link
+                          href={`/lms/Admin_Portal/instructors/edit/${instructor.id}`}
+                          className="p-1.5 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setSelectedInstructor(instructor);
+                            setShowDeleteModal(true);
+                          }}
+                          className="p-1.5 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2 text-sm">
-                      <Award className="w-4 h-4 text-darkGrey/70" />
-                      <span className="text-darkGrey/80">{instructor.specialization}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm">
-                      <Briefcase className="w-4 h-4 text-darkGrey/70" />
-                      <span className="text-darkGrey/80">{instructor.experience} experience</span>
-                    </div>
-                  </div>
-
-                  {/* Assigned Course */}
-                  {instructor.assignedCourse && (
-                    <div className="mt-4 pt-4 border-t border-softGrey">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-darkGrey">Assigned Course</span>
-                        <BookOpen className="w-4 h-4 text-darkGrey/70" />
-                      </div>
-                      <div className="bg-lightGrey rounded-lg p-3">
-                        <p className="font-medium text-darkGrey text-sm">
-                          {instructor.assignedCourse.title}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs text-darkGrey/70">
-                            {instructor.assignedCourse.category}
-                          </span>
-                          <span className="text-xs text-darkGrey/70">
-                            {instructor.assignedCourse.duration}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Users className="w-3 h-3 text-darkGrey/70" />
-                          <span className="text-xs text-darkGrey/70">
-                            {instructor.totalStudents} students
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bio Preview */}
-                  {instructor.bio && (
-                    <div className="mt-4">
-                      <p className="text-xs text-darkGrey/70 line-clamp-2">
-                        {instructor.bio}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div className="mt-4 pt-4 border-t border-softGrey flex items-center justify-between">
-                    <div className="text-xs text-darkGrey/70">
-                      Added: {formatDate(instructor.createdAt)}
-                    </div>
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/lms/Admin_Portal/instructors/edit/${instructor.id}`}
-                        className="p-1.5 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setSelectedInstructor(instructor)
-                          setShowDeleteModal(true)
-                        }}
-                        className="p-1.5 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-lg border border-softGrey">
             <User className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
             <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
-              {searchTerm ? 'No matching instructors found' : 'No instructors yet'}
+              {searchTerm ? "No matching instructors found" : "No instructors yet"}
             </h3>
             <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
-              {searchTerm 
-                ? 'Try a different search term' 
-                : 'Add your first instructor to get started'}
+              {searchTerm ? "Try a different search term" : "Add your first instructor to get started"}
             </p>
             <Link
               href="/lms/Admin_Portal/instructors/add"
               className="inline-flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
-              style={{ 
+              style={{
                 backgroundColor: BRAND_COLORS.deepRed,
-                color: BRAND_COLORS.white 
+                color: BRAND_COLORS.white,
               }}
             >
               <Plus className="w-5 h-5" />
@@ -496,55 +415,7 @@ console.log("total students", totalStudents);
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey">Need Help?</h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                View instructor management guide
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-              <Shield className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-            </div>
-          </div>
-        </div>
-
-        <Link
-          href="/lms/Admin_Portal/courses"
-          className="bg-white rounded-lg border border-softGrey p-5 hover:border-darkRoyalBlue transition-colors duration-200 group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey group-hover:text-darkRoyalBlue">
-                Manage Courses
-              </h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                Add or edit courses for assignment
-              </p>
-            </div>
-            <div className="p-2 rounded-lg group-hover:bg-darkRoyalBlue/10">
-              <BookOpen className="w-5 h-5 text-darkGrey group-hover:text-darkRoyalBlue" />
-            </div>
-          </div>
-        </Link>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey">Export Data</h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                Export instructors list as CSV
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <Calendar className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
-            </div>
-          </div>
-        </div>
-      </div>
+    
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedInstructor && (
@@ -552,12 +423,8 @@ console.log("total students", totalStudents);
           <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
             <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
               <div>
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  Delete Instructor
-                </h3>
-                <p className="text-sm text-darkGrey/70">
-                  Confirm deletion
-                </p>
+                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Delete Instructor</h3>
+                <p className="text-sm text-darkGrey/70">Confirm deletion</p>
               </div>
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -566,7 +433,7 @@ console.log("total students", totalStudents);
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" 
@@ -578,7 +445,7 @@ console.log("total students", totalStudents);
                   <p className="text-sm text-darkGrey/70">{selectedInstructor.email}</p>
                 </div>
               </div>
-              
+
               <div className="bg-lightGrey rounded-lg p-4 mb-6">
                 <p className="text-sm text-darkGrey mb-2">
                   <strong>Warning:</strong> This action cannot be undone.
@@ -590,7 +457,7 @@ console.log("total students", totalStudents);
                   <li>• All related data will be deleted</li>
                 </ul>
               </div>
-              
+
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -601,10 +468,7 @@ console.log("total students", totalStudents);
                 <button
                   onClick={handleDeleteInstructor}
                   className="px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{ 
-                    backgroundColor: BRAND_COLORS.brightRed,
-                    color: BRAND_COLORS.white 
-                  }}
+                  style={{ backgroundColor: BRAND_COLORS.brightRed, color: BRAND_COLORS.white }}
                 >
                   Delete Instructor
                 </button>

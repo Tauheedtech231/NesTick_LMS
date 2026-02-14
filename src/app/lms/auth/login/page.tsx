@@ -6,29 +6,44 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HiUser, HiClock, HiArrowLeft, HiEye, HiEyeOff, HiCheckCircle } from 'react-icons/hi'
 
-// Login type configurations
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
+}
+
+// Login type configurations with brand colors
 const loginTypes = {
   student: {
     title: 'Student Login',
     description: 'Access your learning dashboard',
-    iconColor: 'from-purple-500 to-purple-700',
-    hint: 'Use your student credentials to access course materials.'
+    hint: 'Use your student credentials to access course materials.',
+    primaryColor: BRAND_COLORS.darkRoyalBlue,
+    secondaryColor: BRAND_COLORS.darkNavy
   },
   instructor: {
     title: 'Instructor Login',
     description: 'Manage courses and students',
-    iconColor: 'from-purple-600 to-purple-800',
-    hint: 'Access your instructor dashboard to manage courses.'
+    hint: 'Access your instructor dashboard to manage courses.',
+    primaryColor: BRAND_COLORS.deepRed,
+    secondaryColor: BRAND_COLORS.brightRed
   },
   admin: {
     title: 'Admin Login',
     description: 'System administration',
-    iconColor: 'from-purple-700 to-purple-900',
-    hint: 'Administrator access for system management.'
+    hint: 'Administrator access for system management.',
+    primaryColor: BRAND_COLORS.darkGrey,
+    secondaryColor: BRAND_COLORS.darkNavy
   }
 }
 
-// Success Popup Component
+// Success Popup Component with brand colors
 function SuccessPopup({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -41,14 +56,20 @@ function SuccessPopup({ message, onClose }: { message: string; onClose: () => vo
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
       <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-all duration-300 scale-100 animate-in fade-in slide-in-from-bottom-5">
         <div className="flex flex-col items-center text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4">
+          <div 
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+            style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.deepRed} 0%, ${BRAND_COLORS.brightRed} 100%)` }}
+          >
             <HiCheckCircle className="w-8 h-8 text-white" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Success!</h3>
-          <p className="text-gray-600 mb-6">{message}</p>
+          <h3 className="text-xl font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Success!</h3>
+          <p className="mb-6" style={{ color: BRAND_COLORS.darkGrey }}>{message}</p>
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all duration-300 shadow-md"
+            className="px-6 py-2 text-white rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+            style={{ 
+              background: `linear-gradient(135deg, ${BRAND_COLORS.deepRed} 0%, ${BRAND_COLORS.brightRed} 100%)`
+            }}
           >
             Continue
           </button>
@@ -58,7 +79,7 @@ function SuccessPopup({ message, onClose }: { message: string; onClose: () => vo
   )
 }
 
-// Loading fallback component
+// Loading fallback component with brand colors
 function LoginLoading() {
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -66,24 +87,24 @@ function LoginLoading() {
         {/* Back to Home Skeleton */}
         <div className="flex justify-start">
           <div className="inline-flex items-center text-gray-600">
-            <div className="w-5 h-5 bg-gray-300 rounded mr-2 animate-pulse"></div>
-            <div className="h-5 w-24 bg-gray-300 rounded animate-pulse"></div>
+            <div className="w-5 h-5 rounded mr-2 animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
+            <div className="h-5 w-24 rounded animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
           </div>
         </div>
 
         {/* Login Card Skeleton */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border" style={{ borderColor: BRAND_COLORS.softGrey }}>
           {/* Header Skeleton */}
-          <div className="p-8 border-b border-gray-200">
+          <div className="p-8 border-b" style={{ borderColor: BRAND_COLORS.softGrey }}>
             <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                <div className="w-8 h-8 bg-gray-300 rounded"></div>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                <div className="w-8 h-8 rounded" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
               </div>
             </div>
             
             <div className="text-center">
-              <div className="h-7 w-48 bg-gray-300 rounded mx-auto mb-2 animate-pulse"></div>
-              <div className="h-4 w-64 bg-gray-300 rounded mx-auto animate-pulse"></div>
+              <div className="h-7 w-48 rounded mx-auto mb-2 animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
+              <div className="h-4 w-64 rounded mx-auto animate-pulse" style={{ backgroundColor: BRAND_COLORS.lightGrey }}></div>
             </div>
           </div>
 
@@ -93,7 +114,7 @@ function LoginLoading() {
             <div className="mb-6">
               <div className="flex space-x-2">
                 {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex-1 py-2 px-3 rounded-lg bg-gray-100 animate-pulse"></div>
+                  <div key={item} className="flex-1 py-2 px-3 rounded-lg animate-pulse" style={{ backgroundColor: BRAND_COLORS.lightGrey }}></div>
                 ))}
               </div>
             </div>
@@ -101,19 +122,19 @@ function LoginLoading() {
             {/* Form Inputs Skeleton */}
             <div className="space-y-4">
               <div>
-                <div className="h-4 w-32 bg-gray-200 rounded mb-1 animate-pulse"></div>
-                <div className="h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
+                <div className="h-4 w-32 rounded mb-1 animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
+                <div className="h-11 w-full rounded-lg animate-pulse" style={{ backgroundColor: BRAND_COLORS.lightGrey }}></div>
               </div>
               
               <div>
-                <div className="h-4 w-24 bg-gray-200 rounded mb-1 animate-pulse"></div>
-                <div className="h-11 w-full bg-gray-100 rounded-lg animate-pulse"></div>
+                <div className="h-4 w-24 rounded mb-1 animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
+                <div className="h-11 w-full rounded-lg animate-pulse" style={{ backgroundColor: BRAND_COLORS.lightGrey }}></div>
               </div>
             </div>
 
             {/* Submit Button Skeleton */}
             <div className="pt-6">
-              <div className="h-12 w-full bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className="h-12 w-full rounded-lg animate-pulse" style={{ backgroundColor: BRAND_COLORS.softGrey }}></div>
             </div>
           </div>
         </div>
@@ -540,73 +561,104 @@ function LoginContent() {
   const [successMessage, setSuccessMessage] = useState('')
   const [loginConfig, setLoginConfig] = useState(loginTypes.student)
 
+  // Get current login colors
+  const getCurrentColors = () => {
+    switch(loginType) {
+      case 'student':
+        return {
+          primary: BRAND_COLORS.darkRoyalBlue,
+          secondary: BRAND_COLORS.darkNavy,
+          light: 'rgba(30, 58, 138, 0.1)' // Light royal blue
+        };
+      case 'instructor':
+        return {
+          primary: BRAND_COLORS.deepRed,
+          secondary: BRAND_COLORS.brightRed,
+          light: 'rgba(177, 18, 23, 0.1)' // Light deep red
+        };
+      case 'admin':
+        return {
+          primary: BRAND_COLORS.darkGrey,
+          secondary: BRAND_COLORS.darkNavy,
+          light: 'rgba(31, 41, 51, 0.1)' // Light dark grey
+        };
+      default:
+        return {
+          primary: BRAND_COLORS.darkRoyalBlue,
+          secondary: BRAND_COLORS.darkNavy,
+          light: 'rgba(30, 58, 138, 0.1)'
+        };
+    }
+  };
+
   // Update login configuration based on type
   useEffect(() => {
     const config = loginTypes[loginType as keyof typeof loginTypes] || loginTypes.student
     setLoginConfig(config)
   }, [loginType])
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setError('')
-  setIsLoading(true)
-  
-  setTimeout(() => {
-    try {
-      let validation;
-      
-      // Handle different login types
-      if (loginType === 'instructor') {
-        validation = validateInstructorLogin(formData.email, formData.password);
-      } 
-      else if (loginType === 'admin') {
-        validation = validateAdminLogin(formData.email, formData.password);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+    
+    setTimeout(() => {
+      try {
+        let validation;
+        
+        // Handle different login types
+        if (loginType === 'instructor') {
+          validation = validateInstructorLogin(formData.email, formData.password);
+        } 
+        else if (loginType === 'admin') {
+          validation = validateAdminLogin(formData.email, formData.password);
+        }
+        else {
+          // STUDENT LOGIN - UPDATED LOGIC
+          validation = validateStudentLogin(formData.email, formData.password);
+        }
+        
+        if (validation.success) {
+          console.log(`${loginType} login successful:`, validation.userData);
+          
+          // Save user to localStorage
+          localStorage.setItem('currentUser', JSON.stringify(validation.userData));
+          
+          // Show success message
+          const userName = validation.userData.fullName || 
+                          validation.userData.name || 
+                          validation.userData.username || 
+                          validation.userData.email.split('@')[0];
+          
+          setSuccessMessage(`Welcome back, ${userName}!`);
+          setShowSuccess(true);
+          
+          // Redirect to appropriate portal - FIXED: Check if redirectTo exists
+          setTimeout(() => {
+            if (validation.redirectTo) {
+              router.push(validation.redirectTo);
+            } else {
+              // Default redirect based on login type
+              const defaultRedirects = {
+                student: '/lms/Student_Portal',
+                instructor: '/lms/Instructor_Portal',
+                admin: '/lms/Admin_Portal'
+              };
+              router.push(defaultRedirects[loginType as keyof typeof defaultRedirects] || '/');
+            }
+          }, 2000);
+        } else {
+          console.log(`${loginType} login failed`);
+          setError(validation.error || 'Invalid credentials');
+        }
+      } catch (error: any) {
+        console.error('Login error:', error);
+        setError('An error occurred during login');
+      } finally {
+        setIsLoading(false);
       }
-      else {
-        // STUDENT LOGIN - UPDATED LOGIC
-        validation = validateStudentLogin(formData.email, formData.password);
-      }
-      
-      if (validation.success) {
-        console.log(`${loginType} login successful:`, validation.userData);
-        
-        // Save user to localStorage
-        localStorage.setItem('currentUser', JSON.stringify(validation.userData));
-        
-        // Show success message
-        const userName = validation.userData.fullName || 
-                        validation.userData.name || 
-                        validation.userData.username || 
-                        validation.userData.email.split('@')[0];
-        
-        setSuccessMessage(`Welcome back, ${userName}!`);
-        setShowSuccess(true);
-        
-        // Redirect to appropriate portal - FIXED: Check if redirectTo exists
-        setTimeout(() => {
-          if (validation.redirectTo) {
-            router.push(validation.redirectTo);
-          } else {
-            // Default redirect based on login type
-            const defaultRedirects = {
-              student: '/lms/Student_Portal',
-              instructor: '/lms/Instructor_Portal',
-              admin: '/lms/Admin_Portal'
-            };
-            router.push(defaultRedirects[loginType as keyof typeof defaultRedirects] || '/');
-          }
-        }, 2000);
-      } else {
-        console.log(`${loginType} login failed`);
-        setError(validation.error || 'Invalid credentials');
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      setError('An error occurred during login');
-    } finally {
-      setIsLoading(false);
-    }
-  }, 1000);
-};
+    }, 1000);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -719,6 +771,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
   }, []);
 
+  const colors = getCurrentColors();
+
   return (
     <>
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -727,7 +781,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           <div className="flex justify-start">
             <Link
               href="/"
-              className="inline-flex items-center text-gray-600 hover:text-purple-600 transition-colors duration-300 group"
+              className="inline-flex items-center transition-colors duration-300 group"
+              style={{ color: BRAND_COLORS.darkGrey }}
             >
               <HiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
               Back to Home
@@ -735,18 +790,31 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
 
           {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-            {/* Header Section - Clean White */}
-            <div className="p-8 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border" style={{ borderColor: BRAND_COLORS.softGrey }}>
+            {/* Header Section */}
+            <div className="p-8 border-b" style={{ borderColor: BRAND_COLORS.softGrey }}>
               <div className="flex items-center justify-center mb-4">
-                <div className={`w-16 h-16 bg-gradient-to-r ${loginConfig.iconColor} rounded-full flex items-center justify-center shadow-md`}>
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center shadow-md"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
+                  }}
+                >
                   <HiUser className="w-8 h-8 text-white" />
                 </div>
               </div>
               
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{loginConfig.title}</h1>
-                <p className="text-gray-600 text-sm">{loginConfig.description}</p>
+                <h1 className="text-2xl font-bold mb-2" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                  {loginType === 'student' ? 'Student Login' : 
+                   loginType === 'instructor' ? 'Instructor Login' : 
+                   'Admin Login'}
+                </h1>
+                <p className="text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
+                  {loginType === 'student' ? 'Access your learning dashboard' :
+                   loginType === 'instructor' ? 'Manage courses and students' :
+                   'System administration'}
+                </p>
               </div>
             </div>
 
@@ -754,27 +822,38 @@ const handleSubmit = async (e: React.FormEvent) => {
             <div className="p-8">
               {/* Error Message */}
               {error && (
-                <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm text-center">{error}</p>
+                <div className="mb-6 p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }}>
+                  <p className="text-sm text-center" style={{ color: BRAND_COLORS.brightRed }}>{error}</p>
                 </div>
               )}
 
               {/* Login Type Selector */}
               <div className="mb-6">
                 <div className="flex space-x-2">
-                  {Object.entries(loginTypes).map(([key, config]) => (
-                    <Link
-                      key={key}
-                      href={`/lms/auth/login?type=${key}`}
-                      className={`flex-1 py-2 px-3 rounded-lg text-center text-sm font-medium transition-all duration-300 ${
-                        loginType === key
-                          ? `bg-gradient-to-r ${config.iconColor} text-white shadow-md`
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </Link>
-                  ))}
+                  {['student', 'instructor', 'admin'].map((type) => {
+                    const typeColors = type === 'student' ? 
+                      { primary: BRAND_COLORS.darkRoyalBlue, secondary: BRAND_COLORS.darkNavy } :
+                      type === 'instructor' ?
+                      { primary: BRAND_COLORS.deepRed, secondary: BRAND_COLORS.brightRed } :
+                      { primary: BRAND_COLORS.darkGrey, secondary: BRAND_COLORS.darkNavy };
+                    
+                    return (
+                      <Link
+                        key={type}
+                        href={`/lms/auth/login?type=${type}`}
+                        className={`flex-1 py-2 px-3 rounded-lg text-center text-sm font-medium transition-all duration-300 ${
+                          loginType === type
+                            ? 'text-white shadow-md'
+                            : 'text-gray-700 hover:bg-gray-200'
+                        }`}
+                        style={loginType === type ? { 
+                          background: `linear-gradient(135deg, ${typeColors.primary} 0%, ${typeColors.secondary} 100%)`
+                        } : { backgroundColor: BRAND_COLORS.lightGrey }}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -782,14 +861,14 @@ const handleSubmit = async (e: React.FormEvent) => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email/Identifier Input */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className="block text-sm font-medium mb-1" style={{ color: BRAND_COLORS.darkGrey }}>
                     {loginType === 'student' ? 'Email or Username' : 
                      loginType === 'instructor' ? 'Email or Phone Number' : 
                      'Email Address'}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <HiUser className="h-4 w-4 text-gray-400" />
+                      <HiUser className="h-4 w-4" style={{ color: BRAND_COLORS.softGrey }} />
                     </div>
                     <input
                       id="email"
@@ -799,7 +878,10 @@ const handleSubmit = async (e: React.FormEvent) => {
                       required
                       value={formData.email}
                       onChange={handleEmailChange}
-                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
+                      className="block w-full pl-10 pr-3 py-2.5 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-300"
+                      style={{ 
+                        borderColor: BRAND_COLORS.softGrey,
+                      }}
                       placeholder={
                         loginType === 'student' 
                           ? 'Enter email or username' 
@@ -807,10 +889,18 @@ const handleSubmit = async (e: React.FormEvent) => {
                           ? 'Enter email or phone number'
                           : 'Enter your email'
                       }
+                      onFocus={(e) => {
+                        e.target.style.borderColor = colors.primary;
+                        e.target.style.boxShadow = `0 0 0 2px ${colors.light}`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = BRAND_COLORS.softGrey;
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                   {loginType === 'instructor' && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs mt-1" style={{ color: BRAND_COLORS.darkGrey }}>
                       Use email sent by admin or phone number
                     </p>
                   )}
@@ -818,12 +908,12 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                 {/* Password Input */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="password" className="block text-sm font-medium mb-1" style={{ color: BRAND_COLORS.darkGrey }}>
                     Password
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <HiClock className="h-4 w-4 text-gray-400" />
+                      <HiClock className="h-4 w-4" style={{ color: BRAND_COLORS.softGrey }} />
                     </div>
                     <input
                       id="password"
@@ -833,8 +923,19 @@ const handleSubmit = async (e: React.FormEvent) => {
                       required
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
+                      className="block w-full pl-10 pr-10 py-2.5 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-300"
+                      style={{ 
+                        borderColor: BRAND_COLORS.softGrey,
+                      }}
                       placeholder="Enter your password"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = colors.primary;
+                        e.target.style.boxShadow = `0 0 0 2px ${colors.light}`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = BRAND_COLORS.softGrey;
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                     <button
                       type="button"
@@ -842,14 +943,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                       className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     >
                       {showPassword ? (
-                        <HiEyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                        <HiEyeOff className="h-4 w-4 transition-colors" style={{ color: BRAND_COLORS.softGrey }} />
                       ) : (
-                        <HiEye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                        <HiEye className="h-4 w-4 transition-colors" style={{ color: BRAND_COLORS.softGrey }} />
                       )}
                     </button>
                   </div>
                   {loginType === 'instructor' && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs mt-1" style={{ color: BRAND_COLORS.darkGrey }}>
                       Use password sent by admin via email
                     </p>
                   )}
@@ -860,9 +961,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className={`w-full py-2.5 px-4 border border-transparent rounded-lg text-base font-medium text-white bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300 shadow-md hover:shadow-lg ${
+                    className={`w-full py-2.5 px-4 border border-transparent rounded-lg text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 shadow-md hover:shadow-lg ${
                       isLoading ? 'opacity-75 cursor-not-allowed' : ''
                     }`}
+                    style={{ 
+                      background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+                    }}
+                    onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.light}`}
+                    onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
@@ -878,16 +984,16 @@ const handleSubmit = async (e: React.FormEvent) => {
 
               {/* Login Info */}
               <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm" style={{ color: BRAND_COLORS.darkGrey }}>
                   {loginConfig.hint}
                 </p>
                 {loginType === 'student' && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs mt-2" style={{ color: BRAND_COLORS.darkGrey }}>
                     Use the credentials sent to your email after payment verification.
                   </p>
                 )}
                 {loginType === 'instructor' && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs mt-2" style={{ color: BRAND_COLORS.darkGrey }}>
                     Use the credentials sent to your email by the admin.
                   </p>
                 )}
@@ -897,13 +1003,13 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           {/* Footer Note */}
           <div className="text-center">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: BRAND_COLORS.darkGrey }}>
               By signing in, you agree to our{' '}
-              <Link href="#" className="text-purple-600 hover:underline transition-colors">
+              <Link href="#" className="transition-colors" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Terms
               </Link>{' '}
               and{' '}
-              <Link href="#" className="text-purple-600 hover:underline transition-colors">
+              <Link href="#" className="transition-colors" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Privacy
               </Link>
             </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
   Plus,
@@ -59,13 +59,13 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   // Load courses from localStorage
   useEffect(() => {
     const loadCourses = () => {
       try {
         const savedCourses = localStorage.getItem('lms_courses')
-        console.log("saved",savedCourses)
         if (savedCourses) {
           setCourses(JSON.parse(savedCourses))
         } else {
@@ -163,28 +163,38 @@ export default function CoursesPage() {
     loadCourses()
   }, [])
 
-  // Filter courses
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = 
-      course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesCategory = filterCategory === 'all' || course.category === filterCategory
-    
-    return matchesSearch && matchesCategory
-  })
-
   // Get unique categories
-  const categories = ['all', ...new Set(courses.map(course => course.category))]
+  const categories = useMemo(() => {
+    return ['all', ...new Set(courses.map(course => course.category))]
+  }, [courses])
+
+  // Filter courses
+  const filteredCourses = useMemo(() => {
+    return courses.filter(course => {
+      const matchesSearch = 
+        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.description.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      const matchesCategory = filterCategory === 'all' || course.category === filterCategory
+      
+      return matchesSearch && matchesCategory
+    })
+  }, [courses, searchTerm, filterCategory])
 
   // Delete course
   const deleteCourse = (courseId: string) => {
-    if (confirm('Are you sure you want to delete this course?')) {
-      const updatedCourses = courses.filter(course => course.id !== courseId)
-      setCourses(updatedCourses)
-      localStorage.setItem('lms_courses', JSON.stringify(updatedCourses))
-    }
+    const updatedCourses = courses.filter(course => course.id !== courseId)
+    setCourses(updatedCourses)
+    localStorage.setItem('lms_courses', JSON.stringify(updatedCourses))
+    setDeleteConfirm(null)
+  }
+
+  // Preview course (could be replaced with a modal)
+  const previewCourse = (course: Course) => {
+    // For now, we'll open a new tab with a preview page (if exists) or alert
+    // You can replace this with a modal or a dedicated preview route
+    alert(`Preview: ${course.title}`)
   }
 
   if (loading) {
@@ -203,7 +213,7 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div>
               <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Course Management
@@ -214,7 +224,7 @@ export default function CoursesPage() {
             </div>
             <Link
               href="/lms/Instructor_Portal/courses/add"
-              className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 
@@ -229,7 +239,7 @@ export default function CoursesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg border border-softGrey p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -280,8 +290,8 @@ export default function CoursesPage() {
             <div>
               <p className="text-sm font-medium text-darkGrey">Manage Modules</p>
               <p className="text-sm font-medium mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                <Link href="/lms/Instructor_Portal/courses/modules" className="hover:underline">
-                  View All Modules →
+                <Link href="/lms/Instructor_Portal/courses/modules" className="hover:underline flex items-center gap-1">
+                  View All <ChevronRight className="w-4 h-4" />
                 </Link>
               </p>
             </div>
@@ -304,6 +314,7 @@ export default function CoursesPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                aria-label="Search courses"
               />
             </div>
           </div>
@@ -315,6 +326,7 @@ export default function CoursesPage() {
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white appearance-none"
+                aria-label="Filter by category"
               >
                 {categories.map(category => (
                   <option key={category} value={category}>
@@ -329,7 +341,7 @@ export default function CoursesPage() {
 
       {/* Courses Table */}
       <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
-        <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
+        <div className="p-4 border-b border-softGrey flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-lightGrey">
           <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
             All Courses ({filteredCourses.length})
           </h2>
@@ -342,25 +354,13 @@ export default function CoursesPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Course
-                  </th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Category
-                  </th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Duration
-                  </th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Price
-                  </th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Rating
-                  </th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Actions
-                  </th>
+                <tr style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}> {/* Changed to royal blue */}
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Course</th>
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Category</th>
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Duration</th>
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Price</th>
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Rating</th>
+                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Actions</th>
                 </tr>
               </thead>
 
@@ -389,7 +389,7 @@ export default function CoursesPage() {
                           <p className="text-sm text-darkGrey/70 truncate max-w-xs">{course.description}</p>
                         </div>
                         {course.featured && (
-                          <span className="px-2 py-1 text-xs rounded-full bg-deepRed/10 text-deepRed">
+                          <span className="px-2 py-1 text-xs rounded-full bg-deepRed/10 text-deepRed whitespace-nowrap">
                             Featured
                           </span>
                         )}
@@ -452,19 +452,33 @@ export default function CoursesPage() {
                           <FolderPlus className="w-4 h-4" />
                         </Link>
                         
-                        <button
-                          onClick={() => deleteCourse(course.id)}
-                          className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
-                          title="Delete Course"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {deleteConfirm === course.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => deleteCourse(course.id)}
+                              className="p-1 text-xs bg-brightRed text-white rounded hover:bg-red-700 transition-colors"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              className="p-1 text-xs bg-gray-300 text-darkGrey rounded hover:bg-gray-400 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirm(course.id)}
+                            className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                            title="Delete Course"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                         
                         <button
-                          onClick={() => {
-                            // Preview course
-                            alert(`Preview: ${course.title}`)
-                          }}
+                          onClick={() => previewCourse(course)}
                           className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
                           title="Preview Course"
                         >
@@ -485,7 +499,7 @@ export default function CoursesPage() {
             </h3>
             <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
               {searchTerm 
-                ? 'Try a different search term' 
+                ? 'Try a different search term or clear filters' 
                 : 'Add your first course to get started'}
             </p>
             <Link

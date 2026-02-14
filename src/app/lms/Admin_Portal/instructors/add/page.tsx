@@ -383,11 +383,11 @@ Login Credentials:
   const selectedCourse = courses.find(c => c.id === selectedCourseId)
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <Link
                 href="/lms/Admin_Portal/instructors"
@@ -396,16 +396,16 @@ Login Credentials:
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                   Add New Instructor
                 </h1>
-                <p className="text-darkGrey mt-1">
+                <p className="text-sm sm:text-base text-darkGrey mt-1">
                   Add instructor and send login credentials via email
                 </p>
               </div>
             </div>
             {usingDefaultCourses && (
-              <span className="px-3 py-1.5 text-xs rounded-full bg-teal/10 text-teal border border-teal/20">
+              <span className="px-3 py-1.5 text-xs rounded-full bg-teal/10 text-teal border border-teal/20 w-fit">
                 Using Default Courses
               </span>
             )}
@@ -415,16 +415,16 @@ Login Credentials:
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left Column - Personal Information */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg border border-softGrey p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Personal Information
               </h2>
               
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">
                       Full Name *
@@ -437,7 +437,7 @@ Login Credentials:
                         required
                         value={formData.name}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., Dr. Sarah Johnson"
                       />
                     </div>
@@ -455,14 +455,14 @@ Login Credentials:
                         required
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., sarah@example.com"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">
                       Phone Number
@@ -474,21 +474,21 @@ Login Credentials:
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., +92 300 1234567"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
                       <label className="block text-sm font-medium text-darkGrey">
                         Auto-generated Password *
                       </label>
                       <button
                         type="button"
                         onClick={handleRegeneratePassword}
-                        className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80"
+                        className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80 w-fit"
                       >
                         <RefreshCw className="w-4 h-4" />
                         Regenerate
@@ -500,7 +500,7 @@ Login Credentials:
                         type="text"
                         readOnly
                         value={autoGeneratedPassword}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg bg-lightGrey font-mono"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg bg-lightGrey font-mono text-sm"
                       />
                     </div>
                     <p className="text-xs text-darkGrey/70 mt-1">
@@ -512,13 +512,13 @@ Login Credentials:
             </div>
 
             {/* Professional Details */}
-            <div className="bg-white rounded-lg border border-softGrey p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Professional Details
               </h2>
               
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">
                       Qualification *
@@ -531,7 +531,7 @@ Login Credentials:
                         required
                         value={formData.qualification}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., PhD in Computer Science"
                       />
                     </div>
@@ -549,14 +549,14 @@ Login Credentials:
                         required
                         value={formData.specialization}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., Web Development, Data Science"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">
                       Experience *
@@ -569,7 +569,7 @@ Login Credentials:
                         required
                         value={formData.experience}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                         placeholder="e.g., 8 years"
                       />
                     </div>
@@ -589,7 +589,7 @@ Login Credentials:
                         step="0.1"
                         value={formData.rating}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                        className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                       />
                     </div>
                   </div>
@@ -598,8 +598,8 @@ Login Credentials:
             </div>
 
             {/* Biography */}
-            <div className="bg-white rounded-lg border border-softGrey p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Biography
               </h2>
               <div className="relative">
@@ -609,7 +609,7 @@ Login Credentials:
                   rows={4}
                   value={formData.bio}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                  className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
                   placeholder="Write a brief biography about the instructor..."
                 />
               </div>
@@ -619,8 +619,8 @@ Login Credentials:
           {/* Right Column - Course Assignment & Status */}
           <div className="space-y-6">
             {/* Course Assignment */}
-            <div className="bg-white rounded-lg border border-softGrey p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Course Assignment
               </h2>
               
@@ -650,7 +650,7 @@ Login Credentials:
                           value={selectedCourseId}
                           onChange={(e) => setSelectedCourseId(e.target.value)}
                           required
-                          className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white appearance-none"
+                          className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white appearance-none text-sm"
                         >
                           <option value="">Select a course</option>
                           {courses.map(course => (
@@ -668,24 +668,24 @@ Login Credentials:
                           <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
                             {getCourseIcon(selectedCourse.title)}
                           </div>
-                          <h4 className="font-medium text-darkGrey">{selectedCourse.title}</h4>
+                          <h4 className="font-medium text-darkGrey text-sm sm:text-base">{selectedCourse.title}</h4>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-darkGrey/70">Category:</span>
-                            <span className="text-sm text-darkGrey">{selectedCourse.category}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-xs sm:text-sm text-darkGrey/70">Category:</span>
+                            <span className="text-xs sm:text-sm text-darkGrey">{selectedCourse.category}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-darkGrey/70">Duration:</span>
-                            <span className="text-sm text-darkGrey">{selectedCourse.duration}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-xs sm:text-sm text-darkGrey/70">Duration:</span>
+                            <span className="text-xs sm:text-sm text-darkGrey">{selectedCourse.duration}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-darkGrey/70">Students:</span>
-                            <span className="text-sm text-darkGrey">{selectedCourse.students}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-xs sm:text-sm text-darkGrey/70">Students:</span>
+                            <span className="text-xs sm:text-sm text-darkGrey">{selectedCourse.students}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-darkGrey/70">Price:</span>
-                            <span className="text-sm font-medium" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-xs sm:text-sm text-darkGrey/70">Price:</span>
+                            <span className="text-xs sm:text-sm font-medium" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                               {selectedCourse.price}
                             </span>
                           </div>
@@ -698,8 +698,8 @@ Login Credentials:
             </div>
 
             {/* Status */}
-            <div className="bg-white rounded-lg border border-softGrey p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Status & Settings
               </h2>
               
@@ -713,7 +713,7 @@ Login Credentials:
                     required
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white text-sm"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -721,28 +721,28 @@ Login Credentials:
                 </div>
 
                 <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
-                  <h4 className="font-medium text-darkGrey mb-2">Process Summary</h4>
-                  <ol className="text-sm text-darkGrey/70 space-y-2">
-                    <li className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs">
+                  <h4 className="font-medium text-darkGrey text-sm sm:text-base mb-2">Process Summary</h4>
+                  <ol className="text-xs sm:text-sm text-darkGrey/70 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                         1
                       </div>
                       <span>Admin fills instructor details</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs">
+                    <li className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                         2
                       </div>
                       <span>System generates password</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs">
+                    <li className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                         3
                       </div>
                       <span>Send credentials to email</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs">
+                    <li className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-lightGrey border border-softGrey flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                         4
                       </div>
                       <span>Save to system (only if email sent)</span>
@@ -755,9 +755,9 @@ Login Credentials:
             {/* Courses Status Info */}
             <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
               <div className="flex items-start gap-3">
-                <BookOpen className="w-5 h-5 mt-0.5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                <BookOpen className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
                 <div>
-                  <h4 className="font-medium text-darkGrey mb-1">
+                  <h4 className="font-medium text-darkGrey text-sm sm:text-base mb-1">
                     {usingDefaultCourses ? '📚 Using Default Courses' : '📋 Available Courses'}
                   </h4>
                   <p className="text-xs text-darkGrey/70">
@@ -781,17 +781,17 @@ Login Credentials:
         </div>
 
         {/* Form Actions */}
-        <div className="mt-8 pt-6 border-t border-softGrey flex justify-end gap-4">
+        <div className="mt-8 pt-6 border-t border-softGrey flex flex-col sm:flex-row justify-end gap-3">
           <Link
             href="/lms/Admin_Portal/instructors"
-            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-center"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading || !formData.email || !formData.name || !selectedCourseId}
-            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             style={{ 
               backgroundColor: BRAND_COLORS.deepRed,
               color: BRAND_COLORS.white 

@@ -97,7 +97,6 @@ export default function InstructorDashboard() {
   useEffect(() => {
     const loadInstructorData = () => {
       try {
-        // Get current instructor from localStorage
         const currentUserStr = localStorage.getItem('currentUser')
         if (!currentUserStr) {
           router.push('/lms/auth/login?type=instructor')
@@ -112,7 +111,6 @@ export default function InstructorDashboard() {
 
         setInstructor(currentUser)
 
-        // Load assigned course
         const courses = JSON.parse(localStorage.getItem('lms_courses') || '[]')
         const courseId = currentUser.courseId || currentUser.assignedCourseId
         const assigned = courses.find((c: Course) => c.id === courseId)
@@ -120,7 +118,6 @@ export default function InstructorDashboard() {
         if (assigned) {
           setAssignedCourse(assigned)
           
-          // Load assignments from localStorage
           const assignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]')
           const instructorAssignments = assignments.filter((a: any) => {
             const matchesInstructor = a.instructorId === currentUser.id || 
@@ -132,7 +129,6 @@ export default function InstructorDashboard() {
             return matchesInstructor && matchesCourse
           })
           
-          // Load quizzes from localStorage
           const quizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
           const instructorQuizzes = quizzes.filter((q: any) => {
             const matchesInstructor = q.instructorId === currentUser.id || 
@@ -143,38 +139,18 @@ export default function InstructorDashboard() {
             return matchesInstructor && matchesCourse
           })
           
-          // Load materials from localStorage - SIMPLIFIED APPROACH
           const materials = JSON.parse(localStorage.getItem('instructor_materials') || '[]')
-          
-          // First, let's check if there are any materials at all
-          console.log('Total materials in localStorage:', materials.length)
-          
-          // Try multiple ways to filter materials
           const instructorMaterials = materials.filter((m: any) => {
             if (!m) return false
-            
-            // Try matching by instructor ID
             if (m.instructorId && m.instructorId === currentUser.id) return true
-            
-            // Try matching by email
             if (m.instructorEmail && m.instructorEmail === currentUser.email) return true
-            
-            // Try matching by name
             if (m.instructorName && (m.instructorName === currentUser.name || 
                                     m.instructorName === currentUser.fullName)) return true
-            
-            // Try matching by course
             if (m.courseId && m.courseId === courseId) return true
-            
-            // If material doesn't have instructor info but has course info, include it
             if (!m.instructorId && !m.instructorEmail && !m.instructorName && m.courseId === courseId) return true
-            
             return false
           })
           
-          console.log('Filtered materials for dashboard:', instructorMaterials.length)
-          
-          // Load students count from course
           const studentCount = assigned.students ? 
             parseInt(assigned.students.replace(/\D/g, '')) || 0 : 0
 
@@ -185,16 +161,8 @@ export default function InstructorDashboard() {
             totalStudents: studentCount,
             courseRating: assigned.rating || 0
           })
-          
-          console.log('Dashboard stats set:', {
-            assignments: instructorAssignments.length,
-            quizzes: instructorQuizzes.length,
-            materials: instructorMaterials.length,
-            students: studentCount
-          })
         }
 
-        // Load recent activities
         loadRecentActivities(currentUser.id, assigned?.id || '')
         
       } catch (error) {
@@ -213,7 +181,6 @@ export default function InstructorDashboard() {
       
       if (!courseId) return
       
-      // Load assignments created by this instructor
       const assignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]')
       const myAssignments = assignments.filter((a: any) => 
         a.instructorId === instructorId && a.courseId === courseId
@@ -232,7 +199,6 @@ export default function InstructorDashboard() {
         })
       })
 
-      // Load quizzes
       const quizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
       const myQuizzes = quizzes.filter((q: any) => 
         q.instructorId === instructorId && q.courseId === courseId
@@ -251,21 +217,13 @@ export default function InstructorDashboard() {
         })
       })
 
-      // Load materials - SIMPLIFIED FILTERING
       const materials = JSON.parse(localStorage.getItem('instructor_materials') || '[]')
-      
-      // Get materials for this course and instructor
       const myMaterials = materials.filter((m: any) => {
         if (!m) return false
-        
-        // Match by instructor
         const matchesInstructor = m.instructorId === instructorId ||
                                  m.instructorEmail === instructor?.email ||
                                  m.instructorName === instructor?.name
-        
-        // Match by course
         const matchesCourse = m.courseId === courseId
-        
         return matchesInstructor && matchesCourse
       })
       
@@ -282,7 +240,6 @@ export default function InstructorDashboard() {
         })
       })
 
-      // Load graded submissions
       const grades = JSON.parse(localStorage.getItem('assignment_grades') || '[]')
       const myGrades = grades.filter((g: any) => 
         g.instructorId === instructorId && g.courseId === courseId
@@ -301,7 +258,6 @@ export default function InstructorDashboard() {
         })
       })
 
-      // Sort by timestamp
       activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       setRecentActivities(activities.slice(0, 8))
       
@@ -343,7 +299,6 @@ export default function InstructorDashboard() {
     return `${diffDays}d ago`
   }
 
-  // Add a function to reset demo data if needed
   const resetDemoMaterials = () => {
     if (!instructor || !assignedCourse) return
     
@@ -371,8 +326,6 @@ export default function InstructorDashboard() {
     const existingMaterials = JSON.parse(localStorage.getItem('instructor_materials') || '[]')
     const combinedMaterials = [...existingMaterials, ...demoMaterials]
     localStorage.setItem('instructor_materials', JSON.stringify(combinedMaterials))
-    
-    // Reload the page to see changes
     window.location.reload()
   }
 
@@ -384,11 +337,11 @@ export default function InstructorDashboard() {
             <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-32 bg-gray-100 rounded-lg"></div>
+                <div key={i} className="h-32 bg-gray-100 rounded-lg border border-softGrey"></div>
               ))}
             </div>
-            <div className="h-64 bg-gray-100 rounded-lg mb-8"></div>
-            <div className="h-96 bg-gray-100 rounded-lg"></div>
+            <div className="h-64 bg-gray-100 rounded-lg border border-softGrey mb-8"></div>
+            <div className="h-96 bg-gray-100 rounded-lg border border-softGrey"></div>
           </div>
         </div>
       </div>
@@ -398,7 +351,7 @@ export default function InstructorDashboard() {
   if (!instructor || !assignedCourse) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md border border-softGrey rounded-lg p-6 sm:p-8">
           <AlertCircle className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
           <h2 className="text-xl font-semibold mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
             No Course Assigned
@@ -422,22 +375,22 @@ export default function InstructorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6">
+    <div className="min-h-screen bg-white p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="bg-white rounded-xl border border-softGrey p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+      <div className="mb-4 sm:mb-6 md:mb-8">
+        <div className="bg-white rounded-xl border border-softGrey p-4 sm:p-5 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" 
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center" 
                   style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
-                  <BookOpen className="w-5 h-5 text-white" />
+                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                     Instructor Dashboard
                   </h1>
-                  <p className="text-sm text-darkGrey/70">
+                  <p className="text-xs sm:text-sm text-darkGrey/70">
                     Manage your course and track student progress
                   </p>
                 </div>
@@ -445,41 +398,41 @@ export default function InstructorDashboard() {
               
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" 
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center" 
                     style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-                    <Users className="w-3 h-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                    <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
                   </div>
                   <div>
                     <p className="text-xs text-darkGrey/70">Instructor</p>
-                    <p className="font-medium text-darkGrey text-sm">{instructor.name}</p>
+                    <p className="font-medium text-darkGrey text-xs sm:text-sm">{instructor.name}</p>
                   </div>
                 </div>
                 
-                <div className="h-6 w-px bg-softGrey"></div>
+                <div className="h-4 w-px bg-softGrey hidden sm:block"></div>
                 
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" 
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center" 
                     style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-                    <BookOpen className="w-3 h-3" style={{ color: BRAND_COLORS.teal }} />
+                    <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: BRAND_COLORS.teal }} />
                   </div>
                   <div>
                     <p className="text-xs text-darkGrey/70">Course</p>
-                    <p className="font-medium text-darkGrey text-sm">{assignedCourse.title}</p>
+                    <p className="font-medium text-darkGrey text-xs sm:text-sm">{assignedCourse.title}</p>
                   </div>
                 </div>
                 
-                <div className="h-6 w-px bg-softGrey hidden sm:block"></div>
+                <div className="h-4 w-px bg-softGrey hidden md:block"></div>
                 
-                <div className="flex items-center gap-2 hidden sm:flex">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" 
+                <div className="flex items-center gap-2 hidden md:flex">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center" 
                     style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
-                    <Star className="w-3 h-3" style={{ color: BRAND_COLORS.deepRed }} />
+                    <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: BRAND_COLORS.deepRed }} />
                   </div>
                   <div>
                     <p className="text-xs text-darkGrey/70">Rating</p>
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                      <span className="font-medium text-darkGrey text-sm">
+                      <span className="font-medium text-darkGrey text-xs sm:text-sm">
                         {stats.courseRating.toFixed(1)}
                       </span>
                     </div>
@@ -488,10 +441,10 @@ export default function InstructorDashboard() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <div className="text-right hidden md:block">
                 <p className="text-xs text-darkGrey/70">Today's Date</p>
-                <p className="font-medium text-darkGrey">
+                <p className="font-medium text-darkGrey text-sm">
                   {new Date().toLocaleDateString('en-US', { 
                     weekday: 'short', 
                     month: 'short', 
@@ -499,7 +452,7 @@ export default function InstructorDashboard() {
                   })}
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-semibold text-xs sm:text-sm"
                 style={{ 
                   background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue}, ${BRAND_COLORS.deepRed})`
                 }}>
@@ -525,13 +478,13 @@ export default function InstructorDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         {/* Assignments Card */}
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-darkGrey/70 mb-1">Assignments</p>
-              <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <h3 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.totalAssignments}
               </h3>
               <div className="flex items-center gap-1 mt-1">
@@ -540,10 +493,10 @@ export default function InstructorDashboard() {
               </div>
             </div>
             <div className="p-2 rounded-lg bg-blue-50">
-              <FileText className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-softGrey">
+          <div className="mt-3 pt-2 border-t border-softGrey">
             <Link 
               href="/lms/Instructor_Portal/assignments"
               className="text-xs font-medium flex items-center justify-between group"
@@ -556,11 +509,11 @@ export default function InstructorDashboard() {
         </div>
 
         {/* Quizzes Card */}
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-darkGrey/70 mb-1">Quizzes</p>
-              <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <h3 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.totalQuizzes}
               </h3>
               <div className="flex items-center gap-1 mt-1">
@@ -569,10 +522,10 @@ export default function InstructorDashboard() {
               </div>
             </div>
             <div className="p-2 rounded-lg bg-green-50">
-              <ClipboardCheck className="w-5 h-5" style={{ color: '#10B981' }} />
+              <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#10B981' }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-softGrey">
+          <div className="mt-3 pt-2 border-t border-softGrey">
             <Link 
               href="/lms/Instructor_Portal/quizzes"
               className="text-xs font-medium flex items-center justify-between group"
@@ -585,30 +538,23 @@ export default function InstructorDashboard() {
         </div>
 
         {/* Materials Card */}
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-darkGrey/70 mb-1">Materials</p>
-              <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <h3 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.totalMaterials}
               </h3>
               <div className="flex items-center gap-1 mt-1">
                 <FileVideo className="w-3 h-3 text-purple-500" />
                 <span className="text-xs text-purple-600 font-medium">Total files</span>
               </div>
-              {/* Debug button - remove in production */}
-              <button 
-                onClick={() => console.log('Materials in localStorage:', JSON.parse(localStorage.getItem('instructor_materials') || '[]'))}
-                className="text-xs text-gray-500 mt-1"
-              >
-                Debug: {stats.totalMaterials} shown
-              </button>
             </div>
             <div className="p-2 rounded-lg bg-purple-50">
-              <FileVideo className="w-5 h-5" style={{ color: '#8B5CF6' }} />
+              <FileVideo className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#8B5CF6' }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-softGrey">
+          <div className="mt-3 pt-2 border-t border-softGrey">
             <Link 
               href="/lms/Instructor_Portal/materials"
               className="text-xs font-medium flex items-center justify-between group"
@@ -621,11 +567,11 @@ export default function InstructorDashboard() {
         </div>
 
         {/* Students Card */}
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-darkGrey/70 mb-1">Students</p>
-              <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+              <h3 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.totalStudents}
               </h3>
               <div className="flex items-center gap-1 mt-1">
@@ -634,10 +580,10 @@ export default function InstructorDashboard() {
               </div>
             </div>
             <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <Users className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: BRAND_COLORS.teal }} />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-softGrey">
+          <div className="mt-3 pt-2 border-t border-softGrey">
             <Link 
               href="/lms/Instructor_Portal/students"
               className="text-xs font-medium flex items-center justify-between group"
@@ -665,7 +611,7 @@ export default function InstructorDashboard() {
             <div className="space-y-2">
               <Link
                 href="/lms/Instructor_Portal/assignments/create"
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 sm:p-3 rounded-lg transition-colors hover:bg-lightGrey"
                 style={{ 
                   backgroundColor: BRAND_COLORS.lightGrey,
                   color: BRAND_COLORS.darkGrey 
@@ -674,16 +620,16 @@ export default function InstructorDashboard() {
                 <div className="p-2 rounded-lg bg-blue-50">
                   <FileUp className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">Create Assignment</h4>
-                  <p className="text-xs text-darkGrey/70">New task for students</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">Create Assignment</h4>
+                  <p className="text-xs text-darkGrey/70 truncate">New task for students</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-darkGrey/40" />
+                <ChevronRight className="w-4 h-4 text-darkGrey/40 flex-shrink-0" />
               </Link>
 
               <Link
                 href="/lms/Instructor_Portal/quizzes/create"
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 sm:p-3 rounded-lg transition-colors hover:bg-lightGrey"
                 style={{ 
                   backgroundColor: BRAND_COLORS.lightGrey,
                   color: BRAND_COLORS.darkGrey 
@@ -692,16 +638,16 @@ export default function InstructorDashboard() {
                 <div className="p-2 rounded-lg bg-green-50">
                   <ClipboardCheck className="w-4 h-4" style={{ color: '#10B981' }} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">Create Quiz</h4>
-                  <p className="text-xs text-darkGrey/70">Test student knowledge</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">Create Quiz</h4>
+                  <p className="text-xs text-darkGrey/70 truncate">Test student knowledge</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-darkGrey/40" />
+                <ChevronRight className="w-4 h-4 text-darkGrey/40 flex-shrink-0" />
               </Link>
 
               <Link
                 href="/lms/Instructor_Portal/materials/upload"
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 sm:p-3 rounded-lg transition-colors hover:bg-lightGrey"
                 style={{ 
                   backgroundColor: BRAND_COLORS.lightGrey,
                   color: BRAND_COLORS.darkGrey 
@@ -710,16 +656,16 @@ export default function InstructorDashboard() {
                 <div className="p-2 rounded-lg bg-purple-50">
                   <Upload className="w-4 h-4" style={{ color: '#8B5CF6' }} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">Upload Material</h4>
-                  <p className="text-xs text-darkGrey/70">Slides, videos, documents</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">Upload Material</h4>
+                  <p className="text-xs text-darkGrey/70 truncate">Slides, videos, documents</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-darkGrey/40" />
+                <ChevronRight className="w-4 h-4 text-darkGrey/40 flex-shrink-0" />
               </Link>
 
               <Link
                 href={`/lms/Instructor_Portal/courses/edit/${assignedCourse.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 sm:p-3 rounded-lg transition-colors hover:bg-lightGrey"
                 style={{ 
                   backgroundColor: BRAND_COLORS.lightGrey,
                   color: BRAND_COLORS.darkGrey 
@@ -728,16 +674,16 @@ export default function InstructorDashboard() {
                 <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
                   <Edit className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">Edit Course</h4>
-                  <p className="text-xs text-darkGrey/70">Update course details</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">Edit Course</h4>
+                  <p className="text-xs text-darkGrey/70 truncate">Update course details</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-darkGrey/40" />
+                <ChevronRight className="w-4 h-4 text-darkGrey/40 flex-shrink-0" />
               </Link>
 
               <Link
                 href="/lms/Instructor_Portal/analytics"
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 sm:p-3 rounded-lg transition-colors hover:bg-lightGrey"
                 style={{ 
                   backgroundColor: BRAND_COLORS.lightGrey,
                   color: BRAND_COLORS.darkGrey 
@@ -746,16 +692,16 @@ export default function InstructorDashboard() {
                 <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
                   <BarChart className="w-4 h-4" style={{ color: BRAND_COLORS.deepRed }} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">View Analytics</h4>
-                  <p className="text-xs text-darkGrey/70">Course performance data</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-xs sm:text-sm truncate">View Analytics</h4>
+                  <p className="text-xs text-darkGrey/70 truncate">Course performance data</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-darkGrey/40" />
+                <ChevronRight className="w-4 h-4 text-darkGrey/40 flex-shrink-0" />
               </Link>
             </div>
 
             {/* Course Info Section */}
-            <div className="mt-6 pt-5 border-t border-softGrey">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-softGrey">
               <h3 className="text-sm font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>
                 Course Information
               </h3>
@@ -816,10 +762,10 @@ export default function InstructorDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-darkGrey text-sm truncate">
+                            <h4 className="font-medium text-darkGrey text-xs sm:text-sm truncate">
                               {activity.title}
                             </h4>
-                            <p className="text-xs text-darkGrey/70 mt-0.5">
+                            <p className="text-xs text-darkGrey/70 mt-0.5 truncate">
                               {activity.description}
                             </p>
                           </div>
@@ -845,8 +791,8 @@ export default function InstructorDashboard() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-6 sm:py-8">
-                <MessageSquare className="w-10 h-10 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
+              <div className="text-center py-4 sm:py-6">
+                <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
                 <h3 className="text-base font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
                   No Recent Activity
                 </h3>
@@ -880,44 +826,47 @@ export default function InstructorDashboard() {
 
             {/* Activity Stats */}
             {recentActivities.length > 0 && (
-              <div className="mt-6 pt-5 border-t border-softGrey">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="text-center p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-softGrey">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                  <div className="text-center p-2 sm:p-3 rounded-lg border border-softGrey">
                     <p className="text-xs text-darkGrey/70 mb-1">Today</p>
-                    <p className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                    <p className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                       {recentActivities.filter(a => 
                         new Date(a.timestamp).toDateString() === new Date().toDateString()
                       ).length}
                     </p>
                   </div>
-                  <div className="text-center p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                  <div className="text-center p-2 sm:p-3 rounded-lg border border-softGrey">
                     <p className="text-xs text-darkGrey/70 mb-1">This Week</p>
-                    <p className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                    <p className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                       {recentActivities.filter(a => 
                         new Date(a.timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
                       ).length}
                     </p>
                   </div>
-                  <div className="text-center p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+                  <div className="text-center p-2 sm:p-3 rounded-lg border border-softGrey">
                     <p className="text-xs text-darkGrey/70 mb-1">Assignments</p>
-                    <p className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                    <p className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                       {recentActivities.filter(a => a.type === 'assignment').length}
                     </p>
                   </div>
-                
+                  <div className="text-center p-2 sm:p-3 rounded-lg border border-softGrey">
+                    <p className="text-xs text-darkGrey/70 mb-1">Materials</p>
+                    <p className="text-base sm:text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
+                      {recentActivities.filter(a => a.type === 'material').length}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-
-     
     </div>
   )
 }
 
-// Add RefreshCw icon component
+// RefreshCw icon component
 const RefreshCw = ({ className }: { className: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

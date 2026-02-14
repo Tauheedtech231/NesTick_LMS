@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -13,9 +13,13 @@ import {
   Trash2,
   CheckCircle,
   Search,
-  AlertCircle,
   Download,
-  Clock
+  Clock,
+  MoreVertical,
+  X,
+  PlayCircle,
+  PauseCircle,
+  AlertCircle
 } from 'lucide-react'
 /* eslint-disable */
 
@@ -77,6 +81,8 @@ export default function AssignmentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'closed'>('all')
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const loadData = () => {
@@ -133,6 +139,25 @@ export default function AssignmentsPage() {
     loadData()
   }, [router])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdownId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const toggleDropdown = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation()
+    setOpenDropdownId(openDropdownId === id ? null : id)
+  }
+
   const handleDeleteAssignment = (id: string) => {
     if (confirm('Are you sure you want to delete this assignment? This will also delete all student submissions for this assignment. This action cannot be undone.')) {
       // Delete assignment
@@ -150,6 +175,7 @@ export default function AssignmentsPage() {
       localStorage.setItem('student_submissions', JSON.stringify(filteredSubmissions))
       
       alert('Assignment and all related submissions deleted successfully!')
+      setOpenDropdownId(null)
     }
   }
 
@@ -167,6 +193,7 @@ export default function AssignmentsPage() {
     localStorage.setItem('instructor_assignments', JSON.stringify(updatedAllAssignments))
     
     alert('Assignment published successfully! Students can now see it.')
+    setOpenDropdownId(null)
   }
 
   const handleCloseAssignment = (id: string) => {
@@ -183,6 +210,7 @@ export default function AssignmentsPage() {
     localStorage.setItem('instructor_assignments', JSON.stringify(updatedAllAssignments))
     
     alert('Assignment closed successfully! Students can no longer submit.')
+    setOpenDropdownId(null)
   }
 
   // Function to download all submissions for an assignment
@@ -238,6 +266,7 @@ export default function AssignmentsPage() {
     a.click()
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
+    setOpenDropdownId(null)
   }
 
   // Helper function to format file size
@@ -256,12 +285,16 @@ export default function AssignmentsPage() {
     return matchesSearch && matchesFilter
   })
 
-  const getStatusColor = (status: Assignment['status']) => {
+  const getStatusBadge = (status: Assignment['status']) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800'
-      case 'published': return 'bg-green-100 text-green-800'
-      case 'closed': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'draft':
+        return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Draft</span>
+      case 'published':
+        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Published</span>
+      case 'closed':
+        return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Closed</span>
+      default:
+        return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{status}</span>
     }
   }
 
@@ -278,38 +311,34 @@ export default function AssignmentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white p-6">
+      <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="animate-pulse">
           <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
           <div className="h-32 bg-gray-100 rounded-lg mb-8"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-gray-100 rounded-lg"></div>
-            ))}
-          </div>
+          <div className="h-64 bg-gray-100 rounded-lg"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 Assignments
               </h1>
-              <p className="text-darkGrey mt-1">
+              <p className="text-sm sm:text-base text-darkGrey mt-1">
                 Create and manage assignments for your students
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 self-start sm:self-auto">
               <Link
                 href="/lms/Instructor_Portal/assignments/create"
-                className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
                 style={{ 
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white 
@@ -326,7 +355,7 @@ export default function AssignmentsPage() {
 
       {/* Filters and Search */}
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
             <input
@@ -334,31 +363,31 @@ export default function AssignmentsPage() {
               placeholder="Search assignments by title or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+              className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('all')}
-              className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'all' ? 'bg-darkRoyalBlue text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
+              className={`px-4 py-2.5 rounded-lg font-medium text-sm sm:text-base ${filter === 'all' ? 'bg-darkRoyalBlue text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
             >
               All
             </button>
             <button
               onClick={() => setFilter('published')}
-              className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'published' ? 'bg-green-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
+              className={`px-4 py-2.5 rounded-lg font-medium text-sm sm:text-base ${filter === 'published' ? 'bg-green-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
             >
               Published
             </button>
             <button
               onClick={() => setFilter('draft')}
-              className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'draft' ? 'bg-gray-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
+              className={`px-4 py-2.5 rounded-lg font-medium text-sm sm:text-base ${filter === 'draft' ? 'bg-gray-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
             >
               Drafts
             </button>
             <button
               onClick={() => setFilter('closed')}
-              className={`px-4 py-2.5 rounded-lg font-medium ${filter === 'closed' ? 'bg-red-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
+              className={`px-4 py-2.5 rounded-lg font-medium text-sm sm:text-base ${filter === 'closed' ? 'bg-red-600 text-white' : 'bg-lightGrey text-darkGrey hover:bg-softGrey'}`}
             >
               Closed
             </button>
@@ -366,304 +395,223 @@ export default function AssignmentsPage() {
         </div>
       </div>
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+      {/* Stats Summary - Removed total submissions */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-darkGrey/70">Total Assignments</p>
-              <h3 className="text-2xl font-bold text-darkNavy">{assignments.length}</h3>
+              <p className="text-xs sm:text-sm text-darkGrey/70">Total Assignments</p>
+              <h3 className="text-lg sm:text-2xl font-bold text-darkNavy">{assignments.length}</h3>
             </div>
-            <FileText className="w-8 h-8 text-darkRoyalBlue" />
+            <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-darkRoyalBlue" />
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-darkGrey/70">Published</p>
-              <h3 className="text-2xl font-bold text-darkNavy">
+              <p className="text-xs sm:text-sm text-darkGrey/70">Published</p>
+              <h3 className="text-lg sm:text-2xl font-bold text-darkNavy">
                 {assignments.filter(a => a.status === 'published').length}
               </h3>
             </div>
-            <CheckCircle className="w-8 h-8 text-green-600" />
+            <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-softGrey p-4">
+        <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-darkGrey/70">Total Submissions</p>
-              <h3 className="text-2xl font-bold text-darkNavy">
-                {allSubmissions.length}
-              </h3>
-            </div>
-            <Users className="w-8 h-8 text-teal" style={{ color: BRAND_COLORS.teal }} />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-softGrey p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-darkGrey/70">Pending Grading</p>
-              <h3 className="text-2xl font-bold text-darkNavy">
+              <p className="text-xs sm:text-sm text-darkGrey/70">Pending Grading</p>
+              <h3 className="text-lg sm:text-2xl font-bold text-darkNavy">
                 {allSubmissions.filter(sub => sub.status === 'submitted').length}
               </h3>
             </div>
-            <Clock className="w-8 h-8 text-amber-500" />
+            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
           </div>
         </div>
       </div>
 
-      {/* Submissions Overview */}
-      <div className="bg-white rounded-lg border border-softGrey p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-darkGrey">Recent Submissions</h2>
-          {allSubmissions.length > 0 && (
-            <button
-              onClick={() => {
-                // Download all submissions as a file
-                let content = 'All Submissions Report\n'
-                content += '======================\n\n'
-                
-                allSubmissions.forEach((sub, index) => {
-                  const assignment = assignments.find(a => a.id === sub.assignmentId)
-                  content += `Submission ${index + 1}:\n`
-                  content += `Assignment: ${assignment?.title || 'Unknown'}\n`
-                  content += `Student: ${sub.studentName} (${sub.studentEmail})\n`
-                  content += `Submitted: ${new Date(sub.submittedAt).toLocaleString()}\n`
-                  content += `Status: ${sub.status}\n`
-                  content += `Score: ${sub.score || 'Not graded'}\n`
-                  content += '\n---\n\n'
-                })
-                
-                const blob = new Blob([content], { type: 'text/plain' })
-                const url = window.URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `all_submissions_${new Date().toISOString().split('T')[0]}.txt`
-                document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                window.URL.revokeObjectURL(url)
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-darkRoyalBlue text-white rounded-lg hover:bg-darkRoyalBlue/90"
-            >
-              <Download className="w-4 h-4" />
-              Download All
-            </button>
-          )}
-        </div>
-        
-        {allSubmissions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-softGrey">
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Student</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Assignment</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Submitted</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Status</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Score</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-darkGrey/70">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allSubmissions.slice(0, 5).map((submission) => {
-                  const assignment = assignments.find(a => a.id === submission.assignmentId)
-                  return (
-                    <tr key={submission.id} className="border-b border-softGrey/50 hover:bg-lightGrey/30">
-                      <td className="py-3 px-2">
-                        <div className="font-medium text-darkGrey">{submission.studentName}</div>
-                        <div className="text-xs text-darkGrey/70">{submission.studentEmail}</div>
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="font-medium text-darkGrey">{assignment?.title || 'Unknown Assignment'}</div>
-                      </td>
-                      <td className="py-3 px-2 text-sm text-darkGrey/70">
-                        {new Date(submission.submittedAt).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          submission.status === 'graded' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {submission.status === 'graded' ? 'Graded' : 'Submitted'}
+      {/* Assignments Table */}
+      {filteredAssignments.length > 0 ? (
+        <div className="bg-white rounded-lg border border-softGrey overflow-x-auto">
+          <table className="min-w-full divide-y divide-softGrey">
+            {/* Table Header - Royal Blue */}
+            <thead>
+              <tr style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Assignment</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Status</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Due Date</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Points</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Submissions</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-white">Graded</th>
+                <th className="px-4 py-3 text-center text-xs sm:text-sm font-semibold text-white">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-softGrey">
+              {filteredAssignments.map((assignment) => {
+                const pendingGrading = getPendingGradingCount(assignment.id);
+                return (
+                  <tr key={assignment.id} className="hover:bg-lightGrey/50 transition-colors relative">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-darkGrey text-sm sm:text-base truncate max-w-[200px]" title={assignment.title}>
+                        {assignment.title}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {getStatusBadge(assignment.status)}
+                    </td>
+                    <td className="px-4 py-3 text-sm sm:text-base text-darkGrey whitespace-nowrap">
+                      {new Date(assignment.dueDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm sm:text-base text-darkGrey">
+                      {assignment.totalPoints}
+                    </td>
+                    <td className="px-4 py-3 text-sm sm:text-base text-darkGrey">
+                      {assignment.submissions}
+                      {pendingGrading > 0 && (
+                        <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                          {pendingGrading} pending
                         </span>
-                      </td>
-                      <td className="py-3 px-2">
-                        {submission.score ? (
-                          <span className="font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
-                            {submission.score}/{assignment?.totalPoints || '??'}
-                          </span>
-                        ) : (
-                          <span className="text-darkGrey/70">Not graded</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-2">
-                        <Link
-                          href={`/lms/Instructor_Portal/assignments/submissions/${submission.assignmentId}?student=${submission.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-darkRoyalBlue text-white rounded-lg hover:bg-darkRoyalBlue/90"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm sm:text-base text-darkGrey">
+                      {assignment.graded}
+                    </td>
+                    <td className="px-4 py-3 text-center relative">
+                      {/* 3-Dot Menu Button */}
+                      <button
+                        onClick={(e) => toggleDropdown(assignment.id, e)}
+                        className="p-2 text-darkGrey hover:bg-lightGrey rounded-lg transition-colors relative z-10"
+                        title="Actions"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+
+                      {/* Dropdown Menu - Now properly visible */}
+                      {openDropdownId === assignment.id && (
+                        <div 
+                          ref={dropdownRef}
+                          className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-softGrey z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200"
+                          style={{ minWidth: '250px' }}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <Eye className="w-3 h-3" />
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            
-            {allSubmissions.length > 5 && (
-              <div className="text-center pt-4">
-                <Link
-                  href="/lms/Instructor_Portal/submissions"
-                  className="text-darkRoyalBlue hover:underline font-medium"
-                >
-                  View all {allSubmissions.length} submissions →
-                </Link>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-softGrey" />
-            <p className="text-darkGrey/70">No student submissions yet.</p>
-          </div>
-        )}
-      </div>
+                          {/* Download Submissions */}
+                          <button
+                            onClick={() => handleDownloadSubmissions(assignment.id)}
+                            className={`flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors ${
+                              assignment.submissions === 0 
+                                ? 'opacity-50 cursor-not-allowed' 
+                                : 'hover:bg-lightGrey'
+                            }`}
+                            disabled={assignment.submissions === 0}
+                          >
+                            <Download className="w-4 h-4 text-blue-600" />
+                            <div>
+                              <div className="font-medium text-darkGrey text-sm">Download Submissions</div>
+                              <div className="text-xs text-darkGrey/60">{assignment.submissions} submissions</div>
+                            </div>
+                          </button>
 
-      {/* Assignments List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredAssignments.map(assignment => {
-          const assignmentSubmissions = allSubmissions.filter(sub => sub.assignmentId === assignment.id)
-          const pendingGrading = getPendingGradingCount(assignment.id)
-          
-          return (
-            <div key={assignment.id} className="bg-white rounded-lg border border-softGrey p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(assignment.status)}`}>
-                    {assignment.status.toUpperCase()}
-                  </span>
-                  <h3 className="font-semibold text-darkGrey mt-2 text-lg">{assignment.title}</h3>
-                  <p className="text-sm text-darkGrey/70 mt-1 line-clamp-2">{assignment.description}</p>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleDownloadSubmissions(assignment.id)}
-                    className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg"
-                    title="Download Submissions"
-                    disabled={assignmentSubmissions.length === 0}
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <Link
-                    href={`/lms/Instructor_Portal/assignments/submissions/${assignment.id}`}
-                    className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg"
-                    title="View Submissions"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href={`/lms/Instructor_Portal/assignments/edit/${assignment.id}`}
-                    className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg"
-                    title="Edit"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteAssignment(assignment.id)}
-                    className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+                          {/* View Submissions */}
+                          <Link
+                            href={`/lms/Instructor_Portal/assignments/submissions/${assignment.id}`}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-lightGrey transition-colors"
+                            onClick={() => setOpenDropdownId(null)}
+                          >
+                            <Eye className="w-4 h-4 text-purple-600" />
+                            <div>
+                              <div className="font-medium text-darkGrey text-sm">View Submissions</div>
+                              <div className="text-xs text-darkGrey/60">Grade & provide feedback</div>
+                            </div>
+                          </Link>
 
-              <div className="pt-3 border-t border-softGrey">
-                <div className="flex items-center justify-between text-sm text-darkGrey/70 mb-2">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                  </span>
-                  <span className="font-medium">{assignment.totalPoints} points</span>
-                </div>
-                
-                <div className="flex items-center justify-between mb-2">
-                  <span className="flex items-center gap-1 text-sm">
-                    <Users className="w-3 h-3" />
-                    {assignmentSubmissions.length} submissions
-                  </span>
-                  <span className="text-sm">
-                    {assignment.graded} graded
-                  </span>
-                </div>
+                          {/* Edit Assignment */}
+                          <Link
+                            href={`/lms/Instructor_Portal/assignments/edit/${assignment.id}`}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-lightGrey transition-colors"
+                            onClick={() => setOpenDropdownId(null)}
+                          >
+                            <Edit className="w-4 h-4 text-amber-600" />
+                            <div>
+                              <div className="font-medium text-darkGrey text-sm">Edit Assignment</div>
+                              <div className="text-xs text-darkGrey/60">Update details & instructions</div>
+                            </div>
+                          </Link>
 
-                {/* Submission Progress Bar */}
-                {assignmentSubmissions.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-darkGrey/70 mb-1">
-                      <span>Submission Progress</span>
-                      <span>{Math.round((assignment.graded / assignmentSubmissions.length) * 100)}% graded</span>
-                    </div>
-                    <div className="w-full bg-softGrey rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full bg-green-500"
-                        style={{ 
-                          width: `${(assignment.graded / assignmentSubmissions.length) * 100}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
+                          {/* Status-based actions */}
+                          {assignment.status === 'draft' && (
+                            <button
+                              onClick={() => handlePublishAssignment(assignment.id)}
+                              className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-lightGrey transition-colors"
+                            >
+                              <PlayCircle className="w-4 h-4 text-green-600" />
+                              <div>
+                                <div className="font-medium text-green-600 text-sm">Publish Assignment</div>
+                                <div className="text-xs text-darkGrey/60">Make visible to students</div>
+                              </div>
+                            </button>
+                          )}
+                          
+                          {assignment.status === 'published' && (
+                            <button
+                              onClick={() => handleCloseAssignment(assignment.id)}
+                              className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-lightGrey transition-colors"
+                            >
+                              <PauseCircle className="w-4 h-4 text-orange-600" />
+                              <div>
+                                <div className="font-medium text-orange-600 text-sm">Close Assignment</div>
+                                <div className="text-xs text-darkGrey/60">Stop accepting submissions</div>
+                              </div>
+                            </button>
+                          )}
+                          
+                          {assignment.status === 'closed' && (
+                            <button
+                              onClick={() => handlePublishAssignment(assignment.id)}
+                              className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-lightGrey transition-colors"
+                            >
+                              <PlayCircle className="w-4 h-4 text-green-600" />
+                              <div>
+                                <div className="font-medium text-green-600 text-sm">Reopen Assignment</div>
+                                <div className="text-xs text-darkGrey/60">Accept submissions again</div>
+                              </div>
+                            </button>
+                          )}
 
-                <div className="pt-2 border-t border-softGrey flex gap-2">
-                  {assignment.status === 'draft' && (
-                    <button
-                      onClick={() => handlePublishAssignment(assignment.id)}
-                      className="flex-1 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Publish
-                    </button>
-                  )}
-                  {assignment.status === 'published' && (
-                    <button
-                      onClick={() => handleCloseAssignment(assignment.id)}
-                      className="flex-1 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Close
-                    </button>
-                  )}
-                  <Link
-                    href={`/lms/Instructor_Portal/assignments/submissions/${assignment.id}`}
-                    className={`flex-1 py-1.5 text-sm text-center border rounded-lg transition-colors ${
-                      pendingGrading > 0
-                        ? 'border-amber-500 text-amber-600 hover:bg-amber-50'
-                        : 'border-darkRoyalBlue text-darkRoyalBlue hover:bg-darkRoyalBlue/5'
-                    }`}
-                  >
-                    {pendingGrading > 0 ? `Grade (${pendingGrading})` : 'View Submissions'}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+                          {/* Divider */}
+                          <div className="my-2 border-t border-softGrey"></div>
 
-      {filteredAssignments.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg border border-softGrey">
-          <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-          <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+                          {/* Delete Assignment */}
+                          <button
+                            onClick={() => handleDeleteAssignment(assignment.id)}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-red-50 transition-colors group"
+                          >
+                            <Trash2 className="w-4 h-4 text-brightRed" />
+                            <div>
+                              <div className="font-medium text-brightRed text-sm">Delete Assignment</div>
+                              <div className="text-xs text-darkGrey/60">Permanently remove</div>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-8 sm:py-12 bg-white rounded-lg border border-softGrey">
+          <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+          <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
             No Assignments Found
           </h3>
-          <p className="text-darkGrey/70 mb-6">
+          <p className="text-darkGrey/70 mb-6 text-sm sm:text-base">
             {searchTerm ? 'Try a different search term' : 'Create your first assignment for students'}
           </p>
           <Link
             href="/lms/Instructor_Portal/assignments/create"
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
             style={{ 
               backgroundColor: BRAND_COLORS.deepRed,
               color: BRAND_COLORS.white 

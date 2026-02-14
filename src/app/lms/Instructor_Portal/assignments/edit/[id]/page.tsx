@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Save, X, Plus, Trash2, Calendar } from 'lucide-react'
+import { Save, X, Plus, Trash2, Calendar, ArrowLeft } from 'lucide-react'
 /* eslint-disable */
 
 const BRAND_COLORS = {
@@ -172,9 +172,9 @@ export default function EditAssignmentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white p-6">
+      <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="animate-pulse">
-          <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
+          <div className="h-8 w-32 sm:w-48 bg-gray-200 rounded mb-4"></div>
           <div className="h-32 bg-gray-100 rounded-lg"></div>
         </div>
       </div>
@@ -186,28 +186,30 @@ export default function EditAssignmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link
                 href="/lms/Instructor_Portal/assignments"
                 className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors"
+                aria-label="Go back"
               >
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5 block sm:hidden" />
+                <X className="w-5 h-5 hidden sm:block" />
               </Link>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                   Edit Assignment
                 </h1>
-                <p className="text-darkGrey mt-1">
+                <p className="text-sm sm:text-base text-darkGrey mt-1">
                   Update assignment details
                 </p>
               </div>
             </div>
-            <div className="text-sm text-darkGrey/70">
+            <div className="text-xs sm:text-sm text-darkGrey/70 ml-9 sm:ml-0">
               Created: {new Date(assignment.createdAt).toLocaleDateString()}
             </div>
           </div>
@@ -216,8 +218,8 @@ export default function EditAssignmentPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+        <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6 mb-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
             Assignment Details
           </h2>
           
@@ -231,7 +233,8 @@ export default function EditAssignmentPage() {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="Enter assignment title"
               />
             </div>
 
@@ -243,7 +246,8 @@ export default function EditAssignmentPage() {
                 type="text"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="Brief overview of the assignment"
               />
             </div>
 
@@ -256,23 +260,24 @@ export default function EditAssignmentPage() {
                 value={formData.instructions}
                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                placeholder="Provide detailed instructions for students..."
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-darkGrey mb-2">
                   Due Date & Time *
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-darkGrey/50" />
                   <input
                     type="datetime-local"
                     required
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                    className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                   />
                 </div>
               </div>
@@ -289,21 +294,21 @@ export default function EditAssignmentPage() {
                   step="0.5"
                   value={formData.totalPoints}
                   onChange={(e) => setFormData({ ...formData, totalPoints: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                 />
               </div>
             </div>
 
             {/* Attachments */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <label className="block text-sm font-medium text-darkGrey">
                   Attachment URLs
                 </label>
                 <button
                   type="button"
                   onClick={handleAddAttachment}
-                  className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80"
+                  className="flex items-center justify-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80 py-1 px-2 rounded-lg hover:bg-darkRoyalBlue/5 w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4" />
                   Add URL
@@ -317,14 +322,15 @@ export default function EditAssignmentPage() {
                       type="url"
                       value={attachment}
                       onChange={(e) => handleAttachmentChange(index, e.target.value)}
-                      className="flex-1 px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                      className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
                       placeholder="https://example.com/resource.pdf"
                     />
                     {formData.attachments.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveAttachment(index)}
-                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors flex-shrink-0"
+                        aria-label="Remove attachment"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -341,7 +347,7 @@ export default function EditAssignmentPage() {
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as 'draft' | 'published' })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
               >
                 <option value="draft">Draft (Hidden from students)</option>
                 <option value="published">Published (Visible to students)</option>
@@ -351,51 +357,51 @@ export default function EditAssignmentPage() {
         </div>
 
         {/* Assignment Stats */}
-        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+        <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6 mb-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
             Assignment Statistics
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-lightGrey rounded-lg">
-              <div className="text-2xl font-bold text-darkNavy">{assignment.submissions || 0}</div>
-              <div className="text-sm text-darkGrey/70">Submissions</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="text-center p-3 sm:p-4 bg-lightGrey rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-darkNavy">{assignment.submissions || 0}</div>
+              <div className="text-xs sm:text-sm text-darkGrey/70">Submissions</div>
             </div>
-            <div className="text-center p-4 bg-lightGrey rounded-lg">
-              <div className="text-2xl font-bold text-darkNavy">{assignment.graded || 0}</div>
-              <div className="text-sm text-darkGrey/70">Graded</div>
+            <div className="text-center p-3 sm:p-4 bg-lightGrey rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-darkNavy">{assignment.graded || 0}</div>
+              <div className="text-xs sm:text-sm text-darkGrey/70">Graded</div>
             </div>
-            <div className="text-center p-4 bg-lightGrey rounded-lg">
-              <div className="text-2xl font-bold text-darkNavy">
+            <div className="text-center p-3 sm:p-4 bg-lightGrey rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-darkNavy">
                 {assignment.submissions ? Math.round((assignment.graded / assignment.submissions) * 100) : 0}%
               </div>
-              <div className="text-sm text-darkGrey/70">Grading Progress</div>
+              <div className="text-xs sm:text-sm text-darkGrey/70">Progress</div>
             </div>
-            <div className="text-center p-4 bg-lightGrey rounded-lg">
-              <div className="text-2xl font-bold text-darkNavy">{assignment.totalPoints}</div>
-              <div className="text-sm text-darkGrey/70">Total Points</div>
+            <div className="text-center p-3 sm:p-4 bg-lightGrey rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-darkNavy">{assignment.totalPoints}</div>
+              <div className="text-xs sm:text-sm text-darkGrey/70">Points</div>
             </div>
           </div>
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-between gap-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-4">
           <Link
             href={`/lms/Instructor_Portal/assignments/submissions/${assignmentId}`}
-            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+            className="w-full sm:w-auto px-4 sm:px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-center text-sm sm:text-base"
           >
             View Submissions
           </Link>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
             <Link
               href="/lms/Instructor_Portal/assignments"
-              className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-center text-sm sm:text-base"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 
@@ -403,13 +409,15 @@ export default function EditAssignmentPage() {
             >
               {saving ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="sm:hidden">Saving...</span>
+                  <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-5 h-5" />
-                  Update Assignment
+                  <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="sm:hidden">Update</span>
+                  <span className="hidden sm:inline">Update Assignment</span>
                 </>
               )}
             </button>

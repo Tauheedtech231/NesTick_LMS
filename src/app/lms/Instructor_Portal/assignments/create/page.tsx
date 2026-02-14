@@ -159,15 +159,15 @@ export default function CreateAssignmentPage() {
   }
 
   if (!instructor || !course) {
-    return <div className="min-h-screen bg-white p-6">Loading...</div>
+    return <div className="min-h-screen bg-white p-4 sm:p-6">Loading...</div>
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex items-center justify-between mb-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <Link
                 href="/lms/Instructor_Portal/assignments"
@@ -176,10 +176,10 @@ export default function CreateAssignmentPage() {
                 <X className="w-5 h-5" />
               </Link>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                   Create Assignment
                 </h1>
-                <p className="text-darkGrey mt-1">
+                <p className="text-sm sm:text-base text-darkGrey mt-1">
                   For: {course.title}
                 </p>
               </div>
@@ -190,8 +190,8 @@ export default function CreateAssignmentPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+        <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-6 mb-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
             Assignment Details
           </h2>
           
@@ -205,7 +205,7 @@ export default function CreateAssignmentPage() {
                 required
                 value={assignment.title}
                 onChange={(e) => setAssignment({ ...assignment, title: e.target.value })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                 placeholder="e.g., Final Project Submission"
               />
             </div>
@@ -218,7 +218,7 @@ export default function CreateAssignmentPage() {
                 type="text"
                 value={assignment.description}
                 onChange={(e) => setAssignment({ ...assignment, description: e.target.value })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                 placeholder="Short description of the assignment"
               />
             </div>
@@ -232,7 +232,7 @@ export default function CreateAssignmentPage() {
                 value={assignment.instructions}
                 onChange={(e) => setAssignment({ ...assignment, instructions: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                 placeholder="Provide detailed instructions for students..."
               />
               <p className="text-xs text-darkGrey/70 mt-1">
@@ -240,7 +240,7 @@ export default function CreateAssignmentPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-darkGrey mb-2">
                   Due Date & Time *
@@ -252,7 +252,7 @@ export default function CreateAssignmentPage() {
                     required
                     value={assignment.dueDate}
                     onChange={(e) => setAssignment({ ...assignment, dueDate: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                   />
                 </div>
               </div>
@@ -269,21 +269,21 @@ export default function CreateAssignmentPage() {
                   step="0.5"
                   value={assignment.totalPoints}
                   onChange={(e) => setAssignment({ ...assignment, totalPoints: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                 />
               </div>
             </div>
 
             {/* Attachments */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                 <label className="block text-sm font-medium text-darkGrey">
                   Attachment URLs (Optional)
                 </label>
                 <button
                   type="button"
                   onClick={handleAddAttachment}
-                  className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80"
+                  className="flex items-center gap-1 text-sm text-darkRoyalBlue hover:text-darkRoyalBlue/80 self-start sm:self-auto"
                 >
                   <Plus className="w-4 h-4" />
                   Add URL
@@ -292,19 +292,19 @@ export default function CreateAssignmentPage() {
               
               <div className="space-y-2">
                 {assignment.attachments.map((attachment, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="url"
                       value={attachment}
                       onChange={(e) => handleAttachmentChange(index, e.target.value)}
-                      className="flex-1 px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+                      className="flex-1 px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm sm:text-base"
                       placeholder={`https://example.com/resource-${index + 1}.pdf`}
                     />
                     {assignment.attachments.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveAttachment(index)}
-                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
+                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors self-end sm:self-auto"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -324,7 +324,7 @@ export default function CreateAssignmentPage() {
               <select
                 value={assignment.status}
                 onChange={(e) => setAssignment({ ...assignment, status: e.target.value as 'draft' | 'published' })}
-                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white text-sm sm:text-base"
               >
                 <option value="draft">Save as Draft (Hidden from students)</option>
                 <option value="published">Publish Now (Visible to students)</option>
@@ -334,17 +334,17 @@ export default function CreateAssignmentPage() {
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end gap-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
           <Link
             href="/lms/Instructor_Portal/assignments"
-            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium"
+            className="px-6 py-3 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium text-center"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             style={{ 
               backgroundColor: BRAND_COLORS.deepRed,
               color: BRAND_COLORS.white 
