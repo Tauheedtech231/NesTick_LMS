@@ -7,22 +7,16 @@ import {
   HiMail, 
   HiPhone, 
   HiCalendar, 
-  HiLocationMarker,
   HiAcademicCap,
-  HiBookOpen,
   HiCheckCircle,
-  HiLockClosed,
   HiPencilAlt,
   HiSave,
   HiX,
-  HiClock,
-  HiStar,
-  HiArrowRight,
-  HiRefresh
+  HiCamera,
+  HiTrash
 } from 'react-icons/hi';
-/* eslint-disable */
 
-// ✅ Brand Colors
+// Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -41,7 +35,6 @@ type User = {
   fullName: string;
   phone?: string;
   address?: string;
-  dateOfBirth?: string;
   role: 'student';
   course: string;
   courseId: string;
@@ -49,261 +42,126 @@ type User = {
   status: 'active' | 'inactive';
   paymentVerified: boolean;
   learnerId: string;
-  profileImage?: string;
-};
-
-type Course = {
-  id: string;
-  title: string;
-  description?: string;
-  category: string;
-  duration: string;
-  instructorId: string;
-  instructorName: string;
-  instructorEmail?: string;
-  instructorSpecialization?: string;
-  instructorRating?: number;
-  progress: number;
-  status: 'not_started' | 'in_progress' | 'completed';
-  enrolledDate: string;
-  studyHours: number;
-  price?: string;
-  image?: string;
-  rating?: number;
+  profileImage?: string; // new field for profile image URL
 };
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<User>>({});
-  const [activeTab, setActiveTab] = useState<'profile' | 'courses' | 'settings'>('profile');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
-  // ========== 🔥 FIXED: REAL INSTRUCTOR FIND KARO - SIRF TITLE SE! ==========
-  const findRealInstructorByCourseTitle = (courseTitle: string) => {
-    try {
-      if (!courseTitle) return null;
-      
-      console.log('\n🔍 SEARCHING REAL INSTRUCTOR FOR COURSE:', courseTitle);
-      
-      // Get all instructors
-      const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
-      
-      // 🔥 FILTER OUT DEMO INSTRUCTORS!
-      const realInstructors = allInstructors.filter((inst: any) => 
-        !inst.id?.includes('demo') && 
-        !inst.name?.includes('Demo') &&
-        !inst.name?.includes('demo') &&
-        inst.name !== 'Instructor' &&
-        inst.name !== 'Not Assigned'
-      );
-      
-      console.log(`📋 REAL Instructors available: ${realInstructors.length}`);
-      
-      // 🔥 SIRF TITLE SE MATCH KARO - ID SE NAHI!
-      const instructor = realInstructors.find((inst: any) => {
-        const instCourseTitle = inst.assignedCourse?.title?.toLowerCase().trim();
-        const searchTitle = courseTitle?.toLowerCase().trim();
-        const isMatch = instCourseTitle === searchTitle;
-        
-        if (isMatch) {
-          console.log(`✅ MATCH FOUND! REAL Instructor: ${inst.name} -> Course: ${inst.assignedCourse?.title}`);
-        }
-        
-        return isMatch;
-      });
-      
-      if (instructor) {
-        console.log(`✅ SELECTED: ${instructor.name} for course: ${courseTitle}`);
-        return instructor;
-      }
-      
-      // 🔥 FALLBACK: Assignments se instructor dhundho
-      console.log('⚠️ No direct match, checking assignments...');
-      const allAssignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]');
-      const assignment = allAssignments.find((a: any) => 
-        a.courseTitle?.toLowerCase().trim() === courseTitle?.toLowerCase().trim()
-      );
-      
-      if (assignment?.instructorId) {
-        const instructorFromAssignment = realInstructors.find((inst: any) => 
-          inst.id === assignment.instructorId
-        );
-        if (instructorFromAssignment) {
-          console.log(`✅ Found via assignments: ${instructorFromAssignment.name}`);
-          return instructorFromAssignment;
-        }
-      }
-      
-      console.log(`❌ NO REAL INSTRUCTOR found for course: ${courseTitle}`);
-      return null;
-    } catch (error) {
-      console.error('Error finding instructor:', error);
-      return null;
-    }
-  };
-
-  // ========== 🔥 FIXED: STUDENT COURSES LOAD KARO - SIRF TITLE SE! ==========
-  const loadStudentCourses = (studentData: User) => {
-    try {
-      console.log('\n========== 🚀 LOADING STUDENT COURSES ==========');
-      console.log('📋 Student:', studentData.fullName, '- Course:', studentData.course);
-      console.log('⚠️ WARNING: Student courseId "' + studentData.courseId + '" IGNORED! Using title match only.');
-
-      // 📚 Get all courses
-      const industrialCourses = JSON.parse(localStorage.getItem('industrial_training_courses') || '[]');
-      const lmsCourses = JSON.parse(localStorage.getItem('lms_courses') || '[]');
-      const allCourses = [...industrialCourses, ...lmsCourses];
-      
-      console.log('\n📚 Available courses in system:');
-      allCourses.forEach(c => console.log(`   - ${c.title} (${c.id})`));
-
-      // 🔥 FIX 1: SIRF TITLE SE COURSE DHUNDHO - STUDENT KI ID IGNORE KARO!
-      const studentCourseTitle = studentData.course; // "Pipe Fitter"
-      
-      const courseInfo = allCourses.find((c: any) => 
-        c.title?.toLowerCase().trim() === studentCourseTitle?.toLowerCase().trim()
-      );
-
-      if (!courseInfo) {
-        console.log('❌ Course not found:', studentCourseTitle);
-        return;
-      }
-
-      console.log(`\n✅ Course found: ${courseInfo.title} (${courseInfo.id})`);
-
-      // 🔥 FIX 2: REAL INSTRUCTOR DHUNDHO - SIRF TITLE SE!
-      const instructor = findRealInstructorByCourseTitle(courseInfo.title);
-      
-      // ✅ Create course with REAL instructor data
-      const newCourse: Course = {
-        id: courseInfo.id,                    // ✅ ORIGINAL ID: "pipe-fitter"
-        title: courseInfo.title,              // ✅ "Pipe Fitter"
-        description: courseInfo.description,
-        category: courseInfo.category || 'Technical Training',
-        duration: courseInfo.duration || '8 Weeks',
-        instructorId: instructor?.id || '',    // ✅ REAL INSTRUCTOR ID
-        instructorName: instructor?.name || 'Not Assigned', // ✅ REAL INSTRUCTOR NAME
-        instructorEmail: instructor?.email || '',
-        instructorSpecialization: instructor?.specialization || 'Technical Training',
-        instructorRating: instructor?.rating || 0,
-        progress: 0,
-        status: 'not_started' as const,
-        enrolledDate: studentData.registrationDate.split('T')[0],
-        studyHours: 0,
-        price: courseInfo.price,
-        image: courseInfo.image,
-        rating: courseInfo.rating
-      };
-
-      console.log('\n✅ COURSE CREATED WITH REAL INSTRUCTOR:');
-      console.log(`   Course: ${newCourse.title}`);
-      console.log(`   Instructor: ${newCourse.instructorName}`);
-      console.log(`   Instructor ID: ${newCourse.instructorId}`);
-      console.log(`   Course ID: ${newCourse.id}`);
-
-      // 💾 Save to localStorage
-      setCourses([newCourse]);
-      localStorage.setItem('studentCourses', JSON.stringify([newCourse]));
-      
-      console.log('\n✅ StudentCourses saved to localStorage!');
-
-    } catch (error) {
-      console.error('Error loading student courses:', error);
-    }
-  };
-
-  // ========== 📋 LOAD DATA ON MOUNT ==========
   useEffect(() => {
-    const loadData = () => {
+    const loadUser = () => {
       try {
         const currentUserStr = localStorage.getItem('currentUser');
-        
         if (currentUserStr) {
           const userData = JSON.parse(currentUserStr);
           setUser(userData);
           setEditForm({
             fullName: userData.fullName,
-            email: userData.email,
             phone: userData.phone || '',
-            address: userData.address || '',
-            dateOfBirth: userData.dateOfBirth || ''
+            address: userData.address || ''
           });
-
-          // 🔥 FIX 3: PEHLE CHECK KARO AGAR REAL INSTRUCTOR DATA HAI?
-          const studentCoursesStr = localStorage.getItem('studentCourses');
-          if (studentCoursesStr) {
-            const existingCourses = JSON.parse(studentCoursesStr);
-            
-            // Check if existing courses have REAL instructors
-            const hasRealInstructor = existingCourses.some((c: any) => 
-              !c.instructorName?.includes('Demo') && 
-              !c.instructorName?.includes('demo') &&
-              !c.instructorId?.includes('demo') &&
-              c.instructorName !== 'Not Assigned' &&
-              c.instructorName !== 'Instructor' &&
-              c.instructorId !== ''
-            );
-            
-            if (hasRealInstructor) {
-              console.log('\n✅ Using existing REAL instructor data from localStorage');
-              console.log('📚 Courses:', existingCourses.map((c: any) => ({
-                title: c.title,
-                instructor: c.instructorName
-              })));
-              setCourses(existingCourses);
-              setLoading(false);
-              return; // ✅ Don't reload - use existing data!
-            } else {
-              console.log('\n⚠️ Existing courses have DEMO instructors - reloading...');
-              localStorage.removeItem('studentCourses'); // Clear demo data
-            }
+          if (userData.profileImage) {
+            setImagePreview(userData.profileImage);
           }
-          
-          // Load fresh with REAL instructors
-          loadStudentCourses(userData);
         }
       } catch (error) {
-        console.error('Error loading profile data:', error);
+        console.error('Error loading user:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    loadData();
+    loadUser();
   }, []);
 
-  // ========== 🔄 REFRESH COURSES ==========
-  const refreshCourses = () => {
-    if (user) {
-      setRefreshing(true);
-      // Clear existing data and reload
-      localStorage.removeItem('studentCourses');
-      loadStudentCourses(user);
-      setTimeout(() => setRefreshing(false), 1000);
+  // ========== IMAGE UPLOAD HANDLER ==========
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Cloudinary via API route
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'profile_image');
+
+      const response = await fetch('/api/upload/cloudinary', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && user) {
+        // Update user object with new image URL
+        const updatedUser = { ...user, profileImage: result.data.secure_url };
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload image. Please try again.');
+      // Revert preview if upload fails
+      if (user?.profileImage) {
+        setImagePreview(user.profileImage);
+      } else {
+        setImagePreview('');
+      }
+    } finally {
+      setUploadingImage(false);
     }
   };
 
-  // ========== 💾 SAVE PROFILE ==========
-  const handleSaveProfile = () => {
+  const handleImageRemove = () => {
+    if (!user) return;
+    const updatedUser = { ...user, profileImage: '' };
+    setUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    setImagePreview('');
+  };
+
+  const handleSave = () => {
     if (!user) return;
     const updatedUser = { ...user, ...editForm };
     setUser(updatedUser);
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
     setIsEditing(false);
-    alert('Profile updated successfully!');
   };
 
-  const handleCancelEdit = () => {
+  const handleCancel = () => {
     if (user) {
       setEditForm({
         fullName: user.fullName,
-        email: user.email,
         phone: user.phone || '',
-        address: user.address || '',
-        dateOfBirth: user.dateOfBirth || ''
+        address: user.address || ''
       });
     }
     setIsEditing(false);
@@ -313,7 +171,8 @@ export default function ProfilePage() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent"
+          <div 
+            className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent"
             style={{ borderColor: BRAND_COLORS.deepRed }}
           ></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
@@ -333,35 +192,68 @@ export default function ProfilePage() {
     );
   }
 
-  const completedCourses = courses.filter(c => c.status === 'completed').length;
-  const inProgressCourses = courses.filter(c => c.status === 'in_progress').length;
-  const averageProgress = courses.length > 0 
-    ? Math.round(courses.reduce((sum, c) => sum + c.progress, 0) / courses.length)
-    : 0;
-
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Profile Header */}
+    <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {/* Profile Header with Image */}
       <div 
-        className="rounded-2xl p-4 sm:p-6 text-white w-full"
+        className="rounded-2xl p-6 text-white mb-6 relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-md bg-white">
-              <HiUser className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+        <div className="flex items-center gap-4">
+          {/* Profile Image with Upload */}
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden border-4 border-white/30">
+              {imagePreview ? (
+                <img 
+                  src={imagePreview} 
+                  alt={user.fullName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <HiUser className="w-10 h-10" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              )}
             </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold">{user.fullName}</h1>
-              <p className="text-xs sm:text-sm opacity-90">
-                {user.learnerId} • {user.course}
-              </p>
-              <p className="text-xs opacity-75 mt-1">
-                Member since {new Date(user.registrationDate).toLocaleDateString()}
-              </p>
+            {uploadingImage && (
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+              </div>
+            )}
+            {/* Image upload button (visible on hover) */}
+            <div className="absolute -bottom-2 -right-2 flex gap-1">
+              <label className="cursor-pointer bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleImageUpload(e.target.files[0]);
+                    }
+                  }}
+                  className="hidden"
+                  disabled={uploadingImage}
+                />
+                <HiCamera className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              </label>
+              {imagePreview && (
+                <button
+                  onClick={handleImageRemove}
+                  className="bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+                  disabled={uploadingImage}
+                >
+                  <HiTrash className="w-4 h-4 text-red-600" />
+                </button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div>
+            <h1 className="text-xl font-bold">{user.fullName}</h1>
+            <p className="text-sm opacity-90">{user.learnerId}</p>
+            <p className="text-xs opacity-75 mt-1">
+              Member since {new Date(user.registrationDate).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
             <span className={`px-2 py-1 rounded-full text-xs font-bold ${
               user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
             } text-white`}>
@@ -374,258 +266,135 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="border-b border-gray-200 overflow-x-auto">
-          <nav className="flex -mb-px">
+      {/* Profile Info Card */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Personal Information
+          </h2>
+          {!isEditing ? (
             <button
-              onClick={() => setActiveTab('profile')}
-              className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                activeTab === 'profile'
-                  ? 'border-deepRed text-deepRed'
-                  : 'border-transparent text-gray-500'
-              }`}
-              style={activeTab === 'profile' ? { borderColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.deepRed } : {}}
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
-              <HiUser className="w-4 h-4" /> Profile
+              <HiPencilAlt className="w-4 h-4" /> Edit
             </button>
-            <button
-              onClick={() => setActiveTab('courses')}
-              className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                activeTab === 'courses'
-                  ? 'border-deepRed text-deepRed'
-                  : 'border-transparent text-gray-500'
-              }`}
-              style={activeTab === 'courses' ? { borderColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.deepRed } : {}}
-            >
-              <HiBookOpen className="w-4 h-4" /> Courses ({courses.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`py-3 px-6 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                activeTab === 'settings'
-                  ? 'border-deepRed text-deepRed'
-                  : 'border-transparent text-gray-500'
-              }`}
-              style={activeTab === 'settings' ? { borderColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.deepRed } : {}}
-            >
-              <HiLockClosed className="w-4 h-4" /> Settings
-            </button>
-          </nav>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm"
+              >
+                <HiSave className="w-4 h-4" /> Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm"
+              >
+                <HiX className="w-4 h-4" /> Cancel
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="p-6">
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  Personal Information
-                </h2>
-                {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-                    style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                  >
-                    <HiPencilAlt className="w-4 h-4" /> Edit
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSaveProfile}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg"
-                    >
-                      <HiSave className="w-4 h-4" /> Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg"
-                    >
-                      <HiX className="w-4 h-4" /> Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Full Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiUser className="w-4 h-4" /> Full Name
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editForm.fullName || ''}
+                onChange={(e) => setEditForm({...editForm, fullName: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 focus:border-deepRed"
+              />
+            ) : (
+              <p className="font-medium">{user.fullName}</p>
+            )}
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                      <HiUser className="w-4 h-4" /> Full Name
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm.fullName || ''}
-                        onChange={(e) => setEditForm({...editForm, fullName: e.target.value})}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    ) : (
-                      <p className="font-medium">{user.fullName}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                      <HiMail className="w-4 h-4" /> Email
-                    </label>
-                    <p className="font-medium">{user.email}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                      <HiPhone className="w-4 h-4" /> Phone
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="tel"
-                        value={editForm.phone || ''}
-                        onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    ) : (
-                      <p className="font-medium">{user.phone || 'Not provided'}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                      <HiAcademicCap className="w-4 h-4" /> Learner ID
-                    </label>
-                    <p className="font-medium">{user.learnerId}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                      <HiCalendar className="w-4 h-4" /> Registration Date
-                    </label>
-                    <p className="font-medium">
-                      {new Date(user.registrationDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          {/* Email (read-only) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiMail className="w-4 h-4" /> Email
+            </label>
+            <p className="font-medium">{user.email}</p>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiPhone className="w-4 h-4" /> Phone
+            </label>
+            {isEditing ? (
+              <input
+                type="tel"
+                value={editForm.phone || ''}
+                onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 focus:border-deepRed"
+                placeholder="+92 XXX XXXXXXX"
+              />
+            ) : (
+              <p className="font-medium">{user.phone || 'Not provided'}</p>
+            )}
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiAcademicCap className="w-4 h-4" /> Address
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editForm.address || ''}
+                onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 focus:border-deepRed"
+                placeholder="Your address"
+              />
+            ) : (
+              <p className="font-medium">{user.address || 'Not provided'}</p>
+            )}
+          </div>
+
+          {/* Learner ID (read-only) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiAcademicCap className="w-4 h-4" /> Learner ID
+            </label>
+            <p className="font-medium">{user.learnerId}</p>
+          </div>
+
+          {/* Registration Date (read-only) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <HiCalendar className="w-4 h-4" /> Registration Date
+            </label>
+            <p className="font-medium">
+              {new Date(user.registrationDate).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        {/* Status info (read-only) */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600">Account Status</p>
+              <p className={`font-medium ${user.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                {user.status.toUpperCase()}
+              </p>
             </div>
-          )}
-
-          {/* ✅ FIXED: Courses Tab - REAL INSTRUCTOR SHOW HOGA! */}
-          {activeTab === 'courses' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  My Courses ({courses.length})
-                </h2>
-                <button
-                  onClick={refreshCourses}
-                  disabled={refreshing}
-                  className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2"
-                >
-                  <HiRefresh className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  {refreshing ? 'Refreshing...' : 'Refresh'}
-                </button>
-              </div>
-
-              {courses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {courses.map((course) => (
-                    <div key={course.id} className="bg-white rounded-xl border overflow-hidden hover:shadow-lg">
-                      {course.image && (
-                        <div className="h-40 overflow-hidden">
-                          <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-semibold px-2 py-1 rounded bg-teal-100 text-teal-800">
-                            {course.category}
-                          </span>
-                        </div>
-                        
-                        <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
-                        
-                        {/* ✅ FIXED: REAL INSTRUCTOR NAME SHOW HOGA! */}
-                        <div className="flex items-center gap-2 mb-3 p-2 rounded bg-gray-50">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <HiUser className="w-4 h-4 text-gray-600" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {course.instructorName !== 'Not Assigned' && !course.instructorName.includes('Demo')
-                                ? course.instructorName 
-                                : 'No instructor assigned'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {course.instructorSpecialization || 'Technical Training'}
-                              {course.instructorRating ? ` • ${course.instructorRating}★` : ''}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-gray-600 mb-3">
-                          <div className="flex items-center">
-                            <HiClock className="w-3 h-3 mr-1" />
-                            {course.duration}
-                          </div>
-                          <div>
-                            Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}
-                          </div>
-                        </div>
-
-                        <button
-                          className="w-full py-2 text-sm font-medium rounded-lg text-white flex items-center justify-center gap-2"
-                          style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                          onClick={() => window.location.href = `/lms/Student_Portal/courses/${course.id}`}
-                        >
-                          <span>Continue Learning</span>
-                          <HiArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 border rounded-lg">
-                  <HiBookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-medium mb-2">No Courses Enrolled</h3>
-                  <p className="text-gray-600 mb-4">You haven't enrolled in any courses yet.</p>
-                  <button
-                    className="px-6 py-2 rounded-lg text-white"
-                    style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                    onClick={() => window.location.href = '/courses'}
-                  >
-                    Browse Courses
-                  </button>
-                </div>
-              )}
+            <div>
+              <p className="text-sm text-gray-600">Payment</p>
+              <p className={`font-medium ${user.paymentVerified ? 'text-green-600' : 'text-yellow-600'}`}>
+                {user.paymentVerified ? 'Verified' : 'Pending'}
+              </p>
             </div>
-          )}
-
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                Account Settings
-              </h2>
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2">Account Status</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Status</span>
-                      <span className={`text-sm font-medium ${user.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
-                        {user.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Payment</span>
-                      <span className={`text-sm font-medium ${user.paymentVerified ? 'text-green-600' : 'text-yellow-600'}`}>
-                        {user.paymentVerified ? 'Verified' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

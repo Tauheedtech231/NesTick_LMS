@@ -979,7 +979,7 @@ export default function AddCoursePage() {
                   onChange={(e) => setCourseDetails({ ...courseDetails, title: e.target.value })}
                   className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20
                     ${step1Errors.title ? 'border-deepRed' : 'border-softGrey'}`}
-                  placeholder="e.g., Web Development Bootcamp"
+                  placeholder="e.g., Pipe Welding for Beginners"
                 />
                 {step1Errors.title && (
                   <p className="text-xs text-deepRed mt-1 flex items-center gap-1">
@@ -1155,12 +1155,7 @@ export default function AddCoursePage() {
                   <option value="">Select Category</option>
                   <option value="Technical Training">Technical Training</option>
                   <option value="Safety Training">Safety Training</option>
-                  <option value="Web Development">Web Development</option>
-                  <option value="Mobile Development">Mobile Development</option>
-                  <option value="Data Science">Data Science</option>
-                  <option value="Design">Design</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Business">Business</option>
+                 
                 </select>
                 {step1Errors.category && (
                   <p className="text-xs text-deepRed mt-1 flex items-center gap-1">
@@ -1484,11 +1479,12 @@ export default function AddCoursePage() {
                         </div>
 
                         <button
-                          onClick={() => handleAddQuestion(selectedSlideId)}
-                          className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium hover:bg-darkRoyalBlue/90 transition-colors"
-                        >
-                          Add Question
-                        </button>
+  onClick={() => handleAddQuestion(selectedSlideId)}
+  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+>
+  Add Question
+</button>
+
                       </div>
                     </div>
 

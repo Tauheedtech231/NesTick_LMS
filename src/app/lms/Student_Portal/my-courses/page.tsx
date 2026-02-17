@@ -330,11 +330,7 @@ export default function MyCoursesPage() {
                   {course.title}
                 </h3>
 
-                {/* Instructor */}
-                <div className="flex items-center text-xs text-gray-500 mb-2">
-                  <HiUser className="w-3 h-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">{course.instructor}</span>
-                </div>
+               
 
                 {/* Description */}
                 <p className="text-xs text-gray-600 mb-3 line-clamp-2">

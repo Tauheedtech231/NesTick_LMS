@@ -9,6 +9,7 @@ type User = {
   username: string;
   fullName: string;
   role: 'student';
+  profileImage?: string; // optional profile image URL
 };
 
 export default function Header() {
@@ -47,17 +48,38 @@ export default function Header() {
         {/* Right: User Info */}
         {user && (
           <div className="flex flex-col text-right lg:flex-row lg:items-center lg:gap-3">
-            {/* Mobile: Only name + email */}
-            <div className="lg:hidden text-right">
-              <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
-              <p className="text-xs text-gray-300 truncate">{user.email}</p>
+            {/* Mobile: Avatar + name + email */}
+            <div className="lg:hidden flex items-center gap-2 text-right">
+              {user.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt={user.fullName}
+                  className="w-8 h-8 rounded-full object-cover border border-white/30"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-800 rounded-full flex items-center justify-center">
+                  <HiUser className="w-4 h-4 text-white" />
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
+                <p className="text-xs text-gray-300 truncate">{user.email}</p>
+              </div>
             </div>
 
-            {/* Desktop: Full profile + logout */}
+            {/* Desktop: Avatar + name + email + logout */}
             <div className="hidden lg:flex lg:items-center lg:gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-800 rounded-full flex items-center justify-center">
-                <HiUser className="w-4 h-4 text-white" />
-              </div>
+              {user.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt={user.fullName}
+                  className="w-8 h-8 rounded-full object-cover border border-white/30"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-purple-800 rounded-full flex items-center justify-center">
+                  <HiUser className="w-4 h-4 text-white" />
+                </div>
+              )}
               <div className="text-left">
                 <p className="text-sm font-semibold text-white">{user.fullName}</p>
                 <p className="text-xs text-gray-300">{user.email}</p>
