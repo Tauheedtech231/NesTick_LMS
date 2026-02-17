@@ -6,17 +6,14 @@ import {
   HiBookOpen, 
   HiCheckCircle, 
   HiClock, 
-  HiDocumentText,
-  HiChartBar,
   HiArrowRight,
   HiUser,
-  HiStar,
-  HiAcademicCap
+  HiClipboardCheck
 } from 'react-icons/hi';
 import Link from 'next/link';
 /* eslint-disable */
 
-// ✅ Brand Colors
+// Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -28,7 +25,7 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// ✅ KPI Card Component
+// KPI Card Component
 const KPICard = ({ 
   title, 
   value, 
@@ -82,7 +79,7 @@ const KPICard = ({
   );
 };
 
-// ✅ Progress Bar Component
+// Progress Bar Component
 const ProgressBar = ({ 
   progress, 
   size = 'md', 
@@ -113,7 +110,7 @@ const ProgressBar = ({
   );
 };
 
-// ✅ Course Card Component - INSTRUCTOR HIDDEN
+// Course Card Component
 const CourseCard = ({ 
   id,
   title,
@@ -199,285 +196,218 @@ const CourseCard = ({
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [courses, setCourses] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalCourses: 0,
-    completedCourses: 0,
-    inProgressCourses: 0,
     totalStudyHours: 0,
-    pendingAssignments: 0,
-    upcomingQuizzes: 0,
-    assignmentsSubmitted: 0,
+    totalQuizzes: 0,
     quizzesAttempted: 0,
-    averageScore: 0
+    quizzesPassed: 0,
+    averageQuizScore: 0
   });
 
-  // ========== 🔥 REAL INSTRUCTOR LOGIC (KEPT INTERNALLY, NOT DISPLAYED) ==========
-  const findRealInstructorByCourseTitle = (courseTitle: string) => {
+  // Function to calculate real progress from completed slides
+  const calculateRealProgress = (courseId: string, studentId: string) => {
     try {
-      if (!courseTitle) return null;
-      const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
-      const realInstructors = allInstructors.filter((inst: any) => 
-        !inst.id?.includes('demo') && 
-        !inst.name?.includes('Demo') &&
-        !inst.name?.includes('demo') &&
-        inst.name !== 'Instructor' &&
-        inst.name !== 'Not Assigned'
-      );
-      const instructor = realInstructors.find((inst: any) => {
-        const instCourseTitle = inst.assignedCourse?.title?.toLowerCase().trim();
-        const searchTitle = courseTitle?.toLowerCase().trim();
-        return instCourseTitle === searchTitle;
-      });
-      return instructor || null;
+      const completedSlidesKey = `completedSlides_${studentId}_${courseId}`;
+      const completedSlidesStr = localStorage.getItem(completedSlidesKey);
+      const completedSlides = completedSlidesStr ? JSON.parse(completedSlidesStr) : [];
+      
+      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
+      const courseSlides = allSlides.filter((s: any) => s.courseId === courseId);
+      const totalSlides = courseSlides.length;
+      
+      const progress = totalSlides > 0 
+        ? Math.round((completedSlides.length / totalSlides) * 100) 
+        : 0;
+      
+      return {
+        progress,
+        completedSlides: completedSlides.length,
+        totalSlides
+      };
     } catch (error) {
-      console.error('Error finding instructor:', error);
-      return null;
+      console.error('Error calculating progress:', error);
+      return { progress: 0, completedSlides: 0, totalSlides: 0 };
     }
   };
 
-  // ========== 🔥 Load student courses (instructor data used internally only) ==========
+  // Function to load real quiz attempts
+  const loadQuizAttempts = (studentId: string, courseIds: string[]) => {
+    try {
+      const attemptsKey = `quizAttempts_${studentId}`;
+      const savedAttempts = localStorage.getItem(attemptsKey);
+      if (!savedAttempts) return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
+      
+      const attempts = JSON.parse(savedAttempts);
+      const courseAttempts = Object.values(attempts).filter((attempt: any) => 
+        courseIds.includes(attempt.courseId)
+      );
+      
+      const totalQuizzes = courseAttempts.length;
+      const passedQuizzes = courseAttempts.filter((a: any) => a.passed).length;
+      const averageScore = totalQuizzes > 0 
+        ? Math.round(courseAttempts.reduce((sum: number, a: any) => sum + a.score, 0) / totalQuizzes) 
+        : 0;
+      
+      return {
+        totalQuizzes,
+        attemptedQuizzes: totalQuizzes,
+        passedQuizzes,
+        averageScore
+      };
+    } catch (error) {
+      console.error('Error loading quiz attempts:', error);
+      return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
+    }
+  };
+
+  // Load student's enrolled courses with real progress
   const loadStudentCourses = (studentData: any) => {
     try {
-      console.log('🔍 Dashboard: Loading REAL courses for student:', studentData.email);
-      console.log('⚠️ Student courseId "' + studentData.courseId + '" IGNORED! Using title match only.');
+      console.log('Loading student courses for:', studentData.email);
 
-      const industrialCourses = JSON.parse(localStorage.getItem('industrial_training_courses') || '[]');
-      const lmsCourses = JSON.parse(localStorage.getItem('lms_courses') || '[]');
-      const allCourses = [...industrialCourses, ...lmsCourses];
+      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
       
-      let enrolledCourses = [];
-
-      // Check existing stored courses
-      const existingCoursesStr = localStorage.getItem('studentCourses');
-      if (existingCoursesStr) {
-        const existingCourses = JSON.parse(existingCoursesStr);
-        const hasRealInstructor = existingCourses.some((c: any) => 
-          !c.instructorName?.includes('Demo') && 
-          !c.instructorName?.includes('demo') &&
-          !c.instructorId?.includes('demo') &&
-          c.instructorName !== 'Not Assigned' &&
-          c.instructorName !== 'Instructor' &&
-          c.instructorId !== ''
-        );
-        if (hasRealInstructor) {
-          console.log('✅ Dashboard: Using existing REAL instructor data from localStorage');
-          setCourses(existingCourses);
-          loadAssignmentsAndQuizzes(existingCourses, studentData);
-          calculateStats(existingCourses);
-          return;
-        }
-      }
-
-      // Fresh load
-      const studentCourseTitle = studentData.course;
-      const courseInfo = allCourses.find((c: any) => 
-        c.title?.toLowerCase().trim() === studentCourseTitle?.toLowerCase().trim()
+      const studentEnrollments = enrollments.filter((e: any) => 
+        e.studentEmail?.toLowerCase() === studentData.email?.toLowerCase() ||
+        e.studentId === studentData.id ||
+        e.studentId === studentData.userId ||
+        e.studentId === studentData.learnerId
       );
 
-      if (courseInfo) {
-        const instructor = findRealInstructorByCourseTitle(courseInfo.title);
-        enrolledCourses.push({
-          id: courseInfo.id,
-          title: courseInfo.title,
-          category: courseInfo.category || 'Training',
-          duration: courseInfo.duration || 'N/A',
-          instructorId: instructor?.id || '',
-          instructorName: instructor?.name || 'Not Assigned', // kept for internal use
-          progress: 0,
-          status: 'not_started',
-          enrolledDate: studentData.registrationDate || new Date().toISOString(),
-          studyHours: 0,
-          price: courseInfo.price,
-          image: courseInfo.image,
-          rating: courseInfo.rating
+      let enrolledCourseIds = studentEnrollments.map((e: any) => e.courseId);
+      
+      const studentCoursesStr = localStorage.getItem('studentCourses');
+      if (studentCoursesStr) {
+        const studentCourses = JSON.parse(studentCoursesStr);
+        studentCourses.forEach((sc: any) => {
+          if (!enrolledCourseIds.includes(sc.id)) {
+            enrolledCourseIds.push(sc.id);
+          }
         });
       }
 
-      // Courses from credentials
-      const studentCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
-      const credentialCourses = studentCredentials
-        .filter((cred: any) => 
-          cred.studentEmail?.toLowerCase() === studentData.email?.toLowerCase() || 
-          cred.username?.toLowerCase() === studentData.username?.toLowerCase()
-        )
-        .map((cred: any) => {
-          const courseInfo = allCourses.find((c: any) => 
-            c.title?.toLowerCase().trim() === cred.course?.toLowerCase().trim()
-          );
-          if (courseInfo) {
-            const instructor = findRealInstructorByCourseTitle(courseInfo.title);
-            return {
-              id: courseInfo.id,
-              title: courseInfo.title,
-              category: courseInfo.category || 'Training',
-              duration: courseInfo.duration || 'N/A',
-              instructorId: instructor?.id || '',
-              instructorName: instructor?.name || 'Not Assigned',
-              progress: 0,
-              status: 'not_started',
-              enrolledDate: cred.sentDate || new Date().toISOString(),
-              studyHours: 0,
-              price: courseInfo.price,
-              image: courseInfo.image,
-              rating: courseInfo.rating
-            };
-          }
-          return null;
+      // Load real quiz attempts
+      const { totalQuizzes, attemptedQuizzes, passedQuizzes, averageScore } = 
+        loadQuizAttempts(studentData.id, enrolledCourseIds);
+
+      // Build enrolled courses with REAL progress
+      const enrolledCourses = enrolledCourseIds
+        .map((courseId: string) => {
+          const course = allCourses.find((c: any) => c.id === courseId);
+          if (!course) return null;
+
+          const { progress, completedSlides, totalSlides } = calculateRealProgress(courseId, studentData.id);
+
+          const hoursKey = `studyHours_${studentData.id}_${courseId}`;
+          const savedHours = localStorage.getItem(hoursKey);
+          const studyHours = savedHours ? parseInt(savedHours) : 0;
+
+          return {
+            id: course.id,
+            title: course.title,
+            description: course.description,
+            category: course.category || 'General',
+            duration: course.duration || 'Self-paced',
+            image: course.courseImage || course.image,
+            progress,
+            studyHours,
+            totalSlides,
+            completedSlides,
+            status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
+            enrolledDate: studentData.registrationDate || new Date().toISOString()
+          };
         })
         .filter(Boolean);
 
-      enrolledCourses = [...enrolledCourses, ...credentialCourses];
+      console.log('Enrolled courses with REAL progress:', 
+        enrolledCourses.map((c: any) => ({ 
+          title: c.title, 
+          progress: c.progress,
+          totalSlides: c.totalSlides,
+          completedSlides: c.completedSlides
+        }))
+      );
 
-      // Remove duplicates
-      const courseMap = new Map();
-      enrolledCourses.forEach(course => {
-        const existing = courseMap.get(course.id);
-        if (!existing) {
-          courseMap.set(course.id, course);
-        } else {
-          if (existing.instructorName.includes('Demo') || existing.instructorName === 'Not Assigned') {
-            if (!course.instructorName.includes('Demo') && course.instructorName !== 'Not Assigned') {
-              courseMap.set(course.id, course);
-            }
-          }
-        }
+      setCourses(enrolledCourses);
+
+      // Update stats with real data
+      setStats({
+        totalCourses: enrolledCourses.length,
+        totalStudyHours: enrolledCourses.reduce((sum: number, c: any) => sum + (c.studyHours || 0), 0),
+        totalQuizzes,
+        quizzesAttempted: attemptedQuizzes,
+        quizzesPassed: passedQuizzes,
+        averageQuizScore: averageScore
       });
-      
-      const uniqueCourses = Array.from(courseMap.values());
-      console.log('🎯 Dashboard: Final enrolled courses:', uniqueCourses.map(c => c.title));
-      setCourses(uniqueCourses);
-      localStorage.setItem('studentCourses', JSON.stringify(uniqueCourses));
-      loadAssignmentsAndQuizzes(uniqueCourses, studentData);
-      calculateStats(uniqueCourses);
+
+      // Store in localStorage with updated progress
+      localStorage.setItem('studentCourses', JSON.stringify(enrolledCourses));
 
     } catch (error) {
       console.error('Error loading student courses:', error);
     }
   };
 
-  // ✅ Load assignments and quizzes
-  const loadAssignmentsAndQuizzes = (studentCourses: any[], studentData: any) => {
+  // Function to load all dashboard data
+  const loadDashboardData = () => {
     try {
-      const studentEmail = studentData.email;
-      if (!studentEmail) return;
-
-      const allAssignments = JSON.parse(localStorage.getItem('instructor_assignments') || '[]');
-      const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]');
-      const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
-      
-      const studentAssignments: any[] = [];
-      const studentQuizzes: any[] = [];
-
-      studentCourses.forEach(course => {
-        const courseAssignments = allAssignments
-          .filter((assignment: any) => {
-            const matchesExactId = assignment.courseId === course.id;
-            const matchesCourseTitle = assignment.courseTitle?.toLowerCase() === course.title?.toLowerCase();
-            return (matchesExactId || matchesCourseTitle) && assignment.status === 'published';
-          })
-          .map((assignment: any) => {
-            const assignmentInstructor = allInstructors.find((inst: any) => 
-              inst.id === assignment.instructorId
-            );
-            return {
-              ...assignment,
-              courseTitle: course.title,
-              instructorName: assignmentInstructor?.name || assignment.instructorName || '',
-              studentStatus: 'not_started',
-              studentScore: null
-            };
-          });
-
-        const courseQuizzes = allQuizzes
-          .filter((quiz: any) => {
-            const matchesExactId = quiz.courseId === course.id;
-            const matchesCourseTitle = quiz.courseTitle?.toLowerCase() === course.title?.toLowerCase();
-            return (matchesExactId || matchesCourseTitle) && quiz.status === 'published';
-          })
-          .map((quiz: any) => {
-            const quizInstructor = allInstructors.find((inst: any) => 
-              inst.id === quiz.instructorId
-            );
-            return {
-              ...quiz,
-              courseTitle: course.title,
-              instructorName: quizInstructor?.name || quiz.instructorName || '',
-              studentStatus: 'not_attempted',
-              studentScore: null
-            };
-          });
-
-        studentAssignments.push(...courseAssignments);
-        studentQuizzes.push(...courseQuizzes);
-      });
-
-      const pendingAssignments = studentAssignments.filter(a => a.studentStatus === 'not_started').length;
-      const upcomingQuizzes = studentQuizzes.filter(q => q.studentStatus === 'not_attempted').length;
-
-      setAssignments(studentAssignments);
-      setQuizzes(studentQuizzes);
-      
-      setStats(prev => ({
-        ...prev,
-        pendingAssignments,
-        upcomingQuizzes,
-        assignmentsSubmitted: studentAssignments.filter(a => a.studentStatus === 'submitted' || a.studentStatus === 'graded').length,
-        quizzesAttempted: studentQuizzes.filter(q => q.studentStatus === 'completed').length
-      }));
-
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        const userData = JSON.parse(currentUserStr);
+        setUser(userData);
+        loadStudentCourses(userData);
+      }
     } catch (error) {
-      console.error('Error loading assignments and quizzes:', error);
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ✅ Calculate stats (no instructor display)
-  const calculateStats = (courseList: any[]) => {
-    const totalCourses = courseList.length;
-    const completedCourses = courseList.filter((c: any) => c.status === 'completed').length;
-    const inProgressCourses = courseList.filter((c: any) => c.status === 'in_progress').length;
-    const totalStudyHours = courseList.reduce((sum: number, c: any) => sum + (c.studyHours || 0), 0);
-
-    setStats(prev => ({
-      ...prev,
-      totalCourses,
-      completedCourses,
-      inProgressCourses,
-      totalStudyHours
-    }));
-  };
-
   useEffect(() => {
-    const loadDashboardData = () => {
-      try {
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (currentUserStr) {
-          const userData = JSON.parse(currentUserStr);
-          setUser(userData);
-          loadStudentCourses(userData);
-        }
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
+    loadDashboardData();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('completedSlides_') || 
+          e.key?.startsWith('quizAttempts_') ||
+          e.key === 'studentCourses' ||
+          e.key === 'courses') {
+        loadDashboardData();
       }
     };
 
-    loadDashboardData();
-  }, []);
+    const handleDataUpdate = () => {
+      loadDashboardData();
+    };
 
-  const getLastAccessedCourse = () => {
-    return courses
-      .filter(course => course.status !== 'completed')
-      .sort((a, b) => b.progress - a.progress)[0];
-  };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('courseProgressUpdated', handleDataUpdate);
+    window.addEventListener('quizAttempted', handleDataUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('courseProgressUpdated', handleDataUpdate);
+      window.removeEventListener('quizAttempted', handleDataUpdate);
+    };
+  }, []);
 
   const getOverallProgress = () => {
     if (courses.length === 0) return 0;
-    const totalProgress = courses.reduce((sum, course) => sum + (course.progress || 0), 0);
-    return Math.round(totalProgress / courses.length);
+    
+    let totalCompletedSlides = 0;
+    let totalSlides = 0;
+    
+    courses.forEach(course => {
+      totalCompletedSlides += course.completedSlides || 0;
+      totalSlides += course.totalSlides || 0;
+    });
+    
+    if (totalSlides === 0) return 0;
+    
+    return Math.round((totalCompletedSlides / totalSlides) * 100);
   };
 
   if (loading) {
@@ -494,14 +424,11 @@ export default function DashboardPage() {
     );
   }
 
-  const lastAccessedCourse = getLastAccessedCourse();
   const overallProgress = getOverallProgress();
-  const upcomingAssignmentsCount = assignments.filter(a => a.studentStatus === 'not_started').length;
-  const upcomingQuizzesCount = quizzes.filter(q => q.studentStatus === 'not_attempted').length;
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
-      {/* Welcome Section - Mobile Optimized */}
+      {/* Welcome Section */}
       <div 
         className="rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white"
         style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
@@ -527,8 +454,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards - Mobile Responsive Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           title="Courses"
           value={stats.totalCourses}
@@ -537,21 +464,12 @@ export default function DashboardPage() {
           size="sm"
         />
         <KPICard
-          title="Assignments"
-          value={stats.pendingAssignments}
-          icon={HiDocumentText}
-          color="bg-gradient-to-r from-red-500 to-red-600"
-          change={upcomingAssignmentsCount > 0 ? `${upcomingAssignmentsCount} due` : 'All done'}
-          changeType={upcomingAssignmentsCount > 0 ? 'negative' : 'positive'}
-          size="sm"
-        />
-        <KPICard
           title="Quizzes"
-          value={stats.upcomingQuizzes}
-          icon={HiChartBar}
+          value={stats.totalQuizzes}
+          icon={HiClipboardCheck}
           color="bg-gradient-to-r from-yellow-500 to-yellow-600"
-          change={upcomingQuizzesCount > 0 ? `${upcomingQuizzesCount} ready` : 'None'}
-          changeType={upcomingQuizzesCount > 0 ? 'negative' : 'positive'}
+          change={stats.quizzesAttempted > 0 ? `${stats.quizzesPassed} passed` : 'Not started'}
+          changeType={stats.quizzesAttempted > 0 ? 'positive' : 'neutral'}
           size="sm"
         />
         <KPICard
@@ -561,157 +479,98 @@ export default function DashboardPage() {
           color="bg-gradient-to-r from-green-500 to-green-600"
           size="sm"
         />
+        <KPICard
+          title="Study Hours"
+          value={stats.totalStudyHours}
+          icon={HiClock}
+          color="bg-gradient-to-r from-blue-500 to-blue-600"
+          size="sm"
+        />
       </div>
 
-      {/* Quick Access & Courses - Instructor completely hidden */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Quick Access - No instructor, no "My Courses" link */}
-        <div className="lg:col-span-1">
-          <div className="bg-transparent">
-            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 px-1" style={{ color: BRAND_COLORS.darkNavy }}>
-              Quick Access
-            </h2>
-            <div className="space-y-1">
-              {lastAccessedCourse ? (
-                <Link
-                  href={`/lms/Student_Portal/Materials`}
-                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-900">Materials</p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{lastAccessedCourse.title}</p>
-                    {/* 🔥 INSTRUCTOR LINE COMPLETELY REMOVED */}
-                  </div>
-                  <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: BRAND_COLORS.deepRed }} />
-                </Link>
-              ) : (
-                <div className="px-3 sm:px-4 py-2.5 sm:py-3">
-                  <p className="text-xs text-gray-500">No active courses</p>
-                </div>
-              )}
-
-              {stats.pendingAssignments > 0 && (
-                <Link
-                  href="/lms/Student_Portal/assignments"
-                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-900">Assignments</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{stats.pendingAssignments} pending</p>
-                  </div>
-                  <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: BRAND_COLORS.teal }} />
-                </Link>
-              )}
-
-              {stats.upcomingQuizzes > 0 && (
-                <Link
-                  href="/lms/Student_Portal/quizzes"
-                  className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg hover:bg-gray-50 transition-colors active:bg-gray-100"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-900">Quizzes</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{stats.upcomingQuizzes} ready</p>
-                  </div>
-                  <HiArrowRight className="w-4 h-4 flex-shrink-0 ml-2" style={{ color: '#8B5CF6' }} />
-                </Link>
-              )}
+      {/* Quiz Stats Row (only if quizzes exist) */}
+      {stats.totalQuizzes > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+            Quiz Performance
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+              <p className="text-xs text-gray-600">Attempted</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+                {stats.quizzesAttempted}/{stats.totalQuizzes}
+              </p>
+            </div>
+            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+              <p className="text-xs text-gray-600">Passed</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-green-600">
+                {stats.quizzesPassed}
+              </p>
+            </div>
+            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+              <p className="text-xs text-gray-600">Average Score</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                {stats.averageQuizScore}%
+              </p>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Courses List - Instructor hidden in CourseCard */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                My Courses ({courses.length})
-              </h2>
-              <div className="text-left sm:text-right">
-                <p className="text-xs text-gray-600">Overall Progress</p>
-                <span className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
-                  {overallProgress}%
-                </span>
-              </div>
-            </div>
-            
-            <div className="mb-6 sm:mb-8">
-              <ProgressBar progress={overallProgress} size="lg" animate={true} />
-            </div>
-
-            {courses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {courses.slice(0, 4).map(course => (
-                  <CourseCard
-                    key={course.id}
-                    id={course.id}
-                    title={course.title}
-                    category={course.category}
-                    progress={course.progress || 0}
-                    duration={course.duration}
-                    image={course.image}
-                    compact={true}
-                    // 🔥 instructorName prop removed from CourseCard
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 sm:py-12">
-                <HiBookOpen className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-                <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
-                  No courses enrolled
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
-                  You haven't enrolled in any courses yet.
-                </p>
-                <Link
-                  href="/courses"
-                  className="inline-flex px-5 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-colors"
-                  style={{ 
-                    backgroundColor: BRAND_COLORS.deepRed,
-                    color: BRAND_COLORS.white 
-                  }}
-                >
-                  Browse Courses
-                </Link>
-              </div>
-            )}
-            
-            {/* 🔥 "View all courses" link completely removed */}
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Summary - Mobile Optimized */}
+      {/* Courses List */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-        <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-          Learning Stats
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-xs text-gray-600">Study Hours</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-              {stats.totalStudyHours}
-            </p>
-          </div>
-          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-xs text-gray-600">Completed</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-              {stats.completedCourses}
-            </p>
-          </div>
-          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-xs text-gray-600">In Progress</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-              {stats.inProgressCourses}
-            </p>
-          </div>
-          <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <p className="text-xs text-gray-600">Submitted</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-              {stats.assignmentsSubmitted}
-            </p>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+            My Courses ({courses.length})
+          </h2>
+          <div className="text-left sm:text-right">
+            <p className="text-xs text-gray-600">Overall Progress</p>
+            <span className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+              {overallProgress}%
+            </span>
           </div>
         </div>
+        
+        <div className="mb-6 sm:mb-8">
+          <ProgressBar progress={overallProgress} size="lg" animate={true} />
+        </div>
+
+        {courses.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {courses.slice(0, 4).map(course => (
+              <CourseCard
+                key={course.id}
+                id={course.id}
+                title={course.title}
+                category={course.category}
+                progress={course.progress || 0}
+                duration={course.duration}
+                image={course.image}
+                compact={true}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 sm:py-12">
+            <HiBookOpen className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+            <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+              No courses enrolled
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
+              You haven't enrolled in any courses yet.
+            </p>
+            <Link
+              href="/courses"
+              className="inline-flex px-5 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-colors"
+              style={{ 
+                backgroundColor: BRAND_COLORS.deepRed,
+                color: BRAND_COLORS.white 
+              }}
+            >
+              Browse Courses
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

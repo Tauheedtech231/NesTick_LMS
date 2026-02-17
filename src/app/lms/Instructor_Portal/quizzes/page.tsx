@@ -184,13 +184,13 @@ export default function QuizzesPage() {
   const getStatusBadge = (status: Quiz['status']) => {
     switch (status) {
       case 'draft':
-        return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Draft</span>
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Draft</span>
       case 'published':
-        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Published</span>
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Published</span>
       case 'closed':
-        return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Closed</span>
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Closed</span>
       default:
-        return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{status}</span>
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">{status}</span>
     }
   }
 
@@ -226,7 +226,7 @@ export default function QuizzesPage() {
             </div>
             <Link
               href="/lms/Instructor_Portal/quizzes/create"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 
@@ -299,13 +299,13 @@ export default function QuizzesPage() {
               placeholder="Search quizzes by title or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'all' 
                   ? 'bg-darkRoyalBlue text-white' 
                   : 'bg-lightGrey text-darkGrey hover:bg-softGrey'
@@ -315,7 +315,7 @@ export default function QuizzesPage() {
             </button>
             <button
               onClick={() => setFilter('published')}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'published' 
                   ? 'bg-green-600 text-white' 
                   : 'bg-lightGrey text-darkGrey hover:bg-softGrey'
@@ -325,7 +325,7 @@ export default function QuizzesPage() {
             </button>
             <button
               onClick={() => setFilter('draft')}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'draft' 
                   ? 'bg-gray-600 text-white' 
                   : 'bg-lightGrey text-darkGrey hover:bg-softGrey'
@@ -335,7 +335,7 @@ export default function QuizzesPage() {
             </button>
             <button
               onClick={() => setFilter('closed')}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'closed' 
                   ? 'bg-red-600 text-white' 
                   : 'bg-lightGrey text-darkGrey hover:bg-softGrey'
@@ -347,168 +347,285 @@ export default function QuizzesPage() {
         </div>
       </div>
 
-      {/* Quizzes Table */}
-    <div className="bg-white rounded-lg border border-softGrey overflow-hidden mb-6">
-  {/* Table Header - Royal Blue */}
-  <div className="grid grid-cols-12 gap-2 sm:gap-3 p-3 sm:p-4 text-white text-xs sm:text-sm font-medium" 
-       style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
-    <div className="col-span-3 sm:col-span-3">Quiz Title</div>
-    <div className="col-span-2 sm:col-span-2">Details</div>
-    <div className="col-span-2 sm:col-span-2">Schedule</div>
-    <div className="col-span-2 sm:col-span-2">Performance</div>
-    <div className="col-span-1 sm:col-span-1">Status</div>
-    <div className="col-span-2 sm:col-span-2 text-right">Actions</div>
-  </div>
-
-  {/* Table Body */}
-  <div className="divide-y divide-softGrey">
-    {currentItems.map(quiz => (
-      <div key={quiz.id} className="grid grid-cols-12 gap-2 sm:gap-3 p-3 sm:p-4 items-center hover:bg-lightGrey/50 transition-colors relative">
-        {/* Quiz Title */}
-        <div className="col-span-3">
-          <div>
-            <div className="font-medium text-darkGrey text-xs sm:text-sm truncate">{quiz.title}</div>
-            <div className="text-[10px] sm:text-xs text-darkGrey/70 truncate hidden sm:block">{quiz.description}</div>
-          </div>
+      {/* Quizzes Table - Responsive Design */}
+      <div className="bg-white rounded-lg border border-softGrey overflow-hidden mb-6">
+        {/* Desktop Table Header */}
+        <div className="hidden md:grid grid-cols-12 gap-2 p-4 text-white text-sm font-medium" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
+          <div className="col-span-3">Quiz Title</div>
+          <div className="col-span-2">Details</div>
+          <div className="col-span-2">Schedule</div>
+          <div className="col-span-2">Performance</div>
+          <div className="col-span-1">Status</div>
+          <div className="col-span-2 text-right">Actions</div>
         </div>
 
-        {/* Details */}
-        <div className="col-span-2">
-          <div className="text-xs sm:text-sm">
-            <div>{quiz.duration} min</div>
-            <div className="text-[10px] sm:text-xs text-darkGrey/70 hidden sm:block">{quiz.totalQuestions} Q • {quiz.totalPoints} pts</div>
-            <div className="text-[10px] sm:text-xs text-darkGrey/70 sm:hidden">{quiz.totalQuestions}Q</div>
-          </div>
-        </div>
+        {/* Mobile/Tablet Cards */}
+        <div className="md:hidden space-y-3 p-3">
+          {currentItems.map(quiz => (
+            <div key={quiz.id} className="bg-white border border-softGrey rounded-lg p-3 relative">
+              {/* Header with Title and Status */}
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 pr-8">
+                  <h3 className="font-medium text-sm text-darkGrey">{quiz.title}</h3>
+                  <p className="text-xs text-darkGrey/70 mt-0.5 line-clamp-2">{quiz.description}</p>
+                </div>
+                {getStatusBadge(quiz.status)}
+              </div>
 
-        {/* Schedule */}
-        <div className="col-span-2">
-          <div className="text-xs sm:text-sm">
-            <div className="hidden sm:block text-xs">{new Date(quiz.startDate).toLocaleDateString()}</div>
-            <div className="text-[10px] sm:text-xs text-darkGrey/70 hidden sm:block">to {new Date(quiz.endDate).toLocaleDateString()}</div>
-            <div className="sm:hidden text-[10px]">
-              {new Date(quiz.startDate).toLocaleDateString().slice(0,5)}
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div>
+                  <span className="text-darkGrey/60">Duration:</span>
+                  <span className="ml-1 text-darkGrey font-medium">{quiz.duration}m</span>
+                </div>
+                <div>
+                  <span className="text-darkGrey/60">Questions:</span>
+                  <span className="ml-1 text-darkGrey font-medium">{quiz.totalQuestions}</span>
+                </div>
+                <div>
+                  <span className="text-darkGrey/60">Points:</span>
+                  <span className="ml-1 text-darkGrey font-medium">{quiz.totalPoints}</span>
+                </div>
+                <div>
+                  <span className="text-darkGrey/60">Attempts:</span>
+                  <span className="ml-1 text-darkGrey font-medium">{quiz.attempts}</span>
+                </div>
+              </div>
+
+              {/* Schedule and Score */}
+              <div className="flex items-center justify-between text-xs border-t border-softGrey pt-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-darkGrey/40" />
+                  <span className="text-darkGrey/70">{new Date(quiz.startDate).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BarChart className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="font-medium text-darkGrey">{quiz.averageScore}% avg</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="absolute top-3 right-3">
+                <button
+                  onClick={() => toggleMenu(quiz.id)}
+                  className="p-1.5 text-darkGrey hover:bg-lightGrey rounded-lg transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+
+                {/* Dropdown Menu */}
+                {openMenuId === quiz.id && (
+                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1 text-xs">
+                    <Link
+                      href={`/lms/Instructor_Portal/quizzes/submissions/${quiz.id}`}
+                      className="flex items-center gap-2 px-3 py-2 text-darkGrey hover:bg-lightGrey transition-colors"
+                      onClick={() => setOpenMenuId(null)}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Results
+                    </Link>
+                    <Link
+                      href={`/lms/Instructor_Portal/quizzes/edit/${quiz.id}`}
+                      className="flex items-center gap-2 px-3 py-2 text-darkGrey hover:bg-lightGrey transition-colors"
+                      onClick={() => setOpenMenuId(null)}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
+                    </Link>
+                    
+                    {quiz.status === 'draft' && (
+                      <button
+                        onClick={() => handlePublishQuiz(quiz.id)}
+                        className="flex items-center gap-2 px-3 py-2 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        Publish
+                      </button>
+                    )}
+                    
+                    {quiz.status === 'published' && (
+                      <button
+                        onClick={() => handleCloseQuiz(quiz.id)}
+                        className="flex items-center gap-2 px-3 py-2 text-orange-600 hover:bg-lightGrey transition-colors w-full text-left"
+                      >
+                        <PauseCircle className="w-3.5 h-3.5" />
+                        Close
+                      </button>
+                    )}
+                    
+                    {quiz.status === 'closed' && (
+                      <button
+                        onClick={() => handlePublishQuiz(quiz.id)}
+                        className="flex items-center gap-2 px-3 py-2 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        Reopen
+                      </button>
+                    )}
+                    
+                    <div className="border-t border-softGrey my-1"></div>
+                    
+                    <button
+                      onClick={() => handleDeleteQuiz(quiz.id)}
+                      className="flex items-center gap-2 px-3 py-2 text-brightRed hover:bg-lightGrey transition-colors w-full text-left"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Desktop Table Body */}
+        <div className="hidden md:block">
+          <div className="divide-y divide-softGrey">
+            {currentItems.map(quiz => (
+              <div key={quiz.id} className="grid grid-cols-12 gap-2 p-4 items-center hover:bg-lightGrey/50 transition-colors relative">
+                {/* Quiz Title */}
+                <div className="col-span-3">
+                  <div>
+                    <div className="font-medium text-darkGrey text-sm truncate">{quiz.title}</div>
+                    <div className="text-xs text-darkGrey/70 truncate">{quiz.description}</div>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="col-span-2">
+                  <div className="text-sm">
+                    <div>{quiz.duration} min</div>
+                    <div className="text-xs text-darkGrey/70">{quiz.totalQuestions} Q • {quiz.totalPoints} pts</div>
+                  </div>
+                </div>
+
+                {/* Schedule */}
+                <div className="col-span-2">
+                  <div className="text-sm">
+                    <div>{new Date(quiz.startDate).toLocaleDateString()}</div>
+                    <div className="text-xs text-darkGrey/70">to {new Date(quiz.endDate).toLocaleDateString()}</div>
+                  </div>
+                </div>
+
+                {/* Performance */}
+                <div className="col-span-2">
+                  <div className="text-sm">
+                    <div>{quiz.attempts} attempts</div>
+                    <div className="text-xs text-darkGrey/70">{quiz.averageScore}% avg</div>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-1">
+                  {getStatusBadge(quiz.status)}
+                </div>
+
+                {/* Actions */}
+                <div className="col-span-2 text-right relative" ref={menuRef}>
+                  <button
+                    onClick={() => toggleMenu(quiz.id)}
+                    className="p-2 text-darkGrey hover:bg-lightGrey rounded-lg transition-colors"
+                    title="Actions"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {openMenuId === quiz.id && (
+                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1.5 text-sm">
+                      <Link
+                        href={`/lms/Instructor_Portal/quizzes/submissions/${quiz.id}`}
+                        className="flex items-center gap-2 px-4 py-2.5 text-darkGrey hover:bg-lightGrey transition-colors"
+                        onClick={() => setOpenMenuId(null)}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Results
+                      </Link>
+                      <Link
+                        href={`/lms/Instructor_Portal/quizzes/edit/${quiz.id}`}
+                        className="flex items-center gap-2 px-4 py-2.5 text-darkGrey hover:bg-lightGrey transition-colors"
+                        onClick={() => setOpenMenuId(null)}
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit Quiz
+                      </Link>
+                      
+                      {quiz.status === 'draft' && (
+                        <button
+                          onClick={() => handlePublishQuiz(quiz.id)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Publish Quiz
+                        </button>
+                      )}
+                      
+                      {quiz.status === 'published' && (
+                        <button
+                          onClick={() => handleCloseQuiz(quiz.id)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-orange-600 hover:bg-lightGrey transition-colors w-full text-left"
+                        >
+                          <PauseCircle className="w-4 h-4" />
+                          Close Quiz
+                        </button>
+                      )}
+                      
+                      {quiz.status === 'closed' && (
+                        <button
+                          onClick={() => handlePublishQuiz(quiz.id)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Reopen Quiz
+                        </button>
+                      )}
+                      
+                      <div className="border-t border-softGrey my-1.5"></div>
+                      
+                      <button
+                        onClick={() => handleDeleteQuiz(quiz.id)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-brightRed hover:bg-lightGrey transition-colors w-full text-left"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Quiz
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Performance */}
-        <div className="col-span-2">
-          <div className="text-xs sm:text-sm">
-            <div>{quiz.attempts} att</div>
-            <div className="text-[10px] sm:text-xs text-darkGrey/70">{quiz.averageScore}% avg</div>
-          </div>
-        </div>
-
-        {/* Status */}
-        <div className="col-span-1">
-          {getStatusBadge(quiz.status)}
-        </div>
-
-        {/* Actions - 3 Dot Menu */}
-        <div className="col-span-2 text-right relative" ref={menuRef}>
-          <button
-            onClick={() => toggleMenu(quiz.id)}
-            className="p-1.5 sm:p-2 text-darkGrey hover:bg-lightGrey rounded-lg transition-colors"
-            title="Actions"
-          >
-            <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-
-          {/* Dropdown Menu */}
-          {openMenuId === quiz.id && (
-            <div className="absolute right-0 mt-1 w-44 sm:w-56 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1.5 text-xs sm:text-sm">
-              <Link
-                href={`/lms/Instructor_Portal/quizzes/submissions/${quiz.id}`}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-darkGrey hover:bg-lightGrey transition-colors w-full text-left"
-                onClick={() => setOpenMenuId(null)}
-              >
-                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                View Results
-              </Link>
-              <Link
-                href={`/lms/Instructor_Portal/quizzes/edit/${quiz.id}`}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-darkGrey hover:bg-lightGrey transition-colors w-full text-left"
-                onClick={() => setOpenMenuId(null)}
-              >
-                <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Edit Quiz
-              </Link>
-              
-              {quiz.status === 'draft' && (
-                <button
-                  onClick={() => handlePublishQuiz(quiz.id)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
-                >
-                  <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Publish Quiz
-                </button>
-              )}
-              
-              {quiz.status === 'published' && (
-                <button
-                  onClick={() => handleCloseQuiz(quiz.id)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-orange-600 hover:bg-lightGrey transition-colors w-full text-left"
-                >
-                  <PauseCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Close Quiz
-                </button>
-              )}
-              
-              {quiz.status === 'closed' && (
-                <button
-                  onClick={() => handlePublishQuiz(quiz.id)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-green-600 hover:bg-lightGrey transition-colors w-full text-left"
-                >
-                  <PlayCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Reopen Quiz
-                </button>
-              )}
-              
-              <div className="border-t border-softGrey my-1.5"></div>
-              
+        {/* Pagination */}
+        {filteredQuizzes.length > 0 && (
+          <div className="flex items-center justify-between p-3 sm:p-4 border-t border-softGrey bg-lightGrey/50 text-xs sm:text-sm">
+            <div className="text-darkGrey/70">
+              {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredQuizzes.length)} of {filteredQuizzes.length}
+            </div>
+            <div className="flex gap-2">
               <button
-                onClick={() => handleDeleteQuiz(quiz.id)}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-brightRed hover:bg-lightGrey transition-colors w-full text-left"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 sm:p-2 rounded-lg border border-softGrey hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Delete Quiz
+                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+              <span className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border border-softGrey text-xs sm:text-sm">
+                {currentPage}/{totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 sm:p-2 rounded-lg border border-softGrey hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    ))}
-  </div>
-
-  {/* Pagination */}
-  {filteredQuizzes.length > 0 && (
-    <div className="flex items-center justify-between p-3 sm:p-4 border-t border-softGrey bg-lightGrey/50 text-xs sm:text-sm">
-      <div className="text-darkGrey/70">
-        {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredQuizzes.length)} of {filteredQuizzes.length}
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="p-1.5 sm:p-2 rounded-lg border border-softGrey hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-        </button>
-        <span className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border border-softGrey">
-          {currentPage}/{totalPages}
-        </span>
-        <button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          className="p-1.5 sm:p-2 rounded-lg border border-softGrey hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
-        </button>
-      </div>
-    </div>
-  )}
-</div>
 
       {/* Empty State */}
       {filteredQuizzes.length === 0 && (

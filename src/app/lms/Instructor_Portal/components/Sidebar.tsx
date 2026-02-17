@@ -15,13 +15,11 @@ import {
 const navItems = [
   { href: '/lms/Instructor_Portal/dashboard', icon: HiHome, label: 'Dashboard' },
   { href: '/lms/Instructor_Portal/courses', icon: HiBookOpen, label: 'Courses' },
-
-  { href: '/lms/Instructor_Portal/materials', icon: HiCollection, label: 'Materials' },
-  { href: '/lms/Instructor_Portal/assignments', icon: HiClipboardList, label: 'Assignments' },
-  { href: '/lms/Instructor_Portal/quizzes', icon: HiQuestionMarkCircle, label: 'Quizzes' },
-
+  { href: '/lms/Instructor_Portal/quizzes', icon: HiQuestionMarkCircle, label: 'Mock Quizzes' },
+  { href: '/lms/Instructor_Portal/students', icon: HiClipboardList, label: 'Students' },
   { href: '/lms/Instructor_Portal/profile', icon: HiUser, label: 'Profile' },
 ];
+
 /* eslint-disable */
 
 export default function Sidebar() {

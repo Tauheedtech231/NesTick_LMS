@@ -4,15 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
-  
   HiCheckCircle,
   HiArrowLeft,
-
   HiOutlineCash,
- 
   HiOutlineShieldCheck,
   HiOutlineFire as HiOutlineWrench,
-  
 } from "react-icons/hi";
 import Link from "next/link";
 import { IoMdArrowDropright } from "react-icons/io";
@@ -31,8 +27,8 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// Course Data
-const coursesData = {
+// Published Courses Data (fallback)
+const publishedCoursesData = {
   'pipe-fitter': {
     id: 'pipe-fitter',
     title: 'Pipe Fitter',
@@ -166,45 +162,122 @@ const coursesData = {
   }
 };
 
-// Instructor Data
-const instructors = [
-  {
-    name: 'Engr. Ali Raza',
-    role: 'Senior Pipe Fitting Expert',
-    experience: '15 years',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
-    description: 'Former chief engineer at Pakistan Steel Mills'
-  },
-  {
-    name: 'Ms. Ayesha Khan',
-    role: 'Safety Compliance Officer',
-    experience: '12 years',
-    image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
-    description: 'OSHA certified safety professional'
-  },
-  {
-    name: 'Engr. Muhammad Shahid',
-    role: 'Welding Specialist',
-    experience: '18 years',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
-    description: 'International welding certification holder'
-  }
-];
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  longDescription?: string;
+  duration: string;
+  students: string;
+  level: string;
+  schedule?: string;
+  location?: string;
+  startDate?: string;
+  highlights: string[];
+  curriculum: string[];
+  requirements: string[];
+  price: string;
+  originalPrice?: string;
+  savings?: string;
+  icon?: any;
+  color?: string;
+  image?: string;          // from published courses
+  courseImage?: string;    // from instructor courses (localStorage)
+  featured?: boolean;
+  rating?: number;
+  reviews?: number;
+  studentsTrained?: number;
+}
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
- 
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const courseId = params.id as string;
-  const course = coursesData[courseId as keyof typeof coursesData];
 
   useEffect(() => {
-    if (course) {
-      setSelectedCourse(course);
+    loadCourse();
+  }, [courseId]);
+
+  const loadCourse = () => {
+    try {
+      // First, check localStorage for instructor-created courses
+      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      const localCourse = allCourses.find((c: any) => c.id === courseId);
+
+      if (localCourse) {
+        // Map localStorage course to expected structure
+        const mappedCourse: Course = {
+          id: localCourse.id,
+          title: localCourse.title,
+          description: localCourse.description,
+          longDescription: localCourse.longDescription || localCourse.description,
+          duration: localCourse.duration || 'TBD',
+          students: localCourse.studentCapacity ? `Max ${localCourse.studentCapacity} per batch` : 'Limited seats',
+          level: localCourse.level || 'All Levels',
+          schedule: localCourse.schedule || 'Flexible',
+          location: localCourse.location || 'Online',
+          startDate: localCourse.startDate || 'Enroll now',
+          highlights: localCourse.highlights || [
+            'Comprehensive curriculum',
+            'Hands-on training',
+            'Expert instructors',
+            'Certification included'
+          ],
+          curriculum: localCourse.curriculum || [
+            'Introduction to the course',
+            'Core concepts',
+            'Practical applications',
+            'Final project'
+          ],
+          requirements: localCourse.requirements || [
+            'No prior experience required',
+            'Basic computer skills',
+            'Access to internet'
+          ],
+          price: localCourse.price || 'Contact for pricing',
+          originalPrice: localCourse.originalPrice,
+          savings: localCourse.savings,
+          courseImage: localCourse.courseImage || localCourse.image, // prefer courseImage
+          featured: localCourse.featured || false,
+          rating: localCourse.rating || 4.5,
+          reviews: localCourse.reviews || 0,
+          studentsTrained: localCourse.studentsTrained || 0
+        };
+        setCourse(mappedCourse);
+      } else {
+        // Fallback to published courses
+        const publishedCourse = publishedCoursesData[courseId as keyof typeof publishedCoursesData];
+        if (publishedCourse) {
+          setCourse(publishedCourse);
+        } else {
+          setCourse(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading course:', error);
+      setCourse(null);
+    } finally {
+      setLoading(false);
     }
-  }, [course]);
+  };
+
+  const handleEnrollNow = () => {
+    router.push(`/courses/${courseId}/enrollment`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-deepRed mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading course details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -219,9 +292,8 @@ export default function CourseDetailPage() {
     );
   }
 
-  const handleEnrollNow = () => {
-    router.push(`/courses/${courseId}/enrollment`);
-  };
+  // Determine image source: use courseImage if available (from localStorage), else image (from published)
+  const courseImageUrl = course.courseImage || course.image || '/placeholder-course.jpg';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">
@@ -238,151 +310,140 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Course Hero Section */}
-       <motion.section
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.6 }}
-  className="mb-12"
->
-  <div className=" bg-white shadow-md rounded-2xl  border border-gray-100 overflow-hidden md:flex">
-    {/* Course Image */}
-    <div className="md:w-2/5 relative">
-      <img
-        src={course.image}
-        alt={course.title}
-        className="w-full h-64 md:h-full object-cover"
-      />
-      
-    </div>
-
-    {/* Course Info */}
-<div className="md:w-3/5 p-6 flex flex-col justify-between">
-  {/* Course Header */}
-  <div>
-    <header className="mb-4">
-      <h1
-        className="text-3xl font-bold mb-2"
-        style={{ color: BRAND_COLORS.darkNavy }}
-      >
-        {course.title}
-      </h1>
-      <p className="text-base text-gray-700">{course.description}</p>
-    </header>
-
-    {/* Stats List with subtle dots */}
-    <ul className="mb-4 text-gray-700 text-sm space-y-1">
-      {[
-        { label: 'Duration', value: course.duration },
-        { label: 'Class Size', value: course.students },
-        { label: 'Level', value: course.level },
-        { label: 'Starts', value: course.startDate },
-      ].map((stat) => (
-        <li
-          key={stat.label}
-          className="flex items-center gap-2 before:content-['•'] before:text-gray-400 before:mr-2"
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12"
         >
-          <span className="font-medium">{stat.value}</span>
-          <span className="text-gray-500">{stat.label}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
+          <div className="bg-white shadow-md rounded-2xl border border-gray-100 overflow-hidden md:flex">
+            {/* Course Image */}
+            <div className="md:w-2/5 relative">
+              <img
+                src={courseImageUrl}
+                alt={course.title}
+                className="w-full h-64 md:h-full object-cover"
+              />
+            </div>
 
-  {/* Price & CTA */}
-  <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-    <div>
-      <div className="flex items-baseline gap-2 mb-1">
-        <span
-          className="text-2xl font-bold"
-          style={{ color: BRAND_COLORS.deepRed }}
-        >
-          {course.price}
-        </span>
-        {course.originalPrice && (
-          <span className="text-sm text-gray-500 line-through">
-            {course.originalPrice}
-          </span>
-        )}
-      </div>
+            {/* Course Info */}
+            <div className="md:w-3/5 p-6 flex flex-col justify-between">
+              <div>
+                <header className="mb-4">
+                  <h1
+                    className="text-3xl font-bold mb-2"
+                    style={{ color: BRAND_COLORS.darkNavy }}
+                  >
+                    {course.title}
+                  </h1>
+                  <p className="text-base text-gray-700">{course.description}</p>
+                </header>
 
-      <div className="flex flex-wrap items-center gap-1 text-xs text-gray-600">
-        {course.savings && (
-          <span
-            className="px-2 py-0.5 rounded-full font-semibold"
-            style={{
-              backgroundColor: `${BRAND_COLORS.deepRed}15`,
-              color: BRAND_COLORS.deepRed,
-            }}
-          >
-            {course.savings}
-          </span>
-        )}
-        <span>{course.studentsTrained.toLocaleString()} students trained</span>
-      </div>
-    </div>
+                <ul className="mb-4 text-gray-700 text-sm space-y-1">
+                  {[
+                    { label: 'Duration', value: course.duration },
+                    { label: 'Class Size', value: course.students },
+                    { label: 'Level', value: course.level },
+                    { label: 'Starts', value: course.startDate },
+                  ].map((stat) => (
+                    <li
+                      key={stat.label}
+                      className="flex items-center gap-2 before:content-['•'] before:text-gray-400 before:mr-2"
+                    >
+                      <span className="font-medium">{stat.value}</span>
+                      <span className="text-gray-500">{stat.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-    <button
-      onClick={handleEnrollNow}
-      className="px-6 py-3 rounded-lg font-bold text-base shadow transition-transform duration-200 transform hover:scale-105 active:scale-95"
-      style={{
-        backgroundColor: BRAND_COLORS.deepRed,
-        color: BRAND_COLORS.white,
-      }}
-    >
-      Enroll Now
-    </button>
-  </div>
-</div>
+              {/* Price & CTA */}
+              <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span
+                      className="text-2xl font-bold"
+                      style={{ color: BRAND_COLORS.deepRed }}
+                    >
+                      {course.price}
+                    </span>
+                    {course.originalPrice && (
+                      <span className="text-sm text-gray-500 line-through">
+                        {course.originalPrice}
+                      </span>
+                    )}
+                  </div>
 
+                  <div className="flex flex-wrap items-center gap-1 text-xs text-gray-600">
+                    {course.savings && (
+                      <span
+                        className="px-2 py-0.5 rounded-full font-semibold"
+                        style={{
+                          backgroundColor: `${BRAND_COLORS.deepRed}15`,
+                          color: BRAND_COLORS.deepRed,
+                        }}
+                      >
+                        {course.savings}
+                      </span>
+                    )}
+                    <span>{course.studentsTrained?.toLocaleString() || 0} students trained</span>
+                  </div>
+                </div>
 
-
-  </div>
-</motion.section>
-
+                <button
+                  onClick={handleEnrollNow}
+                  className="px-6 py-3 rounded-lg font-bold text-base shadow transition-transform duration-200 transform hover:scale-105 active:scale-95"
+                  style={{
+                    backgroundColor: BRAND_COLORS.deepRed,
+                    color: BRAND_COLORS.white,
+                  }}
+                >
+                  Enroll Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.section>
 
         {/* Course Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           {/* Left Column - Curriculum */}
           <div className="lg:col-span-2">
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.2 }}
-  className="rounded-2xl p-8 border border-gray-100"
->
-  <h2
-    className="text-2xl font-bold mb-6 flex items-center"
-    style={{ color: BRAND_COLORS.darkNavy }}
-  >
-    <HiCheckCircle className="w-6 h-6 mr-3" style={{ color: BRAND_COLORS.darkNavy }} />
-    Course Curriculum
-  </h2>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-2xl p-8 border border-gray-100"
+            >
+              <h2
+                className="text-2xl font-bold mb-6 flex items-center"
+                style={{ color: BRAND_COLORS.darkNavy }}
+              >
+                <HiCheckCircle className="w-6 h-6 mr-3" style={{ color: BRAND_COLORS.darkNavy }} />
+                Course Curriculum
+              </h2>
 
-  <div className="space-y-4">
-    {course.curriculum.map((item, index) => (
-      <div key={index} className="flex items-start gap-3">
-        {/* Check-circle for curriculum */}
-        <IoMdArrowDropright className="text-blue-900 w-6 h-6 mt-1 flex-shrink-0" />
-        {/* Curriculum text */}
-        <span className="text-gray-700 text-base">{item}</span>
-      </div>
-    ))}
-  </div>
-</motion.div>
-
-
+              <div className="space-y-4">
+                {course.curriculum.map((item, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <IoMdArrowDropright className="text-blue-900 w-6 h-6 mt-1 flex-shrink-0" />
+                    <span className="text-gray-700 text-base">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
 
             {/* Highlights */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className=" rounded-2xl  p-8 border border-gray-100"
+              className="rounded-2xl p-8 border border-gray-100 mt-6"
             >
               <h2 className="text-2xl font-bold mb-6 flex items-center"
                 style={{ color: BRAND_COLORS.darkNavy }}>
-                <HiCheckCircle className="w-6 h-6 mr-3" style={{ color: course.color }} />
-                What You'll Learn
+                <HiCheckCircle className="w-6 h-6 mr-3" style={{ color: course.color || BRAND_COLORS.teal }} />
+                What You&apos;ll Learn
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {course.highlights.map((highlight, index) => (
@@ -395,67 +456,63 @@ export default function CourseDetailPage() {
             </motion.div>
           </div>
 
-       {/* Right Column - Sidebar */}
-<div className="space-y-6">
-  {/* Course Details Card */}
- <motion.div
-  initial={{ opacity: 0, y: 15 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.2 }}
-  className="rounded-2xl shadow-md p-6 border border-gray-100"
->
-  <h3 className="text-xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-    Course Details
-  </h3>
-  <ul className="space-y-3 text-gray-700 text-base">
-    <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
-      <div>
-        <div className="font-medium">{course.schedule}</div>
-        <div className="text-gray-500">Schedule</div>
-      </div>
-    </li>
-    <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
-      <div>
-        <div className="font-medium">{course.location}</div>
-        <div className="text-gray-500">Location</div>
-      </div>
-    </li>
-    <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
-      <div>
-        <div className="font-medium">English & Urdu</div>
-        <div className="text-gray-500">Language</div>
-      </div>
-    </li>
-  </ul>
-</motion.div>
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Course Details Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-2xl shadow-md p-6 border border-gray-100"
+            >
+              <h3 className="text-xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+                Course Details
+              </h3>
+              <ul className="space-y-3 text-gray-700 text-base">
+                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+                  <div>
+                    <div className="font-medium">{course.schedule}</div>
+                    <div className="text-gray-500">Schedule</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+                  <div>
+                    <div className="font-medium">{course.location}</div>
+                    <div className="text-gray-500">Location</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+                  <div>
+                    <div className="font-medium">English & Urdu</div>
+                    <div className="text-gray-500">Language</div>
+                  </div>
+                </li>
+              </ul>
+            </motion.div>
 
-
-  {/* Requirements Card */}
-<motion.div
-  initial={{ opacity: 0, y: 15 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.3 }}
-  className="rounded-2xl shadow-md p-6 border border-gray-100"
->
-  <h3 className="text-xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-    Requirements
-  </h3>
-  <ul className="space-y-3 text-gray-700 text-base">
-    {course.requirements.map((req, index) => (
-      <li
-        key={index}
-        className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold"
-      >
-        {req}
-      </li>
-    ))}
-  </ul>
-</motion.div>
-
-</div>
-
+            {/* Requirements Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="rounded-2xl shadow-md p-6 border border-gray-100"
+            >
+              <h3 className="text-xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+                Requirements
+              </h3>
+              <ul className="space-y-3 text-gray-700 text-base">
+                {course.requirements.map((req, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold"
+                  >
+                    {req}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </div>
         </div>
-
       </div>
     </div>
   );

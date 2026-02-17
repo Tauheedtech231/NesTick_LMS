@@ -5,11 +5,14 @@ import { Bell, HelpCircle, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 /* eslint-disable */
+
 export default function Header() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,6 +22,7 @@ export default function Header() {
         const userData = localStorage.getItem('currentUser');
         const instructorUsers = JSON.parse(localStorage.getItem('instructorUsers') || '[]');
         const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
+        const instructorProfiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
 
         if (userData) {
           const user = JSON.parse(userData);
@@ -32,6 +36,11 @@ export default function Header() {
               isDemoAccount: true,
               initials: 'DI'
             });
+            // Check for demo profile picture
+            const demoProfile = instructorProfiles.find((p: any) => p.email === 'instructor@gmail.com');
+            if (demoProfile?.profilePicture) {
+              setProfilePicture(demoProfile.profilePicture);
+            }
           }
           // If it's a real instructor from instructorUsers
           else if (user.role === 'instructor') {
@@ -46,6 +55,15 @@ export default function Header() {
               instr.email === user.email ||
               (instructorUser && instr.id === instructorUser.id)
             );
+            
+            // Find profile picture from instructor_profiles
+            const instructorProfile = instructorProfiles.find((p: any) => 
+              p.email === user.email || p.userId === user.id || p.userId === user.instructorId
+            );
+            
+            if (instructorProfile?.profilePicture) {
+              setProfilePicture(instructorProfile.profilePicture);
+            }
             
             // Determine name and initials
             let name = user.name || 'Instructor';
@@ -72,7 +90,8 @@ export default function Header() {
               isDemoAccount: false,
               instructorId: user.instructorId,
               instructorDetails,
-              initials
+              initials,
+              profile: instructorProfile
             });
           }
         } else {
@@ -90,6 +109,11 @@ export default function Header() {
                 isDemoAccount: true,
                 initials: 'DI'
               });
+              // Check for demo profile picture
+              const demoProfile = instructorProfiles.find((p: any) => p.email === 'instructor@gmail.com');
+              if (demoProfile?.profilePicture) {
+                setProfilePicture(demoProfile.profilePicture);
+              }
             } else {
               // Try to find real instructor
               const instructorUser = instructorUsers.find((instr: any) => 
@@ -101,6 +125,15 @@ export default function Header() {
                   instr.id === instructorUser.id
                 );
                 
+                // Find profile picture
+                const instructorProfile = instructorProfiles.find((p: any) => 
+                  p.email === lastLogin.email || p.userId === instructorUser.id
+                );
+                
+                if (instructorProfile?.profilePicture) {
+                  setProfilePicture(instructorProfile.profilePicture);
+                }
+                
                 const name = instructorDetails?.name || instructorUser.name || lastLogin.email.split('@')[0];
                 const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
                 
@@ -111,7 +144,8 @@ export default function Header() {
                   isDemoAccount: false,
                   instructorId: instructorUser.id,
                   instructorDetails,
-                  initials
+                  initials,
+                  profile: instructorProfile
                 });
               }
             }
@@ -134,16 +168,24 @@ export default function Header() {
 
     fetchCurrentUser();
 
-    // Listen for storage changes (in case user logs out/in from another tab)
+    // Listen for storage changes (in case user updates profile picture)
     const handleStorageChange = () => {
       fetchCurrentUser();
+      // Also check for updated profile picture
+      const instructorProfiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
+      if (currentUser?.email) {
+        const updatedProfile = instructorProfiles.find((p: any) => p.email === currentUser.email);
+        if (updatedProfile?.profilePicture) {
+          setProfilePicture(updatedProfile.profilePicture);
+        }
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [currentUser?.email]);
 
   // Handle logout
   const handleLogout = () => {
@@ -221,12 +263,6 @@ export default function Header() {
 
             {/* Right: Actions & Profile */}
             <div className="flex items-center space-x-4">
-           
-              
-            
-              
-             
-              
               {/* Profile with Dropdown */}
               <div className="relative group">
                 <div className="flex items-center space-x-3 cursor-pointer">
@@ -241,8 +277,18 @@ export default function Header() {
                     </p>
                     <p className="text-xs text-gray-500">{currentUser?.email}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold relative">
-                    {currentUser?.initials || 'I'}
+                  
+                  {/* Profile Picture or Initials */}
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold relative">
+                    {profilePicture ? (
+                      <img 
+                        src={profilePicture} 
+                        alt={getUserDisplayName()}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span>{currentUser?.initials || 'I'}</span>
+                    )}
                     {currentUser?.isDemoAccount && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full border-2 border-white"></div>
                     )}
@@ -252,10 +298,26 @@ export default function Header() {
                 {/* Dropdown Menu */}
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 hidden group-hover:block">
                   <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
-                    <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+                    <div className="flex items-center space-x-3">
+                      {/* Small profile picture in dropdown */}
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        {profilePicture ? (
+                          <img 
+                            src={profilePicture} 
+                            alt={getUserDisplayName()}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{currentUser?.initials || 'I'}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{getUserDisplayName()}</p>
+                        <p className="text-xs text-gray-500 truncate">{currentUser?.email}</p>
+                      </div>
+                    </div>
                     {currentUser?.isDemoAccount && (
-                      <p className="text-xs text-yellow-600 mt-1">Demo Account</p>
+                      <p className="text-xs text-yellow-600 mt-2">Demo Account</p>
                     )}
                   </div>
                   
@@ -305,7 +367,7 @@ export default function Header() {
               <p className="text-xs text-gray-600">{getUserRole()}</p>
             </div>
 
-            {/* Mobile Profile */}
+            {/* Mobile Profile with Picture */}
             <div className="flex items-center space-x-2">
               <button 
                 onClick={() => router.push('/lms/Instructor_Portal/notifications')}
@@ -314,11 +376,21 @@ export default function Header() {
                 <Bell className="w-5 h-5" />
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
+              
+              {/* Profile Picture or Initials for Mobile */}
               <div 
-                className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm"
+                className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm cursor-pointer"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
-                {currentUser?.initials || 'I'}
+                {profilePicture ? (
+                  <img 
+                    src={profilePicture} 
+                    alt={getUserDisplayName()}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{currentUser?.initials || 'I'}</span>
+                )}
               </div>
             </div>
           </div>
@@ -327,10 +399,19 @@ export default function Header() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="border-t border-gray-200 bg-white px-4 py-3">
-            {/* User Info */}
+            {/* User Info with Picture */}
             <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold">
-                {currentUser?.initials || 'I'}
+              {/* Profile Picture in Mobile Menu */}
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {profilePicture ? (
+                  <img 
+                    src={profilePicture} 
+                    alt={getUserDisplayName()}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{currentUser?.initials || 'I'}</span>
+                )}
               </div>
               <div>
                 <p className="font-medium text-gray-900">

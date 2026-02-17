@@ -19,16 +19,29 @@ import {
   HiOutlineCheckCircle,
   HiOutlineClock,
   HiOutlineDocumentDownload,
-  HiOutlineShare
+  HiOutlineShare,
+  HiLockClosed,
+  HiXCircle
 } from 'react-icons/hi';
 import Link from 'next/link';
-import CertificateCard from '../components/CertificateCard';
+
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6CB'
+};
 
 type Certificate = {
   id: string;
   certificateId: string;
   studentName: string;
   studentEmail: string;
+  studentId: string;
   courseName: string;
   courseId: string;
   completionDate: string;
@@ -36,8 +49,13 @@ type Certificate = {
   certificateUrl?: string;
   verificationUrl: string;
   instructorName?: string;
+  instructorId?: string;
   grade?: string;
   duration?: string;
+  totalSlides: number;
+  completedSlides: number;
+  quizScore?: number;
+  assignmentScore?: number;
 };
 
 type Course = {
@@ -48,9 +66,24 @@ type Course = {
   progress: number;
   status: 'not_started' | 'in_progress' | 'completed';
   instructorName: string;
+  instructorId?: string;
   completedDate?: string;
   grade?: string;
   image?: string;
+  totalSlides: number;
+  completedSlides: number;
+  quizCompletion?: {
+    total: number;
+    attempted: number;
+    passed: number;
+    averageScore: number;
+  };
+  assignmentCompletion?: {
+    total: number;
+    submitted: number;
+    graded: number;
+    averageScore: number;
+  };
 };
 
 export default function CertificatesPage() {
@@ -63,44 +96,122 @@ export default function CertificatesPage() {
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [verificationModal, setVerificationModal] = useState<Certificate | null>(null);
 
-  // ========== 📋 LOAD USER DATA ==========
+  // ========== 📋 LOAD REAL USER DATA FROM LOCALSTORAGE ==========
   useEffect(() => {
     const loadData = () => {
       try {
         // Get current user
         const currentUserStr = localStorage.getItem('currentUser');
-        if (currentUserStr) {
-          const userData = JSON.parse(currentUserStr);
-          setUser(userData);
+        if (!currentUserStr) {
+          setLoading(false);
+          return;
         }
+        
+        const userData = JSON.parse(currentUserStr);
+        setUser(userData);
 
-        // Get student courses
+        // Get student courses from localStorage
         const studentCoursesStr = localStorage.getItem('studentCourses');
         if (studentCoursesStr) {
           const courses = JSON.parse(studentCoursesStr);
           
-          // ✅ Filter COMPLETED courses (progress >= 100)
-          const completed = courses.filter((c: any) => 
-            c.progress >= 100 || c.status === 'completed'
-          ).map((c: any) => ({
-            ...c,
-            completedDate: c.completedDate || new Date().toISOString().split('T')[0],
-            grade: c.grade || 'A'
-          }));
+          // For each course, check REAL completion status from localStorage
+          const completed = courses
+            .filter((c: any) => {
+              // Check if course is marked as completed in studentCourses
+              if (c.status === 'completed' || c.progress >= 100) return true;
+              
+              // Double-check with actual completed slides data
+              const completedKey = `completedSlides_${userData.id}_${c.id}`;
+              const savedCompleted = localStorage.getItem(completedKey);
+              if (savedCompleted) {
+                const completedSlides = JSON.parse(savedCompleted);
+                const totalSlides = c.totalSlides || 0;
+                return completedSlides.length >= totalSlides && totalSlides > 0;
+              }
+              return false;
+            })
+            .map((c: any) => {
+              // Get real completed slides count
+              const completedKey = `completedSlides_${userData.id}_${c.id}`;
+              const savedCompleted = localStorage.getItem(completedKey);
+              const completedSlides = savedCompleted ? JSON.parse(savedCompleted) : [];
+              
+              // Get quiz attempts for this course (optional, for display only)
+              const quizAttemptsKey = `quizAttempts_${userData.id}`;
+              const savedQuizAttempts = localStorage.getItem(quizAttemptsKey);
+              let quizCompletion = { total: 0, attempted: 0, passed: 0, averageScore: 0 };
+              
+              if (savedQuizAttempts) {
+                const attempts = JSON.parse(savedQuizAttempts);
+                const courseQuizzes = Object.values(attempts).filter((a: any) => a.courseId === c.id);
+                const totalQuizzes = c.totalQuizzes || courseQuizzes.length;
+                const passedQuizzes = courseQuizzes.filter((a: any) => a.passed).length;
+                const avgScore = courseQuizzes.length > 0 
+                  ? Math.round(courseQuizzes.reduce((sum: number, a: any) => sum + a.score, 0) / courseQuizzes.length)
+                  : 0;
+                
+                quizCompletion = {
+                  total: totalQuizzes,
+                  attempted: courseQuizzes.length,
+                  passed: passedQuizzes,
+                  averageScore: avgScore
+                };
+              }
+              
+              // Get assignment submissions for this course (optional, for display only)
+              const submissionsKey = 'assignmentSubmissions';
+              const savedSubmissions = localStorage.getItem(submissionsKey);
+              let assignmentCompletion = { total: 0, submitted: 0, graded: 0, averageScore: 0 };
+              
+              if (savedSubmissions) {
+                const submissions = JSON.parse(savedSubmissions);
+                const courseSubmissions = submissions.filter((s: any) => 
+                  s.courseId === c.id && 
+                  (s.studentId === userData.id || s.studentEmail === userData.email)
+                );
+                
+                const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+                const courseAssignments = allAssignments.filter((a: any) => a.courseId === c.id);
+                
+                const gradedSubmissions = courseSubmissions.filter((s: any) => s.score !== undefined);
+                const avgScore = gradedSubmissions.length > 0
+                  ? Math.round(gradedSubmissions.reduce((sum: number, s: any) => sum + (s.score || 0), 0) / gradedSubmissions.length)
+                  : 0;
+                
+                assignmentCompletion = {
+                  total: courseAssignments.length,
+                  submitted: courseSubmissions.length,
+                  graded: gradedSubmissions.length,
+                  averageScore: avgScore
+                };
+              }
+              
+              return {
+                ...c,
+                completedSlides: completedSlides.length,
+                totalSlides: c.totalSlides || 0,
+                quizCompletion,
+                assignmentCompletion,
+                completedDate: c.completedDate || new Date().toISOString().split('T')[0],
+                grade: calculateGrade(quizCompletion.averageScore, assignmentCompletion.averageScore)
+              };
+            });
           
           setCompletedCourses(completed);
         }
 
-        // Get existing certificates
+        // Get existing certificates from localStorage
         const savedCertificates = localStorage.getItem('studentCertificates');
         if (savedCertificates) {
           const certs = JSON.parse(savedCertificates);
-          // ✅ Filter certificates for current user
-          if (currentUserStr) {
-            const userData = JSON.parse(currentUserStr);
+          // Filter certificates for current user
+          if (userData) {
             const userCerts = certs.filter((c: any) => 
               c.studentEmail === userData.email || 
+              c.studentId === userData.id ||
               c.studentName === userData.fullName
             );
             setCertificates(userCerts);
@@ -120,6 +231,27 @@ export default function CertificatesPage() {
     loadData();
   }, []);
 
+  // ========== 🎓 CALCULATE GRADE BASED ON PERFORMANCE ==========
+  const calculateGrade = (quizScore: number = 0, assignmentScore: number = 0): string => {
+    const avgScore = (quizScore + assignmentScore) / 2;
+    if (avgScore >= 90) return 'A+';
+    if (avgScore >= 80) return 'A';
+    if (avgScore >= 70) return 'B';
+    if (avgScore >= 60) return 'C';
+    return 'D';
+  };
+
+  // ========== ✅ CHECK IF COURSE IS TRULY COMPLETED (ONLY SLIDES) ==========
+  const isCourseFullyCompleted = (course: Course): boolean => {
+    // Check if all slides are completed - THIS IS THE ONLY REQUIREMENT NOW
+    const slidesCompleted = course.completedSlides >= course.totalSlides && course.totalSlides > 0;
+    
+    // REMOVED: Quiz and assignment requirements
+    // Now certificate generates based on slides completion only
+    
+    return slidesCompleted;
+  };
+
   // ========== 🔍 FILTER CERTIFICATES ==========
   useEffect(() => {
     let filtered = certificates;
@@ -138,8 +270,14 @@ export default function CertificatesPage() {
     setFilteredCertificates(filtered);
   }, [searchTerm, selectedCourse, certificates]);
 
-  // ========== 🎓 GENERATE CERTIFICATE ==========
+  // ========== 🎓 GENERATE CERTIFICATE (ONLY IF SLIDES COMPLETED) ==========
   const generateCertificate = (course: Course) => {
+    // Check if course is fully completed (slides only)
+    if (!isCourseFullyCompleted(course)) {
+      alert('⚠️ You must complete all lessons before generating a certificate.');
+      return;
+    }
+
     setGeneratingId(course.id);
     
     try {
@@ -155,23 +293,34 @@ export default function CertificatesPage() {
         return;
       }
 
-      // ✅ Generate unique certificate ID
+      // Generate unique certificate ID
       const certId = `CERT-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
       
-      // Create new certificate
+      // Calculate grade based on actual performance (optional)
+      const quizScore = course.quizCompletion?.averageScore || 0;
+      const assignmentScore = course.assignmentCompletion?.averageScore || 0;
+      const grade = calculateGrade(quizScore, assignmentScore);
+      
+      // Create new certificate with real data
       const newCertificate: Certificate = {
         id: `cert-${Date.now()}-${course.id}`,
         certificateId: certId,
         studentName: user?.fullName || 'Student',
         studentEmail: user?.email || '',
+        studentId: user?.id || '',
         courseName: course.title,
         courseId: course.id,
         completionDate: course.completedDate || new Date().toISOString().split('T')[0],
         issueDate: new Date().toISOString().split('T')[0],
         verificationUrl: `https://verify.mansolhab.com/${certId}`,
         instructorName: course.instructorName || 'Mansol Hab School',
-        grade: course.grade || 'A',
-        duration: course.duration || '8 Weeks'
+        instructorId: course.instructorId,
+        grade: grade,
+        duration: course.duration || '8 Weeks',
+        totalSlides: course.totalSlides || 0,
+        completedSlides: course.completedSlides || 0,
+        quizScore: quizScore,
+        assignmentScore: assignmentScore
       };
 
       // Save to state and localStorage
@@ -198,137 +347,9 @@ export default function CertificatesPage() {
   const handleDownloadCertificate = (certificateId: string) => {
     const cert = certificates.find(c => c.certificateId === certificateId);
     if (cert) {
-      // Create professional certificate HTML
-      const certificateHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Certificate of Completion - ${cert.courseName}</title>
-          <style>
-            body {
-              font-family: 'Arial', sans-serif;
-              margin: 0;
-              padding: 40px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              min-height: 100vh;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-            }
-            .certificate {
-              max-width: 900px;
-              margin: 0 auto;
-              background: white;
-              padding: 60px;
-              border-radius: 20px;
-              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-              position: relative;
-            }
-            .certificate::before {
-              content: '★';
-              position: absolute;
-              top: 20px;
-              left: 20px;
-              font-size: 40px;
-              color: #ffd700;
-            }
-            .certificate::after {
-              content: '★';
-              position: absolute;
-              bottom: 20px;
-              right: 20px;
-              font-size: 40px;
-              color: #ffd700;
-            }
-            h1 {
-              color: #1a1a1a;
-              font-size: 42px;
-              margin-bottom: 20px;
-              text-align: center;
-              border-bottom: 3px solid #667eea;
-              padding-bottom: 20px;
-            }
-            h2 {
-              color: #4a5568;
-              font-size: 32px;
-              margin: 20px 0;
-              text-align: center;
-            }
-            h3 {
-              color: #667eea;
-              font-size: 28px;
-              margin: 20px 0;
-              text-align: center;
-              font-weight: bold;
-            }
-            .info {
-              margin: 40px 0;
-              padding: 20px;
-              background: #f7fafc;
-              border-radius: 10px;
-            }
-            .info p {
-              font-size: 18px;
-              color: #2d3748;
-              margin: 10px 0;
-            }
-            .footer {
-              margin-top: 40px;
-              text-align: center;
-              color: #718096;
-              font-size: 14px;
-            }
-            .signature {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 2px solid #e2e8f0;
-              text-align: center;
-              font-size: 16px;
-            }
-            .verification {
-              color: #667eea;
-              text-decoration: none;
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="certificate">
-            <h1>MANSOL HAB SCHOOL</h1>
-            <h2>CERTIFICATE OF COMPLETION</h2>
-            
-            <h3>This is to certify that</h3>
-            <h2 style="color: #764ba2;">${cert.studentName}</h2>
-            
-            <h3>has successfully completed</h3>
-            <h2 style="color: #667eea;">${cert.courseName}</h2>
-            
-            <div class="info">
-              <p><strong>Certificate ID:</strong> ${cert.certificateId}</p>
-              <p><strong>Completion Date:</strong> ${new Date(cert.completionDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p><strong>Issue Date:</strong> ${new Date(cert.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-              <p><strong>Instructor:</strong> ${cert.instructorName || 'Mansol Hab School'}</p>
-              <p><strong>Grade:</strong> ${cert.grade || 'A'}</p>
-              <p><strong>Duration:</strong> ${cert.duration || '8 Weeks'}</p>
-            </div>
-            
-            <div class="signature">
-              <p>Authorized Signature</p>
-              <p style="font-family: 'Brush Script MT', cursive; font-size: 24px;">Mansol Hab</p>
-              <p>Director, Mansol Hab School</p>
-            </div>
-            
-            <div class="footer">
-              <p>This certificate is digitally verifiable</p>
-              <p>Verification URL: <a href="${cert.verificationUrl}" class="verification">${cert.verificationUrl}</a></p>
-              <p>© ${new Date().getFullYear()} Mansol Hab School. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
+      // Create professional certificate HTML with real data
+      const certificateHTML = generateCertificateHTML(cert, true);
+      
       // Download as HTML file
       const blob = new Blob([certificateHTML], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
@@ -351,7 +372,7 @@ export default function CertificatesPage() {
       setSelectedCertificate(cert);
       
       // Open in new window
-      const certificateHTML = generateCertificateHTML(cert);
+      const certificateHTML = generateCertificateHTML(cert, false);
       const newWindow = window.open('', '_blank');
       if (newWindow) {
         newWindow.document.write(certificateHTML);
@@ -360,17 +381,38 @@ export default function CertificatesPage() {
     }
   };
 
-  // ========== 📄 GENERATE CERTIFICATE HTML ==========
-  const generateCertificateHTML = (cert: Certificate) => {
+  // ========== 🔗 VERIFY CERTIFICATE ==========
+  const handleVerifyCertificate = (certificateId: string) => {
+    const cert = certificates.find(c => c.certificateId === certificateId);
+    if (cert) {
+      setVerificationModal(cert);
+    }
+  };
+
+  // ========== 📄 GENERATE CERTIFICATE HTML WITH REAL DATA ==========
+  const generateCertificateHTML = (cert: Certificate, forDownload: boolean = false) => {
+    const completionDate = new Date(cert.completionDate).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const issueDate = new Date(cert.issueDate).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Certificate - ${cert.courseName}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Certificate of Completion - ${cert.courseName}</title>
         <style>
           body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 40px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -380,38 +422,210 @@ export default function CertificatesPage() {
             align-items: center;
           }
           .certificate {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             padding: 60px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border-radius: 30px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+            position: relative;
+            border: 15px solid #f3f4f6;
           }
-          h1 { color: #1a1a1a; font-size: 42px; text-align: center; border-bottom: 3px solid #667eea; padding-bottom: 20px; }
-          h2 { color: #4a5568; font-size: 32px; text-align: center; }
-          h3 { color: #667eea; font-size: 28px; text-align: center; }
-          .info { margin: 40px 0; padding: 20px; background: #f7fafc; border-radius: 10px; }
-          .info p { font-size: 18px; color: #2d3748; margin: 10px 0; }
-          .verification { color: #667eea; text-align: center; margin-top: 40px; }
+          .certificate::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            pointer-events: none;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 40px;
+          }
+          .school-name {
+            color: #1a1a1a;
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+          .certificate-title {
+            color: #4a5568;
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            border-bottom: 3px solid #e2e8f0;
+            padding-bottom: 20px;
+          }
+          .content {
+            text-align: center;
+            margin: 40px 0;
+          }
+          .presented-to {
+            color: #718096;
+            font-size: 20px;
+            margin-bottom: 10px;
+          }
+          .student-name {
+            color: #2d3748;
+            font-size: 42px;
+            font-weight: 700;
+            margin: 20px 0;
+            font-family: 'Georgia', serif;
+          }
+          .for-text {
+            color: #718096;
+            font-size: 20px;
+            margin: 10px 0;
+          }
+          .course-name {
+            color: #667eea;
+            font-size: 36px;
+            font-weight: 700;
+            margin: 20px 0;
+            font-family: 'Georgia', serif;
+          }
+          .details {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+          }
+          .detail-item {
+            text-align: center;
+          }
+          .detail-label {
+            color: #718096;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+          }
+          .detail-value {
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: 600;
+          }
+          .grade-badge {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 25px;
+            font-weight: 600;
+          }
+          .signature {
+            margin-top: 50px;
+            text-align: center;
+          }
+          .signature-line {
+            width: 250px;
+            margin: 0 auto;
+            border-top: 2px solid #cbd5e0;
+            padding-top: 10px;
+          }
+          .signature-name {
+            color: #2d3748;
+            font-size: 24px;
+            font-family: 'Brush Script MT', cursive;
+            margin: 10px 0;
+          }
+          .signature-title {
+            color: #718096;
+            font-size: 16px;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #a0aec0;
+            font-size: 14px;
+          }
+          .verification {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            text-align: center;
+          }
+          .verification-url {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            word-break: break-all;
+          }
+          ${forDownload ? `
+            @media print {
+              body { background: white; padding: 0; }
+              .certificate { box-shadow: none; border: 2px solid #e2e8f0; }
+            }
+          ` : ''}
         </style>
       </head>
       <body>
         <div class="certificate">
-          <h1>MANSOL HAB SCHOOL</h1>
-          <h2>CERTIFICATE OF COMPLETION</h2>
-          <h3>${cert.studentName}</h3>
-          <p style="text-align: center; font-size: 20px;">has successfully completed</p>
-          <h2 style="color: #667eea;">${cert.courseName}</h2>
-          <div class="info">
-            <p><strong>Certificate ID:</strong> ${cert.certificateId}</p>
-            <p><strong>Completion Date:</strong> ${new Date(cert.completionDate).toLocaleDateString()}</p>
-            <p><strong>Issue Date:</strong> ${new Date(cert.issueDate).toLocaleDateString()}</p>
-            <p><strong>Instructor:</strong> ${cert.instructorName || 'Mansol Hab School'}</p>
-            <p><strong>Grade:</strong> ${cert.grade || 'A'}</p>
-            <p><strong>Duration:</strong> ${cert.duration || '8 Weeks'}</p>
+          <div class="header">
+            <div class="school-name">MANSOL HAB SCHOOL</div>
+            <div class="certificate-title">CERTIFICATE OF COMPLETION</div>
           </div>
-          <div class="verification">
-            <p>Verify at: <a href="${cert.verificationUrl}" target="_blank">${cert.verificationUrl}</a></p>
+          
+          <div class="content">
+            <div class="presented-to">THIS CERTIFICATE IS PRESENTED TO</div>
+            <div class="student-name">${cert.studentName}</div>
+            
+            <div class="for-text">for successfully completing the course</div>
+            <div class="course-name">${cert.courseName}</div>
+            
+            <div class="details">
+              <div class="detail-item">
+                <div class="detail-label">Certificate ID</div>
+                <div class="detail-value">${cert.certificateId}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Grade Achieved</div>
+                <div class="detail-value"><span class="grade-badge">${cert.grade || 'A'}</span></div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Issue Date</div>
+                <div class="detail-value">${issueDate}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Duration</div>
+                <div class="detail-value">${cert.duration || '8 Weeks'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Instructor</div>
+                <div class="detail-value">${cert.instructorName || 'Mansol Hab School'}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Completion Date</div>
+                <div class="detail-value">${completionDate}</div>
+              </div>
+            </div>
+            
+            <div class="verification">
+              <div class="detail-label">Verify this certificate</div>
+              <div class="verification-url">${cert.verificationUrl}</div>
+            </div>
+          </div>
+          
+          <div class="signature">
+            <div class="signature-line"></div>
+            <div class="signature-name">Mansol Hab</div>
+            <div class="signature-title">Director, Mansol Hab School</div>
+          </div>
+          
+          <div class="footer">
+            <p>This certificate is digitally verifiable and can be validated online</p>
+            <p>© ${new Date().getFullYear()} Mansol Hab School. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -419,15 +633,7 @@ export default function CertificatesPage() {
     `;
   };
 
-  // ========== 🔗 VERIFY CERTIFICATE ==========
-  const handleVerifyCertificate = (certificateId: string) => {
-    const cert = certificates.find(c => c.certificateId === certificateId);
-    if (cert) {
-      window.open(cert.verificationUrl, '_blank');
-    }
-  };
-
-  // ========== 📊 STATS ==========
+  // ========== 📊 STATS WITH REAL DATA ==========
   const totalCertificates = certificates.length;
   const recentCertificates = certificates.filter(cert => {
     const issueDate = new Date(cert.issueDate);
@@ -437,13 +643,20 @@ export default function CertificatesPage() {
   }).length;
 
   const coursesList = Array.from(new Set(certificates.map(c => c.courseName)));
+  
+  // Calculate pending certificates based on slides completion only
+  const pendingCertificates = completedCourses.filter(c => 
+    c.completedSlides >= c.totalSlides && 
+    c.totalSlides > 0 && 
+    !certificates.some(cert => cert.courseId === c.id)
+  ).length;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent"
-            style={{ borderColor: '#B11217' }}
+            style={{ borderColor: BRAND_COLORS.deepRed }}
           ></div>
           <p className="mt-4 text-gray-600">Loading certificates...</p>
         </div>
@@ -454,13 +667,17 @@ export default function CertificatesPage() {
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
       {/* ========== HEADER ========== */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-white">
+      <div 
+        className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-white"
+        style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
+      >
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1">
-              🎓 My Certificates
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 flex items-center gap-2">
+              <HiAcademicCap className="w-6 h-6" />
+              My Certificates
             </h1>
-            <p className="text-purple-100 text-xs sm:text-sm">
+            <p className="text-white/80 text-xs sm:text-sm">
               {user?.fullName || 'Student'} • {totalCertificates} earned
             </p>
           </div>
@@ -473,12 +690,12 @@ export default function CertificatesPage() {
         </div>
       </div>
 
-      {/* ========== STATS CARDS ========== */}
+      {/* ========== STATS CARDS WITH REAL DATA ========== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600">Total</p>
+              <p className="text-xs text-gray-600">Total Earned</p>
               <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">{totalCertificates}</p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-purple-100 text-purple-600">
@@ -490,7 +707,7 @@ export default function CertificatesPage() {
         <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600">Recent</p>
+              <p className="text-xs text-gray-600">Recent (30 days)</p>
               <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">{recentCertificates}</p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-green-100 text-green-600">
@@ -502,8 +719,10 @@ export default function CertificatesPage() {
         <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600">Completed</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">{completedCourses.length}</p>
+              <p className="text-xs text-gray-600">Completed Courses</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">
+                {completedCourses.filter(c => c.completedSlides >= c.totalSlides && c.totalSlides > 0).length}
+              </p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-blue-100 text-blue-600">
               <HiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -516,7 +735,7 @@ export default function CertificatesPage() {
             <div>
               <p className="text-xs text-gray-600">Pending</p>
               <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">
-                {completedCourses.length - totalCertificates}
+                {pendingCertificates}
               </p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-yellow-100 text-yellow-600">
@@ -526,7 +745,7 @@ export default function CertificatesPage() {
         </div>
       </div>
 
-      {/* ========== COMPLETED COURSES SECTION - GENERATE CERTIFICATES ========== */}
+      {/* ========== COMPLETED COURSES SECTION - GENERATE CERTIFICATES (ONLY IF SLIDES COMPLETED) ========== */}
       {completedCourses.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 p-4 sm:p-5">
@@ -534,18 +753,23 @@ export default function CertificatesPage() {
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                   <HiCheckCircle className="w-5 h-5 text-green-600" />
-                  Completed Courses ({completedCourses.length - totalCertificates} ready for certificate)
+                  Ready for Certificates ({pendingCertificates})
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                  Generate certificates for your completed courses
+                  Generate certificates for courses where you've completed all lessons
                 </p>
               </div>
             </div>
           </div>
 
           <div className="divide-y divide-gray-200">
+            {/* Show courses that are fully completed (slides only) */}
             {completedCourses
-              .filter(course => !certificates.some(c => c.courseId === course.id))
+              .filter(course => 
+                course.completedSlides >= course.totalSlides && 
+                course.totalSlides > 0 && 
+                !certificates.some(c => c.courseId === course.id)
+              )
               .map(course => (
                 <div key={course.id} className="p-4 sm:p-5 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -561,7 +785,7 @@ export default function CertificatesPage() {
                           {course.duration}
                         </span>
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                          Completed
+                          {course.completedSlides}/{course.totalSlides} lessons
                         </span>
                       </div>
                     </div>
@@ -586,7 +810,47 @@ export default function CertificatesPage() {
                 </div>
               ))}
             
-            {completedCourses.length - totalCertificates === 0 && (
+            {/* Show in-progress courses that are NOT fully completed */}
+            {completedCourses
+              .filter(course => 
+                (course.completedSlides < course.totalSlides || course.totalSlides === 0) && 
+                !certificates.some(c => c.courseId === course.id)
+              )
+              .map(course => (
+                <div key={course.id} className="p-4 sm:p-5 bg-gray-50/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">{course.title}</h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                        <span className="text-xs text-gray-600 flex items-center gap-1">
+                          <HiUser className="w-3 h-3" />
+                          {course.instructorName || 'Mansol Hab School'}
+                        </span>
+                        <span className="text-xs text-gray-600 flex items-center gap-1">
+                          <HiClock className="w-3 h-3" />
+                          {course.duration}
+                        </span>
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                          {course.completedSlides}/{course.totalSlides} lessons
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                        <HiLockClosed className="w-3 h-3" />
+                        Complete all {course.totalSlides - course.completedSlides} remaining lessons to generate certificate
+                      </div>
+                    </div>
+                    <button
+                      disabled
+                      className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <HiLockClosed className="w-4 h-4" />
+                      Locked
+                    </button>
+                  </div>
+                </div>
+              ))}
+            
+            {pendingCertificates === 0 && completedCourses.filter(c => c.completedSlides < c.totalSlides).length === 0 && (
               <div className="p-8 text-center">
                 <HiCheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
                 <h3 className="text-sm font-medium text-gray-900 mb-1">All caught up!</h3>
@@ -634,7 +898,7 @@ export default function CertificatesPage() {
         </div>
       )}
 
-      {/* ========== CERTIFICATES GRID ========== */}
+      {/* ========== CERTIFICATES GRID WITH REAL DATA ========== */}
       {certificates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredCertificates.map(certificate => (
@@ -642,7 +906,10 @@ export default function CertificatesPage() {
               key={certificate.id}
               className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
             >
-              <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-4 text-white">
+              <div 
+                className="p-4 text-white"
+                style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue} 0%, ${BRAND_COLORS.darkNavy} 100%)` }}
+              >
                 <div className="flex justify-between items-start">
                   <HiAcademicCap className="w-8 h-8 sm:w-10 sm:h-10 opacity-90" />
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
@@ -670,9 +937,9 @@ export default function CertificatesPage() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-600">Instructor</span>
-                    <span className="font-medium text-gray-900 truncate ml-2">
-                      {certificate.instructorName || 'Mansol Hab School'}
+                    <span className="text-gray-600">Completion</span>
+                    <span className="font-medium text-gray-900">
+                      {certificate.completedSlides}/{certificate.totalSlides} lessons
                     </span>
                   </div>
                 </div>
@@ -693,6 +960,14 @@ export default function CertificatesPage() {
                     Download
                   </button>
                 </div>
+                
+                <button
+                  onClick={() => handleVerifyCertificate(certificate.certificateId)}
+                  className="mt-2 w-full flex items-center justify-center gap-1 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                >
+                  <HiOutlineShare className="w-4 h-4" />
+                  Verify
+                </button>
               </div>
             </div>
           ))}
@@ -704,7 +979,7 @@ export default function CertificatesPage() {
           </div>
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">No certificates yet</h3>
           <p className="text-xs sm:text-sm text-gray-600 mb-6 max-w-md mx-auto">
-            Complete your courses to earn certificates. Each completed course qualifies for a professional certificate.
+            Complete all lessons in your courses to earn professional certificates.
           </p>
           <Link
             href="/lms/Student_Portal/my-courses"
@@ -716,50 +991,80 @@ export default function CertificatesPage() {
         </div>
       )}
 
-      {/* ========== VERIFICATION INFO SECTION ========== */}
-      {certificates.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <HiCheckCircle className="w-5 h-5 text-green-600" />
-            Certificate Verification
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-600 mb-4">
-            All certificates are digitally verifiable. Share the verification URL with employers to confirm authenticity.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <h3 className="text-xs font-semibold text-gray-900 mb-2">Verification Process</h3>
-              <ul className="space-y-1 text-xs text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">•</span>
-                  Each certificate has a unique verification URL
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">•</span>
-                  Instant online verification 24/7
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">•</span>
-                  Digital records maintained for 10 years
-                </li>
-              </ul>
+      {/* ========== VERIFICATION MODAL ========== */}
+      {verificationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Verify Certificate</h3>
+              <button
+                onClick={() => setVerificationModal(null)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <HiXCircle className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <h3 className="text-xs font-semibold text-gray-900 mb-2">How to Share</h3>
-              <ul className="space-y-1 text-xs text-gray-600">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  Download PDF/HTML certificate
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  Share verification link via email
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
-                  Add to LinkedIn profile
-                </li>
-              </ul>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                  <HiCheckCircle className="w-5 h-5" />
+                  Valid Certificate
+                </p>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-4">
+                <dl className="space-y-2">
+                  <div className="flex justify-between">
+                    <dt className="text-xs text-gray-500">Certificate ID</dt>
+                    <dd className="text-xs font-mono font-medium">{verificationModal.certificateId}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-xs text-gray-500">Student Name</dt>
+                    <dd className="text-xs font-medium">{verificationModal.studentName}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-xs text-gray-500">Course</dt>
+                    <dd className="text-xs font-medium">{verificationModal.courseName}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-xs text-gray-500">Issue Date</dt>
+                    <dd className="text-xs font-medium">{new Date(verificationModal.issueDate).toLocaleDateString()}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-xs text-gray-500">Grade</dt>
+                    <dd className="text-xs font-medium">{verificationModal.grade || 'A'}</dd>
+                  </div>
+                </dl>
+              </div>
+              
+              <div className="pt-4">
+                <p className="text-xs text-gray-500 mb-2">Verification URL</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={verificationModal.verificationUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(verificationModal.verificationUrl);
+                      alert('Verification URL copied to clipboard!');
+                    }}
+                    className="px-3 py-2 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setVerificationModal(null)}
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

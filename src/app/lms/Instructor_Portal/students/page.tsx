@@ -1,735 +1,1157 @@
-// app/lms/Instructor_Portal/students/page.tsx
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { 
+  Users, 
   Search, 
   Filter, 
-  Mail, 
-  Phone, 
-  User, 
-  Calendar,
-
-  Send,
- 
-  Download,
-  ChevronDown,
+  ChevronDown, 
   ChevronUp,
-  Loader2
-} from 'lucide-react';
-/* eslint-disable */
+  Eye,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BookOpen,
+  Award,
+  TrendingUp,
+  Download,
+  Mail,
+  Phone,
+  User,
+  BarChart,
+  PieChart,
+  Activity,
+  Plus,
+  GraduationCap,
+  Trophy
+} from 'lucide-react'
 
-// Define TypeScript interfaces
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
+}
+
+// Hardcoded courses data - typed as Course[]
+const hardcodedCourses: Course[] = [
+  {
+    id: 'pipe-fitter',
+    title: 'Pipe Fitter',
+    category: 'Technical Training',
+    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
+    duration: '8 Weeks',
+    studentCapacity: 20,
+    level: 'Beginner to Advanced',
+    price: 'PKR 25,000',
+    originalPrice: 'PKR 30,000',
+    status: 'published', // ✅ now correctly typed as 'published'
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+   
+    rating: 4.8,
+    isHardcoded: true
+  },
+  {
+    id: 'safety-inspector',
+    title: 'Safety Inspector',
+    category: 'Safety Training',
+    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
+    duration: '6 Weeks',
+    studentCapacity: 15,
+    level: 'Intermediate',
+    price: 'PKR 30,000',
+    originalPrice: 'PKR 35,000',
+    status: 'published',
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+    
+    rating: 4.9,
+    isHardcoded: true
+  },
+  {
+    id: 'welding',
+    title: 'Professional Welding',
+    category: 'Technical Training',
+    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
+    duration: '10 Weeks',
+    studentCapacity: 12,
+    level: 'Beginner to Professional',
+    price: 'PKR 35,000',
+    originalPrice: 'PKR 40,000',
+    status: 'published',
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+    
+    rating: 4.7,
+    isHardcoded: true
+  }
+];
+
+interface Course {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  duration: string;
+  studentCapacity: number;
+  level: string;
+  price: string;
+  originalPrice?: string;
+  status: 'draft' | 'published';
+  instructorId: string;
+  instructorName: string;
+  createdAt?: string;
+  updatedAt?: string;
+  image?: string;
+  rating?: number;
+  isHardcoded?: boolean;
+}
+
 interface Student {
   id: string;
   name: string;
   email: string;
   phone: string;
-  cnic: string;
-  courseId: string;
-  courseName: string;
-  dateOfBirth: string;
-  gender: string;
-  country: string;
-  registrationDate: string;
+  enrollmentDate: string;
+  attendance: number;
+  slidesCompleted: number;
+  totalSlides: number;
+  quizScore: number;
+  maxQuizScore: number;
+  quizAttempts: number;
+  quizPassed: number;
+  totalQuizzes: number;
+  assignmentsSubmitted: number;
+  totalAssignments: number;
+  status: 'active' | 'inactive';
+  avatar: string | null;
+  lastActive: string;
+  hasCertificate: boolean;
+  certificateId?: string;
+  certificateDate?: string;
+  performance: { week: string; score: number }[];
 }
 
-interface Course {
+interface Enrollment {
   id: string;
-  name: string;
+  courseId: string;
+  courseTitle: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string;
+  enrollmentDate: string;
+  status: 'active' | 'inactive';
+  lastActive?: string;
 }
-
-interface FeedbackForm {
-  subject: string;
-  message: string;
-  type: string;
-}
-
-interface SortConfig {
-  key: keyof Student;
-  direction: 'asc' | 'desc';
-}
+/* eslint-disable */
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sendingFeedback, setSendingFeedback] = useState(false);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'name',
-    direction: 'asc'
-  });
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [feedbackForm, setFeedbackForm] = useState<FeedbackForm>({
-    subject: 'Feedback from Instructor',
-    message: '',
-    type: 'general'
-  });
+  const [courses, setCourses] = useState<Course[]>([])
+  const [selectedCourse, setSelectedCourse] = useState<string>('')
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'progress' | 'quiz' | 'certificate'>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [showStudentModal, setShowStudentModal] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'certified'>('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [instructor, setInstructor] = useState<any>(null)
 
   useEffect(() => {
-    const fetchStudentData = () => {
-      try {
-        // Get current logged in instructor
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
-        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-        const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
-        
-        let assignedStudents: Student[] = [];
-        
-        if (currentUser?.email === 'instructor@gmail.com') {
-          // Demo instructor - show all students
-          assignedStudents = allStudents.map((student: any) => ({
-            id: student.id || student.cnic,
-            name: `${student.firstName} ${student.lastName || ''}`.trim(),
-            email: student.email,
-            phone: student.phone || 'N/A',
-            cnic: student.cnic,
-            courseId: student.courseId,
-            courseName: student.courseName || 'Unknown Course',
-            dateOfBirth: student.dateOfBirth,
-            gender: student.gender,
-            country: student.country,
-            registrationDate: student.createdAt || 'Unknown'
-          }));
-        } else if (currentUser?.role === 'instructor') {
-          // Real instructor - get assigned students
-          const instructorDetails = allInstructors.find((instr: any) => 
-            instr.email === currentUser.email || instr.id === currentUser.instructorId
-          );
-          
-          if (instructorDetails?.studentsList) {
-            assignedStudents = instructorDetails.studentsList;
-          } else if (instructorDetails?.assignedCourseIds) {
-            // Get students enrolled in assigned courses
-            assignedStudents = allStudents
-              .filter((student: any) => 
-                instructorDetails.assignedCourseIds.includes(student.courseId) ||
-                student.enrolledCourses?.some((courseId: string) => 
-                  instructorDetails.assignedCourseIds.includes(courseId)
-                )
-              )
-              .map((student: any) => ({
-                id: student.id || student.cnic,
-                name: `${student.firstName} ${student.lastName || ''}`.trim(),
-                email: student.email,
-                phone: student.phone || 'N/A',
-                cnic: student.cnic,
-                courseId: student.courseId,
-                courseName: student.courseName || 'Unknown Course',
-                dateOfBirth: student.dateOfBirth,
-                gender: student.gender,
-                country: student.country,
-                registrationDate: student.createdAt || 'Unknown'
-              }));
-          }
-        }
-        
-        // Get unique courses for filter
-        const uniqueCourses: Course[] = Array.from(new Set(
-          assignedStudents.map(student => student.courseId).filter(Boolean)
-        )).map(courseId => {
-          const course = allCourses.find((c: any) => c.id === courseId);
-          return {
-            id: courseId,
-            name: course?.title || courseId
-          };
-        });
-        
-        setStudents(assignedStudents);
-        setFilteredStudents(assignedStudents);
-        setCourses(uniqueCourses);
-        
-      } catch (error) {
-        console.error('Error fetching student data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadInstructorAndCourses()
+  }, [])
 
-    fetchStudentData();
-  }, []);
-
-  // Filter students based on search and course filter
   useEffect(() => {
-    let result = [...students];
-    
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter(student =>
-        student.name.toLowerCase().includes(term) ||
-        student.email.toLowerCase().includes(term) ||
-        student.cnic.toLowerCase().includes(term)
-      );
+    if (selectedCourse) {
+      loadStudentsForCourse()
     }
-    
-    if (courseFilter !== 'all') {
-      result = result.filter(student => student.courseId === courseFilter);
-    }
-    
-    // Apply sorting
-    result.sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-    
-    setFilteredStudents(result);
-  }, [searchTerm, courseFilter, students, sortConfig]);
+  }, [selectedCourse, enrollments])
 
-  const handleSort = (key: keyof Student) => {
-    setSortConfig(current => ({
-      key,
-      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
+  useEffect(() => {
+    filterAndSortStudents()
+  }, [students, searchTerm, sortBy, sortOrder, filterStatus])
 
-  const handleSendFeedback = (student: Student) => {
-    setSelectedStudent(student);
-    setFeedbackForm({
-      subject: 'Feedback from Instructor',
-      message: `Dear ${student.name},\n\nThank you for your participation in the ${getCourseName(student.courseId)} course.\n\n`,
-      type: 'general'
-    });
-    setShowFeedbackModal(true);
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (!selectedStudent) return;
-    
-    setSendingFeedback(true);
-    
+  const loadInstructorAndCourses = () => {
     try {
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const currentUserStr = localStorage.getItem('currentUser')
+      let currentInstructor = null
       
-      const response = await fetch('/api/send-feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: selectedStudent.email,
-          name: selectedStudent.name,
-          subject: feedbackForm.subject,
-          message: feedbackForm.message,
-          instructorName: currentUser.name || 'Your Instructor',
-          courseName: getCourseName(selectedStudent.courseId)
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Save feedback record in localStorage
-        const feedbackData = {
-          id: `feedback_${Date.now()}`,
-          studentId: selectedStudent.id,
-          studentEmail: selectedStudent.email,
-          studentName: selectedStudent.name,
-          subject: feedbackForm.subject,
-          message: feedbackForm.message,
-          type: feedbackForm.type,
-          sentAt: new Date().toISOString(),
-          instructor: currentUser.name || 'Instructor'
-        };
-        
-        const existingFeedback = JSON.parse(localStorage.getItem('student_feedback') || '[]');
-        localStorage.setItem('student_feedback', JSON.stringify([...existingFeedback, feedbackData]));
-        
-        alert(`✅ Feedback sent successfully to ${selectedStudent.email}`);
-        setShowFeedbackModal(false);
-        setSelectedStudent(null);
-      } else {
-        throw new Error(data.error || 'Failed to send feedback');
+      if (currentUserStr) {
+        currentInstructor = JSON.parse(currentUserStr)
+        setInstructor(currentInstructor)
       }
-    } catch (error: any) {
-      console.error('Error sending feedback:', error);
-      alert(`❌ Failed to send feedback: ${error.message}`);
-    } finally {
-      setSendingFeedback(false);
-    }
-  };
 
-  const handleToggleRow = (studentId: string) => {
-    setExpandedRow(expandedRow === studentId ? null : studentId);
-  };
+      const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+      
+      let instructorLocalCourses: Course[] = []
+      if (currentInstructor) {
+        instructorLocalCourses = localStorageCourses.filter((c: Course) => 
+          c.instructorId === currentInstructor.id || c.instructorName === currentInstructor.name
+        )
+      }
+
+      // Combine hardcoded courses with instructor's localStorage courses
+      const allCourses: Course[] = [...hardcodedCourses, ...instructorLocalCourses]
+      setCourses(allCourses)
+      
+      if (allCourses.length > 0) {
+        setSelectedCourse(allCourses[0].id)
+      }
+
+      // Load enrollments from the correct key
+      loadEnrollments()
+      
+    } catch (error) {
+      console.error('Error loading courses:', error)
+      setCourses(hardcodedCourses)
+      if (hardcodedCourses.length > 0) {
+        setSelectedCourse(hardcodedCourses[0].id)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadEnrollments = () => {
+    const stored = localStorage.getItem('enrollments')
+    if (stored) {
+      setEnrollments(JSON.parse(stored))
+    } else {
+      // No real enrollments, create sample data for demonstration
+      createSampleEnrollments()
+    }
+  }
+
+  const createSampleEnrollments = () => {
+    if (courses.length === 0) return
+
+    const sampleEnrollments: Enrollment[] = []
+    courses.forEach(course => {
+      const sampleStudents = [
+        {
+          id: `sample_stu_${course.id}_1`,
+          name: 'Ahmed Khan',
+          email: 'ahmed.khan@example.com',
+          phone: '+92 300 1234567',
+        },
+        {
+          id: `sample_stu_${course.id}_2`,
+          name: 'Fatima Ali',
+          email: 'fatima.ali@example.com',
+          phone: '+92 321 9876543',
+        },
+        {
+          id: `sample_stu_${course.id}_3`,
+          name: 'Bilal Ahmed',
+          email: 'bilal.ahmed@example.com',
+          phone: '+92 333 5557777',
+        }
+      ]
+      sampleStudents.forEach(s => {
+        sampleEnrollments.push({
+          id: `enroll_${course.id}_${s.id}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          studentId: s.id,
+          studentName: s.name,
+          studentEmail: s.email,
+          studentPhone: s.phone,
+          enrollmentDate: '2024-01-15',
+          status: 'active',
+          lastActive: new Date().toISOString()
+        })
+      })
+    })
+    localStorage.setItem('enrollments', JSON.stringify(sampleEnrollments))
+    setEnrollments(sampleEnrollments)
+  }
+
+  // Function to check if a student has certificate for a course
+  const checkCertificateStatus = (studentId: string, courseId: string): { has: boolean; certId?: string; date?: string } => {
+    try {
+      const certificates = JSON.parse(localStorage.getItem('studentCertificates') || '[]')
+      const studentCert = certificates.find((c: any) => 
+        c.studentId === studentId && c.courseId === courseId
+      )
+      return {
+        has: !!studentCert,
+        certId: studentCert?.certificateId,
+        date: studentCert?.issueDate
+      }
+    } catch (error) {
+      return { has: false }
+    }
+  }
+
+  // Function to load real quiz data for a student
+  const loadStudentQuizData = (studentId: string, courseId: string) => {
+    try {
+      const quizAttemptsKey = `quizAttempts_${studentId}`
+      const savedAttempts = localStorage.getItem(quizAttemptsKey)
+      if (!savedAttempts) return { quizScore: 0, quizAttempts: 0, quizPassed: 0, totalQuizzes: 0 }
+      
+      const attempts = JSON.parse(savedAttempts)
+      const courseQuizzes = Object.values(attempts).filter((a: any) => a.courseId === courseId)
+      
+      const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
+      const courseQuizzesList = allQuizzes.filter((q: any) => q.courseId === courseId)
+      const totalQuizzes = courseQuizzesList.length
+      
+      const avgScore = courseQuizzes.length > 0 
+        ? Math.round(courseQuizzes.reduce((sum: number, a: any) => sum + a.score, 0) / courseQuizzes.length)
+        : 0
+      
+      const passedQuizzes = courseQuizzes.filter((a: any) => a.passed).length
+      
+      return {
+        quizScore: avgScore,
+        quizAttempts: courseQuizzes.length,
+        quizPassed: passedQuizzes,
+        totalQuizzes
+      }
+    } catch (error) {
+      return { quizScore: 0, quizAttempts: 0, quizPassed: 0, totalQuizzes: 0 }
+    }
+  }
+
+  // Function to load real assignment data for a student
+  const loadStudentAssignmentData = (studentId: string, studentEmail: string, courseId: string) => {
+    try {
+      const submissionsKey = 'assignmentSubmissions'
+      const savedSubmissions = localStorage.getItem(submissionsKey)
+      if (!savedSubmissions) return { assignmentsSubmitted: 0, totalAssignments: 0 }
+      
+      const submissions = JSON.parse(savedSubmissions)
+      const courseSubmissions = submissions.filter((s: any) => 
+        s.courseId === courseId && 
+        (s.studentId === studentId || s.studentEmail === studentEmail)
+      )
+      
+      const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
+      const courseAssignments = allAssignments.filter((a: any) => a.courseId === courseId)
+      
+      return {
+        assignmentsSubmitted: courseSubmissions.length,
+        totalAssignments: courseAssignments.length
+      }
+    } catch (error) {
+      return { assignmentsSubmitted: 0, totalAssignments: 0 }
+    }
+  }
+
+  // Function to load real slide progress
+  const loadSlideProgress = (studentId: string, courseId: string) => {
+    try {
+      const completedKey = `completedSlides_${studentId}_${courseId}`
+      const savedCompleted = localStorage.getItem(completedKey)
+      const completedSlides = savedCompleted ? JSON.parse(savedCompleted) : []
+      
+      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]')
+      const courseSlides = allSlides.filter((s: any) => s.courseId === courseId)
+      const totalSlides = courseSlides.length
+      
+      return {
+        completedSlides: completedSlides.length,
+        totalSlides
+      }
+    } catch (error) {
+      return { completedSlides: 0, totalSlides: 0 }
+    }
+  }
+
+  // Build student objects from enrollments and real progress data
+  const loadStudentsForCourse = () => {
+    const courseEnrollments = enrollments.filter(e => e.courseId === selectedCourse)
+    if (courseEnrollments.length === 0) {
+      setStudents([])
+      return
+    }
+
+    const studentList: Student[] = courseEnrollments.map(enrollment => {
+      const studentId = enrollment.studentId
+
+      const slideData = loadSlideProgress(studentId, selectedCourse)
+      const quizData = loadStudentQuizData(studentId, selectedCourse)
+      const assignmentData = loadStudentAssignmentData(studentId, enrollment.studentEmail, selectedCourse)
+      const certStatus = checkCertificateStatus(studentId, selectedCourse)
+
+      // For demo, generate some performance data (could be from actual weekly scores if stored)
+      const performance = [
+        { week: 'Week 1', score: Math.floor(Math.random() * 30 + 60) },
+        { week: 'Week 2', score: Math.floor(Math.random() * 30 + 60) },
+        { week: 'Week 3', score: Math.floor(Math.random() * 30 + 60) },
+        { week: 'Week 4', score: Math.floor(Math.random() * 30 + 60) }
+      ]
+
+      return {
+        id: studentId,
+        name: enrollment.studentName,
+        email: enrollment.studentEmail,
+        phone: enrollment.studentPhone || 'N/A',
+        enrollmentDate: enrollment.enrollmentDate,
+        attendance: 0, // Not tracked yet
+        slidesCompleted: slideData.completedSlides,
+        totalSlides: slideData.totalSlides,
+        quizScore: quizData.quizScore,
+        maxQuizScore: 100,
+        quizAttempts: quizData.quizAttempts,
+        quizPassed: quizData.quizPassed,
+        totalQuizzes: quizData.totalQuizzes,
+        assignmentsSubmitted: assignmentData.assignmentsSubmitted,
+        totalAssignments: assignmentData.totalAssignments,
+        status: enrollment.status,
+        avatar: null,
+        lastActive: enrollment.lastActive || enrollment.enrollmentDate,
+        hasCertificate: certStatus.has,
+        certificateId: certStatus.certId,
+        certificateDate: certStatus.date,
+        performance
+      }
+    })
+
+    setStudents(studentList)
+  }
+
+  const filterAndSortStudents = () => {
+    let filtered = [...students]
+
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'certified') {
+        filtered = filtered.filter(s => s.hasCertificate === true)
+      } else {
+        filtered = filtered.filter(s => s.status === filterStatus)
+      }
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.id.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name)
+          break
+        case 'attendance':
+          comparison = a.attendance - b.attendance
+          break
+        case 'progress':
+          const aProgress = a.totalSlides ? (a.slidesCompleted / a.totalSlides) * 100 : 0
+          const bProgress = b.totalSlides ? (b.slidesCompleted / b.totalSlides) * 100 : 0
+          comparison = aProgress - bProgress
+          break
+        case 'quiz':
+          const aQuizPercent = a.totalQuizzes ? (a.quizPassed / a.totalQuizzes) * 100 : 0
+          const bQuizPercent = b.totalQuizzes ? (b.quizPassed / b.totalQuizzes) * 100 : 0
+          comparison = aQuizPercent - bQuizPercent
+          break
+        case 'certificate':
+          comparison = (a.hasCertificate ? 1 : 0) - (b.hasCertificate ? 1 : 0)
+          break
+      }
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+
+    setFilteredStudents(filtered)
+  }
+
+  const handleAttendanceUpdate = (studentId: string, newAttendance: number) => {
+    // Attendance not persisted; just update local state for UI
+    setStudents(prev => prev.map(s => 
+      s.id === studentId ? { ...s, attendance: newAttendance } : s
+    ))
+  }
+
+  const getProgressColor = (progress: number) => {
+    if (progress >= 80) return 'text-green-600'
+    if (progress >= 60) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getProgressBarColor = (progress: number) => {
+    if (progress >= 80) return 'bg-green-500'
+    if (progress >= 60) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
 
-  const getCourseName = (courseId: string) => {
-    const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-    const course = allCourses.find((c: any) => c.id === courseId);
-    return course?.title || courseId || 'Unknown Course';
-  };
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase()
+  }
 
-  const handleExportData = () => {
-    const exportData = filteredStudents.map(student => ({
-      Name: student.name,
-      Email: student.email,
-      CNIC: student.cnic,
-      Phone: student.phone || 'N/A',
-      Course: getCourseName(student.courseId),
-      'Date of Birth': formatDate(student.dateOfBirth),
-      Gender: student.gender,
-      Country: student.country
-    }));
-
-    const csv = [
-      Object.keys(exportData[0] || {}).join(','),
-      ...exportData.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `students_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
+  const selectedCourseData = courses.find(c => c.id === selectedCourse)
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#6B21A8] border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-       <div className="bg-white rounded-2xl border border-gray-200 p-6">
-  {/* Header */}
-  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-    <div>
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Student Management</h1>
-      <p className="text-gray-600 mt-2">
-        Manage and communicate with your students • {students.length} students
-      </p>
-    </div>
-    <div className="flex items-center gap-3">
-      <button
-        onClick={handleExportData}
-        className="flex items-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium rounded-lg transition-colors"
-      >
-        <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">Export CSV</span>
-      </button>
-    </div>
-  </div>
-
-  {/* Stats - Minimal, flat design */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-    {/* Total Students */}
-    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
-      <p className="text-sm font-medium text-gray-700">Total Students</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{students.length}</p>
-    </div>
-
-    {/* Active Courses */}
-    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
-      <p className="text-sm font-medium text-gray-700">Active Courses</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{courses.length}</p>
-    </div>
-
-    {/* Ready for Feedback */}
-    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
-      <p className="text-sm font-medium text-gray-700">Ready for Feedback</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">
-        {students.length > 0 ? Math.floor(students.length * 0.3) : 0}
-      </p>
-    </div>
-
-    {/* International */}
-    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
-      <p className="text-sm font-medium text-gray-700">International</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">
-        {students.filter(s => s.country !== 'Pakistan').length}
-      </p>
-    </div>
-  </div>
-</div>
-
-
-        {/* Search and Filters */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
-  <div className="flex flex-col md:flex-row gap-4">
-    {/* Search Input */}
-    <div className="flex-1 relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-      <input
-        type="text"
-        placeholder="Search by name, email, or CNIC..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-purple-600 focus:border-purple-600 transition"
-      />
-    </div>
-
-    {/* Filter Section */}
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl text-gray-700 text-sm">
-        <Filter className="w-4 h-4" />
-        Filter
-      </div>
-      <select
-        value={courseFilter}
-        onChange={(e) => setCourseFilter(e.target.value)}
-        className="px-4 py-3 border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-600 focus:border-purple-600 transition"
-      >
-        <option value="all">All Courses</option>
-        {courses.map(course => (
-          <option key={course.id} value={course.id}>
-            {course.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-</div>
-
-
-        {/* Students Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                  <th className="py-4 px-6 text-left">
-                    <button
-                      onClick={() => handleSort('name')}
-                      className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-gray-900"
-                    >
-                      Student
-                      {sortConfig.key === 'name' && (
-                        sortConfig.direction === 'asc' ? 
-                          <ChevronUp className="w-4 h-4" /> : 
-                          <ChevronDown className="w-4 h-4" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700">Contact</th>
-                  <th className="py-4 px-6 text-left">
-                    <button
-                      onClick={() => handleSort('courseId')}
-                      className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-gray-900"
-                    >
-                      Course
-                      {sortConfig.key === 'courseId' && (
-                        sortConfig.direction === 'asc' ? 
-                          <ChevronUp className="w-4 h-4" /> : 
-                          <ChevronDown className="w-4 h-4" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700">Details</th>
-                  <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <>
-                      <tr 
-                        key={student.id} 
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => handleToggleRow(student.id)}
-                      >
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-purple-300 flex items-center justify-center text-white font-bold">
-                              {student.name?.charAt(0) || 'S'}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{student.name}</div>
-                              <div className="text-sm text-gray-500">{student.cnic}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-700 truncate max-w-[200px]">
-                                {student.email}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-700">{student.phone || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="space-y-1">
-                            <div className="font-medium text-gray-900">
-                              {getCourseName(student.courseId)}
-                            </div>
-                            <div className="text-xs text-gray-500">ID: {student.courseId?.substring(0, 8)}...</div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3 h-3 text-gray-400" />
-                              <span className="text-xs text-gray-600">DOB: {formatDate(student.dateOfBirth)}</span>
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {student.gender} • {student.country}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSendFeedback(student);
-                              }}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-[#6B21A8] hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
-                            >
-                              <Send className="w-3 h-3" />
-                              <span className="hidden sm:inline">Feedback</span>
-                            </button>
-                            <a
-                              href={`mailto:${student.email}`}
-                              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Mail className="w-3 h-3" />
-                              <span className="hidden sm:inline">Email</span>
-                            </a>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleRow(student.id);
-                              }}
-                              className="p-1.5 text-gray-400 hover:text-gray-600"
-                            >
-                              {expandedRow === student.id ? (
-                                <ChevronUp className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedRow === student.id && (
-                        <tr className="bg-gray-50">
-                          <td colSpan={5} className="py-4 px-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-900 mb-2">Personal Details</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Full Name:</span>
-                                    <span className="font-medium">{student.name}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">CNIC:</span>
-                                    <span className="font-medium">{student.cnic}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Gender:</span>
-                                    <span className="font-medium">{student.gender}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Country:</span>
-                                    <span className="font-medium">{student.country}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Email:</span>
-                                    <span className="font-medium">{student.email}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Phone:</span>
-                                    <span className="font-medium">{student.phone || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Date of Birth:</span>
-                                    <span className="font-medium">{formatDate(student.dateOfBirth)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-900 mb-2">Course Information</h4>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Course:</span>
-                                    <span className="font-medium">{getCourseName(student.courseId)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Course ID:</span>
-                                    <span className="font-medium">{student.courseId}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-600">Registration:</span>
-                                    <span className="font-medium">
-                                      {student.registrationDate ? formatDate(student.registrationDate) : 'Unknown'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center">
-                      <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <User className="w-10 h-10 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {students.length === 0 ? 'No Students Found' : 'No Matching Students'}
-                      </h3>
-                      <p className="text-gray-600 max-w-md mx-auto">
-                        {students.length === 0 
-                          ? "No students are currently assigned to your courses." 
-                          : "Try adjusting your search terms or filters to find students."}
-                      </p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
+            <p className="mt-4 text-darkGrey">Loading students data...</p>
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Send Feedback Modal */}
-      {showFeedbackModal && selectedStudent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Send Feedback</h3>
-                  <p className="text-gray-600 mt-1">to {selectedStudent.name}</p>
-                </div>
-                <button 
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+  if (courses.length === 0) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="text-center py-12 bg-white rounded-lg border border-softGrey">
+          <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
+          <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+            No Courses Found
+          </h3>
+          <p className="text-darkGrey/70 mb-4">
+            You need to create a course first to view enrolled students.
+          </p>
+          <Link
+            href="/lms/Instructor_Portal/courses/add"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg"
+            style={{ 
+              backgroundColor: BRAND_COLORS.deepRed,
+              color: BRAND_COLORS.white 
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Create Your First Course
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-white p-4 sm:p-6">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                Student Enrollment & Progress
+              </h1>
+              <p className="text-sm sm:text-base text-darkGrey mt-1">
+                Monitor student progress, attendance, quiz performance, and certificates
+              </p>
+            </div>
+            <button
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ 
+                backgroundColor: BRAND_COLORS.teal,
+                color: BRAND_COLORS.white 
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Export Report
+            </button>
+          </div>
+          <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+        </div>
+      </div>
+
+      {/* Course Selection and Filters */}
+      <div className="mb-6">
+        <div className="bg-white rounded-lg border border-softGrey p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Course Selector */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Select Course
+              </label>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white"
+                style={{ color: BRAND_COLORS.darkNavy }}
+              >
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>
+                    {course.title} - {course.category} 
+                    {course.isHardcoded ? ' (Demo)' : course.status === 'draft' ? ' (Draft)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Search Students
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-darkGrey/40" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Filter Toggle - Mobile */}
+            <div className="sm:hidden">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-softGrey rounded-lg"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {/* Sort Options - Desktop */}
+            <div className="hidden sm:block">
+              <label className="block text-sm font-medium text-darkGrey mb-2">
+                Sort By
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white text-sm"
                 >
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <option value="name">Name</option>
+                  <option value="attendance">Attendance</option>
+                  <option value="progress">Progress</option>
+                  <option value="quiz">Quiz Pass Rate</option>
+                  <option value="certificate">Certificate</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-3 py-2.5 border border-softGrey rounded-lg hover:bg-lightGrey"
+                >
+                  {sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-            
-            <div className="p-6">
-              <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Send className="w-5 h-5 text-blue-600" />
+          </div>
+
+          {/* Mobile Filters */}
+          {showFilters && (
+            <div className="mt-4 space-y-3 sm:hidden">
+              <div>
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg bg-white"
+                >
+                  <option value="all">All Students</option>
+                  <option value="active">Active Only</option>
+                  <option value="inactive">Inactive Only</option>
+                  <option value="certified">Certified Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-darkGrey mb-2">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg bg-white"
+                >
+                  <option value="name">Name</option>
+                  <option value="attendance">Attendance</option>
+                  <option value="progress">Progress</option>
+                  <option value="quiz">Quiz Pass Rate</option>
+                  <option value="certificate">Certificate</option>
+                </select>
+              </div>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg flex items-center justify-center gap-2"
+              >
+                {sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Course Summary Cards */}
+      {selectedCourseData && filteredStudents.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
+            <p className="text-xs text-darkGrey/60 mb-1">Total Students</p>
+            <p className="text-lg sm:text-xl font-semibold text-darkGrey">{filteredStudents.length}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
+            <p className="text-xs text-darkGrey/60 mb-1">Active</p>
+            <p className="text-lg sm:text-xl font-semibold text-green-600">
+              {filteredStudents.filter(s => s.status === 'active').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
+            <p className="text-xs text-darkGrey/60 mb-1">Avg Progress</p>
+            <p className="text-lg sm:text-xl font-semibold" style={{ color: BRAND_COLORS.teal }}>
+              {filteredStudents.length > 0 
+                ? Math.round(filteredStudents.reduce((acc, s) => acc + (s.slidesCompleted / s.totalSlides) * 100, 0) / filteredStudents.length) 
+                : 0}%
+            </p>
+          </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3 sm:p-4">
+            <p className="text-xs text-darkGrey/60 mb-1">Certified</p>
+            <p className="text-lg sm:text-xl font-semibold text-purple-600">
+              {filteredStudents.filter(s => s.hasCertificate).length}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Students List - Desktop Table */}
+      <div className="hidden lg:block bg-white rounded-lg border border-softGrey overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-lightGrey">
+              <tr>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Student</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Enrollment</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Attendance</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Slide Progress</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Quiz Pass Rate</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Assignments</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Certificate</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Status</th>
+                <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-softGrey">
+              {filteredStudents.map((student) => {
+                const progress = student.totalSlides ? (student.slidesCompleted / student.totalSlides) * 100 : 0
+                const quizPassRate = student.totalQuizzes ? (student.quizPassed / student.totalQuizzes) * 100 : 0
+                
+                return (
+                  <tr key={student.id} className="hover:bg-lightGrey/50 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                          {getInitials(student.name)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-darkGrey text-sm">{student.name}</p>
+                          <p className="text-xs text-darkGrey/60">{student.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-darkGrey/40" />
+                        <span className="text-sm text-darkGrey">{formatDate(student.enrollmentDate)}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${getProgressColor(student.attendance)}`}>
+                          {student.attendance}%
+                        </span>
+                        <div className="w-16 h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${getProgressBarColor(student.attendance)}`}
+                            style={{ width: `${student.attendance}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-sm font-medium ${getProgressColor(progress)}`}>
+                            {Math.round(progress)}%
+                          </span>
+                          <span className="text-xs text-darkGrey/60">
+                            {student.slidesCompleted}/{student.totalSlides}
+                          </span>
+                        </div>
+                        <div className="w-24 h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${getProgressBarColor(progress)}`}
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-sm font-medium ${getProgressColor(quizPassRate)}`}>
+                            {Math.round(quizPassRate)}%
+                          </span>
+                          <span className="text-xs text-darkGrey/60">
+                            {student.quizPassed}/{student.totalQuizzes}
+                          </span>
+                        </div>
+                        <div className="w-24 h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${getProgressBarColor(quizPassRate)}`}
+                            style={{ width: `${quizPassRate}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div>
+                        <span className="text-sm font-medium">
+                          {student.assignmentsSubmitted}/{student.totalAssignments}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {student.hasCertificate ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                          <Trophy className="w-3 h-3 mr-1" />
+                          Certified
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Not Certified
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        student.status === 'active' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {student.status === 'active' ? (
+                          <><CheckCircle className="w-3 h-3 mr-1" /> Active</>
+                        ) : (
+                          <><XCircle className="w-3 h-3 mr-1" /> Inactive</>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => {
+                          setSelectedStudent(student)
+                          setShowStudentModal(true)
+                        }}
+                        className="p-2 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded-lg transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Students List - Mobile Cards */}
+      <div className="lg:hidden space-y-3">
+        {filteredStudents.map((student) => {
+          const progress = student.totalSlides ? (student.slidesCompleted / student.totalSlides) * 100 : 0
+          const quizPassRate = student.totalQuizzes ? (student.quizPassed / student.totalQuizzes) * 100 : 0
+          
+          return (
+            <div key={student.id} className="bg-white rounded-lg border border-softGrey p-4">
+              {/* Header with Name and Status */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold">
+                    {getInitials(student.name)}
                   </div>
                   <div>
-                    <p className="font-medium text-blue-800">Sending to:</p>
-                    <p className="text-blue-700">{selectedStudent.email}</p>
+                    <h3 className="font-medium text-darkGrey">{student.name}</h3>
+                    <p className="text-xs text-darkGrey/60">{student.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    student.status === 'active' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {student.status}
+                  </span>
+                  {student.hasCertificate && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                      <Trophy className="w-3 h-3 inline mr-1" />
+                      Certified
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                <div>
+                  <p className="text-xs text-darkGrey/60">Enrollment</p>
+                  <p className="text-darkGrey">{formatDate(student.enrollmentDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-darkGrey/60">Phone</p>
+                  <p className="text-darkGrey">{student.phone}</p>
+                </div>
+              </div>
+
+              {/* Progress Bars */}
+              <div className="space-y-2 mb-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-darkGrey/60">Attendance</span>
+                    <span className={`font-medium ${getProgressColor(student.attendance)}`}>
+                      {student.attendance}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getProgressBarColor(student.attendance)}`}
+                      style={{ width: `${student.attendance}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-darkGrey/60">Slide Progress</span>
+                    <span className={`font-medium ${getProgressColor(progress)}`}>
+                      {Math.round(progress)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getProgressBarColor(progress)}`}
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-darkGrey/60">Quiz Pass Rate</span>
+                    <span className={`font-medium ${getProgressColor(quizPassRate)}`}>
+                      {Math.round(quizPassRate)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getProgressBarColor(quizPassRate)}`}
+                      style={{ width: `${quizPassRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-darkGrey/60">Assignments</span>
+                    <span className="font-medium">
+                      {student.assignmentsSubmitted}/{student.totalAssignments}
+                    </span>
                   </div>
                 </div>
               </div>
-              
-              <div className="space-y-6">
+
+              {/* Actions */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setSelectedStudent(student)
+                    setShowStudentModal(true)
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
+                  style={{ 
+                    backgroundColor: BRAND_COLORS.darkRoyalBlue,
+                    color: BRAND_COLORS.white 
+                  }}
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Student Details Modal */}
+      {showStudentModal && selectedStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-softGrey flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-darkGrey">Student Details</h2>
+                <p className="text-sm text-darkGrey/60">View complete student information and performance</p>
+              </div>
+              <button
+                onClick={() => setShowStudentModal(false)}
+                className="p-2 hover:bg-lightGrey rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-darkGrey/60" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
+                  {getInitials(selectedStudent.name)}
+                </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Subject
-                  </label>
+                  <h3 className="text-lg font-semibold text-darkGrey">{selectedStudent.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Mail className="w-4 h-4 text-darkGrey/40" />
+                    <span className="text-sm text-darkGrey/70">{selectedStudent.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Phone className="w-4 h-4 text-darkGrey/40" />
+                    <span className="text-sm text-darkGrey/70">{selectedStudent.phone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Certificate Info */}
+              {selectedStudent.hasCertificate && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="w-8 h-8 text-purple-600" />
+                    <div>
+                      <h4 className="font-medium text-purple-800">Certificate Earned</h4>
+                      <p className="text-sm text-purple-600">Certificate ID: {selectedStudent.certificateId}</p>
+                      <p className="text-xs text-purple-500 mt-1">
+                        Issued on: {formatDate(selectedStudent.certificateDate || '')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-lightGrey rounded-lg p-3">
+                  <p className="text-xs text-darkGrey/60 mb-1">Student ID</p>
+                  <p className="font-medium text-darkGrey text-sm">{selectedStudent.id}</p>
+                </div>
+                <div className="bg-lightGrey rounded-lg p-3">
+                  <p className="text-xs text-darkGrey/60 mb-1">Enrolled</p>
+                  <p className="font-medium text-darkGrey text-sm">{formatDate(selectedStudent.enrollmentDate)}</p>
+                </div>
+                <div className="bg-lightGrey rounded-lg p-3">
+                  <p className="text-xs text-darkGrey/60 mb-1">Last Active</p>
+                  <p className="font-medium text-darkGrey text-sm">{formatDate(selectedStudent.lastActive)}</p>
+                </div>
+                <div className="bg-lightGrey rounded-lg p-3">
+                  <p className="text-xs text-darkGrey/60 mb-1">Quiz Attempts</p>
+                  <p className="font-medium text-darkGrey text-sm">{selectedStudent.quizAttempts}</p>
+                </div>
+              </div>
+
+              {/* Performance Chart */}
+              <div>
+                <h4 className="font-medium text-darkGrey mb-3">Weekly Performance</h4>
+                <div className="space-y-2">
+                  {selectedStudent.performance.map((week) => (
+                    <div key={week.week}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-darkGrey/70">{week.week}</span>
+                        <span className="font-medium text-darkGrey">{week.score}%</span>
+                      </div>
+                      <div className="h-2 bg-lightGrey rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-darkRoyalBlue"
+                          style={{ width: `${week.score}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Attendance Edit */}
+              <div>
+                <h4 className="font-medium text-darkGrey mb-3">Update Attendance</h4>
+                <div className="flex items-center gap-3">
                   <input
-                    type="text"
-                    value={feedbackForm.subject}
-                    onChange={(e) => setFeedbackForm({...feedbackForm, subject: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-                    placeholder="Enter email subject"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={selectedStudent.attendance}
+                    onChange={(e) => {
+                      const newAttendance = parseInt(e.target.value)
+                      handleAttendanceUpdate(selectedStudent.id, newAttendance)
+                      setSelectedStudent({ ...selectedStudent, attendance: newAttendance })
+                    }}
+                    className="flex-1"
+                    style={{ accentColor: BRAND_COLORS.teal }}
                   />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    rows={6}
-                    value={feedbackForm.message}
-                    onChange={(e) => setFeedbackForm({...feedbackForm, message: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent"
-                    placeholder="Write your feedback message here..."
-                  />
-                </div>
-                
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 text-[#6B21A8] rounded focus:ring-[#6B21A8]" />
-                    <span className="text-sm text-gray-700">Save this as a template for future use</span>
-                  </label>
+                  <span className="text-lg font-semibold" style={{ color: BRAND_COLORS.teal }}>
+                    {selectedStudent.attendance}%
+                  </span>
                 </div>
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3 mt-8">
-                <button 
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="flex-1 px-6 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSubmitFeedback}
-                  disabled={sendingFeedback}
-                  className="flex items-center justify-center gap-2 flex-1 px-6 py-3 bg-gradient-to-r from-[#6B21A8] to-purple-600 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {sendingFeedback ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Send Feedback
-                    </>
-                  )}
-                </button>
-              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-softGrey flex justify-end">
+              <button
+                onClick={() => setShowStudentModal(false)}
+                className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* No Results */}
+      {filteredStudents.length === 0 && selectedCourse && (
+        <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
+          <Users className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
+          <h3 className="text-base font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+            No Students Found
+          </h3>
+          <p className="text-darkGrey/70 text-sm">
+            {searchTerm || filterStatus !== 'all' 
+              ? 'Try adjusting your filters' 
+              : 'No students enrolled in this course yet'}
+          </p>
+        </div>
+      )}
     </div>
-  );
+  )
 }

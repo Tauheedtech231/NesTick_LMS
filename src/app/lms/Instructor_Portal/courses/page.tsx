@@ -1,27 +1,25 @@
+// lms/Instructor_Portal/courses/page.tsx
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
+  BookOpen,
   Plus,
+  Search,
   Edit,
   Trash2,
-  BookOpen,
-  Clock,
-  Users,
-  DollarSign,
-  Star,
   Eye,
-  Search,
-  Filter,
-  Wrench,
-  ShieldCheck,
-  Flame as Fire,
-  FolderPlus,
-  ChevronRight
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+  SlidersHorizontal,
+  FileVideo,
+  PlayCircle,
+  FileText
 } from 'lucide-react'
 
-// Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -34,455 +32,627 @@ const BRAND_COLORS = {
   brightRed: '#D32F2F'
 }
 
-type Course = {
+// Published courses data with course images
+const publishedCourses = [
+  {
+    id: 'pipe-fitter',
+    title: 'Pipe Fitter',
+    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
+    studentCapacity: 20,
+    category: 'Technical Training',
+    status: 'published',
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    isPublished: true,
+    courseImage: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+    duration: '8 Weeks',
+    level: 'Beginner to Advanced',
+    price: 'PKR 25,000'
+  },
+  {
+    id: 'safety-inspector',
+    title: 'Safety Inspector',
+    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
+    studentCapacity: 15,
+    category: 'Safety Training',
+    status: 'published',
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    isPublished: true,
+    courseImage: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+    duration: '6 Weeks',
+    level: 'Intermediate',
+    price: 'PKR 30,000'
+  },
+  {
+    id: 'welding',
+    title: 'Professional Welding',
+    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
+    studentCapacity: 12,
+    category: 'Technical Training',
+    status: 'published',
+    instructorId: 'system',
+    instructorName: 'System Instructor',
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    isPublished: true,
+    courseImage: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+    duration: '10 Weeks',
+    level: 'Beginner to Professional',
+    price: 'PKR 35,000'
+  }
+];
+
+interface Course {
   id: string;
   title: string;
-  category: string;
   description: string;
-  duration: string;
-  students: string;
-  level: string;
-  highlights: string[];
-  price: string;
-  originalPrice: string;
-  savings: string;
-  featured: boolean;
-  rating: number;
-  reviews: number;
-  image: string;
+  studentCapacity: number;
+  category: string;
+  status: 'draft' | 'published';
+  instructorId: string;
+  instructorName: string;
+  instructorImage?: string;
+  createdAt: string;
+  updatedAt: string;
+  isPublished?: boolean;
+  courseImage?: string;
+  duration?: string;
+  level?: string;
+  price?: string;
+}
+
+interface Slide {
+  id: string;
+  courseId: string;
+  slideNumber: number;
+  title: string;
   createdAt: string;
   updatedAt: string;
 }
 
+interface SlideContent {
+  slideId: string;
+  courseId: string;
+  files: {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    publicId: string;
+    uploadedAt: string;
+  }[];
+}
+/* eslint-disable */
+
+interface Quiz {
+  slideId: string;
+  courseId: string;
+  questions: any[];
+}
+
+interface Assignment {
+  id: string;
+  courseId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  totalMarks: number;
+  passingMarks: number;
+  file?: {
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    publicId: string;
+    uploadedAt: string;
+  };
+  status: 'published' | 'draft';
+  createdAt: string;
+  updatedAt: string;
+}
+/* eslint-disable */
+
 export default function CoursesPage() {
+  const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([])
+  const [instructor, setInstructor] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterCategory, setFilterCategory] = useState('all')
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-
-  // Load courses from localStorage
-  useEffect(() => {
-    const loadCourses = () => {
-      try {
-        const savedCourses = localStorage.getItem('lms_courses')
-        if (savedCourses) {
-          setCourses(JSON.parse(savedCourses))
-        } else {
-          // Default courses
-          const defaultCourses: Course[] = [
-            {
-              id: 'pipe-fitter',
-              title: 'Pipe Fitter',
-              category: 'Technical Training',
-              description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-              duration: '8 Weeks',
-              students: 'Max 20 per batch',
-              level: 'Beginner to Advanced',
-              highlights: [
-                'Learn pipe cutting, threading, and installation',
-                'Blueprint reading and interpretation',
-                'Pipe system design and layout',
-                'Safety protocols and standards',
-                'Hands-on workshop training',
-                'Industry certification preparation'
-              ],
-              price: 'PKR 25,000',
-              originalPrice: 'PKR 30,000',
-              savings: 'Save PKR 5,000',
-              featured: true,
-              rating: 4.8,
-              reviews: 124,
-              image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            },
-            {
-              id: 'safety-inspector',
-              title: 'Safety Inspector',
-              category: 'Safety Training',
-              description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-              duration: '6 Weeks',
-              students: 'Max 15 per batch',
-              level: 'Intermediate',
-              highlights: [
-                'OSHA standards and regulations',
-                'Site inspection methodologies',
-                'Risk assessment techniques',
-                'Safety documentation',
-                'Emergency response planning',
-                'Certification exam preparation'
-              ],
-              price: 'PKR 30,000',
-              originalPrice: 'PKR 35,000',
-              savings: 'Save PKR 5,000',
-              featured: true,
-              rating: 4.9,
-              reviews: 89,
-              image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            },
-            {
-              id: 'welding',
-              title: 'Professional Welding',
-              category: 'Technical Training',
-              description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-              duration: '10 Weeks',
-              students: 'Max 12 per batch',
-              level: 'Beginner to Professional',
-              highlights: [
-                'MIG, TIG, and Arc welding techniques',
-                'Metal identification and preparation',
-                'Weld quality inspection',
-                'Safety equipment usage',
-                'Industry-standard certification',
-                'Portfolio development'
-              ],
-              price: 'PKR 35,000',
-              originalPrice: 'PKR 40,000',
-              savings: 'Save PKR 5,000',
-              featured: true,
-              rating: 4.7,
-              reviews: 156,
-              image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          ]
-          setCourses(defaultCourses)
-          localStorage.setItem('lms_courses', JSON.stringify(defaultCourses))
-        }
-      } catch (error) {
-        console.error('Error loading courses:', error)
-      } finally {
-        setLoading(false)
-      }
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [courseStats, setCourseStats] = useState<{
+    [key: string]: {
+      slides: number, 
+      files: number, 
+      quizzes: number,
+      assignments: number
     }
+  }>({})
+  const [showPublished, setShowPublished] = useState(true)
 
-    loadCourses()
+  useEffect(() => {
+    loadInstructorData()
   }, [])
 
-  // Get unique categories
-  const categories = useMemo(() => {
-    return ['all', ...new Set(courses.map(course => course.category))]
-  }, [courses])
+  useEffect(() => {
+    filterCourses()
+  }, [searchTerm, statusFilter, courses, showPublished])
 
-  // Filter courses
-  const filteredCourses = useMemo(() => {
-    return courses.filter(course => {
-      const matchesSearch = 
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase())
-      
-      const matchesCategory = filterCategory === 'all' || course.category === filterCategory
-      
-      return matchesSearch && matchesCategory
-    })
-  }, [courses, searchTerm, filterCategory])
+  const loadInstructorData = () => {
+    try {
+      // Get current instructor
+      const currentUserStr = localStorage.getItem('currentUser')
+      if (!currentUserStr) {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
 
-  // Delete course
-  const deleteCourse = (courseId: string) => {
-    const updatedCourses = courses.filter(course => course.id !== courseId)
-    setCourses(updatedCourses)
-    localStorage.setItem('lms_courses', JSON.stringify(updatedCourses))
-    setDeleteConfirm(null)
+      const currentUser = JSON.parse(currentUserStr)
+      if (currentUser.role !== 'instructor') {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
+
+      setInstructor(currentUser)
+
+      // Load courses from localStorage for this instructor
+      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+      const instructorCourses = allCourses.filter((c: Course) => 
+        c.instructorId === currentUser.id || c.instructorName === currentUser.name
+      ).map((c: any) => ({
+        ...c,
+        courseImage: c.image || c.courseImage,
+      }))
+      
+      // Combine with published courses if enabled
+      let allAvailableCourses = [...instructorCourses]
+      
+      if (showPublished) {
+        allAvailableCourses = [...publishedCourses, ...instructorCourses]
+      }
+      
+      setCourses(allAvailableCourses)
+      setFilteredCourses(allAvailableCourses)
+      
+      // Load stats for each course
+      loadCourseStats(allAvailableCourses)
+      
+      // Initialize published course data if not exists
+      initializePublishedCourseData()
+      
+    } catch (error) {
+      console.error('Error loading courses:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Preview course (could be replaced with a modal)
-  const previewCourse = (course: Course) => {
-    // For now, we'll open a new tab with a preview page (if exists) or alert
-    // You can replace this with a modal or a dedicated preview route
-    alert(`Preview: ${course.title}`)
+  const initializePublishedCourseData = () => {
+    // Check if published courses have slides initialized
+    publishedCourses.forEach(course => {
+      const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
+      const courseSlides = existingSlides.filter((s: Slide) => s.courseId === course.id)
+      
+      if (courseSlides.length === 0) {
+        // Create default slides for published courses
+        const defaultSlides = [
+          {
+            id: `${course.id}_slide_1`,
+            courseId: course.id,
+            slideNumber: 1,
+            title: 'Introduction',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: `${course.id}_slide_2`,
+            courseId: course.id,
+            slideNumber: 2,
+            title: 'Fundamentals',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: `${course.id}_slide_3`,
+            courseId: course.id,
+            slideNumber: 3,
+            title: 'Advanced Concepts',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ]
+        
+        const updatedSlides = [...existingSlides, ...defaultSlides]
+        localStorage.setItem('slides', JSON.stringify(updatedSlides))
+      }
+    })
+  }
+
+  const loadCourseStats = (courses: Course[]) => {
+    const slides = JSON.parse(localStorage.getItem('slides') || '[]')
+    const slideContent = JSON.parse(localStorage.getItem('slideContent') || '[]')
+    const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
+    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]')
+    
+    const stats: {[key: string]: {slides: number, files: number, quizzes: number, assignments: number}} = {}
+    
+    courses.forEach(course => {
+      const courseSlides = slides.filter((s: Slide) => s.courseId === course.id)
+      const courseSlideIds = courseSlides.map((s: Slide) => s.id)
+      
+      const courseFiles = slideContent.filter((sc: SlideContent) => 
+        courseSlideIds.includes(sc.slideId)
+      ).reduce((acc: number, sc: SlideContent) => acc + (sc.files?.length || 0), 0)
+      
+      const courseQuizzes = quizzes.filter((q: Quiz) => 
+        courseSlideIds.includes(q.slideId)
+      ).reduce((acc: number, q: Quiz) => acc + (q.questions?.length || 0), 0)
+
+      const courseAssignments = assignments.filter((a: Assignment) => 
+        a.courseId === course.id
+      ).length
+      
+      stats[course.id] = {
+        slides: courseSlides.length,
+        files: courseFiles,
+        quizzes: courseQuizzes,
+        assignments: courseAssignments
+      }
+    })
+    
+    setCourseStats(stats)
+  }
+
+  const filterCourses = () => {
+    let filtered = [...courses]
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(course => 
+        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.category.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(course => course.status === statusFilter)
+    }
+    
+    setFilteredCourses(filtered)
+  }
+
+  const handleDeleteCourse = (courseId: string, isPublished?: boolean) => {
+    if (isPublished) {
+      alert('Published courses cannot be deleted. You can hide them using the toggle switch.')
+      return
+    }
+    
+    if (!confirm('Are you sure you want to delete this course? All slides, content, quizzes, and assignments will be permanently removed.')) {
+      return
+    }
+    
+    // Delete course
+    const updatedCourses = courses.filter(c => c.id !== courseId)
+    localStorage.setItem('courses', JSON.stringify(updatedCourses.filter(c => !c.isPublished)))
+    
+    // Delete associated slides
+    const slides = JSON.parse(localStorage.getItem('slides') || '[]')
+    const updatedSlides = slides.filter((s: Slide) => s.courseId !== courseId)
+    localStorage.setItem('slides', JSON.stringify(updatedSlides))
+    
+    // Delete associated slide content
+    const slideContent = JSON.parse(localStorage.getItem('slideContent') || '[]')
+    const updatedContent = slideContent.filter((sc: SlideContent) => sc.courseId !== courseId)
+    localStorage.setItem('slideContent', JSON.stringify(updatedContent))
+    
+    // Delete associated quizzes
+    const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
+    const updatedQuizzes = quizzes.filter((q: Quiz) => q.courseId !== courseId)
+    localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes))
+    
+    // Delete associated assignments
+    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]')
+    const updatedAssignments = assignments.filter((a: Assignment) => a.courseId !== courseId)
+    localStorage.setItem('assignments', JSON.stringify(updatedAssignments))
+    
+    setCourses(updatedCourses)
+  }
+
+  const getStatusBadge = (status: string, isPublished?: boolean) => {
+    if (isPublished) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+          <PlayCircle className="w-3 h-3" />
+          Published
+        </span>
+      )
+    }
+    
+    if (status === 'published') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+          <CheckCircle className="w-3 h-3" />
+          Published
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+        <XCircle className="w-3 h-3" />
+        Draft
+      </span>
+    )
+  }
+
+  const handleManageSlides = (courseId: string) => {
+    router.push(`/lms/Instructor_Portal/courses/edit/${courseId}?tab=slides`)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white p-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
-          <p className="mt-4 text-darkGrey">Loading courses...</p>
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-10 w-48 bg-gray-200 rounded mb-6"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="h-48 bg-gray-100 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="bg-lightGrey rounded-xl p-6 border border-softGrey">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                Course Management
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                My Courses
               </h1>
-              <p className="text-darkGrey mt-1">
-                Manage all courses, add new courses, edit existing ones, and handle modules
+              <p className="text-darkGrey mt-1 text-sm">
+                Manage your courses, slides, content, and assignments
               </p>
             </div>
+            <div className="flex items-center gap-3">
+              {/* Toggle for showing/hiding published courses */}
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-darkGrey/70">Show Published</span>
+                <button
+                  onClick={() => setShowPublished(!showPublished)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    showPublished ? 'bg-teal-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      showPublished ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </label>
+              <Link
+                href="/lms/Instructor_Portal/courses/add"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                style={{ 
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white 
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                Create New Course
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="mb-6">
+        <div className="bg-white rounded-lg border border-softGrey p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-darkGrey/40" />
+              <input
+                type="text"
+                placeholder="Search courses..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 text-sm"
+              />
+            </div>
+            
+            {/* Filter and view section */}
+            <div className="flex items-center gap-2">
+              {/* Filter Button - Mobile */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="sm:hidden px-3 py-2 border border-softGrey rounded-lg flex items-center gap-2"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="text-sm">Filter</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Status Filter - Desktop */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="hidden sm:block px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+          </div>
+          
+          {/* Mobile Filters */}
+          {showFilters && (
+            <div className="mt-4 sm:hidden">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Courses Table */}
+      {filteredCourses.length === 0 ? (
+        <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
+          <BookOpen className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
+          <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+            No Courses Found
+          </h3>
+          <p className="text-darkGrey/70 mb-6">
+            {searchTerm || statusFilter !== 'all' 
+              ? 'Try adjusting your filters' 
+              : 'Get started by creating your first course'}
+          </p>
+          {(searchTerm || statusFilter !== 'all') ? (
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+              }}
+              className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors"
+            >
+              Clear Filters
+            </button>
+          ) : (
             <Link
               href="/lms/Instructor_Portal/courses/add"
-              className="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 
               }}
             >
-              <Plus className="w-5 h-5" />
-              Add New Course
+              <Plus className="w-4 h-4" />
+              Create First Course
             </Link>
-          </div>
-          <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
+          )}
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-darkGrey">Total Courses</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-                {courses.length}
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-              <BookOpen className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-darkGrey">Featured Courses</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-                {courses.filter(c => c.featured).length}
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.deepRed}10` }}>
-              <Star className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-darkGrey">Average Rating</p>
-              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
-                {courses.length > 0 
-                  ? (courses.reduce((acc, c) => acc + c.rating, 0) / courses.length).toFixed(1)
-                  : '0.0'
-                }
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <Star className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-darkGrey">Manage Modules</p>
-              <p className="text-sm font-medium mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                <Link href="/lms/Instructor_Portal/courses/modules" className="hover:underline flex items-center gap-1">
-                  View All <ChevronRight className="w-4 h-4" />
-                </Link>
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-              <FolderPlus className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="bg-white rounded-lg border border-softGrey p-5 mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: BRAND_COLORS.darkGrey }} />
-              <input
-                type="text"
-                placeholder="Search courses by title, category, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
-                aria-label="Search courses"
-              />
-            </div>
-          </div>
-
-          <div className="w-full md:w-48">
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: BRAND_COLORS.darkGrey }} />
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20 bg-white appearance-none"
-                aria-label="Filter by category"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Courses Table */}
-      <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
-        <div className="p-4 border-b border-softGrey flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-lightGrey">
-          <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-            All Courses ({filteredCourses.length})
-          </h2>
-          <span className="text-sm text-darkGrey">
-            Showing {filteredCourses.length} of {courses.length} courses
-          </span>
-        </div>
-
-        {filteredCourses.length > 0 ? (
+      ) : (
+        <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}> {/* Changed to royal blue */}
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Course</th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Category</th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Duration</th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Price</th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Rating</th>
-                  <th className="text-left py-3.5 px-6 font-semibold text-sm text-white">Actions</th>
+              <thead style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
+                <tr>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Course</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Status</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Slides</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Files</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Quizzes</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Assignments</th>
+                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Actions</th>
                 </tr>
               </thead>
-
-              <tbody>
+              <tbody className="divide-y divide-softGrey">
                 {filteredCourses.map((course) => (
-                  <tr 
-                    key={course.id} 
-                    className="border-b border-softGrey hover:bg-lightGrey transition-colors duration-150"
-                  >
-                    <td className="py-4 px-6">
+                  <tr key={course.id} className="hover:bg-lightGrey/50 transition-colors">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" 
-                          style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}10` }}>
-                          {course.title === 'Pipe Fitter' ? (
-                            <Wrench className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                          ) : course.title === 'Safety Inspector' ? (
-                            <ShieldCheck className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                          ) : course.title === 'Professional Welding' ? (
-                            <Fire className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                        {/* Course Image - Show for all courses with fallback */}
+                        <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-softGrey">
+                          {course.courseImage ? (
+                            <img 
+                              src={course.courseImage} 
+                              alt={course.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5" style="color: #1E3A8A" ...></div>';
+                              }}
+                            />
                           ) : (
-                            <BookOpen className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookOpen className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                            </div>
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-darkGrey">{course.title}</p>
-                          <p className="text-sm text-darkGrey/70 truncate max-w-xs">{course.description}</p>
+                          <p className="font-medium text-darkGrey text-sm">{course.title}</p>
+                          <p className="text-xs text-darkGrey/60 line-clamp-1">{course.description}</p>
+                          {course.duration && course.level && (
+                            <p className="text-xs text-purple-600 mt-1">{course.duration} • {course.level}</p>
+                          )}
                         </div>
-                        {course.featured && (
-                          <span className="px-2 py-1 text-xs rounded-full bg-deepRed/10 text-deepRed whitespace-nowrap">
-                            Featured
-                          </span>
-                        )}
                       </div>
                     </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className="px-3 py-1 text-sm rounded-full bg-lightGrey text-darkGrey">
-                        {course.category}
-                      </span>
+                    <td className="py-3 px-4">
+                      {getStatusBadge(course.status, course.isPublished)}
                     </td>
-                    
-                    <td className="py-4 px-6">
+                    <td className="py-3 px-4 text-sm text-darkGrey">
+                      {courseStats[course.id]?.slides || 0}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-darkGrey">
+                      {courseStats[course.id]?.files || 0}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-darkGrey">
+                      {courseStats[course.id]?.quizzes || 0}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" style={{ color: BRAND_COLORS.teal }} />
+                        <span className="text-sm text-darkGrey">
+                          {courseStats[course.id]?.assignments || 0}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-darkGrey/70" />
-                        <span className="text-darkGrey">{course.duration}</span>
-                      </div>
-                      <div className="text-xs text-darkGrey/70 mt-1">{course.students}</div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="space-y-1">
-                        <p className="font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{course.price}</p>
-                        <p className="text-sm line-through text-darkGrey/70">{course.originalPrice}</p>
-                        <p className="text-xs text-teal">{course.savings}</p>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${i < Math.floor(course.rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm font-medium text-darkGrey">{course.rating}</span>
-                        <span className="text-xs text-darkGrey/70">({course.reviews})</span>
-                      </div>
-                      <p className="text-xs text-darkGrey/70 mt-1">{course.level}</p>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/lms/Instructor_Portal/courses/edit/${course.id}`}
-                          className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                          title="Edit Course"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        
-                        <Link
-                          href="/lms/Instructor_Portal/courses/modules"
-                          className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
-                          title="Manage Modules"
-                        >
-                          <FolderPlus className="w-4 h-4" />
-                        </Link>
-                        
-                        {deleteConfirm === course.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => deleteCourse(course.id)}
-                              className="p-1 text-xs bg-brightRed text-white rounded hover:bg-red-700 transition-colors"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirm(null)}
-                              className="p-1 text-xs bg-gray-300 text-darkGrey rounded hover:bg-gray-400 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirm(course.id)}
-                            className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg transition-colors"
-                            title="Delete Course"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        
                         <button
-                          onClick={() => previewCourse(course)}
-                          className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded-lg transition-colors"
+                          onClick={() => handleManageSlides(course.id)}
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          title="Manage Slides"
+                        >
+                          <FileVideo className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                        </button>
+                        {!course.isPublished && (
+                          <Link
+                            href={`/lms/Instructor_Portal/courses/edit/${course.id}`}
+                            className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                            title="Edit Course"
+                          >
+                            <Edit className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                          </Link>
+                        )}
+                        <Link
+                          href={`/lms/Instructor_Portal/courses/preview/${course.id}`}
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
                           title="Preview Course"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteCourse(course.id, course.isPublished)}
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          title={course.isPublished ? "Published courses cannot be deleted" : "Delete Course"}
+                        >
+                          <Trash2 className="w-4 h-4" style={{ color: course.isPublished ? BRAND_COLORS.softGrey : BRAND_COLORS.brightRed }} />
                         </button>
                       </div>
                     </td>
@@ -491,86 +661,42 @@ export default function CoursesPage() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-            <h3 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
-              {searchTerm ? 'No matching courses found' : 'No courses available'}
-            </h3>
-            <p className="text-darkGrey/70 mb-6 max-w-md mx-auto">
-              {searchTerm 
-                ? 'Try a different search term or clear filters' 
-                : 'Add your first course to get started'}
+        </div>
+      )}
+
+      {/* Summary Stats */}
+      {filteredCourses.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="bg-white rounded-lg border border-softGrey p-3">
+            <p className="text-xs text-darkGrey/60">Total Courses</p>
+            <p className="text-lg font-semibold text-darkGrey">{filteredCourses.length}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3">
+            <p className="text-xs text-darkGrey/60">Published</p>
+            <p className="text-lg font-semibold text-darkGrey">
+              {filteredCourses.filter(c => c.status === 'published' || c.isPublished).length}
             </p>
-            <Link
-              href="/lms/Instructor_Portal/courses/add"
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors"
-              style={{ 
-                backgroundColor: BRAND_COLORS.deepRed,
-                color: BRAND_COLORS.white 
-              }}
-            >
-              <Plus className="w-5 h-5" />
-              Add Your First Course
-            </Link>
           </div>
-        )}
-      </div>
-
-      {/* Quick Links */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link
-          href="/lms/Instructor_Portal/courses/add"
-          className="bg-white rounded-lg border border-softGrey p-5 hover:border-darkRoyalBlue transition-colors duration-200 group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey group-hover:text-darkRoyalBlue">
-                Add New Course
-              </h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                Create a new course with modules, pricing, and details
-              </p>
-            </div>
-            <div className="p-2 rounded-lg group-hover:bg-darkRoyalBlue/10">
-              <Plus className="w-5 h-5 text-darkGrey group-hover:text-darkRoyalBlue" />
-            </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3">
+            <p className="text-xs text-darkGrey/60">Drafts</p>
+            <p className="text-lg font-semibold text-darkGrey">
+              {filteredCourses.filter(c => c.status === 'draft').length}
+            </p>
           </div>
-        </Link>
-
-        <Link
-          href="/lms/Instructor_Portal/courses/modules"
-          className="bg-white rounded-lg border border-softGrey p-5 hover:border-darkRoyalBlue transition-colors duration-200 group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey group-hover:text-darkRoyalBlue">
-                Manage Modules
-              </h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                Add, edit, and organize modules for all courses
-              </p>
-            </div>
-            <div className="p-2 rounded-lg group-hover:bg-darkRoyalBlue/10">
-              <FolderPlus className="w-5 h-5 text-darkGrey group-hover:text-darkRoyalBlue" />
-            </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3">
+            <p className="text-xs text-darkGrey/60">System Courses</p>
+            <p className="text-lg font-semibold text-darkGrey">
+              {filteredCourses.filter(c => c.isPublished).length}
+            </p>
           </div>
-        </Link>
-
-        <div className="bg-white rounded-lg border border-softGrey p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-darkGrey">Quick Stats</h3>
-              <p className="text-sm text-darkGrey/70 mt-1">
-                {courses.length} courses • {courses.reduce((acc, c) => acc + c.reviews, 0)} reviews
-              </p>
-            </div>
-            <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
-              <Star className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
-            </div>
+          <div className="bg-white rounded-lg border border-softGrey p-3">
+            <p className="text-xs text-darkGrey/60">Total Assignments</p>
+            <p className="text-lg font-semibold text-darkGrey">
+              {Object.values(courseStats).reduce((sum, stat) => sum + (stat.assignments || 0), 0)}
+            </p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

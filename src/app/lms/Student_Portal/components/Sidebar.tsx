@@ -38,37 +38,12 @@ export default function Sidebar() {
       icon: HiBookOpen,
       path: '/lms/Student_Portal/my-courses',
     },
-    {
-      id: 'Materials',
-      label: 'Materials',
-      icon: FolderIcon,
-      path: '/lms/Student_Portal/Materials',
-    },
-    {
-      id: 'Assignments',
-      label: 'Assignments',
-      icon: HiDocumentText,
-      path: '/lms/Student_Portal/assignments',
-    },
     
-    {
-      id: 'mock-quizzes',
-      label: 'Mock Quizzes',
-      icon: HiDocumentText,
-      path: '/lms/Student_Portal/mock-quizzes',
-    },
-    {
-      id: 'progress',
-      label: 'Progress',
-      icon: HiChartBar,
-      path: '/lms/Student_Portal/progress',
-    },
-    {
-      id: 'certificates',
-      label: 'Certificates',
-      icon: HiAcademicCap,
-      path: '/lms/Student_Portal/certificates',
-    },
+   
+    
+    
+   
+    
     {
       id: 'profile',
       label: 'Profile',
