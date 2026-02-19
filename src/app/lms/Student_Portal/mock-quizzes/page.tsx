@@ -16,7 +16,7 @@ import {
   HiDownload,
 } from 'react-icons/hi';
 import Link from 'next/link';
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -95,70 +95,65 @@ export default function StudentMockQuizzesPage() {
           const userData = JSON.parse(currentUserStr);
           setUser(userData);
 
-          const studentCourses = JSON.parse(localStorage.getItem('studentCourses') || '[]');
+          // Fetch all published quizzes created by instructors
           const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]');
           const allInstructors = JSON.parse(localStorage.getItem('lms_instructors') || '[]');
           const allQuizResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]');
           setQuizResults(allQuizResults);
 
-          const studentQuizData: Quiz[] = [];
+          // Filter only published quizzes (all students can see all published quizzes)
+          const publishedQuizzes = allQuizzes.filter((quiz: any) => quiz.status === 'published');
 
-          studentCourses.forEach((course: any) => {
-            const courseQuizzes = allQuizzes
-              .filter((quiz: any) => {
-                const matchesCourseId = quiz.courseId === course.id;
-                const matchesCourseTitle =
-                  quiz.courseTitle?.toLowerCase() === course.title?.toLowerCase();
-                return (matchesCourseId || matchesCourseTitle) && quiz.status === 'published';
-              })
-              .map((quiz: any) => {
-                const instructor = allInstructors.find((inst: any) => inst.id === quiz.instructorId) || {
-                  name: quiz.instructorName || 'Instructor',
-                };
+          const studentQuizData: Quiz[] = publishedQuizzes.map((quiz: any) => {
+            const instructor = allInstructors.find((inst: any) => inst.id === quiz.instructorId) || {
+              name: quiz.instructorName || 'Instructor',
+            };
 
-                const studentResult = allQuizResults.find(
-                  (result: any) =>
-                    result.quizId === quiz.id &&
-                    (result.studentEmail === userData.email || result.studentId === userData.id)
-                );
+            // Get all attempts by this student for this quiz
+            const studentAttempts = allQuizResults.filter(
+              (result: any) =>
+                result.quizId === quiz.id &&
+                (result.studentEmail === userData.email || result.studentId === userData.id)
+            );
 
-                let status: 'not_attempted' | 'in_progress' | 'completed' = 'not_attempted';
-                let studentScore = undefined;
-                let isPassed = false;
-                let attempts = 0;
-                let lastAttempt = undefined;
+            let status: 'not_attempted' | 'in_progress' | 'completed' = 'not_attempted';
+            let studentScore = undefined;
+            let isPassed = false;
+            const attempts = studentAttempts.length;
+            let lastAttempt = undefined;
 
-                if (studentResult) {
-                  status = 'completed';
-                  studentScore = studentResult.score;
-                  isPassed = studentResult.isPassed;
-                  attempts = 1;
-                  lastAttempt = studentResult.submittedAt;
-                }
+            // Get the most recent attempt
+            if (studentAttempts.length > 0) {
+              const latestAttempt = studentAttempts.sort(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+              )[0];
+              status = 'completed';
+              studentScore = latestAttempt.score;
+              isPassed = latestAttempt.isPassed;
+              lastAttempt = latestAttempt.submittedAt;
+            }
 
-                return {
-                  id: quiz.id,
-                  title: quiz.title,
-                  description: quiz.description || 'Test your knowledge with this quiz',
-                  course: course.title,
-                  courseId: course.id,
-                  instructorName: instructor.name,
-                  totalQuestions: quiz.totalQuestions || quiz.questions?.length || 10,
-                  passingScore: quiz.passingScore || 70,
-                  studentScore,
-                  isPassed,
-                  attempts,
-                  timeLimit: quiz.timeLimit || 30,
-                  difficulty: quiz.difficulty || 'medium',
-                  tags: quiz.tags || ['assessment'],
-                  createdAt: quiz.createdAt || new Date().toISOString(),
-                  status,
-                  lastAttempt,
-                  averageScore: quiz.averageScore || 0,
-                };
-              });
-
-            studentQuizData.push(...courseQuizzes);
+            return {
+              id: quiz.id,
+              title: quiz.title,
+              description: quiz.description || 'Test your knowledge with this quiz',
+              course: quiz.courseTitle || 'General',
+              courseId: quiz.courseId || 'general',
+              instructorName: instructor.name,
+              totalQuestions: quiz.totalQuestions || quiz.questions?.length || 10,
+              passingScore: quiz.passingScore || 70,
+              studentScore,
+              isPassed,
+              attempts,
+              timeLimit: quiz.timeLimit || 30,
+              difficulty: quiz.difficulty || 'medium',
+              tags: quiz.tags || ['assessment'],
+              createdAt: quiz.createdAt || new Date().toISOString(),
+              status,
+              lastAttempt,
+              averageScore: quiz.averageScore || 0,
+            };
           });
 
           if (studentQuizData.length === 0) {
@@ -690,12 +685,6 @@ export default function StudentMockQuizzesPage() {
                         </Link>
                       </>
                     )}
-                    <Link
-                      href={`/lms/Student_Portal/mock-quizzes/${quiz.id}/details`}
-                      className="w-full py-2.5 px-4 rounded-lg font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 text-sm"
-                    >
-                      View Details
-                    </Link>
                   </div>
                 </div>
               </div>

@@ -89,8 +89,29 @@ export default function QuizzesPage() {
         const myQuizzes = allQuizzes.filter((q: Quiz) => 
           q.instructorId === currentUser.id && q.courseId === currentUser.courseId
         )
+
+        // Load student quiz results to calculate attempt counts and average scores
+        const allResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]')
+
+        // Enhance quizzes with actual attempt data
+        const enhancedQuizzes = myQuizzes.map((quiz: any) => {
+          // Count attempts for this quiz
+          const quizResults = allResults.filter((result: any) => result.quizId === quiz.id)
+          const attemptCount = quizResults.length
+          
+          // Calculate average score from actual attempts
+          const averageScore = attemptCount > 0 
+            ? Math.round(quizResults.reduce((sum: number, result: any) => sum + result.score, 0) / attemptCount)
+            : 0
+
+          return {
+            ...quiz,
+            attempts: attemptCount,
+            averageScore: averageScore
+          }
+        })
         
-        setQuizzes(myQuizzes)
+        setQuizzes(enhancedQuizzes)
       } catch (error) {
         console.error('Error loading quizzes:', error)
       } finally {

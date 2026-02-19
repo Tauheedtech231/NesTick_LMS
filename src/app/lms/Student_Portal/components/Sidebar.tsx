@@ -14,6 +14,7 @@ import {
   HiChevronRight,
   HiMenu,
   HiX,
+  HiClipboardCheck,
 } from 'react-icons/hi';
 import { SiMaterialdesignicons } from 'react-icons/si';
 import { FolderIcon } from 'lucide-react';
@@ -38,12 +39,12 @@ export default function Sidebar() {
       icon: HiBookOpen,
       path: '/lms/Student_Portal/my-courses',
     },
-    
-   
-    
-    
-   
-    
+    {
+      id: 'mock-quizzes',
+      label: 'Mock Quizzes',
+      icon: HiClipboardCheck,
+      path: '/lms/Student_Portal/mock-quizzes',
+    },
     {
       id: 'profile',
       label: 'Profile',

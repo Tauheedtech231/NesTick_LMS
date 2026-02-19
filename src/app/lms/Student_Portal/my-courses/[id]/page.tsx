@@ -79,6 +79,9 @@ interface QuizAttempt {
   score: number;
   passed: boolean;
   attemptedAt: string;
+  studentId?: string;
+  studentEmail?: string;
+  studentName?: string;
 }
 
 interface Assignment {
@@ -105,6 +108,7 @@ interface Assignment {
 
 interface AssignmentSubmission {
   assignmentId: string;
+  courseId?: string;
   studentId: string;
   studentEmail: string;
   studentName: string;
@@ -480,7 +484,10 @@ export default function StudentCourseDetailPage() {
       answers: [...quizAnswers],
       score,
       passed,
-      attemptedAt: new Date().toISOString()
+      attemptedAt: new Date().toISOString(),
+      studentId: user.id,
+      studentEmail: user.email,
+      studentName: user.fullName || user.name || 'Student'
     };
 
     // Save attempt
@@ -561,6 +568,7 @@ export default function StudentCourseDetailPage() {
       if (uploadedFiles.length > 0) {
         const submission: AssignmentSubmission = {
           assignmentId,
+          courseId: courseId,
           studentId: user.id,
           studentEmail: user.email,
           studentName: user.fullName || user.name || 'Student',

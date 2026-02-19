@@ -194,51 +194,87 @@ export default function InstructorDashboard() {
 
   const loadRecentActivities = () => {
     try {
-      // Hardcoded recent activities as requested
-      const activities: Activity[] = [
-        {
-          id: '1',
-          type: 'enrollment',
-          title: 'New Student Enrolled',
-          description: 'Sarah Johnson enrolled in Web Development Fundamentals',
-          courseName: 'Web Development Fundamentals',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
-        },
-        {
-          id: '2',
-          type: 'quiz_created',
-          title: 'Quiz Created',
-          description: 'JavaScript Basics Quiz with 15 questions',
-          courseName: 'Advanced JavaScript',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day ago
-        },
-        {
-          id: '3',
-          type: 'slide_added',
-          title: 'Slide Added',
-          description: 'React Hooks - Complete Guide presentation uploaded',
-          courseName: 'React Masterclass',
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
-        },
-        {
-          id: '4',
-          type: 'enrollment',
-          title: 'New Student Enrolled',
-          description: 'Michael Chen enrolled in UI/UX Design Principles',
-          courseName: 'UI/UX Design Principles',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days ago
-        },
-        {
-          id: '5',
-          type: 'course_update',
-          title: 'Course Updated',
-          description: 'Added new module on Advanced State Management',
-          courseName: 'React Masterclass',
-          timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() // 4 days ago
+      const currentUserStr = localStorage.getItem('currentUser')
+      if (!currentUserStr) return
+
+      const currentUser = JSON.parse(currentUserStr)
+      const activities: Activity[] = []
+
+      // 1. Get activities from instructor_quizzes (quiz_created)
+      const instructorQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
+      instructorQuizzes.forEach((quiz: any) => {
+        if (quiz.instructorId === currentUser.id) {
+          activities.push({
+            id: `quiz_${quiz.id}`,
+            type: 'quiz_created',
+            title: 'Quiz Created',
+            description: `${quiz.title} with ${quiz.totalQuestions || 10} questions`,
+            courseName: quiz.courseTitle || 'Course',
+            timestamp: quiz.createdAt || new Date().toISOString()
+          })
         }
-      ]
-      
-      setRecentActivities(activities)
+      })
+
+      // 2. Get activities from teaching_materials (slide_added/materials uploaded)
+      const teachingMaterials = JSON.parse(localStorage.getItem('teaching_materials') || '[]')
+      teachingMaterials.forEach((material: any) => {
+        // Find if this material belongs to this instructor's course
+        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+        const course = allCourses.find((c: any) => c.id === material.courseId && c.instructorId === currentUser.id)
+        
+        if (course) {
+          activities.push({
+            id: `material_${material.id}`,
+            type: 'slide_added',
+            title: 'Material Uploaded',
+            description: `${material.title} (${material.type || 'File'}) added to course`,
+            courseName: course.title || 'Course',
+            timestamp: material.uploadedAt || material.createdAt || new Date().toISOString()
+          })
+        }
+      })
+
+      // 3. Get activities from course updates (course_update)
+      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+      allCourses.forEach((course: any) => {
+        if (course.instructorId === currentUser.id && course.updatedAt) {
+          activities.push({
+            id: `course_${course.id}`,
+            type: 'course_update',
+            title: 'Course Updated',
+            description: `${course.title} was updated`,
+            courseName: course.title || 'Course',
+            timestamp: course.updatedAt || new Date().toISOString()
+          })
+        }
+      })
+
+      // 4. Get enrollment activities from enrollments tracking
+      const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]')
+      const students = JSON.parse(localStorage.getItem('lms_students') || '[]')
+      enrollments.forEach((enrollment: any) => {
+        const course = allCourses.find((c: any) => c.id === enrollment.courseId && c.instructorId === currentUser.id)
+        if (course) {
+          const student = students.find((s: any) => s.id === enrollment.studentId)
+          const studentName = student?.name || enrollment.studentName || 'A student'
+          activities.push({
+            id: `enrollment_${enrollment.id}`,
+            type: 'enrollment',
+            title: 'New Student Enrolled',
+            description: `${studentName} enrolled in ${course.title}`,
+            courseName: course.title || 'Course',
+            timestamp: enrollment.enrolledAt || enrollment.createdAt || new Date().toISOString()
+          })
+        }
+      })
+
+      // Sort activities by timestamp (most recent first)
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+      // Keep only the most recent 10 activities
+      const recentActivities = activities.slice(0, 10)
+
+      setRecentActivities(recentActivities)
       
     } catch (error) {
       console.error('Error loading activities:', error)
@@ -523,13 +559,7 @@ export default function InstructorDashboard() {
                             >
                               <Users className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
                             </Link>
-                            <Link
-                              href={`/lms/Instructor_Portal/materials?course=${course.id}`}
-                              className="p-1.5 rounded-lg hover:bg-lightGrey transition-colors"
-                              title="Manage Slides"
-                            >
-                              <FileVideo className="w-4 h-4" style={{ color: BRAND_COLORS.deepRed }} />
-                            </Link>
+                          
                           </div>
                         </td>
                       </tr>
