@@ -1,4 +1,4 @@
-// app/lms/Student_Portal/my-courses/page.tsx
+// app/lms/Student_Portal/my-courses/page.tsx (FIXED VERSION)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,6 +10,7 @@ type Course = {
   id: string;
   title: string;
   instructor: string;
+  instructorName?: string;
   description: string;
   category: string;
   progress: number;
@@ -20,9 +21,9 @@ type Course = {
   completedModules: number;
   lastAccessed?: string;
   image?: string;
-  instructorName?: string;
   duration?: string;
   level?: string;
+  instructorImage?: string;
 };
 
 const BRAND_COLORS = {
@@ -42,6 +43,7 @@ const DEMO_COURSES: Course[] = [
     id: 'demo-1',
     title: 'Introduction to Web Development',
     instructor: 'Sarah Johnson',
+    instructorName: 'Sarah Johnson',
     description: 'Learn the fundamentals of HTML, CSS, and JavaScript. Build your first responsive website from scratch.',
     category: 'Web Development',
     progress: 45,
@@ -58,6 +60,7 @@ const DEMO_COURSES: Course[] = [
     id: 'demo-2',
     title: 'Data Science Fundamentals',
     instructor: 'Michael Chen',
+    instructorName: 'Michael Chen',
     description: 'Master the basics of data analysis, Python programming, and visualization. Hands-on projects included.',
     category: 'Data Science',
     progress: 20,
@@ -74,6 +77,7 @@ const DEMO_COURSES: Course[] = [
     id: 'demo-3',
     title: 'UX/UI Design Principles',
     instructor: 'Emily Rodriguez',
+    instructorName: 'Emily Rodriguez',
     description: 'Discover the art of creating intuitive user experiences. Learn wireframing, prototyping, and user testing.',
     category: 'Design',
     progress: 0,
@@ -90,6 +94,7 @@ const DEMO_COURSES: Course[] = [
     id: 'demo-4',
     title: 'Digital Marketing Mastery',
     instructor: 'David Kim',
+    instructorName: 'David Kim',
     description: 'Comprehensive guide to SEO, social media marketing, and analytics. Build a complete marketing strategy.',
     category: 'Marketing',
     progress: 100,
@@ -113,6 +118,31 @@ export default function MyCoursesPage() {
   const [overallProgress, setOverallProgress] = useState(0);
   const [showingDemo, setShowingDemo] = useState(false);
 
+  // Helper function to get instructor name from various sources
+  const getInstructorName = (course: any): string => {
+    // Check all possible fields where instructor name might be stored
+    const instructorName = 
+      course.instructorName || 
+      course.instructor || 
+      course.instructor_name || 
+      course.createdBy ||
+      course.creator ||
+      course.teacher ||
+      'Not Assigned';
+    
+    // If it's an object with a name property
+    if (typeof instructorName === 'object' && instructorName !== null) {
+      return instructorName.name || instructorName.fullName || instructorName.displayName || 'Instructor';
+    }
+    
+    // If it's a string and not empty
+    if (typeof instructorName === 'string' && instructorName.trim()) {
+      return instructorName;
+    }
+    
+    return 'Not Assigned';
+  };
+
   // Function to load courses with real-time progress
   const loadCoursesWithProgress = () => {
     try {
@@ -130,6 +160,15 @@ export default function MyCoursesPage() {
       const userData = JSON.parse(currentUserStr);
       setUser(userData);
 
+      // Get all courses from localStorage (for instructor names)
+      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      
+      // Create a map of courseId to course details for quick lookup
+      const courseDetailsMap = new Map();
+      allCourses.forEach((course: any) => {
+        courseDetailsMap.set(course.id, course);
+      });
+
       // Get studentCourses
       const studentCoursesStr = localStorage.getItem('studentCourses');
       if (!studentCoursesStr) {
@@ -144,7 +183,7 @@ export default function MyCoursesPage() {
 
       const studentCoursesData = JSON.parse(studentCoursesStr);
 
-      // For each course, get the latest progress from individual completion data
+      // For each course, get the latest progress and correct instructor name
       const typedCourses: Course[] = studentCoursesData.map((course: any) => {
         // Get the latest completion data for this course and student
         const completedSlidesKey = `completedSlides_${userData.id}_${course.id}`;
@@ -166,23 +205,39 @@ export default function MyCoursesPage() {
         // Get completed modules count
         const completedModules = completedSlides;
 
+        // Get course details from the main courses list
+        const courseDetails = courseDetailsMap.get(course.id) || {};
+        
+        // Get instructor name with priority:
+        // 1. From courseDetails (most accurate)
+        // 2. From the course object itself
+        // 3. From studentCourses data
+        // 4. Default fallback
+        const instructorName = 
+          getInstructorName(courseDetails) || 
+          getInstructorName(course) || 
+          course.instructorName ||
+          course.instructor ||
+          'Not Assigned';
+
         return {
           id: course.id,
-          title: course.title || 'Untitled Course',
-          instructor: course.instructorName || course.instructor || 'Not Assigned',
-          description: course.description || 'Course description not available.',
-          category: course.category || 'General',
+          title: courseDetails.title || course.title || 'Untitled Course',
+          instructor: instructorName,
+          instructorName: instructorName,
+          description: courseDetails.description || course.description || 'Course description not available.',
+          category: courseDetails.category || course.category || 'General',
           progress: progress,
           status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
           enrolledDate: course.enrolledDate || new Date().toISOString(),
           modules: course.modules || [],
-          totalModules: totalSlides,
+          totalModules: totalSlides || course.totalModules || 1,
           completedModules: completedModules,
           lastAccessed: course.lastAccessed,
-          image: course.image || course.courseImage,
-          instructorName: course.instructorName,
-          duration: course.duration || 'Self-paced',
-          level: course.level || 'All Levels'
+          image: courseDetails.image || course.image || course.courseImage,
+          duration: courseDetails.duration || course.duration || 'Self-paced',
+          level: courseDetails.level || course.level || 'All Levels',
+          instructorImage: courseDetails.instructorImage
         };
       });
 
@@ -199,6 +254,12 @@ export default function MyCoursesPage() {
       setCourses(typedCourses);
       setFilteredCourses(typedCourses);
       setShowingDemo(false);
+
+      console.log('Loaded courses with instructors:', typedCourses.map(c => ({
+        title: c.title,
+        instructor: c.instructor
+      })));
+
     } catch (error) {
       console.error('Error loading courses:', error);
       // On error, show demo courses as fallback
@@ -216,7 +277,8 @@ export default function MyCoursesPage() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.startsWith('completedSlides_') || 
           e.key?.startsWith('completedContent_') || 
-          e.key === 'studentCourses') {
+          e.key === 'studentCourses' ||
+          e.key === 'courses') {
         loadCoursesWithProgress();
       }
     };
@@ -245,7 +307,8 @@ export default function MyCoursesPage() {
         (course) =>
           course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.category.toLowerCase().includes(searchTerm.toLowerCase())
+          course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          course.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -351,16 +414,10 @@ export default function MyCoursesPage() {
 
       {/* Stats Cards - only for real courses */}
       {!showingDemo && courses.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
             <p className="text-xs text-gray-500">Total</p>
             <p className="text-lg sm:text-xl font-bold text-gray-900">{courses.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-xs text-gray-500">In Progress</p>
-            <p className="text-lg sm:text-xl font-bold text-yellow-600">
-              {courses.filter(c => c.status === 'in_progress').length}
-            </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
             <p className="text-xs text-gray-500">Completed</p>
@@ -423,11 +480,7 @@ export default function MyCoursesPage() {
                   {course.title}
                 </h3>
 
-                {/* Instructor */}
-                <p className="text-xs text-gray-600 mb-3">
-                  <HiUser className="inline w-3 h-3 mr-1" />
-                  {course.instructor}
-                </p>
+             
 
                 {/* Description */}
                 <p className="text-xs text-gray-600 mb-3 line-clamp-2">

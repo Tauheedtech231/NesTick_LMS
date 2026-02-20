@@ -165,11 +165,11 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
         <div className="h-20 flex items-center px-4 border-b" style={{ borderColor: '#1E407F' }}>
           <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-              <span className="text-white font-bold">A</span>
+              <span className="text-white font-bold text-base">A</span>
             </div>
             <div>
-              <div className="text-sm font-semibold text-white">Admin Portal</div>
-              <div className="text-xs text-white/80">Dashboard</div>
+              <div className="text-base font-semibold text-white">Admin Portal</div>
+              <div className="text-sm text-white/80">Dashboard</div>
             </div>
           </Link>
         </div>
@@ -179,25 +179,25 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
             <li>
               <Link href="/lms/Admin_Portal/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/dashboard') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiHome className="w-5 h-5 text-white/90" />
-                <span className="text-sm text-white">Dashboard</span>
+                <span className="text-base text-white">Dashboard</span>
               </Link>
             </li>
             <li>
               <Link href="/lms/Admin_Portal/instructors" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/instructors') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiAcademicCap className="w-5 h-5 text-white/90" />
-                <span className="text-sm text-white">Instructors</span>
+                <span className="text-base text-white">Instructors</span>
               </Link>
             </li>
             <li>
               <Link href="/lms/Admin_Portal/payments" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/payments') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiCreditCard className="w-5 h-5 text-white/90" />
-                <span className="text-sm text-white">Payments</span>
+                <span className="text-base text-white">Payments</span>
               </Link>
             </li>
             <li>
               <Link href="/lms/Admin_Portal/reports" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/reports') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiChartBar className="w-5 h-5 text-white/90" />
-                <span className="text-sm text-white">Reports</span>
+                <span className="text-base text-white">Reports</span>
               </Link>
             </li>
           </ul>
@@ -206,16 +206,16 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
         <div className="p-4 border-t" style={{ borderColor: '#1E407F' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-              <span className="text-white font-medium text-sm">{currentUser?.name?.charAt(0) || 'A'}</span>
+              <span className="text-white font-medium text-base">{currentUser?.name?.charAt(0) || 'A'}</span>
             </div>
             <div>
-              <div className="text-sm font-medium text-white">{currentUser?.name || 'Admin User'}</div>
-              <div className="text-xs text-white/80">{currentUser?.email || 'admin@example.com'}</div>
+              <div className="text-base font-medium text-white">{currentUser?.name || 'Admin User'}</div>
+              <div className="text-sm text-white/80">{currentUser?.email || 'admin@example.com'}</div>
             </div>
           </div>
 
           <div className="mt-3">
-            <button onClick={handleLogout} className="w-full text-sm py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors">
+            <button onClick={handleLogout} className="w-full text-base py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors">
               Logout
             </button>
           </div>
@@ -231,7 +231,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
           <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
             <span className="text-white font-bold text-sm">A</span>
           </div>
-          <span className="text-white font-semibold text-sm">Admin Portal</span>
+          <span className="text-white font-semibold text-base">Admin Portal</span>
         </Link>
 
         <button
@@ -275,13 +275,13 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-                    <span className="text-white font-medium text-sm">
+                    <span className="text-white font-medium text-base">
                       {currentUser?.name?.charAt(0) || 'A'}
                     </span>
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium text-white">{currentUser?.name || 'Admin User'}</p>
-                    <p className="text-xs text-white/60">{currentUser?.email || 'admin@example.com'}</p>
+                    <p className="text-base font-medium text-white">{currentUser?.name || 'Admin User'}</p>
+                    <p className="text-sm text-white/60">{currentUser?.email || 'admin@example.com'}</p>
                   </div>
                 </div>
               </div>
@@ -294,7 +294,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 <input
                   type="search"
                   placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 bg-white/10 text-white rounded-lg border border-white/20 focus:outline-none placeholder-white/50"
+                  className="w-full pl-10 pr-4 py-2 bg-white/10 text-white rounded-lg border border-white/20 focus:outline-none placeholder-white/50 text-base"
                 />
               </div>
             </div>
@@ -313,7 +313,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                   }`}
                 >
                   <HiHome className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white">Dashboard</span>
+                  <span className="font-medium text-white text-base">Dashboard</span>
                 </Link>
               </div>
 
@@ -329,7 +329,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                   }`}
                 >
                   <HiAcademicCap className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white">Instructors</span>
+                  <span className="font-medium text-white text-base">Instructors</span>
                 </Link>
               </div>
 
@@ -345,7 +345,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                   }`}
                 >
                   <HiCreditCard className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white">Payments</span>
+                  <span className="font-medium text-white text-base">Payments</span>
                 </Link>
               </div>
 
@@ -361,7 +361,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                   }`}
                 >
                   <HiChartBar className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white">Reports</span>
+                  <span className="font-medium text-white text-base">Reports</span>
                 </Link>
               </div>
             </div>
@@ -370,7 +370,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
             <div className="p-4 border-t" style={{ borderColor: `${BRAND_COLORS.softGrey}30` }}>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base"
                 style={{
                   backgroundColor: BRAND_COLORS.white,
                   color: BRAND_COLORS.brightRed,

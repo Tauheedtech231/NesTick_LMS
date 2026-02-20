@@ -1,5 +1,6 @@
 'use client'
 
+import { RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { 
   HiSearch, HiFilter, HiDocumentDownload,
@@ -9,6 +10,19 @@ import {
   HiUserCircle, HiCalendar, HiCreditCard
 } from 'react-icons/hi'
 /* eslint-disable */
+
+// Brand Colors
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
+}
 
 interface RealPayment {
   id: string
@@ -271,9 +285,9 @@ export default function PaymentsList() {
     
     const matchesStatus = 
       statusFilter === 'ALL' || 
-      (statusFilter === 'PAID' && payment.status === 'verified') ||
-      (statusFilter === 'PENDING' && payment.status === 'pending') ||
-      (statusFilter === 'FAILED' && payment.status === 'rejected')
+      (statusFilter === 'verified' && payment.status === 'verified') ||
+      (statusFilter === 'pending' && payment.status === 'pending') ||
+      (statusFilter === 'rejected' && payment.status === 'rejected')
     
     return matchesSearch && matchesStatus
   })
@@ -289,10 +303,10 @@ export default function PaymentsList() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'border-green-200 bg-green-50 text-green-700'
-      case 'pending': return 'border-amber-200 bg-amber-50 text-amber-700'
-      case 'rejected': return 'border-red-200 bg-red-50 text-red-700'
-      default: return 'border-gray-200 bg-gray-50 text-gray-700'
+      case 'verified': return 'bg-green-100 text-green-800 border-green-200'
+      case 'pending': return 'bg-amber-100 text-amber-800 border-amber-200'
+      case 'rejected': return 'bg-red-100 text-red-800 border-red-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -381,124 +395,133 @@ export default function PaymentsList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header with Stats */}
         <div className="mb-8">
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Real Payments</h1>
-                <p className="text-gray-600 mt-2">Real payment data from student submissions</p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+                Real Payments
+              </h1>
+              <p className="text-darkGrey/70 mt-2">Real payment data from student submissions</p>
+            </div>
+            <button
+              onClick={refreshData}
+              className="px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 text-sm transition-colors"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh Data
+            </button>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-darkGrey/70">Total Payments</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{stats.totalPayments}</p>
+                </div>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
+                  <HiCurrencyDollar className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                </div>
               </div>
-              <button
-                onClick={refreshData}
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm flex items-center"
-              >
-                <span className="mr-2">🔄</span>
-                Refresh Data
-              </button>
+              <div className="mt-2 text-xs text-darkGrey/50">
+                {stats.recentPayments} in last 30 days
+              </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Total Payments</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalPayments}</p>
-                  </div>
-                  <HiCurrencyDollar className="w-8 h-8 text-gray-400" />
+            <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-darkGrey/70">Verified</p>
+                  <p className="text-2xl font-bold mt-1 text-green-600">{stats.verifiedPayments}</p>
                 </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {stats.recentPayments} in last 30 days
+                <div className="p-3 rounded-lg bg-green-100">
+                  <HiCheckCircle className="w-5 h-5 text-green-600" />
                 </div>
               </div>
-              
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Verified</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.verifiedPayments}</p>
-                  </div>
-                  <HiCheckCircle className="w-8 h-8 text-green-400" />
+              <div className="mt-2 text-xs text-darkGrey/50">
+                {Math.round((stats.verifiedPayments / Math.max(stats.totalPayments, 1)) * 100)}% success rate
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-darkGrey/70">Pending</p>
+                  <p className="text-2xl font-bold mt-1 text-amber-600">{stats.pendingPayments}</p>
                 </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {Math.round((stats.verifiedPayments / Math.max(stats.totalPayments, 1)) * 100)}% success rate
+                <div className="p-3 rounded-lg bg-amber-100">
+                  <HiClock className="w-5 h-5 text-amber-600" />
                 </div>
               </div>
-              
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Pending</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.pendingPayments}</p>
-                  </div>
-                  <HiClock className="w-8 h-8 text-amber-400" />
+              <div className="mt-2 text-xs text-darkGrey/50">
+                Needs verification
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-darkGrey/70">Total Revenue</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                    {formatCurrency(stats.totalRevenue)}
+                  </p>
                 </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  Needs verification
+                <div className="p-3 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
+                  <HiCreditCard className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
                 </div>
               </div>
-              
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Total Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(stats.totalRevenue).replace('PKR', 'PKR ')}
-                    </p>
-                  </div>
-                  <HiCreditCard className="w-8 h-8 text-blue-400" />
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  From all payments
-                </div>
+              <div className="mt-2 text-xs text-darkGrey/50">
+                From all payments
               </div>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border border-softGrey">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
                   <input
                     type="text"
                     placeholder="Search by name, email, course, or transaction ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                    className="w-full pl-10 pr-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 focus:border-darkRoyalBlue"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-darkGrey/50 hover:text-darkGrey"
                     >
                       <HiX className="w-4 h-4" />
                     </button>
                   )}
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black min-w-[140px]"
+                  className="px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 focus:border-darkRoyalBlue min-w-[140px] text-sm"
                 >
                   <option value="ALL">All Status</option>
                   <option value="verified">Verified</option>
                   <option value="pending">Pending</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
+                <div className="inline-flex items-center bg-lightGrey rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('basic')}
                     className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                       viewMode === 'basic'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white text-darkGrey shadow-sm'
+                        : 'text-darkGrey/60 hover:text-darkGrey'
                     }`}
                   >
                     <HiEyeOff className="w-4 h-4 inline mr-1" />
@@ -508,8 +531,8 @@ export default function PaymentsList() {
                     onClick={() => setViewMode('detailed')}
                     className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                       viewMode === 'detailed'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white text-darkGrey shadow-sm'
+                        : 'text-darkGrey/60 hover:text-darkGrey'
                     }`}
                   >
                     <HiEye className="w-4 h-4 inline mr-1" />
@@ -522,7 +545,7 @@ export default function PaymentsList() {
                     setSearchTerm('')
                     setExpandedPayments([])
                   }}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                  className="px-4 py-2.5 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey transition-colors"
                 >
                   Clear
                 </button>
@@ -532,45 +555,45 @@ export default function PaymentsList() {
 
           {/* Results Count */}
           <div className="mb-6">
-            <div className="text-gray-700">
+            <p className="text-sm text-darkGrey/70">
               Showing {filteredPayments.length} of {payments.length} real payments
               {searchTerm && ` matching "${searchTerm}"`}
-            </div>
+            </p>
           </div>
         </div>
 
         {/* Screenshot Modal */}
         {showScreenshotModal && selectedScreenshot && selectedPayment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-softGrey">
+              <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
                     Payment Screenshot - {selectedPayment.studentName}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-darkGrey/70">
                     Transaction ID: {selectedPayment.transactionId} • {selectedPayment.course}
                   </p>
                 </div>
                 <button
                   onClick={() => setShowScreenshotModal(false)}
-                  className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
+                  className="text-darkGrey/70 hover:text-darkGrey p-2 rounded-lg hover:bg-white transition-colors"
                 >
-                  ✕
+                  <HiX className="w-5 h-5" />
                 </button>
               </div>
               
               <div className="p-6 overflow-auto max-h-[70vh]">
                 <div className="flex flex-col lg:flex-row gap-6">
                   <div className="lg:w-2/3">
-                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <div className="border border-softGrey rounded-lg overflow-hidden bg-lightGrey">
                       <img
                         src={selectedScreenshot}
                         alt="Payment Screenshot"
                         className="w-full h-auto max-h-[500px] object-contain"
                       />
                     </div>
-                    <div className="mt-4 flex justify-center space-x-4">
+                    <div className="mt-4 flex flex-wrap justify-center gap-3">
                       <button
                         onClick={() => downloadScreenshot(selectedPayment)}
                         className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium flex items-center"
@@ -589,44 +612,40 @@ export default function PaymentsList() {
                   </div>
                   
                   <div className="lg:w-1/3">
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold text-gray-900 mb-3">Payment Details</h4>
+                    <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
+                      <h4 className="font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>Payment Details</h4>
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm text-gray-500">Student Name</p>
-                          <p className="font-medium">{selectedPayment.studentName}</p>
+                          <p className="text-xs text-darkGrey/70">Student Name</p>
+                          <p className="font-medium text-darkGrey">{selectedPayment.studentName}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Email</p>
-                          <p className="font-medium text-sm">{selectedPayment.email}</p>
+                          <p className="text-xs text-darkGrey/70">Email</p>
+                          <p className="font-medium text-sm text-darkGrey">{selectedPayment.email}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Course</p>
-                          <p className="font-medium">{selectedPayment.course}</p>
+                          <p className="text-xs text-darkGrey/70">Course</p>
+                          <p className="font-medium text-darkGrey">{selectedPayment.course}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Amount</p>
+                          <p className="text-xs text-darkGrey/70">Amount</p>
                           <p className="font-medium text-green-600">{selectedPayment.amount}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Payment Method</p>
-                          <p className="font-medium">{selectedPayment.paymentMethod}</p>
+                          <p className="text-xs text-darkGrey/70">Payment Method</p>
+                          <p className={`font-medium ${getMethodColor(selectedPayment.paymentMethod)}`}>
+                            {selectedPayment.paymentMethod}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Transaction ID</p>
-                          <p className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          <p className="text-xs text-darkGrey/70">Transaction ID</p>
+                          <p className="font-mono text-sm bg-white px-2 py-1 rounded border border-softGrey text-darkGrey break-all">
                             {selectedPayment.transactionId}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Status</p>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            selectedPayment.status === 'verified' 
-                              ? 'bg-green-100 text-green-800'
-                              : selectedPayment.status === 'rejected'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
+                          <p className="text-xs text-darkGrey/70">Status</p>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(selectedPayment.status)}`}>
                             {getStatusText(selectedPayment.status)}
                           </span>
                         </div>
@@ -664,7 +683,7 @@ export default function PaymentsList() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-softGrey p-6 animate-pulse">
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <div className="h-4 bg-gray-200 rounded w-1/4"></div>
@@ -677,7 +696,7 @@ export default function PaymentsList() {
             ))}
           </div>
         ) : filteredPayments.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-white rounded-xl border border-softGrey">
             <HiCurrencyDollar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">No payments found</h3>
             <p className="text-gray-600 mb-6">
@@ -685,7 +704,8 @@ export default function PaymentsList() {
             </p>
             <button
               onClick={refreshData}
-              className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
+              className="px-6 py-3 rounded-lg text-white font-medium transition-colors"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
               Refresh Data
             </button>
@@ -699,27 +719,28 @@ export default function PaymentsList() {
               return (
                 <div 
                   key={payment.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden"
+                  className="bg-white rounded-xl shadow-sm border border-softGrey hover:border-gray-300 transition-colors overflow-hidden"
                 >
                   {/* Basic Info Row */}
-                  <div className="p-6">
+                  <div className="p-5">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       {/* Left Column */}
-                      <div className="space-y-2 flex-1">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                               style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
                             <span className="text-white text-sm font-bold">
                               {payment.studentName.split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900">{payment.studentName}</h3>
-                            <div className="text-sm text-gray-500">
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 truncate">{payment.studentName}</h3>
+                            <div className="text-sm text-gray-500 truncate">
                               {payment.email} • {payment.course}
                             </div>
                           </div>
                           {payment.formData && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap">
                               Real Data
                             </span>
                           )}
@@ -735,21 +756,21 @@ export default function PaymentsList() {
                       </div>
 
                       {/* Right Column */}
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(payment.status)}`}>
                           {getStatusText(payment.status)}
                         </span>
                         <div className="flex gap-2">
                           <button
                             onClick={() => togglePaymentDetails(payment.id)}
-                            className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                            className="px-3 py-1.5 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey text-sm transition-colors"
                           >
                             {isExpanded ? 'Hide Details' : 'View Details'}
                           </button>
                           {payment.screenshotUrl && (
                             <button
                               onClick={() => viewScreenshot(payment)}
-                              className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm flex items-center"
+                              className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm flex items-center transition-colors"
                             >
                               <HiPhotograph className="w-4 h-4 mr-1" />
                               Screenshot
@@ -760,7 +781,7 @@ export default function PaymentsList() {
                     </div>
 
                     {/* Additional Info */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="mt-4 pt-4 border-t border-softGrey grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <div className="text-sm text-gray-600">Payment Date</div>
                         <div className="font-medium text-gray-900">
@@ -769,7 +790,7 @@ export default function PaymentsList() {
                       </div>
                       <div>
                         <div className="text-sm text-gray-600">Transaction ID</div>
-                        <div className="font-medium text-gray-900 text-sm font-mono">
+                        <div className="font-medium text-gray-900 text-sm font-mono truncate">
                           {payment.transactionId}
                         </div>
                       </div>
@@ -792,8 +813,8 @@ export default function PaymentsList() {
 
                     {/* Detailed Information */}
                     {showDetails && (
-                      <div className="mt-6 pt-6 border-t border-gray-100">
-                        <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="mt-6 pt-6 border-t border-softGrey">
+                        <div className="bg-lightGrey rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Payment Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -824,19 +845,19 @@ export default function PaymentsList() {
                               <div className="text-sm text-gray-600">Date: {formatDate(payment.paymentDate)}</div>
                             </div>
                           </div>
-                          <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-3">
+                          <div className="mt-4 pt-4 border-t border-softGrey flex flex-wrap gap-3">
                             {payment.screenshotUrl && (
                               <>
                                 <button
                                   onClick={() => viewScreenshot(payment)}
-                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center"
+                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center transition-colors"
                                 >
                                   <HiPhotograph className="w-4 h-4 mr-2" />
                                   View Screenshot
                                 </button>
                                 <button
                                   onClick={() => downloadScreenshot(payment)}
-                                  className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm flex items-center"
+                                  className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm flex items-center transition-colors"
                                 >
                                   <HiDownload className="w-4 h-4 mr-2" />
                                   Download Proof
@@ -847,20 +868,20 @@ export default function PaymentsList() {
                               <>
                                 <button
                                   onClick={() => handleVerifyPayment(payment.id)}
-                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors"
                                 >
                                   ✓ Verify Payment
                                 </button>
                                 <button
                                   onClick={() => handleRejectPayment(payment.id)}
-                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition-colors"
                                 >
                                   ✗ Reject Payment
                                 </button>
                               </>
                             )}
-                            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
-                              <HiDocumentDownload className="w-4 h-4 inline mr-2" />
+                            <button className="px-4 py-2 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey text-sm flex items-center transition-colors">
+                              <HiDocumentDownload className="w-4 h-4 mr-2" />
                               Download Receipt
                             </button>
                           </div>
@@ -875,27 +896,30 @@ export default function PaymentsList() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-8 border-t border-gray-200">
+        <div className="mt-8 pt-8 border-t border-softGrey">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-darkGrey/70">
               <div className="flex items-center">
                 <HiCurrencyDollar className="w-4 h-4 mr-2" />
                 Real payment data loaded from localStorage
               </div>
-              <div className="mt-1 text-xs text-gray-500">
+              <div className="mt-1 text-xs text-darkGrey/50">
                 {payments.filter(p => p.formData).length} real submissions • Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={refreshData}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm flex items-center"
+                className="px-4 py-2 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey text-sm flex items-center transition-colors"
               >
                 <span className="mr-2">🔄</span>
                 Refresh Data
               </button>
-              <button className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm">
-                <HiFilter className="w-4 h-4 inline mr-2" />
+              <button 
+                className="px-4 py-2 rounded-lg text-white font-medium text-sm flex items-center transition-colors"
+                style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
+              >
+                <HiFilter className="w-4 h-4 mr-2" />
                 Export All Data
               </button>
             </div>

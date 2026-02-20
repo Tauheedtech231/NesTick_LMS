@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx (updated version)
+// app/dashboard/page.tsx (FIXED - 3 cards per row)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,8 +7,13 @@ import {
   HiCheckCircle, 
   HiClock, 
   HiArrowRight,
-  HiUser,
-  HiClipboardCheck
+  HiClipboardCheck,
+  HiDocumentText,
+  HiStar,
+  HiLightningBolt,
+  HiPlay,
+  HiTrendingUp,
+  HiAcademicCap
 } from 'react-icons/hi';
 import Link from 'next/link';
 /* eslint-disable */
@@ -25,61 +30,34 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// KPI Card Component (same as before)
+// KPI Card Component – Fixed size for 3 per row
 const KPICard = ({ 
   title, 
   value, 
   icon: Icon, 
-  color, 
-  change, 
-  changeType,
-  size = 'md'
+  color
 }: {
   title: string;
   value: string | number;
   icon: any;
   color: string;
-  change?: string;
-  changeType?: 'positive' | 'negative' | 'neutral';
-  size?: 'sm' | 'md' | 'lg';
 }) => {
-  const sizeClasses = {
-    sm: 'p-3',
-    md: 'p-4',
-    lg: 'p-6'
-  };
-
-  const iconSizeClasses = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-10 h-10'
-  };
-
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 ${sizeClasses[size]} shadow-sm hover:shadow-md transition-shadow`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-gray-600 text-xs sm:text-sm">{title}</p>
-          <h3 className="font-bold text-xl sm:text-2xl mt-1">{value}</h3>
-          {change && (
-            <p className={`text-xs sm:text-sm mt-1 ${
-              changeType === 'positive' ? 'text-green-600' : 
-              changeType === 'negative' ? 'text-red-600' : 
-              'text-gray-600'
-            }`}>
-              {change}
-            </p>
-          )}
+    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
+      <div className="flex items-center gap-3">
+        <div className={`${color} rounded-lg p-2.5 text-white flex-shrink-0`}>
+          <Icon className="w-5 h-5" />
         </div>
-        <div className={`${color} rounded-lg p-2 text-white`}>
-          <Icon className={iconSizeClasses[size]} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-gray-600 mb-0.5">{title}</p>
+          <h3 className="text-xl font-bold text-gray-900">{value}</h3>
         </div>
       </div>
     </div>
   );
 };
 
-// Progress Bar Component
+// Progress Bar Component (animated)
 const ProgressBar = ({ 
   progress, 
   size = 'md', 
@@ -110,84 +88,53 @@ const ProgressBar = ({
   );
 };
 
-// Course Card Component
-const CourseCard = ({ 
-  id,
-  title,
-  category,
-  progress,
-  duration,
-  image,
-  compact = false
-}: {
-  id: string;
-  title: string;
-  category: string;
-  progress: number;
-  duration: string;
-  image?: string;
-  compact?: boolean;
-}) => {
+// Single Course Row Component (responsive)
+const CourseRow = ({ course }: { course: any }) => {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow ${compact ? 'p-3 sm:p-4' : 'p-4 sm:p-6'}`}>
-      {image && !compact && (
-        <div className="h-32 sm:h-40 overflow-hidden mb-3 sm:mb-4 rounded-lg">
-          <img 
-            src={image} 
-            alt={title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      
-      <div>
-        <div className="flex justify-between items-start mb-2 sm:mb-3">
-          <span 
-            className="text-xs font-semibold px-2 py-1 rounded"
-            style={{ 
-              backgroundColor: `${BRAND_COLORS.teal}20`,
+    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 hover:shadow-lg transition-shadow">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <HiAcademicCap className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap" style={{
+              backgroundColor: `${BRAND_COLORS.teal}15`,
               color: BRAND_COLORS.teal
-            }}
-          >
-            {category}
-          </span>
-          <span className="text-xs font-medium text-gray-500">
-            {progress}%
-          </span>
-        </div>
-        
-        <h3 className={`font-bold text-gray-900 mb-2 ${compact ? 'text-sm' : 'text-base sm:text-lg'}`}>
-          {title}
-        </h3>
-        
-        <div className="flex items-center text-xs text-gray-500 mb-2 sm:mb-3">
-          <HiClock className="w-3 h-3 mr-1 flex-shrink-0" />
-          <span className="truncate">{duration}</span>
-        </div>
-        
-        <div className="mb-3">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-600">Progress</span>
-            <span className="font-medium" style={{ color: BRAND_COLORS.deepRed }}>
-              {progress}%
+            }}>
+              {course.category}
             </span>
           </div>
-          <ProgressBar progress={progress} size="sm" animate={true} />
+          <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">{course.title}</h3>
+          <p className="text-xs text-gray-500 mt-1">{course.duration}</p>
         </div>
-        
-        <Link
-          href={`/lms/Student_Portal/my-courses/${id}`}
-          className={`w-full flex items-center justify-center gap-2 font-medium rounded-lg transition-colors ${
-            compact ? 'py-1.5 sm:py-2 text-xs' : 'py-2 sm:py-2.5 text-sm'
-          }`}
-          style={{ 
-            backgroundColor: BRAND_COLORS.deepRed,
-            color: BRAND_COLORS.white 
-          }}
-        >
-          <span>{compact ? 'View' : 'Continue Learning'}</span>
-          <HiArrowRight className="w-3 h-3" />
-        </Link>
+
+        <div className="flex flex-col sm:items-end gap-2 flex-shrink-0">
+          <span className="text-sm font-bold px-3 py-1 rounded-full self-start sm:self-auto whitespace-nowrap" style={{
+            backgroundColor: course.progress === 100 ? '#D1FAE5' : '#FEF3C7',
+            color: course.progress === 100 ? '#059669' : '#92400E'
+          }}>
+            {course.progress}% Complete
+          </span>
+          <Link
+            href={`/lms/Student_Portal/my-courses/${course.id}`}
+            className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+            style={{
+              backgroundColor: BRAND_COLORS.deepRed,
+              color: '#FFFFFF'
+            }}
+          >
+            {course.progress === 100 ? 'Review' : 'Continue'}
+            <HiArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Progress bar and stats */}
+      <div className="mt-3">
+        <ProgressBar progress={course.progress} size="md" animate />
+        <div className="flex flex-wrap justify-between text-xs text-gray-500 mt-2 gap-2">
+          <span>{course.completedSlides || 0}/{course.totalSlides || 0} lessons</span>
+          <span>{course.studyHours || 0} study hours</span>
+        </div>
       </div>
     </div>
   );
@@ -197,13 +144,18 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastAccessedCourse, setLastAccessedCourse] = useState<any>(null);
   const [stats, setStats] = useState({
     totalCourses: 0,
+    coursesCompleted: 0,
+    coursesInProgress: 0,
     totalStudyHours: 0,
     totalQuizzes: 0,
     quizzesAttempted: 0,
     quizzesPassed: 0,
-    averageQuizScore: 0
+    averageQuizScore: 0,
+    assignmentsCompleted: 0,
+    totalAssignments: 0
   });
 
   // Function to calculate real progress from completed slides
@@ -232,81 +184,23 @@ export default function DashboardPage() {
     }
   };
 
-  // Function to calculate study hours dynamically from slide completion timestamps
-  const calculateStudyHours = (studentId: string, courseId: string) => {
-    try {
-      const slidesCompletionKey = `slidesCompletion_${studentId}_${courseId}`;
-      const completionDataStr = localStorage.getItem(slidesCompletionKey);
-      
-      if (!completionDataStr) {
-        // Fallback to stored study hours if completion data not available
-        const hoursKey = `studyHours_${studentId}_${courseId}`;
-        const savedHours = localStorage.getItem(hoursKey);
-        return savedHours ? parseInt(savedHours) : 0;
-      }
-
-      const completionData = JSON.parse(completionDataStr);
-      
-      // If stored as array of timestamps, calculate duration
-      if (Array.isArray(completionData)) {
-        return completionData.length > 0 ? Math.ceil(completionData.length * 0.5) : 0; // ~30 min per slide
-      }
-      
-      // If stored as object with timestamps
-      if (typeof completionData === 'object' && completionData !== null) {
-        const timestamps = Object.values(completionData).filter(t => typeof t === 'number') as number[];
-        if (timestamps.length > 1) {
-          const duration = (Math.max(...timestamps) - Math.min(...timestamps)) / (1000 * 60); // Convert ms to minutes
-          return Math.ceil(duration / 60); // Convert to hours
-        }
-        return timestamps.length > 0 ? Math.ceil(timestamps.length * 0.5) : 0;
-      }
-
-      return 0;
-    } catch (error) {
-      console.error('Error calculating study hours:', error);
-      // Fallback to stored study hours
-      const hoursKey = `studyHours_${studentId}_${courseId}`;
-      const savedHours = localStorage.getItem(hoursKey);
-      return savedHours ? parseInt(savedHours) : 0;
-    }
-  };
-
   // Function to load real quiz attempts
   const loadQuizAttempts = (studentId: string, courseIds: string[]) => {
     try {
       const attemptsKey = `quizAttempts_${studentId}`;
       const savedAttempts = localStorage.getItem(attemptsKey);
-      if (!savedAttempts) {
-        console.log('No quiz attempts found');
-        return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
-      }
+      if (!savedAttempts) return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
       
       const attempts = JSON.parse(savedAttempts);
-      console.log('Raw attempts:', attempts);
-      
-      // Handle both array and object formats
-      let attemptsList = Array.isArray(attempts) ? attempts : Object.values(attempts);
-      
-      const courseAttempts = attemptsList.filter((attempt: any) => 
-        courseIds.includes(attempt.courseId) || courseIds.includes(attempt.courseID)
+      const courseAttempts = Object.values(attempts).filter((attempt: any) => 
+        courseIds.includes(attempt.courseId)
       );
       
-      console.log('Course attempts:', courseAttempts);
-      
       const totalQuizzes = courseAttempts.length;
-      const passedQuizzes = courseAttempts.filter((a: any) => a.passed || a.score >= 70).length;
-      
-      // Fix average score calculation - handle different property names
-      const scoreValues = courseAttempts
-        .map((a: any) => a.score !== undefined ? a.score : a.marks !== undefined ? a.marks : 0)
-        .filter((score: number) => score > 0);
-      
-      const averageScore = scoreValues.length > 0 
-        ? Math.round(scoreValues.reduce((sum: number, score: number) => sum + score, 0) / scoreValues.length)
+      const passedQuizzes = courseAttempts.filter((a: any) => a.passed).length;
+      const averageScore = totalQuizzes > 0 
+        ? Math.round(courseAttempts.reduce((sum: number, a: any) => sum + a.score, 0) / totalQuizzes) 
         : 0;
-      
-      console.log('Quiz stats - Total:', totalQuizzes, 'Passed:', passedQuizzes, 'Average:', averageScore);
       
       return {
         totalQuizzes,
@@ -320,55 +214,70 @@ export default function DashboardPage() {
     }
   };
 
-  // FIXED: Better function to find student enrollments
+  // Function to load assignments data
+  const loadAssignmentsData = (studentId: string, courseIds: string[]) => {
+    try {
+      const submissionsStr = localStorage.getItem('assignmentSubmissions');
+      if (!submissionsStr) return { totalAssignments: 0, completedAssignments: 0 };
+      
+      const submissions = JSON.parse(submissionsStr);
+      
+      // Filter submissions for this student
+      const studentSubmissions = submissions.filter((sub: any) => 
+        sub.studentId === studentId || sub.studentEmail === user?.email
+      );
+      
+      // Get all assignments for enrolled courses
+      const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+      const courseAssignments = allAssignments.filter((a: any) => courseIds.includes(a.courseId));
+      
+      const completedCount = courseAssignments.filter((a: any) => 
+        studentSubmissions.some((sub: any) => sub.assignmentId === a.id)
+      ).length;
+      
+      return {
+        totalAssignments: courseAssignments.length,
+        completedAssignments: completedCount
+      };
+    } catch (error) {
+      console.error('Error loading assignments:', error);
+      return { totalAssignments: 0, completedAssignments: 0 };
+    }
+  };
+
+  // Find student enrollments
   const findStudentEnrollments = (studentData: any) => {
     try {
       const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
       
-      // Log all enrollments for debugging
-      console.log('All enrollments:', enrollments);
-      console.log('Current student data:', studentData);
-      
-      // Try multiple matching strategies
       const studentEnrollments = enrollments.filter((e: any) => {
-        // Strategy 1: Match by email (case insensitive)
         if (e.studentEmail && studentData.email && 
             e.studentEmail.toLowerCase() === studentData.email.toLowerCase()) {
           return true;
         }
-        
-        // Strategy 2: Match by studentId
         if (e.studentId && studentData.id && e.studentId === studentData.id) {
           return true;
         }
-        
-        // Strategy 3: Match by userId/learnerId
         if (e.studentId && studentData.userId && e.studentId === studentData.userId) {
           return true;
         }
-        
-        // Strategy 4: Match by name (partial, case insensitive)
         if (e.studentName && studentData.fullName && 
             e.studentName.toLowerCase().includes(studentData.fullName.toLowerCase())) {
           return true;
         }
-        
         return false;
       });
       
-      console.log('Found student enrollments:', studentEnrollments);
       return studentEnrollments;
-      
     } catch (error) {
       console.error('Error finding enrollments:', error);
       return [];
     }
   };
 
-  // FIXED: Better function to load all available courses
+  // Load all available courses
   const loadAllCourses = () => {
     try {
-      // Get hardcoded courses from instructor file structure
       const hardcodedCourses = [
         {
           id: 'pipe-fitter',
@@ -396,41 +305,30 @@ export default function DashboardPage() {
         }
       ];
       
-      // Get courses from localStorage
       const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-      
-      // Combine all courses
       const allCourses = [...hardcodedCourses, ...localStorageCourses];
       
-      // Remove duplicates by id
       const uniqueCourses = allCourses.filter((course, index, self) => 
         index === self.findIndex((c) => c.id === course.id)
       );
       
-      console.log('All available courses:', uniqueCourses);
       return uniqueCourses;
-      
     } catch (error) {
       console.error('Error loading courses:', error);
       return [];
     }
   };
 
-  // FIXED: Main function to load student's enrolled courses
+  // Main function to load student's enrolled courses
   const loadStudentCourses = (studentData: any) => {
     try {
       console.log('Loading student courses for:', studentData);
       
-      // Step 1: Find enrollments for this student
       const studentEnrollments = findStudentEnrollments(studentData);
-      
-      // Step 2: Get all available courses
       const allCourses = loadAllCourses();
-      
-      // Step 3: Get course IDs from enrollments
       let enrolledCourseIds = studentEnrollments.map((e: any) => e.courseId);
       
-      // Step 4: Also check studentCourses backup
+      // Also check studentCourses backup
       try {
         const studentCoursesStr = localStorage.getItem('studentCourses');
         if (studentCoursesStr) {
@@ -445,12 +343,9 @@ export default function DashboardPage() {
         console.error('Error reading studentCourses:', error);
       }
       
-      console.log('Enrolled course IDs:', enrolledCourseIds);
-      
-      // If no enrollments found, try to create demo enrollments for testing
-      if (enrolledCourseIds.length === 0 && studentData) {
-        console.log('No enrollments found, creating demo enrollments for testing');
-        // Create demo enrollments for hardcoded courses
+      // If no enrollments, create demo enrollments for testing (only for student@gmail.com)
+      if (enrolledCourseIds.length === 0 && studentData && studentData.email === 'student@gmail.com') {
+        console.log('No enrollments found, creating demo enrollments for demo user');
         const demoEnrollments = [
           {
             id: `enroll_demo_1_${studentData.id}`,
@@ -473,36 +368,40 @@ export default function DashboardPage() {
             studentPhone: studentData.phone || '',
             enrollmentDate: new Date().toISOString().split('T')[0],
             status: 'active'
+          },
+          {
+            id: `enroll_demo_3_${studentData.id}`,
+            courseId: 'welding',
+            courseTitle: 'Professional Welding',
+            studentId: studentData.id,
+            studentName: studentData.fullName || studentData.name,
+            studentEmail: studentData.email,
+            studentPhone: studentData.phone || '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            status: 'active'
           }
         ];
         
-        // Save demo enrollments to localStorage
         const existingEnrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
         const updatedEnrollments = [...existingEnrollments, ...demoEnrollments];
         localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments));
         
-        enrolledCourseIds = ['pipe-fitter', 'safety-inspector'];
+        enrolledCourseIds = ['pipe-fitter', 'safety-inspector', 'welding'];
         studentEnrollments.push(...demoEnrollments);
       }
       
-      // Step 5: Build enrolled courses with REAL progress
+      // Build enrolled courses with REAL progress
       const enrolledCourses = enrolledCourseIds
         .map((courseId: string) => {
-          // Find course details
           const course = allCourses.find((c: any) => c.id === courseId);
-          if (!course) {
-            console.log(`Course not found for ID: ${courseId}`);
-            return null;
-          }
+          if (!course) return null;
           
-          // Find enrollment details
           const enrollment = studentEnrollments.find((e: any) => e.courseId === courseId);
-          
-          // Calculate real progress
           const { progress, completedSlides, totalSlides } = calculateRealProgress(courseId, studentData.id);
           
-          // Get study hours dynamically
-          const studyHours = calculateStudyHours(studentData.id, courseId);
+          const hoursKey = `studyHours_${studentData.id}_${courseId}`;
+          const savedHours = localStorage.getItem(hoursKey);
+          const studyHours = savedHours ? parseInt(savedHours) : 0;
           
           return {
             id: course.id,
@@ -528,17 +427,33 @@ export default function DashboardPage() {
       const { totalQuizzes, attemptedQuizzes, passedQuizzes, averageScore } = 
         loadQuizAttempts(studentData.id, enrolledCourseIds);
       
-      // Update stats
+      // Load assignments for stats
+      const { totalAssignments, completedAssignments } = loadAssignmentsData(studentData.id, enrolledCourseIds);
+      
+      const coursesCompleted = enrolledCourses.filter((c: any) => c.progress === 100).length;
+      const coursesInProgress = enrolledCourses.filter((c: any) => c.progress > 0 && c.progress < 100).length;
+      
+      // Set last accessed course
+      const inProgressCourses = enrolledCourses.filter((c: any) => c.progress > 0 && c.progress < 100);
+      if (inProgressCourses.length > 0) {
+        setLastAccessedCourse(inProgressCourses[0]);
+      } else if (enrolledCourses.length > 0) {
+        setLastAccessedCourse(enrolledCourses[0]);
+      }
+      
       setStats({
         totalCourses: enrolledCourses.length,
+        coursesCompleted,
+        coursesInProgress,
         totalStudyHours: enrolledCourses.reduce((sum: number, c: any) => sum + (c.studyHours || 0), 0),
-        totalQuizzes: totalQuizzes,
+        totalQuizzes,
         quizzesAttempted: attemptedQuizzes,
         quizzesPassed: passedQuizzes,
-        averageQuizScore: averageScore
+        averageQuizScore: averageScore,
+        totalAssignments,
+        assignmentsCompleted: completedAssignments
       });
       
-      // Save to localStorage for backup
       localStorage.setItem('studentCourses', JSON.stringify(enrolledCourses));
       
     } catch (error) {
@@ -546,7 +461,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Function to load all dashboard data
+  // Load all dashboard data
   const loadDashboardData = () => {
     try {
       const currentUserStr = localStorage.getItem('currentUser');
@@ -567,11 +482,9 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboardData();
 
-    // Listen for storage changes
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'enrollments' || 
           e.key?.startsWith('completedSlides_') || 
-          e.key?.startsWith('slidesCompletion_') ||
           e.key?.startsWith('quizAttempts_') ||
           e.key === 'studentCourses' ||
           e.key === 'courses') {
@@ -579,28 +492,16 @@ export default function DashboardPage() {
       }
     };
 
-    // Custom events for updates
-    const handleDataUpdate = () => {
-      loadDashboardData();
-    };
-
-    const handleSlideCompleted = () => {
-      // Reload when a slide is completed to update study hours
-      loadDashboardData();
-    };
-
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('courseProgressUpdated', handleDataUpdate);
-    window.addEventListener('quizAttempted', handleDataUpdate);
-    window.addEventListener('enrollmentUpdated', handleDataUpdate);
-    window.addEventListener('slideCompleted', handleSlideCompleted);
+    window.addEventListener('courseProgressUpdated', loadDashboardData);
+    window.addEventListener('quizAttempted', loadDashboardData);
+    window.addEventListener('enrollmentUpdated', loadDashboardData);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('courseProgressUpdated', handleDataUpdate);
-      window.removeEventListener('quizAttempted', handleDataUpdate);
-      window.removeEventListener('enrollmentUpdated', handleDataUpdate);
-      window.removeEventListener('slideCompleted', handleSlideCompleted);
+      window.removeEventListener('courseProgressUpdated', loadDashboardData);
+      window.removeEventListener('quizAttempted', loadDashboardData);
+      window.removeEventListener('enrollmentUpdated', loadDashboardData);
     };
   }, []);
 
@@ -637,15 +538,15 @@ export default function DashboardPage() {
   const overallProgress = getOverallProgress();
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
-      {/* Welcome Section */}
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 p-3 sm:p-4 md:p-5 lg:p-6 bg-gray-50 min-h-screen">
+      {/* Welcome Section - Compact */}
       <div 
-        className="rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white"
-        style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
+        className="rounded-xl p-4 sm:p-5 md:p-6 text-white shadow-lg"
+        style={{ background: `linear-gradient(145deg, ${BRAND_COLORS.darkNavy} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)` }}
       >
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
-          <div className="flex-1">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-3">
+          <div>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold mb-0.5">
               Welcome back, {user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || 'Student'}!
             </h1>
             <p className="text-xs sm:text-sm opacity-90">
@@ -656,70 +557,73 @@ export default function DashboardPage() {
           </div>
           <div className="text-left sm:text-right">
             <p className="text-xs opacity-90">Learner ID</p>
-            <p className="text-sm sm:text-base font-bold">{user?.learnerId || user?.id || ''}</p>
-            <p className="text-xs opacity-75 mt-0.5 sm:mt-1">
-              {user?.registrationDate ? `Joined ${new Date(user.registrationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
-            </p>
+            <p className="text-xs sm:text-sm font-bold">{user?.learnerId || user?.id || ''}</p>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* KPI Cards - 3 per row on all screens */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
         <KPICard
-          title="Courses"
-          value={stats.totalCourses}
-          icon={HiBookOpen}
-          color="bg-gradient-to-r from-purple-500 to-purple-600"
-          size="sm"
-        />
-        <KPICard
-          title="Quizzes"
-          value={stats.totalQuizzes}
-          icon={HiClipboardCheck}
-          color="bg-gradient-to-r from-yellow-500 to-yellow-600"
-          change={stats.quizzesAttempted > 0 ? `${stats.quizzesPassed} passed` : 'Not started'}
-          changeType={stats.quizzesAttempted > 0 ? 'positive' : 'neutral'}
-          size="sm"
-        />
-        <KPICard
-          title="Progress"
-          value={`${overallProgress}%`}
+          title="Completed"
+          value={stats.coursesCompleted}
           icon={HiCheckCircle}
           color="bg-gradient-to-r from-green-500 to-green-600"
-          size="sm"
+        />
+        <KPICard
+          title="In Progress"
+          value={stats.coursesInProgress}
+          icon={HiLightningBolt}
+          color="bg-gradient-to-r from-orange-500 to-orange-600"
         />
         <KPICard
           title="Study Hours"
           value={stats.totalStudyHours}
           icon={HiClock}
           color="bg-gradient-to-r from-blue-500 to-blue-600"
-          size="sm"
+        />
+        <KPICard
+          title="Assignments"
+          value={`${stats.assignmentsCompleted}/${stats.totalAssignments}`}
+          icon={HiDocumentText}
+          color="bg-gradient-to-r from-indigo-500 to-indigo-600"
+        />
+        <KPICard
+          title="Quizzes Passed"
+          value={stats.quizzesPassed}
+          icon={HiClipboardCheck}
+          color="bg-gradient-to-r from-yellow-500 to-yellow-600"
+        />
+        <KPICard
+          title="Progress"
+          value={`${overallProgress}%`}
+          icon={HiTrendingUp}
+          color="bg-gradient-to-r from-purple-500 to-purple-600"
         />
       </div>
 
-      {/* Quiz Stats Row (only if quizzes exist) */}
+      {/* Quiz Stats Row - Compact */}
       {stats.totalQuizzes > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+          <h2 className="text-base sm:text-lg font-bold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>
             Quiz Performance
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="text-center p-2 sm:p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
               <p className="text-xs text-gray-600">Attempted</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
+              <p className="text-sm sm:text-base font-bold mt-1" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.quizzesAttempted}/{stats.totalQuizzes}
               </p>
             </div>
-            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+            <div className="text-center p-2 sm:p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
               <p className="text-xs text-gray-600">Passed</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-green-600">
+              <p className="text-sm sm:text-base font-bold mt-1 text-green-600">
                 {stats.quizzesPassed}
               </p>
             </div>
-            <div className="text-center p-3 sm:p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-              <p className="text-xs text-gray-600">Average Score</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+            <div className="text-center p-2 sm:p-3 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
+              <p className="text-xs text-gray-600">Avg Score</p>
+              <p className="text-sm sm:text-base font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                 {stats.averageQuizScore}%
               </p>
             </div>
@@ -727,51 +631,112 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Quick Access - 3 in a row */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+        <h2 className="text-base sm:text-lg font-bold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>
+          Quick Access
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+          {/* Continue Learning */}
+          {lastAccessedCourse && (
+            <Link
+              href={`/lms/Student_Portal/my-courses/${lastAccessedCourse.id}`}
+              className="p-3 rounded-lg border flex items-center justify-between hover:shadow-md transition-all group"
+              style={{ borderColor: BRAND_COLORS.deepRed }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <HiPlay className="w-3 h-3" style={{ color: BRAND_COLORS.deepRed }} />
+                  <p className="text-xs font-medium text-gray-600 truncate">CONTINUE</p>
+                </div>
+                <p className="text-xs font-medium text-gray-900 truncate">
+                  {lastAccessedCourse.title}
+                </p>
+              </div>
+              <HiArrowRight className="w-3 h-3 text-gray-400 group-hover:text-gray-900 ml-2 flex-shrink-0" />
+            </Link>
+          )}
+
+          {/* My Courses */}
+          <Link
+            href="/lms/Student_Portal/my-courses"
+            className="p-3 rounded-lg border flex items-center justify-between hover:shadow-md transition-all group"
+            style={{ borderColor: BRAND_COLORS.teal }}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <HiBookOpen className="w-3 h-3" style={{ color: BRAND_COLORS.teal }} />
+                <p className="text-xs font-medium text-gray-600 truncate">MY COURSES</p>
+              </div>
+              <p className="text-xs font-medium text-gray-900 truncate">
+                {stats.totalCourses} {stats.totalCourses === 1 ? 'Course' : 'Courses'}
+              </p>
+            </div>
+            <HiArrowRight className="w-3 h-3 text-gray-400 group-hover:text-gray-900 ml-2 flex-shrink-0" />
+          </Link>
+
+          {/* Certificates */}
+          <Link
+            href="/lms/Student_Portal/certificates"
+            className="p-3 rounded-lg border flex items-center justify-between hover:shadow-md transition-all group"
+            style={{ borderColor: '#FCD34D' }}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <HiStar className="w-3 h-3" style={{ color: '#FCD34D' }} />
+                <p className="text-xs font-medium text-gray-600 truncate">CERTIFICATES</p>
+              </div>
+              <p className="text-xs font-medium text-gray-900 truncate">
+                {stats.coursesCompleted} Earned
+              </p>
+            </div>
+            <HiArrowRight className="w-3 h-3 text-gray-400 group-hover:text-gray-900 ml-2 flex-shrink-0" />
+          </Link>
+        </div>
+      </div>
+
       {/* Courses List */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-            My Courses ({courses.length})
-          </h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+              My Courses ({courses.length})
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {stats.coursesCompleted} completed • {stats.coursesInProgress} in progress
+            </p>
+          </div>
           <div className="text-left sm:text-right">
             <p className="text-xs text-gray-600">Overall Progress</p>
-            <span className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+            <span className="text-lg sm:text-xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
               {overallProgress}%
             </span>
           </div>
         </div>
-        
-        <div className="mb-6 sm:mb-8">
-          <ProgressBar progress={overallProgress} size="lg" animate={true} />
+
+        {/* Overall progress bar */}
+        <div className="mb-4">
+          <ProgressBar progress={overallProgress} size="md" animate />
         </div>
 
         {courses.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-3">
             {courses.map(course => (
-              <CourseCard
-                key={course.id}
-                id={course.id}
-                title={course.title}
-                category={course.category}
-                progress={course.progress || 0}
-                duration={course.duration}
-                image={course.image}
-                compact={true}
-              />
+              <CourseRow key={course.id} course={course} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 sm:py-12">
-            <HiBookOpen className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-            <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>
+          <div className="text-center py-8">
+            <HiBookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
+            <h3 className="text-base font-medium mb-1" style={{ color: BRAND_COLORS.darkGrey }}>
               No courses enrolled
             </h3>
-            <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
+            <p className="text-xs text-gray-600 mb-4">
               You haven't enrolled in any courses yet.
             </p>
             <Link
               href="/courses"
-              className="inline-flex px-5 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-colors"
+              className="inline-flex px-4 py-2 rounded-lg font-medium text-xs transition-colors"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 

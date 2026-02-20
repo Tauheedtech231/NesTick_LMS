@@ -7,6 +7,19 @@ import {
   HiCurrencyDollar, HiDocumentReport
 } from 'react-icons/hi'
 
+// Brand Colors
+const BRAND_COLORS = {
+  darkNavy: '#0B1C3D',
+  darkRoyalBlue: '#1E3A8A',
+  deepRed: '#B11217',
+  white: '#FFFFFF',
+  lightGrey: '#F4F6F8',
+  softGrey: '#E5E7EB',
+  darkGrey: '#1F2933',
+  teal: '#1FB6C9',
+  brightRed: '#D32F2F'
+}
+
 interface ReportData {
   period: string
   revenue: number
@@ -35,7 +48,7 @@ export default function ReportsPage() {
 
           payments.forEach((p: any) => {
             const d = new Date(p.paymentDate || p.uploadedAt || p.uploadDate || Date.now())
-            const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
             groups[key] = groups[key] || []
             groups[key].push(p)
           })
@@ -45,7 +58,7 @@ export default function ReportsPage() {
             const arr = groups[key]
             const dateParts = key.split('-')
             const year = Number(dateParts[0])
-            const monthIdx = Number(dateParts[1])
+            const monthIdx = Number(dateParts[1]) - 1
             const period = new Date(year, monthIdx).toLocaleString('en-US', { month: 'short', year: 'numeric' })
 
             const revenue = arr.reduce((s: number, item: any) => {
@@ -130,25 +143,29 @@ export default function ReportsPage() {
     : 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6 lg:p-8 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-        <p className="text-gray-600 mt-2">Generate detailed reports and analyze system performance</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
+            Reports & Analytics
+          </h1>
+          <p className="text-darkGrey/70 mt-2">Generate detailed reports and analyze system performance</p>
+        </div>
       </div>
 
       {/* Report Controls */}
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white rounded-xl border border-softGrey p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Report Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-darkGrey/70 mb-2">
               Report Type
             </label>
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 focus:border-darkRoyalBlue"
             >
               <option value="overview">Overview Report</option>
               <option value="financial">Financial Report</option>
@@ -160,13 +177,13 @@ export default function ReportsPage() {
 
           {/* Date Range */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-darkGrey/70 mb-2">
               Date Range
             </label>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-softGrey rounded-lg focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 focus:border-darkRoyalBlue"
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -182,7 +199,8 @@ export default function ReportsPage() {
             <button
               onClick={handleGenerateReport}
               disabled={loading}
-              className="w-full px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-2 rounded-lg text-white font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -200,8 +218,8 @@ export default function ReportsPage() {
         </div>
 
         {/* Download Options */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Export Report As:</h3>
+        <div className="mt-6 pt-6 border-t border-softGrey">
+          <h3 className="text-sm font-medium text-darkGrey/70 mb-3">Export Report As:</h3>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => handleDownloadReport('PDF')}
@@ -236,103 +254,105 @@ export default function ReportsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">${totalRevenue.toLocaleString()}</p>
+              <p className="text-sm text-darkGrey/70">Total Revenue</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                ${totalRevenue.toLocaleString()}
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center">
-              <HiCurrencyDollar className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
+              <HiCurrencyDollar className="w-5 h-5" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Enrollments</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalEnrollments}</p>
+              <p className="text-sm text-darkGrey/70">Total Enrollments</p>
+              <p className="text-2xl font-bold mt-1 text-blue-600">{totalEnrollments}</p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
-              <HiUsers className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-lg bg-blue-100">
+              <HiUsers className="w-5 h-5 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Avg. Completion</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{avgCompletionRate}%</p>
+              <p className="text-sm text-darkGrey/70">Avg. Completion</p>
+              <p className="text-2xl font-bold mt-1 text-green-600">{avgCompletionRate}%</p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
-              <HiAcademicCap className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-lg bg-green-100">
+              <HiAcademicCap className="w-5 h-5 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Avg. Engagement</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{avgEngagement}%</p>
+              <p className="text-sm text-darkGrey/70">Avg. Engagement</p>
+              <p className="text-2xl font-bold mt-1 text-amber-600">{avgEngagement}%</p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 flex items-center justify-center">
-              <HiChartBar className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-lg bg-amber-100">
+              <HiChartBar className="w-5 h-5 text-amber-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Report Data Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="font-bold text-gray-900">Report Data</h3>
-          <p className="text-gray-600 text-sm mt-1">Detailed analysis by period</p>
+      <div className="bg-white rounded-xl border border-softGrey shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-softGrey">
+          <h3 className="font-bold text-lg" style={{ color: BRAND_COLORS.darkNavy }}>Report Data</h3>
+          <p className="text-darkGrey/70 text-sm mt-1">Detailed analysis by period</p>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-softGrey">
+            <thead className="bg-lightGrey">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Period
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Revenue
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Enrollments
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Completion Rate
                 </th>
-                <th className="px6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Avg. Engagement
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Top Course
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-darkGrey/70 uppercase tracking-wider">
                   Top Instructor
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-softGrey">
               {reportData.map((data, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+                <tr key={index} className="hover:bg-lightGrey/50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <HiCalendar className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="text-gray-900">{data.period}</span>
+                      <HiCalendar className="w-4 h-4 text-darkGrey/40 mr-2" />
+                      <span className="font-medium text-darkGrey">{data.period}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-bold text-gray-900">
+                    <span className="font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
                       ${data.revenue.toLocaleString()}
-                    </div>
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -340,36 +360,42 @@ export default function ReportsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
                         <div 
                           className={`h-2 rounded-full ${
                             data.completionRate >= 70 ? 'bg-green-500' :
-                            data.completionRate >= 50 ? 'bg-amber-500' :
-                            'bg-red-500'
+                            data.completionRate >= 50 ? 'bg-amber-500' : 'bg-red-500'
                           }`}
                           style={{ width: `${data.completionRate}%` }}
                         ></div>
                       </div>
-                      <span className="font-medium text-gray-900">{data.completionRate}%</span>
+                      <span className="font-medium text-darkGrey">{data.completionRate}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full"
-                          style={{ width: `${data.avgEngagement}%` }}
+                          className="h-2 rounded-full"
+                          style={{ 
+                            width: `${data.avgEngagement}%`,
+                            backgroundColor: BRAND_COLORS.teal 
+                          }}
                         ></div>
                       </div>
-                      <span className="font-medium text-gray-900">{data.avgEngagement}%</span>
+                      <span className="font-medium text-darkGrey">{data.avgEngagement}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900 truncate max-w-xs">{data.topCourse}</div>
+                    <span className="font-medium text-darkGrey truncate max-w-xs block" title={data.topCourse}>
+                      {data.topCourse}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900 truncate max-w-xs">{data.topInstructor}</div>
+                    <span className="font-medium text-darkGrey truncate max-w-xs block" title={data.topInstructor}>
+                      {data.topInstructor}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -377,8 +403,6 @@ export default function ReportsPage() {
           </table>
         </div>
       </div>
-
-     
     </div>
   )
 }

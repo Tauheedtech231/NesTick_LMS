@@ -1,4 +1,4 @@
-// app/lms/Student_Portal/mock-quizzes/[id]/details/page.tsx
+// app/lms/Student_Portal/mock-quizzes/[id]/details/page.tsx (FIXED VERSION)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -81,7 +81,20 @@ export default function QuizDetailsPage() {
           const foundQuiz = allQuizzes.find((q: any) => q.id === quizId);
 
           if (foundQuiz) {
-            setQuiz(foundQuiz);
+            // Ensure difficulty has a default value
+            const quizWithDefaults = {
+              ...foundQuiz,
+              difficulty: foundQuiz.difficulty || 'medium', // Default to medium if undefined
+              timeLimit: foundQuiz.timeLimit || 30, // Default time limit
+              passingScore: foundQuiz.passingScore || 70, // Default passing score
+              totalQuestions: foundQuiz.totalQuestions || foundQuiz.questions?.length || 0,
+              courseTitle: foundQuiz.courseTitle || 'General Course',
+              instructorName: foundQuiz.instructorName || 'Instructor',
+              tags: foundQuiz.tags || [],
+              createdAt: foundQuiz.createdAt || new Date().toISOString()
+            };
+            
+            setQuiz(quizWithDefaults);
 
             // Load student's attempts for this quiz
             const allResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]');
@@ -111,8 +124,8 @@ export default function QuizDetailsPage() {
     loadData();
   }, [quizId]);
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+  const getDifficultyColor = (difficulty: string = 'medium') => {
+    switch (difficulty?.toLowerCase()) {
       case 'easy':
         return { bg: 'bg-green-50', text: 'text-green-700', badge: 'bg-green-100' };
       case 'medium':
@@ -122,6 +135,11 @@ export default function QuizDetailsPage() {
       default:
         return { bg: 'bg-gray-50', text: 'text-gray-700', badge: 'bg-gray-100' };
     }
+  };
+
+  const formatDifficulty = (difficulty: string | undefined) => {
+    if (!difficulty) return 'Medium';
+    return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
   };
 
   if (loading) {
@@ -154,14 +172,19 @@ export default function QuizDetailsPage() {
     );
   }
 
+  // Safe access to quiz properties with defaults
   const colors = getDifficultyColor(quiz.difficulty);
+  const difficultyDisplay = formatDifficulty(quiz.difficulty);
+  const totalQuestions = quiz.totalQuestions || quiz.questions?.length || 0;
+  const timeLimit = quiz.timeLimit || 30;
+  const passingScore = quiz.passingScore || 70;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
       <Link
         href="/lms/Student_Portal/mock-quizzes"
-        className="inline-flex items-center gap-2 text-sm font-medium mb-6"
+        className="inline-flex items-center gap-2 text-sm font-medium mb-6 hover:underline"
         style={{ color: BRAND_COLORS.darkRoyalBlue }}
       >
         <HiArrowLeft className="w-4 h-4" />
@@ -178,12 +201,12 @@ export default function QuizDetailsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h1 className="text-3xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
-                    {quiz.title}
+                    {quiz.title || 'Untitled Quiz'}
                   </h1>
-                  <p className="text-gray-700 text-lg">{quiz.description}</p>
+                  <p className="text-gray-700 text-lg">{quiz.description || 'No description provided'}</p>
                 </div>
                 <div className={`${colors.badge} px-4 py-2 rounded-lg font-semibold text-sm ${colors.text}`}>
-                  {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                  {difficultyDisplay}
                 </div>
               </div>
             </div>
@@ -212,7 +235,7 @@ export default function QuizDetailsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Instructor</p>
-                    <p className="font-semibold text-gray-900">{quiz.instructorName}</p>
+                    <p className="font-semibold text-gray-900">{quiz.instructorName || 'Unknown'}</p>
                   </div>
                 </div>
               </div>
@@ -233,7 +256,7 @@ export default function QuizDetailsPage() {
                   <span className="text-sm text-gray-600">Questions</span>
                 </div>
                 <p className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  {quiz.totalQuestions}
+                  {totalQuestions}
                 </p>
               </div>
 
@@ -244,7 +267,7 @@ export default function QuizDetailsPage() {
                   <span className="text-sm text-gray-600">Time Limit</span>
                 </div>
                 <p className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  {quiz.timeLimit}
+                  {timeLimit}
                   <span className="text-sm font-normal text-gray-600 ml-1">min</span>
                 </p>
               </div>
@@ -256,7 +279,7 @@ export default function QuizDetailsPage() {
                   <span className="text-sm text-gray-600">Pass %</span>
                 </div>
                 <p className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                  {quiz.passingScore}
+                  {passingScore}
                   <span className="text-sm font-normal text-gray-600">%</span>
                 </p>
               </div>
@@ -307,10 +330,10 @@ export default function QuizDetailsPage() {
                 <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
                   <p className="text-sm text-gray-600 mb-2">Best Score</p>
                   <p className="text-3xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
-                    {bestScore}
+                    {bestScore !== null ? bestScore : 0}
                     <span className="text-sm font-normal text-gray-600">%</span>
                   </p>
-                  {bestScore && bestScore >= quiz.passingScore ? (
+                  {bestScore !== null && bestScore >= passingScore ? (
                     <div className="flex items-center gap-2 text-green-700">
                       <HiCheckCircle className="w-4 h-4" />
                       <span className="text-sm font-medium">Passed</span>
@@ -355,7 +378,7 @@ export default function QuizDetailsPage() {
                 </div>
               </>
             ) : (
-              <div className="mb-6 p-4 rounded-lg bg-blue-50">
+              <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <p className="text-sm text-blue-700">No attempts yet. Start the quiz to begin!</p>
               </div>
             )}
@@ -383,7 +406,7 @@ export default function QuizDetailsPage() {
               {attempts.length > 0 && (
                 <Link
                   href={`/lms/Student_Portal/mock-quizzes/${quizId}/result`}
-                  className="w-full py-3 px-4 rounded-lg font-semibold text-white text-center inline-flex items-center justify-center gap-2 transition-colors"
+                  className="w-full py-3 px-4 rounded-lg font-semibold text-white text-center inline-flex items-center justify-center gap-2 transition-colors hover:opacity-90"
                   style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
                 >
                   <HiCheckCircle className="w-5 h-5" />
@@ -403,7 +426,7 @@ export default function QuizDetailsPage() {
             <div className="mt-6 pt-6 border-t border-gray-200 text-xs text-gray-600">
               <div className="flex items-center gap-2">
                 <HiCalendar className="w-4 h-4" />
-                <span>Created on {new Date(quiz.createdAt).toLocaleDateString()}</span>
+                <span>Created on {new Date(quiz.createdAt || new Date()).toLocaleDateString()}</span>
               </div>
             </div>
           </div>
