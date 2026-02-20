@@ -1,4 +1,4 @@
-// app/certificates/page.tsx
+// app/certificates/page.tsx (FIXED VERSION)
 'use client';
 /* eslint-disable */
 
@@ -86,10 +86,23 @@ type Course = {
   };
 };
 
+type Enrollment = {
+  id: string;
+  courseId: string;
+  courseTitle: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string;
+  enrollmentDate: string;
+  status: 'active' | 'inactive';
+  lastActive?: string;
+};
+
 export default function CertificatesPage() {
   const [user, setUser] = useState<any>(null);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [completedCourses, setCompletedCourses] = useState<Course[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [filteredCertificates, setFilteredCertificates] = useState<Certificate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
@@ -98,140 +111,210 @@ export default function CertificatesPage() {
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [verificationModal, setVerificationModal] = useState<Certificate | null>(null);
 
-  // ========== 📋 LOAD REAL USER DATA FROM LOCALSTORAGE ==========
-  useEffect(() => {
-    const loadData = () => {
-      try {
-        // Get current user
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (!currentUserStr) {
-          setLoading(false);
-          return;
+  // ========== 📋 LOAD ALL COURSES (HARDCODED + LOCALSTORAGE) ==========
+  const loadAllCourses = () => {
+    try {
+      // Hardcoded courses from instructor file
+      const hardcodedCourses = [
+        {
+          id: 'pipe-fitter',
+          title: 'Pipe Fitter',
+          category: 'Technical Training',
+          duration: '8 Weeks',
+          instructorName: 'System Instructor',
+          image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+          totalSlides: 0
+        },
+        {
+          id: 'safety-inspector',
+          title: 'Safety Inspector',
+          category: 'Safety Training',
+          duration: '6 Weeks',
+          instructorName: 'System Instructor',
+          image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+          totalSlides: 0
+        },
+        {
+          id: 'welding',
+          title: 'Professional Welding',
+          category: 'Technical Training',
+          duration: '10 Weeks',
+          instructorName: 'System Instructor',
+          image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+          totalSlides: 0
+        }
+      ];
+      
+      // Get courses from localStorage (instructor created courses)
+      const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      
+      // Combine all courses
+      const allCourses = [...hardcodedCourses, ...localStorageCourses];
+      
+      // Remove duplicates by id
+      const uniqueCourses = allCourses.filter((course, index, self) => 
+        index === self.findIndex((c) => c.id === course.id)
+      );
+      
+      // Get slides data to update totalSlides for each course
+      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
+      
+      // Update totalSlides for each course based on actual slides
+      uniqueCourses.forEach(course => {
+        const courseSlides = allSlides.filter((s: any) => s.courseId === course.id);
+        course.totalSlides = courseSlides.length;
+      });
+      
+      return uniqueCourses;
+      
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      return [];
+    }
+  };
+
+  // ========== 🔍 FIND STUDENT ENROLLMENTS ==========
+  const findStudentEnrollments = (studentData: any) => {
+    try {
+      const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+      
+      console.log('All enrollments:', enrollments);
+      console.log('Current student:', studentData);
+      
+      // Multiple matching strategies
+      const studentEnrollments = enrollments.filter((e: any) => {
+        // Strategy 1: Match by email (case insensitive)
+        if (e.studentEmail && studentData.email && 
+            e.studentEmail.toLowerCase() === studentData.email.toLowerCase()) {
+          return true;
         }
         
-        const userData = JSON.parse(currentUserStr);
-        setUser(userData);
-
-        // Get student courses from localStorage
-        const studentCoursesStr = localStorage.getItem('studentCourses');
-        if (studentCoursesStr) {
-          const courses = JSON.parse(studentCoursesStr);
-          
-          // For each course, check REAL completion status from localStorage
-          const completed = courses
-            .filter((c: any) => {
-              // Check if course is marked as completed in studentCourses
-              if (c.status === 'completed' || c.progress >= 100) return true;
-              
-              // Double-check with actual completed slides data
-              const completedKey = `completedSlides_${userData.id}_${c.id}`;
-              const savedCompleted = localStorage.getItem(completedKey);
-              if (savedCompleted) {
-                const completedSlides = JSON.parse(savedCompleted);
-                const totalSlides = c.totalSlides || 0;
-                return completedSlides.length >= totalSlides && totalSlides > 0;
-              }
-              return false;
-            })
-            .map((c: any) => {
-              // Get real completed slides count
-              const completedKey = `completedSlides_${userData.id}_${c.id}`;
-              const savedCompleted = localStorage.getItem(completedKey);
-              const completedSlides = savedCompleted ? JSON.parse(savedCompleted) : [];
-              
-              // Get quiz attempts for this course (optional, for display only)
-              const quizAttemptsKey = `quizAttempts_${userData.id}`;
-              const savedQuizAttempts = localStorage.getItem(quizAttemptsKey);
-              let quizCompletion = { total: 0, attempted: 0, passed: 0, averageScore: 0 };
-              
-              if (savedQuizAttempts) {
-                const attempts = JSON.parse(savedQuizAttempts);
-                const courseQuizzes = Object.values(attempts).filter((a: any) => a.courseId === c.id);
-                const totalQuizzes = c.totalQuizzes || courseQuizzes.length;
-                const passedQuizzes = courseQuizzes.filter((a: any) => a.passed).length;
-                const avgScore = courseQuizzes.length > 0 
-                  ? Math.round(courseQuizzes.reduce((sum: number, a: any) => sum + a.score, 0) / courseQuizzes.length)
-                  : 0;
-                
-                quizCompletion = {
-                  total: totalQuizzes,
-                  attempted: courseQuizzes.length,
-                  passed: passedQuizzes,
-                  averageScore: avgScore
-                };
-              }
-              
-              // Get assignment submissions for this course (optional, for display only)
-              const submissionsKey = 'assignmentSubmissions';
-              const savedSubmissions = localStorage.getItem(submissionsKey);
-              let assignmentCompletion = { total: 0, submitted: 0, graded: 0, averageScore: 0 };
-              
-              if (savedSubmissions) {
-                const submissions = JSON.parse(savedSubmissions);
-                const courseSubmissions = submissions.filter((s: any) => 
-                  s.courseId === c.id && 
-                  (s.studentId === userData.id || s.studentEmail === userData.email)
-                );
-                
-                const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-                const courseAssignments = allAssignments.filter((a: any) => a.courseId === c.id);
-                
-                const gradedSubmissions = courseSubmissions.filter((s: any) => s.score !== undefined);
-                const avgScore = gradedSubmissions.length > 0
-                  ? Math.round(gradedSubmissions.reduce((sum: number, s: any) => sum + (s.score || 0), 0) / gradedSubmissions.length)
-                  : 0;
-                
-                assignmentCompletion = {
-                  total: courseAssignments.length,
-                  submitted: courseSubmissions.length,
-                  graded: gradedSubmissions.length,
-                  averageScore: avgScore
-                };
-              }
-              
-              return {
-                ...c,
-                completedSlides: completedSlides.length,
-                totalSlides: c.totalSlides || 0,
-                quizCompletion,
-                assignmentCompletion,
-                completedDate: c.completedDate || new Date().toISOString().split('T')[0],
-                grade: calculateGrade(quizCompletion.averageScore, assignmentCompletion.averageScore)
-              };
-            });
-          
-          setCompletedCourses(completed);
+        // Strategy 2: Match by studentId
+        if (e.studentId && studentData.id && e.studentId === studentData.id) {
+          return true;
         }
-
-        // Get existing certificates from localStorage
-        const savedCertificates = localStorage.getItem('studentCertificates');
-        if (savedCertificates) {
-          const certs = JSON.parse(savedCertificates);
-          // Filter certificates for current user
-          if (userData) {
-            const userCerts = certs.filter((c: any) => 
-              c.studentEmail === userData.email || 
-              c.studentId === userData.id ||
-              c.studentName === userData.fullName
-            );
-            setCertificates(userCerts);
-            setFilteredCertificates(userCerts);
-          } else {
-            setCertificates(certs);
-            setFilteredCertificates(certs);
-          }
+        
+        // Strategy 3: Match by userId/learnerId
+        if (e.studentId && studentData.userId && e.studentId === studentData.userId) {
+          return true;
         }
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
+        
+        // Strategy 4: Match by name
+        if (e.studentName && studentData.fullName && 
+            e.studentName.toLowerCase().includes(studentData.fullName.toLowerCase())) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      console.log('Found enrollments:', studentEnrollments);
+      return studentEnrollments;
+      
+    } catch (error) {
+      console.error('Error finding enrollments:', error);
+      return [];
+    }
+  };
+
+  // ========== 📊 CALCULATE COURSE PROGRESS FROM SLIDES ==========
+  const calculateCourseProgress = (courseId: string, studentId: string) => {
+    try {
+      const completedSlidesKey = `completedSlides_${studentId}_${courseId}`;
+      const completedSlidesStr = localStorage.getItem(completedSlidesKey);
+      const completedSlides = completedSlidesStr ? JSON.parse(completedSlidesStr) : [];
+      
+      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
+      const courseSlides = allSlides.filter((s: any) => s.courseId === courseId);
+      const totalSlides = courseSlides.length;
+      
+      const progress = totalSlides > 0 
+        ? Math.round((completedSlides.length / totalSlides) * 100) 
+        : 0;
+      
+      return {
+        progress,
+        completedSlides: completedSlides.length,
+        totalSlides,
+        isCompleted: totalSlides > 0 && completedSlides.length >= totalSlides
+      };
+    } catch (error) {
+      console.error('Error calculating progress:', error);
+      return { progress: 0, completedSlides: 0, totalSlides: 0, isCompleted: false };
+    }
+  };
+
+  // ========== 📝 LOAD QUIZ DATA ==========
+  const loadQuizData = (studentId: string, courseId: string) => {
+    try {
+      const attemptsKey = `quizAttempts_${studentId}`;
+      const savedAttempts = localStorage.getItem(attemptsKey);
+      if (!savedAttempts) {
+        return { total: 0, attempted: 0, passed: 0, averageScore: 0 };
       }
-    };
+      
+      const attempts = JSON.parse(savedAttempts);
+      const courseAttempts = Object.values(attempts).filter((a: any) => a.courseId === courseId);
+      
+      // Get all quizzes for this course
+      const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
+      const courseQuizzes = allQuizzes.filter((q: any) => q.courseId === courseId);
+      
+      const totalQuizzes = courseQuizzes.length;
+      const attemptedQuizzes = courseAttempts.length;
+      const passedQuizzes = courseAttempts.filter((a: any) => a.passed).length;
+      const averageScore = attemptedQuizzes > 0 
+        ? Math.round(courseAttempts.reduce((sum: number, a: any) => sum + a.score, 0) / attemptedQuizzes)
+        : 0;
+      
+      return {
+        total: totalQuizzes,
+        attempted: attemptedQuizzes,
+        passed: passedQuizzes,
+        averageScore
+      };
+    } catch (error) {
+      console.error('Error loading quiz data:', error);
+      return { total: 0, attempted: 0, passed: 0, averageScore: 0 };
+    }
+  };
 
-    loadData();
-  }, []);
+  // ========== 📝 LOAD ASSIGNMENT DATA ==========
+  const loadAssignmentData = (studentId: string, studentEmail: string, courseId: string) => {
+    try {
+      const submissionsKey = 'assignmentSubmissions';
+      const savedSubmissions = localStorage.getItem(submissionsKey);
+      if (!savedSubmissions) {
+        return { total: 0, submitted: 0, graded: 0, averageScore: 0 };
+      }
+      
+      const submissions = JSON.parse(savedSubmissions);
+      const courseSubmissions = submissions.filter((s: any) => 
+        s.courseId === courseId && 
+        (s.studentId === studentId || s.studentEmail === studentEmail)
+      );
+      
+      const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+      const courseAssignments = allAssignments.filter((a: any) => a.courseId === courseId);
+      
+      const gradedSubmissions = courseSubmissions.filter((s: any) => s.score !== undefined);
+      const avgScore = gradedSubmissions.length > 0
+        ? Math.round(gradedSubmissions.reduce((sum: number, s: any) => sum + (s.score || 0), 0) / gradedSubmissions.length)
+        : 0;
+      
+      return {
+        total: courseAssignments.length,
+        submitted: courseSubmissions.length,
+        graded: gradedSubmissions.length,
+        averageScore: avgScore
+      };
+    } catch (error) {
+      console.error('Error loading assignment data:', error);
+      return { total: 0, submitted: 0, graded: 0, averageScore: 0 };
+    }
+  };
 
-  // ========== 🎓 CALCULATE GRADE BASED ON PERFORMANCE ==========
+  // ========== 🎓 CALCULATE GRADE ==========
   const calculateGrade = (quizScore: number = 0, assignmentScore: number = 0): string => {
     const avgScore = (quizScore + assignmentScore) / 2;
     if (avgScore >= 90) return 'A+';
@@ -241,16 +324,189 @@ export default function CertificatesPage() {
     return 'D';
   };
 
-  // ========== ✅ CHECK IF COURSE IS TRULY COMPLETED (ONLY SLIDES) ==========
-  const isCourseFullyCompleted = (course: Course): boolean => {
-    // Check if all slides are completed - THIS IS THE ONLY REQUIREMENT NOW
-    const slidesCompleted = course.completedSlides >= course.totalSlides && course.totalSlides > 0;
-    
-    // REMOVED: Quiz and assignment requirements
-    // Now certificate generates based on slides completion only
-    
-    return slidesCompleted;
+  // ========== 📥 LOAD ENROLLED COURSES FOR STUDENT ==========
+  const loadEnrolledCourses = (studentData: any) => {
+    try {
+      console.log('Loading enrolled courses for certificates...');
+      
+      // Step 1: Find enrollments for this student
+      const studentEnrollments = findStudentEnrollments(studentData);
+      
+      // Step 2: Get all available courses
+      const allCourses = loadAllCourses();
+      
+      // Step 3: Get course IDs from enrollments
+      let enrolledCourseIds = studentEnrollments.map((e: any) => e.courseId);
+      
+      console.log('Enrolled course IDs:', enrolledCourseIds);
+      
+      // Step 4: If no enrollments, create demo enrollments for testing
+      if (enrolledCourseIds.length === 0 && studentData) {
+        console.log('No enrollments found, creating demo enrollments');
+        
+        const demoEnrollments = [
+          {
+            id: `enroll_demo_1_${studentData.id}`,
+            courseId: 'pipe-fitter',
+            courseTitle: 'Pipe Fitter',
+            studentId: studentData.id,
+            studentName: studentData.fullName || studentData.name || 'Student',
+            studentEmail: studentData.email,
+            studentPhone: studentData.phone || '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            status: 'active'
+          },
+          {
+            id: `enroll_demo_2_${studentData.id}`,
+            courseId: 'safety-inspector',
+            courseTitle: 'Safety Inspector',
+            studentId: studentData.id,
+            studentName: studentData.fullName || studentData.name || 'Student',
+            studentEmail: studentData.email,
+            studentPhone: studentData.phone || '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            status: 'active'
+          }
+        ];
+        
+        // Save to localStorage so other pages can see them too
+        const existingEnrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+        const updatedEnrollments = [...existingEnrollments, ...demoEnrollments];
+        localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments));
+        
+        enrolledCourseIds = ['pipe-fitter', 'safety-inspector'];
+      }
+      
+      // Step 5: Build enrolled courses with progress data
+      const enrolledCoursesList = enrolledCourseIds
+        .map((courseId: string) => {
+          // Find course details
+          const course = allCourses.find((c: any) => c.id === courseId);
+          if (!course) return null;
+          
+          // Find enrollment details
+          const enrollment = studentEnrollments.find((e: any) => e.courseId === courseId);
+          
+          // Calculate real progress from slides
+          const { progress, completedSlides, totalSlides, isCompleted } = 
+            calculateCourseProgress(courseId, studentData.id);
+          
+          // Load quiz and assignment data
+          const quizData = loadQuizData(studentData.id, courseId);
+          const assignmentData = loadAssignmentData(studentData.id, studentData.email, courseId);
+          
+          // Determine status
+          let status: 'not_started' | 'in_progress' | 'completed' = 'not_started';
+          if (isCompleted) {
+            status = 'completed';
+          } else if (completedSlides > 0) {
+            status = 'in_progress';
+          }
+          
+          return {
+            id: course.id,
+            title: course.title,
+            category: course.category || 'General',
+            duration: course.duration || 'Self-paced',
+            instructorName: course.instructorName || 'Mansol Hab School',
+            instructorId: course.instructorId,
+            image: course.image,
+            totalSlides: totalSlides,
+            completedSlides: completedSlides,
+            progress: progress,
+            status: status,
+            completedDate: isCompleted ? new Date().toISOString().split('T')[0] : undefined,
+            grade: calculateGrade(quizData.averageScore, assignmentData.averageScore),
+            quizCompletion: quizData,
+            assignmentCompletion: assignmentData
+          };
+        })
+        .filter(Boolean);
+      
+      console.log('Enrolled courses for certificates:', enrolledCoursesList);
+      return enrolledCoursesList;
+      
+    } catch (error) {
+      console.error('Error loading enrolled courses:', error);
+      return [];
+    }
   };
+
+  // ========== 📋 LOAD EXISTING CERTIFICATES ==========
+  const loadCertificates = (studentData: any) => {
+    try {
+      const savedCertificates = localStorage.getItem('studentCertificates');
+      if (!savedCertificates) return [];
+      
+      const allCerts = JSON.parse(savedCertificates);
+      
+      // Filter certificates for current student
+      const studentCerts = allCerts.filter((c: any) => 
+        c.studentEmail === studentData.email || 
+        c.studentId === studentData.id ||
+        c.studentName === studentData.fullName
+      );
+      
+      return studentCerts;
+      
+    } catch (error) {
+      console.error('Error loading certificates:', error);
+      return [];
+    }
+  };
+
+  // ========== 📥 MAIN LOAD FUNCTION ==========
+  useEffect(() => {
+    const loadData = () => {
+      try {
+        console.log('Loading certificates page data...');
+        
+        // Get current user
+        const currentUserStr = localStorage.getItem('currentUser');
+        if (!currentUserStr) {
+          setLoading(false);
+          return;
+        }
+        
+        const userData = JSON.parse(currentUserStr);
+        setUser(userData);
+        console.log('Current user:', userData);
+        
+        // Load enrolled courses
+        const enrolled = loadEnrolledCourses(userData);
+        setEnrolledCourses(enrolled);
+        
+        // Load certificates
+        const certs = loadCertificates(userData);
+        setCertificates(certs);
+        setFilteredCertificates(certs);
+        
+        console.log('Certificates loaded:', certs);
+        console.log('Enrolled courses loaded:', enrolled);
+        
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+    
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'enrollments' || 
+          e.key === 'studentCertificates' ||
+          e.key?.startsWith('completedSlides_') ||
+          e.key?.startsWith('quizAttempts_')) {
+        loadData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+    
+  }, []);
 
   // ========== 🔍 FILTER CERTIFICATES ==========
   useEffect(() => {
@@ -270,10 +526,15 @@ export default function CertificatesPage() {
     setFilteredCertificates(filtered);
   }, [searchTerm, selectedCourse, certificates]);
 
-  // ========== 🎓 GENERATE CERTIFICATE (ONLY IF SLIDES COMPLETED) ==========
+  // ========== ✅ CHECK IF COURSE IS COMPLETED (SLIDES ONLY) ==========
+  const isCourseCompleted = (course: Course): boolean => {
+    return course.completedSlides >= course.totalSlides && course.totalSlides > 0;
+  };
+
+  // ========== 🎓 GENERATE CERTIFICATE ==========
   const generateCertificate = (course: Course) => {
-    // Check if course is fully completed (slides only)
-    if (!isCourseFullyCompleted(course)) {
+    // Check if course is fully completed
+    if (!isCourseCompleted(course)) {
       alert('⚠️ You must complete all lessons before generating a certificate.');
       return;
     }
@@ -296,39 +557,34 @@ export default function CertificatesPage() {
       // Generate unique certificate ID
       const certId = `CERT-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
       
-      // Calculate grade based on actual performance (optional)
-      const quizScore = course.quizCompletion?.averageScore || 0;
-      const assignmentScore = course.assignmentCompletion?.averageScore || 0;
-      const grade = calculateGrade(quizScore, assignmentScore);
-      
-      // Create new certificate with real data
+      // Create new certificate
       const newCertificate: Certificate = {
         id: `cert-${Date.now()}-${course.id}`,
         certificateId: certId,
-        studentName: user?.fullName || 'Student',
+        studentName: user?.fullName || user?.name || 'Student',
         studentEmail: user?.email || '',
         studentId: user?.id || '',
         courseName: course.title,
         courseId: course.id,
-        completionDate: course.completedDate || new Date().toISOString().split('T')[0],
+        completionDate: new Date().toISOString().split('T')[0],
         issueDate: new Date().toISOString().split('T')[0],
         verificationUrl: `https://verify.mansolhab.com/${certId}`,
         instructorName: course.instructorName || 'Mansol Hab School',
         instructorId: course.instructorId,
-        grade: grade,
+        grade: course.grade || 'A',
         duration: course.duration || '8 Weeks',
         totalSlides: course.totalSlides || 0,
         completedSlides: course.completedSlides || 0,
-        quizScore: quizScore,
-        assignmentScore: assignmentScore
+        quizScore: course.quizCompletion?.averageScore || 0,
+        assignmentScore: course.assignmentCompletion?.averageScore || 0
       };
 
-      // Save to state and localStorage
+      // Save to state
       const updatedCertificates = [...certificates, newCertificate];
       setCertificates(updatedCertificates);
       setFilteredCertificates(updatedCertificates);
       
-      // Get existing certificates from localStorage
+      // Save to localStorage
       const allSavedCerts = JSON.parse(localStorage.getItem('studentCertificates') || '[]');
       const updatedAllCerts = [...allSavedCerts, newCertificate];
       localStorage.setItem('studentCertificates', JSON.stringify(updatedAllCerts));
@@ -347,10 +603,8 @@ export default function CertificatesPage() {
   const handleDownloadCertificate = (certificateId: string) => {
     const cert = certificates.find(c => c.certificateId === certificateId);
     if (cert) {
-      // Create professional certificate HTML with real data
       const certificateHTML = generateCertificateHTML(cert, true);
       
-      // Download as HTML file
       const blob = new Blob([certificateHTML], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -371,7 +625,6 @@ export default function CertificatesPage() {
     if (cert) {
       setSelectedCertificate(cert);
       
-      // Open in new window
       const certificateHTML = generateCertificateHTML(cert, false);
       const newWindow = window.open('', '_blank');
       if (newWindow) {
@@ -389,7 +642,7 @@ export default function CertificatesPage() {
     }
   };
 
-  // ========== 📄 GENERATE CERTIFICATE HTML WITH REAL DATA ==========
+  // ========== 📄 GENERATE CERTIFICATE HTML ==========
   const generateCertificateHTML = (cert: Certificate, forDownload: boolean = false) => {
     const completionDate = new Date(cert.completionDate).toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -633,8 +886,9 @@ export default function CertificatesPage() {
     `;
   };
 
-  // ========== 📊 STATS WITH REAL DATA ==========
+  // ========== 📊 STATS ==========
   const totalCertificates = certificates.length;
+  
   const recentCertificates = certificates.filter(cert => {
     const issueDate = new Date(cert.issueDate);
     const thirtyDaysAgo = new Date();
@@ -644,8 +898,13 @@ export default function CertificatesPage() {
 
   const coursesList = Array.from(new Set(certificates.map(c => c.courseName)));
   
-  // Calculate pending certificates based on slides completion only
-  const pendingCertificates = completedCourses.filter(c => 
+  // Completed courses (based on slides)
+  const completedCoursesCount = enrolledCourses.filter(c => 
+    c.completedSlides >= c.totalSlides && c.totalSlides > 0
+  ).length;
+  
+  // Pending certificates (completed but no certificate yet)
+  const pendingCertificates = enrolledCourses.filter(c => 
     c.completedSlides >= c.totalSlides && 
     c.totalSlides > 0 && 
     !certificates.some(cert => cert.courseId === c.id)
@@ -678,7 +937,7 @@ export default function CertificatesPage() {
               My Certificates
             </h1>
             <p className="text-white/80 text-xs sm:text-sm">
-              {user?.fullName || 'Student'} • {totalCertificates} earned
+              {user?.fullName || user?.name || 'Student'} • {totalCertificates} earned
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -690,7 +949,7 @@ export default function CertificatesPage() {
         </div>
       </div>
 
-      {/* ========== STATS CARDS WITH REAL DATA ========== */}
+      {/* ========== STATS CARDS ========== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4">
           <div className="flex items-center justify-between">
@@ -720,9 +979,7 @@ export default function CertificatesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600">Completed Courses</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">
-                {completedCourses.filter(c => c.completedSlides >= c.totalSlides && c.totalSlides > 0).length}
-              </p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">{completedCoursesCount}</p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-blue-100 text-blue-600">
               <HiCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -734,9 +991,7 @@ export default function CertificatesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-600">Pending</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">
-                {pendingCertificates}
-              </p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold mt-1 text-gray-900">{pendingCertificates}</p>
             </div>
             <div className="p-2 sm:p-3 rounded-full bg-yellow-100 text-yellow-600">
               <HiClock className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -745,8 +1000,8 @@ export default function CertificatesPage() {
         </div>
       </div>
 
-      {/* ========== COMPLETED COURSES SECTION - GENERATE CERTIFICATES (ONLY IF SLIDES COMPLETED) ========== */}
-      {completedCourses.length > 0 && (
+      {/* ========== COMPLETED COURSES SECTION ========== */}
+      {enrolledCourses.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -763,8 +1018,8 @@ export default function CertificatesPage() {
           </div>
 
           <div className="divide-y divide-gray-200">
-            {/* Show courses that are fully completed (slides only) */}
-            {completedCourses
+            {/* Completed courses - ready for certificates */}
+            {enrolledCourses
               .filter(course => 
                 course.completedSlides >= course.totalSlides && 
                 course.totalSlides > 0 && 
@@ -778,7 +1033,7 @@ export default function CertificatesPage() {
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                         <span className="text-xs text-gray-600 flex items-center gap-1">
                           <HiUser className="w-3 h-3" />
-                          {course.instructorName || 'Mansol Hab School'}
+                          {course.instructorName}
                         </span>
                         <span className="text-xs text-gray-600 flex items-center gap-1">
                           <HiClock className="w-3 h-3" />
@@ -810,8 +1065,8 @@ export default function CertificatesPage() {
                 </div>
               ))}
             
-            {/* Show in-progress courses that are NOT fully completed */}
-            {completedCourses
+            {/* In-progress courses */}
+            {enrolledCourses
               .filter(course => 
                 (course.completedSlides < course.totalSlides || course.totalSlides === 0) && 
                 !certificates.some(c => c.courseId === course.id)
@@ -824,7 +1079,7 @@ export default function CertificatesPage() {
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                         <span className="text-xs text-gray-600 flex items-center gap-1">
                           <HiUser className="w-3 h-3" />
-                          {course.instructorName || 'Mansol Hab School'}
+                          {course.instructorName}
                         </span>
                         <span className="text-xs text-gray-600 flex items-center gap-1">
                           <HiClock className="w-3 h-3" />
@@ -850,7 +1105,7 @@ export default function CertificatesPage() {
                 </div>
               ))}
             
-            {pendingCertificates === 0 && completedCourses.filter(c => c.completedSlides < c.totalSlides).length === 0 && (
+            {pendingCertificates === 0 && enrolledCourses.filter(c => c.completedSlides < c.totalSlides).length === 0 && (
               <div className="p-8 text-center">
                 <HiCheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
                 <h3 className="text-sm font-medium text-gray-900 mb-1">All caught up!</h3>
@@ -898,7 +1153,7 @@ export default function CertificatesPage() {
         </div>
       )}
 
-      {/* ========== CERTIFICATES GRID WITH REAL DATA ========== */}
+      {/* ========== CERTIFICATES GRID ========== */}
       {certificates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredCertificates.map(certificate => (

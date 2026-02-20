@@ -15,6 +15,8 @@ import {
   HiMenu,
   HiX,
   HiClipboardCheck,
+  HiTrendingUp,
+  HiCheckCircle,
 } from 'react-icons/hi';
 import { SiMaterialdesignicons } from 'react-icons/si';
 import { FolderIcon } from 'lucide-react';
@@ -44,6 +46,18 @@ export default function Sidebar() {
       label: 'Mock Quizzes',
       icon: HiClipboardCheck,
       path: '/lms/Student_Portal/mock-quizzes',
+    },
+    {
+      id: 'progress',
+      label: 'Progress Tracking',
+      icon: HiTrendingUp,
+      path: '/lms/Student_Portal/progress',
+    },
+    {
+      id: 'certificates',
+      label: 'Certificates',
+      icon: HiCheckCircle,
+      path: '/lms/Student_Portal/certificates',
     },
     {
       id: 'profile',

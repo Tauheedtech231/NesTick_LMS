@@ -9,18 +9,20 @@ import DataInitializer from './components/DataInitializer'
 function AdminLayoutLoading() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar Skeleton */}
-      <div className="h-16 bg-gradient-to-r from-purple-800 to-purple-900"></div>
-      
-      {/* Content Skeleton */}
-      <div className="p-8">
-        <div className="h-10 bg-white rounded-lg shadow mb-6 animate-pulse"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-white rounded-lg shadow animate-pulse"></div>
-          ))}
+      <div className="flex">
+        {/* Sidebar Skeleton */}
+        <div className="w-72 h-screen bg-white border-r" style={{ borderColor: '#E5E7EB' }}></div>
+
+        {/* Content Skeleton */}
+        <div className="flex-1 p-8">
+          <div className="h-10 bg-white rounded-lg shadow mb-6 animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-white rounded-lg shadow animate-pulse"></div>
+            ))}
+          </div>
+          <div className="h-96 bg-white rounded-lg shadow animate-pulse"></div>
         </div>
-        <div className="h-96 bg-white rounded-lg shadow animate-pulse"></div>
       </div>
     </div>
   )
@@ -49,11 +51,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     <>
       <DataInitializer />
       <div className="min-h-screen bg-gray-50">
-        {/* Navbar */}
         <AdminNavbar />
-        
+
         {/* Main Content */}
-        <main className="min-h-screen">
+        <main className="min-h-screen md:ml-72">
           <div className="p-4 md:p-6">
             {children}
           </div>

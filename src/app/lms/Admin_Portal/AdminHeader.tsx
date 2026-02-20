@@ -31,11 +31,10 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   const userButtonRef = useRef<HTMLButtonElement>(null)
   const navButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Strict Brand Colors
+  // Consistent brand colors
   const BRAND_COLORS = {
     darkNavy: '#0B1C3D',
-    darkNavyAlt: '#0F172A',
-    darkRoyalBlue: '#1E293B',
+    darkRoyalBlue: '#1E3A8A',      // main background
     deepRed: '#B11217',
     white: '#FFFFFF',
     lightGrey: '#F4F6F8',
@@ -54,12 +53,22 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     }
   ]
 
-
-
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || 'null')
     setCurrentUser(user)
   }, [])
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isMobileMenuOpen])
 
   // Scroll effect
   useEffect(() => {
@@ -148,184 +157,97 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
 
   return (
     <>
-      {/* Main Navbar */}
-      <nav 
-        className={`fixed top-0 left-0 right-0 h-16 z-50 transition-all duration-300 ${
-          scrolled ? 'shadow-lg' : ''
-        }`}
-        style={{
-          background: scrolled 
-            ? `linear-gradient(to right, ${BRAND_COLORS.darkNavy}, ${BRAND_COLORS.darkRoyalBlue})` 
-            : `linear-gradient(to right, ${BRAND_COLORS.darkNavyAlt}, ${BRAND_COLORS.darkRoyalBlue})`,
-          borderBottom: `1px solid ${BRAND_COLORS.softGrey}20`
-        }}
+      {/* Desktop Sidebar (fixed, visible on md and up) */}
+      <aside 
+        className="fixed left-0 top-0 bottom-0 w-72 z-50 hidden md:flex flex-col border-r" 
+        style={{ borderColor: '#1E407F', backgroundColor: BRAND_COLORS.darkRoyalBlue }}
       >
-        <div className="h-full flex items-center justify-between px-4 md:px-6">
-          {/* Left Side: Logo & Navigation Dropdown */}
-          <div className="flex items-center space-x-4">
-            {/* Logo - Removed Admin Portal text */}
-            <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 flex items-center justify-center">
-                {/* Logo removed as requested */}
-              </div>
-            </Link>
+        <div className="h-20 flex items-center px-4 border-b" style={{ borderColor: '#1E407F' }}>
+          <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
+              <span className="text-white font-bold">A</span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white">Admin Portal</div>
+              <div className="text-xs text-white/80">Dashboard</div>
+            </div>
+          </Link>
+        </div>
 
-            {/* Dashboard Link - Desktop */}
-            <Link
-              href="/lms/Admin_Portal/dashboard"
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/10 ${
-                isActive('/lms/Admin_Portal/dashboard') 
-                  ? 'border-b-3 border-deepRed' 
-                  : ''
-              }`}
-              style={{ 
-                borderBottomColor: isActive('/lms/Admin_Portal/dashboard') ? BRAND_COLORS.deepRed : 'transparent' 
-              }}
-            >
-              <HiHome className={`w-4 h-4 ${isActive('/lms/Admin_Portal/dashboard') ? 'text-white' : 'text-white/80'}`} />
-              <span className={`font-medium text-sm transition-all duration-200 ${
-                isActive('/lms/Admin_Portal/dashboard') ? 'text-white' : 'text-white/80 hover:text-white'
-              }`}>
-                Dashboard
-              </span>
-            </Link>
+        <nav className="flex-1 overflow-y-auto p-4">
+          <ul className="space-y-2">
+            <li>
+              <Link href="/lms/Admin_Portal/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/dashboard') ? 'bg-white/10 font-medium' : ''}`}>
+                <HiHome className="w-5 h-5 text-white/90" />
+                <span className="text-sm text-white">Dashboard</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/lms/Admin_Portal/instructors" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/instructors') ? 'bg-white/10 font-medium' : ''}`}>
+                <HiAcademicCap className="w-5 h-5 text-white/90" />
+                <span className="text-sm text-white">Instructors</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/lms/Admin_Portal/payments" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/payments') ? 'bg-white/10 font-medium' : ''}`}>
+                <HiCreditCard className="w-5 h-5 text-white/90" />
+                <span className="text-sm text-white">Payments</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/lms/Admin_Portal/reports" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/reports') ? 'bg-white/10 font-medium' : ''}`}>
+                <HiChartBar className="w-5 h-5 text-white/90" />
+                <span className="text-sm text-white">Reports</span>
+              </Link>
+            </li>
+          </ul>
+        </nav>
 
-            {/* Instructors Link - Desktop */}
-            <Link
-              href="/lms/Admin_Portal/instructors"
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/10 ${
-                isActive('/lms/Admin_Portal/instructors') 
-                  ? 'border-b-3 border-deepRed' 
-                  : ''
-              }`}
-              style={{ 
-                borderBottomColor: isActive('/lms/Admin_Portal/instructors') ? BRAND_COLORS.deepRed : 'transparent' 
-              }}
-            >
-              <HiAcademicCap className={`w-4 h-4 ${isActive('/lms/Admin_Portal/instructors') ? 'text-white' : 'text-white/80'}`} />
-              <span className={`font-medium text-sm transition-all duration-200 ${
-                isActive('/lms/Admin_Portal/instructors') ? 'text-white' : 'text-white/80 hover:text-white'
-              }`}>
-                Instructors
-              </span>
-            </Link>
+        <div className="p-4 border-t" style={{ borderColor: '#1E407F' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
+              <span className="text-white font-medium text-sm">{currentUser?.name?.charAt(0) || 'A'}</span>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-white">{currentUser?.name || 'Admin User'}</div>
+              <div className="text-xs text-white/80">{currentUser?.email || 'admin@example.com'}</div>
+            </div>
           </div>
 
-          {/* Right Side: Search & User Profile */}
-          <div className="flex items-center space-x-3">
-            {/* Desktop Search */}
-            <div className="hidden md:block relative">
-              <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
-              <input
-                type="search"
-                placeholder="Search..."
-                className="w-56 pl-10 pr-4 py-2 bg-white/10 text-white rounded-lg border border-white/20 focus:outline-none placeholder-white/50 transition-all duration-200"
-              />
-            </div>
-
-            {/* User Profile Dropdown */}
-            <div className="relative">
-              <button
-                ref={userButtonRef}
-                onClick={toggleUserDropdown}
-                className="flex items-center space-x-2 p-1 rounded-lg transition-all duration-200 hover:bg-white/10"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
-                    style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-                    <span className="text-white font-medium text-sm">
-                      {currentUser?.name?.charAt(0) || 'A'}
-                    </span>
-                  </div>
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-white/80 hover:text-white">{currentUser?.name || 'Admin User'}</p>
-                    <p className="text-xs text-white/60">{currentUser?.email || 'admin@example.com'}</p>
-                  </div>
-                </div>
-                <HiChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-300 ${
-                  isUserDropdownOpen ? 'rotate-180' : ''
-                }`} />
-              </button>
-
-              {/* User Dropdown Menu */}
-              {isUserDropdownOpen && (
-                <div
-                  ref={userDropdownRef}
-                  className="absolute right-0 top-full mt-2 w-64 rounded-lg shadow-xl animate-in slide-in-from-top-5 duration-300 z-50"
-                  style={{
-                    backgroundColor: BRAND_COLORS.white,
-                    border: `1px solid ${BRAND_COLORS.softGrey}`
-                  }}
-                >
-                  {/* User Info */}
-                  <div className="px-4 py-3 border-b" style={{ borderColor: BRAND_COLORS.softGrey }}>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-                        <span className="text-white font-medium text-sm">
-                          {currentUser?.name?.charAt(0) || 'A'}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-darkGrey text-sm">
-                          {currentUser?.name || 'Admin User'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {currentUser?.email || 'admin@example.com'}
-                        </div>
-                        <div className="mt-1">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                            {currentUser?.role || 'Admin'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                
-
-                  {/* Logout Button */}
-                  <div className="p-3 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center justify-center space-x-2 w-full px-4 py-2.5 rounded-lg transition-all duration-200 hover:bg-red-50"
-                      style={{
-                        backgroundColor: BRAND_COLORS.white,
-                        color: BRAND_COLORS.brightRed,
-                        border: `1px solid ${BRAND_COLORS.brightRed}30`
-                      }}
-                    >
-                      <HiLogout className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        Logout
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              data-mobile-menu-button
-              onClick={toggleMobileMenu}
-              className="lg:hidden p-2 rounded-lg transition-all duration-300 hover:bg-white/10"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? (
-                <HiX className="w-6 h-6 text-white" />
-              ) : (
-                <HiMenu className="w-6 h-6 text-white" />
-              )}
+          <div className="mt-3">
+            <button onClick={handleLogout} className="w-full text-sm py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors">
+              Logout
             </button>
           </div>
         </div>
-      </nav>
+      </aside>
 
-      {/* Mobile Menu Slider */}
+      {/* Mobile Header (fixed, visible only on mobile) */}
+      <header 
+        className="fixed top-0 left-0 right-0 h-16 z-40 flex md:hidden items-center justify-between px-4 shadow-md"
+        style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
+      >
+        <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-md flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
+            <span className="text-white font-bold text-sm">A</span>
+          </div>
+          <span className="text-white font-semibold text-sm">Admin Portal</span>
+        </Link>
+
+        <button
+          data-mobile-menu-button
+          onClick={toggleMobileMenu}
+          className="p-2 rounded-lg text-white/90 hover:bg-white/10 transition-colors"
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
+        </button>
+      </header>
+
+      {/* Mobile Menu Slider (off-canvas) */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="md:hidden fixed inset-0 bg-black/50 z-50"
           onClick={toggleMobileMenu}
         >
           <div 
@@ -333,7 +255,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
             className="absolute top-0 right-0 h-full w-80 shadow-xl animate-in slide-in-from-right duration-300"
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: BRAND_COLORS.darkNavy,
+              backgroundColor: BRAND_COLORS.darkRoyalBlue, // consistent background
               borderLeft: `1px solid ${BRAND_COLORS.softGrey}20`
             }}
           >
@@ -388,10 +310,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                     isActive('/lms/Admin_Portal/dashboard') 
                       ? 'bg-white/10' 
                       : 'hover:bg-white/5'
-                  } ${isActive('/lms/Admin_Portal/dashboard') ? 'border-b-3 border-deepRed' : ''}`}
-                  style={{ 
-                    borderBottomColor: isActive('/lms/Admin_Portal/dashboard') ? BRAND_COLORS.deepRed : 'transparent' 
-                  }}
+                  }`}
                 >
                   <HiHome className="w-5 h-5 text-white/80" />
                   <span className="font-medium text-white">Dashboard</span>
@@ -407,17 +326,44 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                     isActive('/lms/Admin_Portal/instructors') 
                       ? 'bg-white/10' 
                       : 'hover:bg-white/5'
-                  } ${isActive('/lms/Admin_Portal/instructors') ? 'border-b-3 border-deepRed' : ''}`}
-                  style={{ 
-                    borderBottomColor: isActive('/lms/Admin_Portal/instructors') ? BRAND_COLORS.deepRed : 'transparent' 
-                  }}
+                  }`}
                 >
                   <HiAcademicCap className="w-5 h-5 text-white/80" />
                   <span className="font-medium text-white">Instructors</span>
                 </Link>
               </div>
 
-            
+              {/* Payments Link */}
+              <div className="mb-4">
+                <Link
+                  href="/lms/Admin_Portal/payments"
+                  onClick={toggleMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
+                    isActive('/lms/Admin_Portal/payments') 
+                      ? 'bg-white/10' 
+                      : 'hover:bg-white/5'
+                  }`}
+                >
+                  <HiCreditCard className="w-5 h-5 text-white/80" />
+                  <span className="font-medium text-white">Payments</span>
+                </Link>
+              </div>
+
+              {/* Reports Link */}
+              <div className="mb-4">
+                <Link
+                  href="/lms/Admin_Portal/reports"
+                  onClick={toggleMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
+                    isActive('/lms/Admin_Portal/reports') 
+                      ? 'bg-white/10' 
+                      : 'hover:bg-white/5'
+                  }`}
+                >
+                  <HiChartBar className="w-5 h-5 text-white/80" />
+                  <span className="font-medium text-white">Reports</span>
+                </Link>
+              </div>
             </div>
 
             {/* Mobile Logout Button */}
@@ -439,8 +385,8 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
         </div>
       )}
 
-      {/* Spacer for fixed navbar */}
-      <div className="h-16"></div>
+      {/* Spacer for fixed header (mobile) and sidebar (desktop) */}
+      <div className="h-16 md:h-0"></div>
     </>
   )
 }

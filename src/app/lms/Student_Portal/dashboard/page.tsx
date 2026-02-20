@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx (updated version)
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -25,7 +25,7 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// KPI Card Component
+// KPI Card Component (same as before)
 const KPICard = ({ 
   title, 
   value, 
@@ -232,23 +232,81 @@ export default function DashboardPage() {
     }
   };
 
+  // Function to calculate study hours dynamically from slide completion timestamps
+  const calculateStudyHours = (studentId: string, courseId: string) => {
+    try {
+      const slidesCompletionKey = `slidesCompletion_${studentId}_${courseId}`;
+      const completionDataStr = localStorage.getItem(slidesCompletionKey);
+      
+      if (!completionDataStr) {
+        // Fallback to stored study hours if completion data not available
+        const hoursKey = `studyHours_${studentId}_${courseId}`;
+        const savedHours = localStorage.getItem(hoursKey);
+        return savedHours ? parseInt(savedHours) : 0;
+      }
+
+      const completionData = JSON.parse(completionDataStr);
+      
+      // If stored as array of timestamps, calculate duration
+      if (Array.isArray(completionData)) {
+        return completionData.length > 0 ? Math.ceil(completionData.length * 0.5) : 0; // ~30 min per slide
+      }
+      
+      // If stored as object with timestamps
+      if (typeof completionData === 'object' && completionData !== null) {
+        const timestamps = Object.values(completionData).filter(t => typeof t === 'number') as number[];
+        if (timestamps.length > 1) {
+          const duration = (Math.max(...timestamps) - Math.min(...timestamps)) / (1000 * 60); // Convert ms to minutes
+          return Math.ceil(duration / 60); // Convert to hours
+        }
+        return timestamps.length > 0 ? Math.ceil(timestamps.length * 0.5) : 0;
+      }
+
+      return 0;
+    } catch (error) {
+      console.error('Error calculating study hours:', error);
+      // Fallback to stored study hours
+      const hoursKey = `studyHours_${studentId}_${courseId}`;
+      const savedHours = localStorage.getItem(hoursKey);
+      return savedHours ? parseInt(savedHours) : 0;
+    }
+  };
+
   // Function to load real quiz attempts
   const loadQuizAttempts = (studentId: string, courseIds: string[]) => {
     try {
       const attemptsKey = `quizAttempts_${studentId}`;
       const savedAttempts = localStorage.getItem(attemptsKey);
-      if (!savedAttempts) return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
+      if (!savedAttempts) {
+        console.log('No quiz attempts found');
+        return { totalQuizzes: 0, attemptedQuizzes: 0, passedQuizzes: 0, averageScore: 0 };
+      }
       
       const attempts = JSON.parse(savedAttempts);
-      const courseAttempts = Object.values(attempts).filter((attempt: any) => 
-        courseIds.includes(attempt.courseId)
+      console.log('Raw attempts:', attempts);
+      
+      // Handle both array and object formats
+      let attemptsList = Array.isArray(attempts) ? attempts : Object.values(attempts);
+      
+      const courseAttempts = attemptsList.filter((attempt: any) => 
+        courseIds.includes(attempt.courseId) || courseIds.includes(attempt.courseID)
       );
       
+      console.log('Course attempts:', courseAttempts);
+      
       const totalQuizzes = courseAttempts.length;
-      const passedQuizzes = courseAttempts.filter((a: any) => a.passed).length;
-      const averageScore = totalQuizzes > 0 
-        ? Math.round(courseAttempts.reduce((sum: number, a: any) => sum + a.score, 0) / totalQuizzes) 
+      const passedQuizzes = courseAttempts.filter((a: any) => a.passed || a.score >= 70).length;
+      
+      // Fix average score calculation - handle different property names
+      const scoreValues = courseAttempts
+        .map((a: any) => a.score !== undefined ? a.score : a.marks !== undefined ? a.marks : 0)
+        .filter((score: number) => score > 0);
+      
+      const averageScore = scoreValues.length > 0 
+        ? Math.round(scoreValues.reduce((sum: number, score: number) => sum + score, 0) / scoreValues.length)
         : 0;
+      
+      console.log('Quiz stats - Total:', totalQuizzes, 'Passed:', passedQuizzes, 'Average:', averageScore);
       
       return {
         totalQuizzes,
@@ -262,92 +320,229 @@ export default function DashboardPage() {
     }
   };
 
-  // Load student's enrolled courses with real progress
-  const loadStudentCourses = (studentData: any) => {
+  // FIXED: Better function to find student enrollments
+  const findStudentEnrollments = (studentData: any) => {
     try {
-      console.log('Loading student courses for:', studentData.email);
-
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
       const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
       
-      const studentEnrollments = enrollments.filter((e: any) => 
-        e.studentEmail?.toLowerCase() === studentData.email?.toLowerCase() ||
-        e.studentId === studentData.id ||
-        e.studentId === studentData.userId ||
-        e.studentId === studentData.learnerId
-      );
+      // Log all enrollments for debugging
+      console.log('All enrollments:', enrollments);
+      console.log('Current student data:', studentData);
+      
+      // Try multiple matching strategies
+      const studentEnrollments = enrollments.filter((e: any) => {
+        // Strategy 1: Match by email (case insensitive)
+        if (e.studentEmail && studentData.email && 
+            e.studentEmail.toLowerCase() === studentData.email.toLowerCase()) {
+          return true;
+        }
+        
+        // Strategy 2: Match by studentId
+        if (e.studentId && studentData.id && e.studentId === studentData.id) {
+          return true;
+        }
+        
+        // Strategy 3: Match by userId/learnerId
+        if (e.studentId && studentData.userId && e.studentId === studentData.userId) {
+          return true;
+        }
+        
+        // Strategy 4: Match by name (partial, case insensitive)
+        if (e.studentName && studentData.fullName && 
+            e.studentName.toLowerCase().includes(studentData.fullName.toLowerCase())) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      console.log('Found student enrollments:', studentEnrollments);
+      return studentEnrollments;
+      
+    } catch (error) {
+      console.error('Error finding enrollments:', error);
+      return [];
+    }
+  };
 
+  // FIXED: Better function to load all available courses
+  const loadAllCourses = () => {
+    try {
+      // Get hardcoded courses from instructor file structure
+      const hardcodedCourses = [
+        {
+          id: 'pipe-fitter',
+          title: 'Pipe Fitter',
+          category: 'Technical Training',
+          description: 'Master industrial pipe fitting techniques',
+          duration: '8 Weeks',
+          image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+        },
+        {
+          id: 'safety-inspector',
+          title: 'Safety Inspector',
+          category: 'Safety Training',
+          description: 'Professional safety inspection training',
+          duration: '6 Weeks',
+          image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+        },
+        {
+          id: 'welding',
+          title: 'Professional Welding',
+          category: 'Technical Training',
+          description: 'Comprehensive welding training',
+          duration: '10 Weeks',
+          image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+        }
+      ];
+      
+      // Get courses from localStorage
+      const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      
+      // Combine all courses
+      const allCourses = [...hardcodedCourses, ...localStorageCourses];
+      
+      // Remove duplicates by id
+      const uniqueCourses = allCourses.filter((course, index, self) => 
+        index === self.findIndex((c) => c.id === course.id)
+      );
+      
+      console.log('All available courses:', uniqueCourses);
+      return uniqueCourses;
+      
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      return [];
+    }
+  };
+
+  // FIXED: Main function to load student's enrolled courses
+  const loadStudentCourses = (studentData: any) => {
+    try {
+      console.log('Loading student courses for:', studentData);
+      
+      // Step 1: Find enrollments for this student
+      const studentEnrollments = findStudentEnrollments(studentData);
+      
+      // Step 2: Get all available courses
+      const allCourses = loadAllCourses();
+      
+      // Step 3: Get course IDs from enrollments
       let enrolledCourseIds = studentEnrollments.map((e: any) => e.courseId);
       
-      const studentCoursesStr = localStorage.getItem('studentCourses');
-      if (studentCoursesStr) {
-        const studentCourses = JSON.parse(studentCoursesStr);
-        studentCourses.forEach((sc: any) => {
-          if (!enrolledCourseIds.includes(sc.id)) {
-            enrolledCourseIds.push(sc.id);
-          }
-        });
+      // Step 4: Also check studentCourses backup
+      try {
+        const studentCoursesStr = localStorage.getItem('studentCourses');
+        if (studentCoursesStr) {
+          const studentCourses = JSON.parse(studentCoursesStr);
+          studentCourses.forEach((sc: any) => {
+            if (!enrolledCourseIds.includes(sc.id)) {
+              enrolledCourseIds.push(sc.id);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error reading studentCourses:', error);
       }
-
-      // Load real quiz attempts
-      const { totalQuizzes, attemptedQuizzes, passedQuizzes, averageScore } = 
-        loadQuizAttempts(studentData.id, enrolledCourseIds);
-
-      // Build enrolled courses with REAL progress
+      
+      console.log('Enrolled course IDs:', enrolledCourseIds);
+      
+      // If no enrollments found, try to create demo enrollments for testing
+      if (enrolledCourseIds.length === 0 && studentData) {
+        console.log('No enrollments found, creating demo enrollments for testing');
+        // Create demo enrollments for hardcoded courses
+        const demoEnrollments = [
+          {
+            id: `enroll_demo_1_${studentData.id}`,
+            courseId: 'pipe-fitter',
+            courseTitle: 'Pipe Fitter',
+            studentId: studentData.id,
+            studentName: studentData.fullName || studentData.name,
+            studentEmail: studentData.email,
+            studentPhone: studentData.phone || '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            status: 'active'
+          },
+          {
+            id: `enroll_demo_2_${studentData.id}`,
+            courseId: 'safety-inspector',
+            courseTitle: 'Safety Inspector',
+            studentId: studentData.id,
+            studentName: studentData.fullName || studentData.name,
+            studentEmail: studentData.email,
+            studentPhone: studentData.phone || '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            status: 'active'
+          }
+        ];
+        
+        // Save demo enrollments to localStorage
+        const existingEnrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+        const updatedEnrollments = [...existingEnrollments, ...demoEnrollments];
+        localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments));
+        
+        enrolledCourseIds = ['pipe-fitter', 'safety-inspector'];
+        studentEnrollments.push(...demoEnrollments);
+      }
+      
+      // Step 5: Build enrolled courses with REAL progress
       const enrolledCourses = enrolledCourseIds
         .map((courseId: string) => {
+          // Find course details
           const course = allCourses.find((c: any) => c.id === courseId);
-          if (!course) return null;
-
+          if (!course) {
+            console.log(`Course not found for ID: ${courseId}`);
+            return null;
+          }
+          
+          // Find enrollment details
+          const enrollment = studentEnrollments.find((e: any) => e.courseId === courseId);
+          
+          // Calculate real progress
           const { progress, completedSlides, totalSlides } = calculateRealProgress(courseId, studentData.id);
-
-          const hoursKey = `studyHours_${studentData.id}_${courseId}`;
-          const savedHours = localStorage.getItem(hoursKey);
-          const studyHours = savedHours ? parseInt(savedHours) : 0;
-
+          
+          // Get study hours dynamically
+          const studyHours = calculateStudyHours(studentData.id, courseId);
+          
           return {
             id: course.id,
             title: course.title,
-            description: course.description,
+            description: course.description || course.title,
             category: course.category || 'General',
             duration: course.duration || 'Self-paced',
             image: course.courseImage || course.image,
-            progress,
-            studyHours,
-            totalSlides,
-            completedSlides,
+            progress: progress,
+            studyHours: studyHours,
+            totalSlides: totalSlides,
+            completedSlides: completedSlides,
             status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
-            enrolledDate: studentData.registrationDate || new Date().toISOString()
+            enrolledDate: enrollment?.enrollmentDate || new Date().toISOString()
           };
         })
         .filter(Boolean);
-
-      console.log('Enrolled courses with REAL progress:', 
-        enrolledCourses.map((c: any) => ({ 
-          title: c.title, 
-          progress: c.progress,
-          totalSlides: c.totalSlides,
-          completedSlides: c.completedSlides
-        }))
-      );
-
+      
+      console.log('Final enrolled courses:', enrolledCourses);
       setCourses(enrolledCourses);
-
-      // Update stats with real data
+      
+      // Load quiz attempts for stats
+      const { totalQuizzes, attemptedQuizzes, passedQuizzes, averageScore } = 
+        loadQuizAttempts(studentData.id, enrolledCourseIds);
+      
+      // Update stats
       setStats({
         totalCourses: enrolledCourses.length,
         totalStudyHours: enrolledCourses.reduce((sum: number, c: any) => sum + (c.studyHours || 0), 0),
-        totalQuizzes,
+        totalQuizzes: totalQuizzes,
         quizzesAttempted: attemptedQuizzes,
         quizzesPassed: passedQuizzes,
         averageQuizScore: averageScore
       });
-
-      // Store in localStorage with updated progress
+      
+      // Save to localStorage for backup
       localStorage.setItem('studentCourses', JSON.stringify(enrolledCourses));
-
+      
     } catch (error) {
-      console.error('Error loading student courses:', error);
+      console.error('Error in loadStudentCourses:', error);
     }
   };
 
@@ -359,6 +554,8 @@ export default function DashboardPage() {
         const userData = JSON.parse(currentUserStr);
         setUser(userData);
         loadStudentCourses(userData);
+      } else {
+        console.log('No current user found in localStorage');
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -370,8 +567,11 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboardData();
 
+    // Listen for storage changes
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('completedSlides_') || 
+      if (e.key === 'enrollments' || 
+          e.key?.startsWith('completedSlides_') || 
+          e.key?.startsWith('slidesCompletion_') ||
           e.key?.startsWith('quizAttempts_') ||
           e.key === 'studentCourses' ||
           e.key === 'courses') {
@@ -379,18 +579,28 @@ export default function DashboardPage() {
       }
     };
 
+    // Custom events for updates
     const handleDataUpdate = () => {
+      loadDashboardData();
+    };
+
+    const handleSlideCompleted = () => {
+      // Reload when a slide is completed to update study hours
       loadDashboardData();
     };
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('courseProgressUpdated', handleDataUpdate);
     window.addEventListener('quizAttempted', handleDataUpdate);
+    window.addEventListener('enrollmentUpdated', handleDataUpdate);
+    window.addEventListener('slideCompleted', handleSlideCompleted);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('courseProgressUpdated', handleDataUpdate);
       window.removeEventListener('quizAttempted', handleDataUpdate);
+      window.removeEventListener('enrollmentUpdated', handleDataUpdate);
+      window.removeEventListener('slideCompleted', handleSlideCompleted);
     };
   }, []);
 
@@ -436,7 +646,7 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div className="flex-1">
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">
-              Welcome back, {user?.fullName?.split(' ')[0] || 'Student'}!
+              Welcome back, {user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || 'Student'}!
             </h1>
             <p className="text-xs sm:text-sm opacity-90">
               {courses.length > 0 
@@ -446,7 +656,7 @@ export default function DashboardPage() {
           </div>
           <div className="text-left sm:text-right">
             <p className="text-xs opacity-90">Learner ID</p>
-            <p className="text-sm sm:text-base font-bold">{user?.learnerId || ''}</p>
+            <p className="text-sm sm:text-base font-bold">{user?.learnerId || user?.id || ''}</p>
             <p className="text-xs opacity-75 mt-0.5 sm:mt-1">
               {user?.registrationDate ? `Joined ${new Date(user.registrationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
             </p>
@@ -537,7 +747,7 @@ export default function DashboardPage() {
 
         {courses.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {courses.slice(0, 4).map(course => (
+            {courses.map(course => (
               <CourseCard
                 key={course.id}
                 id={course.id}

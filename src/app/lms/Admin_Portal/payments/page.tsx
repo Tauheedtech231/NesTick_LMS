@@ -68,6 +68,48 @@ export default function PaymentsList() {
     setLoading(true)
     
     try {
+      // Prefer canonical `payments` if available
+      const paymentsCanonicalRaw = localStorage.getItem('payments')
+      if (paymentsCanonicalRaw) {
+        try {
+          const paymentsCanonical = JSON.parse(paymentsCanonicalRaw)
+          if (paymentsCanonical && paymentsCanonical.length > 0) {
+            const mapped: RealPayment[] = paymentsCanonical.map((p: any) => ({
+              id: p.id || p.paymentId || `pay-${Math.random().toString(36).slice(2,9)}`,
+              studentName: p.name || p.studentName || 'Unknown Student',
+              email: p.email || p.studentEmail || 'unknown@example.com',
+              phone: p.phone || p.contact || 'Not available',
+              course: p.course || p.courseName || 'Unknown Course',
+              amount: p.amount ? (String(p.amount).startsWith('PKR') ? String(p.amount) : `PKR ${Number(p.amount).toLocaleString()}`) : 'PKR 25,000',
+              amountNumber: p.amountNumber || (p.amount ? Number(String(p.amount).replace(/[^0-9.-]+/g, '')) : 25000),
+              enrollmentId: p.enrollmentId || p.enrollmentId || `ENR-${Math.random().toString(36).slice(2,6)}`,
+              voucherNumber: p.voucherNumber || p.voucher || `VCH-${Math.random().toString(36).slice(2,6)}`,
+              paymentDate: p.paymentDate || p.uploadedAt || new Date().toISOString(),
+              paymentMethod: p.paymentMethod || p.method || 'JazzCash',
+              transactionId: p.transactionId || p.txn || p.paymentRef || `TXN-${Math.random().toString(36).substr(2,8).toUpperCase()}`,
+              status: (p.status || p.paymentStatus || '').toString().toLowerCase().includes('paid') || (p.status || p.paymentStatus || '').toString().toLowerCase().includes('verif') ? 'verified' : (p.status || '').toString().toLowerCase().includes('reject') || (p.status || '').toString().toLowerCase().includes('fail') ? 'rejected' : 'pending',
+              screenshotUrl: p.screenshotUrl || p.thumbnail || null,
+              uploadedAt: p.uploadedAt || p.uploadDate || new Date().toISOString(),
+              formData: p.formData || null
+            }))
+
+            setPayments(mapped)
+
+            const totalPayments = mapped.length
+            const verifiedPayments = mapped.filter(p => p.status === 'verified').length
+            const pendingPayments = mapped.filter(p => p.status === 'pending').length
+            const rejectedPayments = mapped.filter(p => p.status === 'rejected').length
+            const totalRevenue = mapped.reduce((sum, p) => sum + (p.amountNumber || 0), 0)
+            const recentPayments = mapped.filter(p => new Date(p.uploadedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
+
+            setStats({ totalPayments, verifiedPayments, pendingPayments, rejectedPayments, totalRevenue, recentPayments })
+            setLoading(false)
+            return
+          }
+        } catch (err) {
+          console.error('Error parsing canonical payments:', err)
+        }
+      }
       // Load enrollment data from localStorage
       const storedEnrollmentData = JSON.parse(localStorage.getItem('enrollmentData') || 'null')
       

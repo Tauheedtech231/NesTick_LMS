@@ -1,4 +1,4 @@
-// app/lms/Student_Portal/my-courses/[id]/page.tsx
+// app/lms/Student_Portal/my-courses/[id]/page.tsx (UPDATED with assignment files)
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -20,7 +20,8 @@ import {
   HiTrendingUp,
   HiTrendingDown,
   HiStar,
-  HiDocumentReport
+  HiDocumentReport,
+  HiPaperClip
 } from 'react-icons/hi';
 import { IoMdRadioButtonOff } from 'react-icons/io';
 /* eslint-disable */
@@ -86,7 +87,7 @@ interface QuizAttempt {
 
 interface Assignment {
   id: string;
-  slideId: string;  // Updated to match new structure
+  slideId: string;
   courseId: string;
   title: string;
   description: string;
@@ -155,6 +156,271 @@ interface SlidePerformance {
   completedAt?: string;
 }
 
+// ========== DEMO DATA FOR HARDCODED COURSES (only for demo user) ==========
+const DEMO_SLIDES: Record<string, Slide[]> = {
+  'pipe-fitter': [
+    { id: 'pf-1', courseId: 'pipe-fitter', slideNumber: 1, title: 'Introduction to Pipe Fitting', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pf-2', courseId: 'pipe-fitter', slideNumber: 2, title: 'Pipe Materials and Specifications', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pf-3', courseId: 'pipe-fitter', slideNumber: 3, title: 'Cutting and Threading Techniques', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pf-4', courseId: 'pipe-fitter', slideNumber: 4, title: 'Installation and Assembly', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'pf-5', courseId: 'pipe-fitter', slideNumber: 5, title: 'Safety and Quality Standards', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ],
+  'safety-inspector': [
+    { id: 'si-1', courseId: 'safety-inspector', slideNumber: 1, title: 'Role of a Safety Inspector', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'si-2', courseId: 'safety-inspector', slideNumber: 2, title: 'OSHA Standards and Regulations', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'si-3', courseId: 'safety-inspector', slideNumber: 3, title: 'Hazard Identification and Risk Assessment', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'si-4', courseId: 'safety-inspector', slideNumber: 4, title: 'Inspection Procedures and Reporting', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'si-5', courseId: 'safety-inspector', slideNumber: 5, title: 'Emergency Preparedness', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ],
+  'welding': [
+    { id: 'w-1', courseId: 'welding', slideNumber: 1, title: 'Welding Basics and Safety', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'w-2', courseId: 'welding', slideNumber: 2, title: 'MIG Welding Techniques', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'w-3', courseId: 'welding', slideNumber: 3, title: 'TIG Welding Fundamentals', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'w-4', courseId: 'welding', slideNumber: 4, title: 'Arc Welding and Equipment', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    { id: 'w-5', courseId: 'welding', slideNumber: 5, title: 'Welding Inspection and Quality Control', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ]
+};
+
+const DEMO_SLIDE_CONTENTS: Record<string, SlideContent[]> = {
+  'pipe-fitter': [
+    {
+      slideId: 'pf-1',
+      courseId: 'pipe-fitter',
+      files: [
+        { id: 'pf-1-file1', name: 'Pipe Fitting Overview.pdf', type: 'application/pdf', size: 245760, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'pf-1-file2', name: 'Introduction Video.mp4', type: 'video/mp4', size: 5242880, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'pf-2',
+      courseId: 'pipe-fitter',
+      files: [
+        { id: 'pf-2-file1', name: 'Pipe Materials Chart.pdf', type: 'application/pdf', size: 102400, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'pf-2-file2', name: 'Specifications Guide.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'pf-3',
+      courseId: 'pipe-fitter',
+      files: [
+        { id: 'pf-3-file1', name: 'Cutting Techniques.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'pf-3-file2', name: 'Threading Demo.mp4', type: 'video/mp4', size: 6291456, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'pf-4',
+      courseId: 'pipe-fitter',
+      files: [
+        { id: 'pf-4-file1', name: 'Assembly Guide.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'pf-5',
+      courseId: 'pipe-fitter',
+      files: [
+        { id: 'pf-5-file1', name: 'Safety Checklist.pdf', type: 'application/pdf', size: 153600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    }
+  ],
+  'safety-inspector': [
+    {
+      slideId: 'si-1',
+      courseId: 'safety-inspector',
+      files: [
+        { id: 'si-1-file1', name: 'Role Description.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'si-2',
+      courseId: 'safety-inspector',
+      files: [
+        { id: 'si-2-file1', name: 'OSHA Quick Reference.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'si-2-file2', name: 'Regulations Video.mp4', type: 'video/mp4', size: 5242880, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'si-3',
+      courseId: 'safety-inspector',
+      files: [
+        { id: 'si-3-file1', name: 'Hazard ID Worksheet.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'si-4',
+      courseId: 'safety-inspector',
+      files: [
+        { id: 'si-4-file1', name: 'Inspection Form.pdf', type: 'application/pdf', size: 256000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'si-5',
+      courseId: 'safety-inspector',
+      files: [
+        { id: 'si-5-file1', name: 'Emergency Plan.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    }
+  ],
+  'welding': [
+    {
+      slideId: 'w-1',
+      courseId: 'welding',
+      files: [
+        { id: 'w-1-file1', name: 'Welding Safety Manual.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'w-1-file2', name: 'Safety Video.mp4', type: 'video/mp4', size: 6291456, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'w-2',
+      courseId: 'welding',
+      files: [
+        { id: 'w-2-file1', name: 'MIG Guide.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'w-2-file2', name: 'MIG Demo.mp4', type: 'video/mp4', size: 7340032, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'w-3',
+      courseId: 'welding',
+      files: [
+        { id: 'w-3-file1', name: 'TIG Techniques.pdf', type: 'application/pdf', size: 512000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'w-4',
+      courseId: 'welding',
+      files: [
+        { id: 'w-4-file1', name: 'Arc Welding.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
+        { id: 'w-4-file2', name: 'Equipment Setup.mp4', type: 'video/mp4', size: 8388608, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    },
+    {
+      slideId: 'w-5',
+      courseId: 'welding',
+      files: [
+        { id: 'w-5-file1', name: 'Inspection Checklist.pdf', type: 'application/pdf', size: 256000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
+      ]
+    }
+  ]
+};
+
+const DEMO_QUIZZES: Record<string, Quiz[]> = {
+  'pipe-fitter': [
+    {
+      slideId: 'pf-2',
+      courseId: 'pipe-fitter',
+      questions: [
+        { id: 'pf-q1', question: 'What is the most common material for residential plumbing?', options: ['Copper', 'PVC', 'Steel', 'Cast Iron'], correctAnswer: 1 },
+        { id: 'pf-q2', question: 'Which standard specifies pipe fitting dimensions?', options: ['ISO 9001', 'ASME B16.9', 'ASTM A53', 'ANSI B16.5'], correctAnswer: 1 }
+      ]
+    },
+    {
+      slideId: 'pf-4',
+      courseId: 'pipe-fitter',
+      questions: [
+        { id: 'pf-q3', question: 'When joining pipes, what should be applied to threads?', options: ['Glue', 'Teflon tape', 'Grease', 'Paint'], correctAnswer: 1 }
+      ]
+    }
+  ],
+  'safety-inspector': [
+    {
+      slideId: 'si-2',
+      courseId: 'safety-inspector',
+      questions: [
+        { id: 'si-q1', question: 'OSHA stands for?', options: ['Occupational Safety and Health Administration', 'Organization for Safety and Health Affairs', 'Office of Safety and Hazard Assessment', 'None'], correctAnswer: 0 },
+        { id: 'si-q2', question: 'What is the general duty clause?', options: ['Employers must provide a workplace free from recognized hazards', 'Employees must wear PPE', 'Inspections must be announced', 'All accidents must be reported'], correctAnswer: 0 }
+      ]
+    }
+  ],
+  'welding': [
+    {
+      slideId: 'w-2',
+      courseId: 'welding',
+      questions: [
+        { id: 'w-q1', question: 'MIG stands for?', options: ['Metal Inert Gas', 'Manual Inert Gas', 'Metallic Induction Gun', 'Multiple Ignition Generator'], correctAnswer: 0 },
+        { id: 'w-q2', question: 'What shielding gas is commonly used in MIG welding?', options: ['Oxygen', 'Argon/CO2 mix', 'Helium', 'Nitrogen'], correctAnswer: 1 }
+      ]
+    },
+    {
+      slideId: 'w-3',
+      courseId: 'welding',
+      questions: [
+        { id: 'w-q3', question: 'TIG welding uses which type of electrode?', options: ['Consumable', 'Non-consumable', 'Flux-cored', 'Stick'], correctAnswer: 1 }
+      ]
+    }
+  ]
+};
+
+const DEMO_ASSIGNMENTS: Record<string, Assignment[]> = {
+  'pipe-fitter': [
+    {
+      id: 'pf-assign-1',
+      slideId: 'pf-3',
+      courseId: 'pipe-fitter',
+      title: 'Pipe Cutting and Threading Exercise',
+      description: 'Submit a video or photos of you cutting and threading a pipe following the techniques shown.',
+      dueDate: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
+      totalMarks: 100,
+      passingMarks: 70,
+      file: {
+        name: 'Pipe Cutting Instructions.pdf',
+        type: 'application/pdf',
+        size: 512000,
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        publicId: 'dummy',
+        uploadedAt: new Date().toISOString()
+      },
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ],
+  'safety-inspector': [
+    {
+      id: 'si-assign-1',
+      slideId: 'si-4',
+      courseId: 'safety-inspector',
+      title: 'Workplace Inspection Report',
+      description: 'Conduct a mock inspection of a workspace and submit a report using the provided form.',
+      dueDate: new Date(Date.now() + 5*24*60*60*1000).toISOString(),
+      totalMarks: 100,
+      passingMarks: 75,
+      file: {
+        name: 'Inspection Form Template.docx',
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        size: 256000,
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        publicId: 'dummy',
+        uploadedAt: new Date().toISOString()
+      },
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ],
+  'welding': [
+    {
+      id: 'w-assign-1',
+      slideId: 'w-4',
+      courseId: 'welding',
+      title: 'Arc Welding Practice',
+      description: 'Submit a video of you performing an arc weld, along with a photo of the finished bead.',
+      dueDate: new Date(Date.now() + 10*24*60*60*1000).toISOString(),
+      totalMarks: 100,
+      passingMarks: 70,
+      file: {
+        name: 'Welding Techniques Reference.pdf',
+        type: 'application/pdf',
+        size: 1024000,
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        publicId: 'dummy',
+        uploadedAt: new Date().toISOString()
+      },
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ]
+};
+
 export default function StudentCourseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -183,10 +449,68 @@ export default function StudentCourseDetailPage() {
   const [uploadingAssignment, setUploadingAssignment] = useState(false);
   const [assignmentFeedback, setAssignmentFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
 
-  // Load all data
+  // ========== 📋 LOAD ALL COURSES (HARDCODED + LOCALSTORAGE) ==========
+  const loadAllCourses = () => {
+    try {
+      // Hardcoded courses from instructor file
+      const hardcodedCourses = [
+        {
+          id: 'pipe-fitter',
+          title: 'Pipe Fitter',
+          description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
+          category: 'Technical Training',
+          duration: '8 Weeks',
+          instructorName: 'System Instructor',
+          level: 'Beginner to Advanced',
+          image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
+        },
+        {
+          id: 'safety-inspector',
+          title: 'Safety Inspector',
+          description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
+          category: 'Safety Training',
+          duration: '6 Weeks',
+          instructorName: 'System Instructor',
+          level: 'Intermediate',
+          image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
+        },
+        {
+          id: 'welding',
+          title: 'Professional Welding',
+          description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
+          category: 'Technical Training',
+          duration: '10 Weeks',
+          instructorName: 'System Instructor',
+          level: 'Beginner to Professional',
+          image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
+        }
+      ];
+      
+      // Get courses from localStorage (instructor created courses)
+      const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      
+      // Combine all courses
+      const allCourses = [...hardcodedCourses, ...localStorageCourses];
+      
+      // Remove duplicates by id
+      const uniqueCourses = allCourses.filter((course, index, self) => 
+        index === self.findIndex((c) => c.id === course.id)
+      );
+      
+      return uniqueCourses;
+      
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      return [];
+    }
+  };
+
+  // ========== 📥 LOAD ALL DATA ==========
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('Loading data for course:', courseId);
+        
         // Get current user
         const currentUserStr = localStorage.getItem('currentUser');
         if (!currentUserStr) {
@@ -195,51 +519,90 @@ export default function StudentCourseDetailPage() {
         }
         const userData = JSON.parse(currentUserStr);
         setUser(userData);
+        console.log('Current user:', userData);
 
-        // Load course from 'courses' key
-        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+        // Determine if this is the demo user (only student@gmail.com gets demo content)
+        const isDemoUser = userData.email === 'student@gmail.com';
+        console.log('Is demo user:', isDemoUser);
+
+        // Load course from all courses (hardcoded + localStorage)
+        const allCourses = loadAllCourses();
         const foundCourse = allCourses.find((c: any) => c.id === courseId);
+        
         if (!foundCourse) {
+          console.error('Course not found:', courseId);
           router.push('/lms/Student_Portal/my-courses');
           return;
         }
         setCourse(foundCourse);
+        console.log('Found course:', foundCourse);
 
-        // Load slides for this course
+        // Check if it's a demo course (hardcoded id)
+        const isDemoCourse = ['pipe-fitter', 'safety-inspector', 'welding'].includes(courseId);
+
+        // ========== LOAD SLIDES (from localStorage, fallback to demo only if demo user) ==========
+        let courseSlides: Slide[] = [];
         const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
-        const courseSlides = allSlides
+        const localStorageSlides = allSlides
           .filter((s: Slide) => s.courseId === courseId)
           .sort((a: Slide, b: Slide) => a.slideNumber - b.slideNumber);
+        
+        if (localStorageSlides.length > 0) {
+          // Always prefer slides from localStorage (instructor created)
+          courseSlides = localStorageSlides;
+        } else if (isDemoCourse && isDemoUser) {
+          // Only use demo slides for demo user and demo course
+          courseSlides = DEMO_SLIDES[courseId] || [];
+        }
         setSlides(courseSlides);
 
-        // Load slide contents
-        const allContents = JSON.parse(localStorage.getItem('slideContent') || '[]');
+        // ========== LOAD SLIDE CONTENTS ==========
         const contentsMap = new Map<string, SlideContent>();
-        allContents.forEach((content: SlideContent) => {
-          if (content.courseId === courseId) {
-            contentsMap.set(content.slideId, content);
-          }
+        const allContents = JSON.parse(localStorage.getItem('slideContent') || '[]');
+        const localStorageContents = allContents.filter((c: SlideContent) => c.courseId === courseId);
+        localStorageContents.forEach((content: SlideContent) => {
+          contentsMap.set(content.slideId, content);
         });
+
+        if (contentsMap.size === 0 && isDemoCourse && isDemoUser) {
+          const demoContents = DEMO_SLIDE_CONTENTS[courseId] || [];
+          demoContents.forEach((content: SlideContent) => {
+            contentsMap.set(content.slideId, content);
+          });
+        }
         setSlideContents(contentsMap);
 
-        // Load quizzes
-        const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
+        // ========== LOAD QUIZZES ==========
         const quizzesMap = new Map<string, Quiz>();
-        allQuizzes.forEach((quiz: Quiz) => {
-          if (quiz.courseId === courseId) {
-            quizzesMap.set(quiz.slideId, quiz);
-          }
+        const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
+        const localStorageQuizzes = allQuizzes.filter((q: Quiz) => q.courseId === courseId);
+        localStorageQuizzes.forEach((quiz: Quiz) => {
+          quizzesMap.set(quiz.slideId, quiz);
         });
+
+        if (quizzesMap.size === 0 && isDemoCourse && isDemoUser) {
+          const demoQuizzes = DEMO_QUIZZES[courseId] || [];
+          demoQuizzes.forEach((quiz: Quiz) => {
+            quizzesMap.set(quiz.slideId, quiz);
+          });
+        }
         setQuizzes(quizzesMap);
 
-        // Load assignments (updated to use slideId)
+        // ========== LOAD ASSIGNMENTS ==========
+        let courseAssignments: Assignment[] = [];
         const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-        const courseAssignments = allAssignments.filter((a: Assignment) => 
+        const localStorageAssignments = allAssignments.filter((a: Assignment) => 
           a.courseId === courseId && a.status === 'published'
         );
+        
+        if (localStorageAssignments.length > 0) {
+          courseAssignments = localStorageAssignments;
+        } else if (isDemoCourse && isDemoUser) {
+          courseAssignments = DEMO_ASSIGNMENTS[courseId] || [];
+        }
         setAssignments(courseAssignments);
 
-        // Load assignment submissions
+        // ========== LOAD ASSIGNMENT SUBMISSIONS ==========
         const allSubmissions = JSON.parse(localStorage.getItem('assignmentSubmissions') || '[]');
         const submissionsMap = new Map<string, AssignmentSubmission>();
         allSubmissions.forEach((sub: AssignmentSubmission) => {
@@ -249,23 +612,27 @@ export default function StudentCourseDetailPage() {
         });
         setAssignmentSubmissions(submissionsMap);
 
-        // Load student's completed slides
+        // ========== LOAD COMPLETED SLIDES ==========
         const completedKey = `completedSlides_${userData.id}_${courseId}`;
         const savedCompleted = localStorage.getItem(completedKey);
+        console.log('Completed slides key:', completedKey, 'value:', savedCompleted);
+        
         if (savedCompleted) {
           setCompletedSlides(new Set(JSON.parse(savedCompleted)));
         }
 
-        // Load completed content (videos/pdfs)
+        // ========== LOAD COMPLETED CONTENT ==========
         const completedContentKey = `completedContent_${userData.id}_${courseId}`;
         const savedContent = localStorage.getItem(completedContentKey);
         if (savedContent) {
           setCompletedContent(new Set(JSON.parse(savedContent)));
         }
 
-        // Load quiz attempts
+        // ========== LOAD QUIZ ATTEMPTS ==========
         const attemptsKey = `quizAttempts_${userData.id}`;
         const savedAttempts = localStorage.getItem(attemptsKey);
+        console.log('Quiz attempts key:', attemptsKey, 'value:', savedAttempts);
+        
         if (savedAttempts) {
           const attempts = JSON.parse(savedAttempts);
           const attemptsMap = new Map<string, QuizAttempt>();
@@ -277,7 +644,7 @@ export default function StudentCourseDetailPage() {
           setQuizAttempts(attemptsMap);
         }
 
-        // Update studentCourses progress
+        // ========== UPDATE STUDENT COURSES PROGRESS ==========
         updateStudentCoursesProgress(
           userData.id, 
           courseId, 
@@ -285,7 +652,7 @@ export default function StudentCourseDetailPage() {
           savedCompleted ? JSON.parse(savedCompleted) : []
         );
 
-        // Auto-expand first incomplete slide
+        // ========== AUTO-EXPAND FIRST INCOMPLETE SLIDE ==========
         if (courseSlides.length > 0) {
           const completed = new Set(savedCompleted ? JSON.parse(savedCompleted) : []);
           const firstIncomplete = courseSlides.find((s: { id: unknown; }) => !completed.has(s.id));
@@ -295,6 +662,14 @@ export default function StudentCourseDetailPage() {
             setExpandedSlides(new Set([courseSlides[0].id]));
           }
         }
+
+        // ========== SHOW SUMMARY ==========
+        console.log('===== LOAD SUMMARY =====');
+        console.log('Total slides:', courseSlides.length);
+        console.log('Slides with content:', contentsMap.size);
+        console.log('Slides with quizzes:', quizzesMap.size);
+        console.log('Total assignments:', courseAssignments.length);
+        console.log('========================');
 
       } catch (error) {
         console.error('Error loading course details:', error);
@@ -615,7 +990,7 @@ export default function StudentCourseDetailPage() {
       const quiz = quizzes.get(slide.id);
       const quizId = `${courseId}_${slide.id}`;
       const attempt = quizAttempts.get(quizId);
-      const slideAssignments = assignments.filter(a => a.slideId === slide.id); // Fixed: use slideId
+      const slideAssignments = assignments.filter(a => a.slideId === slide.id);
       const hasAssignment = slideAssignments.length > 0;
       const assignmentSubmitted = hasAssignment && slideAssignments.some(a => assignmentSubmissions.has(a.id));
       const assignment = hasAssignment ? slideAssignments[0] : undefined;
@@ -700,6 +1075,8 @@ export default function StudentCourseDetailPage() {
     if (fileType.includes('pdf')) return <HiDocumentText className="w-5 h-5 text-red-500" />;
     if (fileType.includes('word') || fileType.includes('document')) return <HiDocumentText className="w-5 h-5 text-blue-700" />;
     if (fileType.includes('image')) return <HiDocumentText className="w-5 h-5 text-green-500" />;
+    if (fileType.includes('sheet') || fileType.includes('excel')) return <HiDocumentText className="w-5 h-5 text-green-600" />;
+    if (fileType.includes('presentation') || fileType.includes('powerpoint')) return <HiDocumentText className="w-5 h-5 text-orange-500" />;
     return <HiDocumentText className="w-5 h-5 text-gray-500" />;
   };
 
@@ -968,7 +1345,11 @@ export default function StudentCourseDetailPage() {
         </h2>
         
         {slides.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No lessons available for this course yet.</p>
+          <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
+            <HiDocumentText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500">No lessons available for this course yet.</p>
+            <p className="text-sm text-gray-400 mt-2">Check back later for updates.</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {slides.map((slide) => {
@@ -983,7 +1364,7 @@ export default function StudentCourseDetailPage() {
                 completedContent.has(`${slide.id}_${f.id}`)
               ) ?? true;
               const quizAttempted = quiz ? !!attempt : true;
-              const slideAssignments = assignments.filter(a => a.slideId === slide.id); // Fixed: use slideId
+              const slideAssignments = assignments.filter(a => a.slideId === slide.id);
               const hasAssignment = slideAssignments.length > 0;
               const assignmentSubmitted = hasAssignment && slideAssignments.some(a => assignmentSubmissions.has(a.id));
               const canComplete = canMarkSlideComplete(slide.id);
@@ -1064,7 +1445,7 @@ export default function StudentCourseDetailPage() {
                         <div>
                           <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                             <HiDocumentText className="w-4 h-4" />
-                            Materials
+                            Lesson Materials
                           </h4>
                           <div className="grid gap-2">
                             {slideContent?.files.map((file) => {
@@ -1223,107 +1604,149 @@ export default function StudentCourseDetailPage() {
                           {slideAssignments.map((assignment) => {
                             const submission = assignmentSubmissions.get(assignment.id);
                             
-                            if (submission) {
-                              return (
-                                <div key={assignment.id} className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <HiCheckCircle className="w-6 h-6 text-green-600" />
-                                    <div>
-                                      <p className="text-sm font-medium text-green-700">
-                                        Assignment Submitted
-                                      </p>
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Submitted on {new Date(submission.submittedAt).toLocaleDateString()}
-                                      </p>
-                                      {submission.score && (
-                                        <p className="text-sm font-medium text-green-600 mt-1">
-                                          Score: {submission.score}%
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            if (activeAssignment === assignment.id) {
-                              return (
-                                <div key={assignment.id} className="border border-gray-200 rounded-lg p-4">
-                                  <div className="mb-4">
-                                    <h5 className="font-medium text-gray-900">{assignment.title}</h5>
-                                    <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
-                                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                                      <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                                      <span>Total Marks: {assignment.totalMarks}</span>
-                                      <span>Passing: {assignment.passingMarks}</span>
-                                    </div>
+                            return (
+                              <div key={assignment.id} className="space-y-3">
+                                {/* Assignment details with instructor's file */}
+                                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                  <h5 className="font-medium text-gray-900">{assignment.title}</h5>
+                                  <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
+                                  
+                                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
+                                    <span className="flex items-center gap-1">
+                                      <HiClock className="w-3 h-3" />
+                                      Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                                    </span>
+                                    <span>Total Marks: {assignment.totalMarks}</span>
+                                    <span>Passing: {assignment.passingMarks}</span>
                                   </div>
 
-                                  {/* File upload */}
-                                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                                    <input
-                                      type="file"
-                                      multiple
-                                      onChange={(e) => setAssignmentFiles(Array.from(e.target.files || []))}
-                                      className="hidden"
-                                      id={`assignment-${assignment.id}`}
-                                      disabled={uploadingAssignment}
-                                    />
-                                    <label
-                                      htmlFor={`assignment-${assignment.id}`}
-                                      className="cursor-pointer"
-                                    >
-                                      <div className="text-center">
-                                        <HiDocumentText className="w-8 h-8 mx-auto text-gray-400" />
-                                        <p className="text-sm text-gray-600 mt-2">
-                                          Click to upload files
+                                  {/* Instructor's attached file - NEW SECTION */}
+                                  {assignment.file && (
+                                    <div className="mt-3 p-2 bg-white rounded-lg border border-gray-200">
+                                      <p className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                                        <HiPaperClip className="w-3 h-3" />
+                                        Assignment File from Instructor:
+                                      </p>
+                                      <a
+                                        href={assignment.file.url}
+                                        download={assignment.file.name}
+                                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                      >
+                                        {getFileIcon(assignment.file.type)}
+                                        <span className="text-sm text-blue-600 hover:underline flex-1">
+                                          {assignment.file.name}
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                          ({(assignment.file.size / 1024).toFixed(0)} KB)
+                                        </span>
+                                        <HiDownload className="w-4 h-4 text-gray-400" />
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Submission section */}
+                                {submission ? (
+                                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                      <HiCheckCircle className="w-6 h-6 text-green-600" />
+                                      <div>
+                                        <p className="text-sm font-medium text-green-700">
+                                          Assignment Submitted
                                         </p>
-                                        {assignmentFiles.length > 0 && (
-                                          <p className="text-xs text-green-600 mt-1">
-                                            {assignmentFiles.length} file(s) selected
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Submitted on {new Date(submission.submittedAt).toLocaleDateString()}
+                                        </p>
+                                        {submission.files && submission.files.length > 0 && (
+                                          <div className="mt-2">
+                                            <p className="text-xs font-medium text-gray-600 mb-1">Your submissions:</p>
+                                            {submission.files.map((file, idx) => (
+                                              <a
+                                                key={idx}
+                                                href={file.url}
+                                                download={file.name}
+                                                className="flex items-center gap-2 text-xs text-blue-600 hover:underline mt-1"
+                                              >
+                                                {getFileIcon(file.type)}
+                                                {file.name}
+                                              </a>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {submission.score && (
+                                          <p className="text-sm font-medium text-green-600 mt-2">
+                                            Score: {submission.score}%
+                                            {submission.feedback && ` - Feedback: ${submission.feedback}`}
                                           </p>
                                         )}
                                       </div>
-                                    </label>
-                                  </div>
-
-                                  <div className="flex gap-2 mt-4">
-                                    <button
-                                      onClick={() => handleAssignmentSubmit(assignment.id)}
-                                      disabled={uploadingAssignment || assignmentFiles.length === 0}
-                                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {uploadingAssignment ? 'Uploading...' : 'Submit Assignment'}
-                                    </button>
-                                    <button
-                                      onClick={() => setActiveAssignment(null)}
-                                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            return (
-                              <div key={assignment.id} className="border border-gray-200 rounded-lg p-4">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <h5 className="font-medium text-gray-900">{assignment.title}</h5>
-                                    <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
-                                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                                      <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                                      <span>Marks: {assignment.totalMarks}</span>
                                     </div>
                                   </div>
+                                ) : activeAssignment === assignment.id ? (
+                                  <div className="border border-gray-200 rounded-lg p-4">
+                                    <div className="mb-4">
+                                      <p className="text-sm text-gray-600">Upload your assignment files:</p>
+                                    </div>
+
+                                    {/* File upload */}
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                                      <input
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => setAssignmentFiles(Array.from(e.target.files || []))}
+                                        className="hidden"
+                                        id={`assignment-${assignment.id}`}
+                                        disabled={uploadingAssignment}
+                                      />
+                                      <label
+                                        htmlFor={`assignment-${assignment.id}`}
+                                        className="cursor-pointer block"
+                                      >
+                                        <div className="text-center">
+                                          <HiDocumentText className="w-8 h-8 mx-auto text-gray-400" />
+                                          <p className="text-sm text-gray-600 mt-2">
+                                            Click to upload files
+                                          </p>
+                                          {assignmentFiles.length > 0 && (
+                                            <div className="mt-2">
+                                              {assignmentFiles.map((file, idx) => (
+                                                <p key={idx} className="text-xs text-green-600">
+                                                  {file.name}
+                                                </p>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </label>
+                                    </div>
+
+                                    <div className="flex gap-2 mt-4">
+                                      <button
+                                        onClick={() => handleAssignmentSubmit(assignment.id)}
+                                        disabled={uploadingAssignment || assignmentFiles.length === 0}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {uploadingAssignment ? 'Uploading...' : 'Submit Assignment'}
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setActiveAssignment(null);
+                                          setAssignmentFiles([]);
+                                        }}
+                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
                                   <button
                                     onClick={() => setActiveAssignment(assignment.id)}
-                                    className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+                                    className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                                   >
                                     Start Assignment
                                   </button>
-                                </div>
+                                )}
                               </div>
                             );
                           })}

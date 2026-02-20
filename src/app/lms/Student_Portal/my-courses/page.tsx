@@ -35,7 +35,74 @@ const BRAND_COLORS = {
   darkGrey: '#1F2933',
   teal: '#1FB6CB'
 };
-/* eslint-disable */
+
+// Demo courses to show when user has no enrollments
+const DEMO_COURSES: Course[] = [
+  {
+    id: 'demo-1',
+    title: 'Introduction to Web Development',
+    instructor: 'Sarah Johnson',
+    description: 'Learn the fundamentals of HTML, CSS, and JavaScript. Build your first responsive website from scratch.',
+    category: 'Web Development',
+    progress: 45,
+    status: 'in_progress',
+    enrolledDate: new Date().toISOString(),
+    modules: [],
+    totalModules: 12,
+    completedModules: 5,
+    image: 'https://images.unsplash.com/photo-1593720213429-5c0b6c8f8b8a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    duration: '8 weeks',
+    level: 'Beginner'
+  },
+  {
+    id: 'demo-2',
+    title: 'Data Science Fundamentals',
+    instructor: 'Michael Chen',
+    description: 'Master the basics of data analysis, Python programming, and visualization. Hands-on projects included.',
+    category: 'Data Science',
+    progress: 20,
+    status: 'in_progress',
+    enrolledDate: new Date().toISOString(),
+    modules: [],
+    totalModules: 15,
+    completedModules: 3,
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    duration: '10 weeks',
+    level: 'Intermediate'
+  },
+  {
+    id: 'demo-3',
+    title: 'UX/UI Design Principles',
+    instructor: 'Emily Rodriguez',
+    description: 'Discover the art of creating intuitive user experiences. Learn wireframing, prototyping, and user testing.',
+    category: 'Design',
+    progress: 0,
+    status: 'not_started',
+    enrolledDate: new Date().toISOString(),
+    modules: [],
+    totalModules: 10,
+    completedModules: 0,
+    image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    duration: '6 weeks',
+    level: 'Beginner'
+  },
+  {
+    id: 'demo-4',
+    title: 'Digital Marketing Mastery',
+    instructor: 'David Kim',
+    description: 'Comprehensive guide to SEO, social media marketing, and analytics. Build a complete marketing strategy.',
+    category: 'Marketing',
+    progress: 100,
+    status: 'completed',
+    enrolledDate: new Date().toISOString(),
+    modules: [],
+    totalModules: 8,
+    completedModules: 8,
+    image: 'https://images.unsplash.com/photo-1557838923-2985c318be48?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    duration: '4 weeks',
+    level: 'Intermediate'
+  }
+];
 
 export default function MyCoursesPage() {
   const [user, setUser] = useState<any>(null);
@@ -44,12 +111,18 @@ export default function MyCoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [showingDemo, setShowingDemo] = useState(false);
 
   // Function to load courses with real-time progress
   const loadCoursesWithProgress = () => {
     try {
       const currentUserStr = localStorage.getItem('currentUser');
       if (!currentUserStr) {
+        // No user logged in – show demo courses
+        setCourses([]);
+        setFilteredCourses(DEMO_COURSES);
+        setOverallProgress(0);
+        setShowingDemo(true);
         setLoading(false);
         return;
       }
@@ -60,6 +133,11 @@ export default function MyCoursesPage() {
       // Get studentCourses
       const studentCoursesStr = localStorage.getItem('studentCourses');
       if (!studentCoursesStr) {
+        // No enrolled courses – show demo courses
+        setCourses([]);
+        setFilteredCourses(DEMO_COURSES);
+        setOverallProgress(0);
+        setShowingDemo(true);
         setLoading(false);
         return;
       }
@@ -120,8 +198,12 @@ export default function MyCoursesPage() {
       setOverallProgress(avgProgress);
       setCourses(typedCourses);
       setFilteredCourses(typedCourses);
+      setShowingDemo(false);
     } catch (error) {
       console.error('Error loading courses:', error);
+      // On error, show demo courses as fallback
+      setFilteredCourses(DEMO_COURSES);
+      setShowingDemo(true);
     } finally {
       setLoading(false);
     }
@@ -155,7 +237,8 @@ export default function MyCoursesPage() {
   }, []);
 
   useEffect(() => {
-    let filtered = courses;
+    const displayCourses = showingDemo ? DEMO_COURSES : courses;
+    let filtered = displayCourses;
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -167,7 +250,7 @@ export default function MyCoursesPage() {
     }
 
     setFilteredCourses(filtered);
-  }, [searchTerm, courses]);
+  }, [searchTerm, courses, showingDemo]);
 
   if (loading) {
     return (
@@ -183,6 +266,8 @@ export default function MyCoursesPage() {
     );
   }
 
+  const displayCourses = showingDemo ? DEMO_COURSES : courses;
+
   return (
     <div className="space-y-4 sm:space-y-5 p-3 sm:p-4 md:p-5">
       {/* Header with search and overall progress */}
@@ -192,14 +277,15 @@ export default function MyCoursesPage() {
             My Courses
           </h1>
           <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
-            {user?.fullName?.split(' ')[0] || 'Student'} • {courses.length}{' '}
-            {courses.length === 1 ? 'course' : 'courses'} enrolled
+            {user?.fullName?.split(' ')[0] || 'Student'} • {displayCourses.length}{' '}
+            {displayCourses.length === 1 ? 'course' : 'courses'} 
+            {showingDemo && ' (demo)'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Overall Progress Badge */}
-          {courses.length > 0 && (
+          {/* Overall Progress Badge - only for real courses */}
+          {!showingDemo && courses.length > 0 && (
             <div 
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200"
             >
@@ -239,8 +325,8 @@ export default function MyCoursesPage() {
         </div>
       </div>
 
-      {/* Mobile Overall Progress */}
-      {courses.length > 0 && (
+      {/* Mobile Overall Progress - only for real courses */}
+      {!showingDemo && courses.length > 0 && (
         <div className="sm:hidden bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -263,8 +349,8 @@ export default function MyCoursesPage() {
         </div>
       )}
 
-      {/* Stats Cards */}
-      {courses.length > 0 && (
+      {/* Stats Cards - only for real courses */}
+      {!showingDemo && courses.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
             <p className="text-xs text-gray-500">Total</p>
@@ -285,13 +371,20 @@ export default function MyCoursesPage() {
         </div>
       )}
 
+      {/* Demo indicator message */}
+      {showingDemo && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          You are viewing demo courses. <a href="/courses" className="font-medium underline">Browse real courses</a> to start learning.
+        </div>
+      )}
+
       {/* Course grid */}
       {filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {filteredCourses.map((course) => (
             <Link
               key={course.id}
-              href={`/lms/Student_Portal/my-courses/${course.id}`}
+              href={showingDemo ? `/lms/Student_Portal/demo-courses/${course.id}` : `/lms/Student_Portal/my-courses/${course.id}`}
               className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
             >
               <div className="p-4 sm:p-5">
@@ -330,7 +423,11 @@ export default function MyCoursesPage() {
                   {course.title}
                 </h3>
 
-               
+                {/* Instructor */}
+                <p className="text-xs text-gray-600 mb-3">
+                  <HiUser className="inline w-3 h-3 mr-1" />
+                  {course.instructor}
+                </p>
 
                 {/* Description */}
                 <p className="text-xs text-gray-600 mb-3 line-clamp-2">
@@ -390,12 +487,14 @@ export default function MyCoursesPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-10 text-center">
           <div className="text-5xl sm:text-6xl mb-4">📚</div>
           <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-            {searchTerm ? 'No matching courses' : 'No courses enrolled'}
+            {searchTerm ? 'No matching courses' : 'No courses available'}
           </h3>
           <p className="text-xs sm:text-sm text-gray-600 mb-5 max-w-md mx-auto">
             {searchTerm
               ? `No courses found matching "${searchTerm}"`
-              : "You haven't enrolled in any courses yet. Browse available courses to get started."}
+              : showingDemo 
+                ? "No demo courses to display." 
+                : "You haven't enrolled in any courses yet. Browse available courses to get started."}
           </p>
           {searchTerm ? (
             <button
@@ -404,7 +503,7 @@ export default function MyCoursesPage() {
             >
               Clear Search
             </button>
-          ) : (
+          ) : !showingDemo && (
             // eslint-disable-next-line @next/next/no-html-link-for-pages
             <a
               href="/courses"
