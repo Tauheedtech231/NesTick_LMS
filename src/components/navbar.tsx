@@ -383,12 +383,12 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Mobile Navigation Header */}
+          {/* Mobile Navigation Header - FIXED RESPONSIVENESS */}
           <div className="lg:hidden flex items-center justify-between w-full">
             {/* Mobile Menu Button - Left Side */}
             <button
               onClick={toggleMobileMenu}
-              className="p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95"
+              className="p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95 flex-shrink-0"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -398,11 +398,16 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Mobile Logo - Center (Hidden on mobile header) */}
-            <div className="flex-1"></div>
-
-            {/* Placeholder for alignment */}
-            <div className="w-10"></div>
+            {/* Mobile Logo - Right Side */}
+            <Link href="/" className="flex items-center flex-shrink-0">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center">
+                <img
+                  src="/newlogo.jpg"
+                  alt="Mansol Logo"
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+            </Link>
           </div>
 
           {/* Desktop Navigation - Centered */}

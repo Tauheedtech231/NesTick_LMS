@@ -11,12 +11,17 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
 
-  // Routes where navbar/footer should show exactly
-  const exactRoutes = ["/", "/about", "/contact", "/courses"];
+  // Clean the pathname - remove trailing slash
+  const cleanPath = pathname?.replace(/\/$/, "") || "";
 
-  // Show Navbar/Footer if pathname is in exactRoutes OR starts with /courses/
-  const showNav =
-    exactRoutes.includes(pathname) || pathname.startsWith("/courses/");
+  // Routes where navbar/footer should show
+  const exactRoutes = ["", "/", "/about", "/contact", "/courses"];
+  
+  // Check if current route should show navbar
+  const showNav = 
+    exactRoutes.includes(cleanPath) || // exact matches
+    cleanPath.startsWith("/courses/") || // courses sub-routes
+    cleanPath === ""; // root path
 
   return (
     <>
