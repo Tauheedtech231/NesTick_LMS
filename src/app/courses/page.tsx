@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { 
   HiClock, 
   HiUserGroup, 
@@ -365,84 +365,181 @@ export default function CoursesPage() {
     setImageErrors(prev => ({ ...prev, [courseId]: true }));
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants:Variants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { 
+        type: "spring", 
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  };
+
+  const heroVariants:Variants = {
+    hidden: { scale: 0.9, opacity: 0, y: -20 },
+    visible: { 
+      scale: 1, 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.8,
+        ease: "easeOut"
+      }
+    }
+  };
+
+  const badgeVariants:Variants = {
+    hidden: { x: -50, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: { 
+        delay: 0.3,
+        type: "spring",
+        stiffness: 200
+      }
+    }
+  };
+
+  const featureVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (custom: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.5 + custom * 0.1,
+        duration: 0.5
+      }
+    })
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16 flex items-center justify-center">
-        <div className="text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
           <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: BRAND_COLORS.deepRed }}></div>
-          <p className="mt-4 text-gray-600">Loading courses...</p>
-        </div>
+          <p className="mt-4 text-gray-600 text-base">Loading courses...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">
-      {/* Hero Section */}
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Hero Section with enhanced entry animation */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          variants={heroVariants}
+          initial="hidden"
+          animate="visible"
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center px-4 py-2 rounded-full mb-4"
-            style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}>
+          <motion.div 
+            variants={badgeVariants}
+            initial="hidden"
+            animate="visible"
+            className="inline-flex items-center px-4 py-2 rounded-full mb-4"
+            style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}15` }}
+          >
             <HiStar className="w-4 h-4 mr-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
             <span className="text-sm font-semibold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
               Industry-Focused Training
             </span>
-          </div>
+          </motion.div>
           
-          <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.7 }}
+            className="text-3xl md:text-4xl font-bold mb-4" 
+            style={{ color: BRAND_COLORS.darkNavy }}
+          >
             Technical & Safety Training Programs
-          </h1>
+          </motion.h1>
           
-          <p className="text-lg max-w-3xl mx-auto mb-8" style={{ color: BRAND_COLORS.darkGrey }}>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="text-base md:text-lg max-w-3xl mx-auto mb-8" 
+            style={{ color: BRAND_COLORS.darkGrey }}
+          >
             Mansol Hab School of Skills Development offers industry-focused technical and safety training programs 
             designed to meet international standards.
-          </p>
+          </motion.p>
 
-          <div className="flex flex-col items-center sm:flex-row sm:justify-center gap-4 sm:gap-6 mb-12">
-            <div className="w-full flex justify-center sm:w-auto">
-              <div className="flex items-center gap-2 w-64">
-                <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
-                <span className="font-medium text-center">International Standards</span>
-              </div>
-            </div>
-
-            <div className="w-full flex justify-center sm:w-auto">
-              <div className="flex items-center gap-2 w-64">
-                <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
-                <span className="font-medium text-center">Hands-on Training</span>
-              </div>
-            </div>
-
-            <div className="w-full flex justify-center sm:w-auto">
-              <div className="flex items-center gap-2 w-64">
-                <HiCheckCircle className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
-                <span className="font-medium text-center">Industry Certification</span>
-              </div>
-            </div>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="flex flex-col items-center sm:flex-row sm:justify-center gap-4 sm:gap-6 mb-12"
+          >
+            {[
+              { text: "International Standards", icon: HiCheckCircle },
+              { text: "Hands-on Training", icon: HiCheckCircle },
+              { text: "Industry Certification", icon: HiCheckCircle }
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                custom={index}
+                variants={featureVariants}
+                initial="hidden"
+                animate="visible"
+                className="w-full flex justify-center sm:w-auto"
+              >
+                <div className="flex items-center gap-2 w-64">
+                  <feature.icon className="w-5 h-5 shrink-0" style={{ color: BRAND_COLORS.teal }} />
+                  <span className="font-medium text-sm text-center">{feature.text}</span>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </motion.div>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Courses Grid with staggered children */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
           {allCourses.map((course, index) => (
             <motion.div
               key={course.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
+              variants={itemVariants}
+              whileHover={{ y: -8, transition: { duration: 0.2 } }}
               onMouseEnter={() => setHoveredCard(course.id)}
               onMouseLeave={() => setHoveredCard(null)}
               className="relative group flex flex-col"
             >
               {/* Featured Badge */}
               {course.featured && (
-                <div className="absolute top-4 left-4 z-10">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.6 + index * 0.1, type: "spring" }}
+                  className="absolute top-4 left-4 z-10"
+                >
                   <div
                     className="px-3 py-1 rounded-full flex items-center"
                     style={{
@@ -453,7 +550,7 @@ export default function CoursesPage() {
                     <HiStar className="w-3 h-3 mr-1" />
                     <span className="text-xs font-semibold">Featured</span>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* Course Card */}
@@ -532,7 +629,7 @@ export default function CoursesPage() {
                   </div>
 
                   {/* Description */}
-                  <p className="text-gray-600 mb-4 line-clamp-2">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {course.description}
                   </p>
 
@@ -623,13 +720,13 @@ export default function CoursesPage() {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Info Section */}
+        {/* Info Section with fade-up animation */}
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.7 }}
           className="mt-16 rounded-2xl shadow-lg p-8"
           style={{ 
             backgroundColor: BRAND_COLORS.darkNavy,
@@ -637,41 +734,56 @@ export default function CoursesPage() {
           }}
         >
           <div className="text-center max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-white">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6 text-white">
               What Makes Mansol Hab School Different
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
               {/* Certificates */}
-              <div className="text-center p-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0, duration: 0.5 }}
+                className="text-center p-4"
+              >
                 <h3 className="text-lg font-semibold mb-2 text-white">
                   Recognized & Practical Certificates
                 </h3>
-                <p className="text-gray-300">
+                <p className="text-gray-300 text-sm">
                   Our certificates reflect real skills, valued by employers in construction, safety, and technical industries.
                 </p>
-              </div>
+              </motion.div>
 
               {/* Trainers */}
-              <div className="text-center p-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.1, duration: 0.5 }}
+                className="text-center p-4"
+              >
                 <h3 className="text-lg font-semibold mb-2 text-white">
                   Experienced Trainers
                 </h3>
-                <p className="text-gray-300">
+                <p className="text-gray-300 text-sm">
                   Learn hands-on skills from industry professionals who guide you through practical challenges, not just theory.
                 </p>
-              </div>
+              </motion.div>
 
               {/* Career Support */}
-              <div className="text-center p-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.5 }}
+                className="text-center p-4"
+              >
                 <h3 className="text-lg font-semibold mb-2 text-white">
                   Career Guidance & Support
                 </h3>
-                <p className="text-gray-300">
+                <p className="text-gray-300 text-sm">
                   We help students explore career paths, prepare for job opportunities, and succeed in technical fields.
                 </p>
-              </div>
+              </motion.div>
             </div>
           </div>
         </motion.div>

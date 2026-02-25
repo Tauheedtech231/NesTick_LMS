@@ -42,23 +42,7 @@ const navItems = [
     title: 'Courses',
     href: '/courses',
     icon: HiBookOpen,
-    subItems: [
-      { 
-        title: 'Pipe Fitter', 
-        href: '/courses/pipe-fitter',
-        description: 'Industrial pipe fitting training'
-      },
-      { 
-        title: 'Safety Inspector', 
-        href: '/courses/safety-inspector',
-        description: 'OSHA safety certification'
-      },
-      { 
-        title: 'Professional Welding', 
-        href: '/courses/welding',
-        description: 'MIG, TIG and Arc welding'
-      }
-    ]
+ 
   },
   {
     title: 'About',
@@ -415,52 +399,7 @@ export default function Navbar() {
             <div className="flex items-center space-x-1">
               {navItems.map((item, idx) => (
                 <div key={idx} className="relative">
-                  {item.subItems ? (
-                    <div className="group">
-                      <button
-                        onMouseEnter={() => handleNavHover(idx)}
-                        onMouseLeave={handleNavLeave}
-                        className={`flex items-center space-x-1 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                          isActive(item.href) 
-                            ? 'bg-white/10 shadow-inner' 
-                            : 'hover:bg-white/5 hover:shadow-sm'
-                        }`}
-                      >
-                        <span className="text-white font-medium text-sm transition-all duration-200 group-hover:tracking-wide">
-                          {item.title}
-                        </span>
-                        <HiChevronDown className="w-4 h-4 text-white/70 transition-transform duration-200 group-hover:rotate-180" />
-                      </button>
-                      
-                      {/* Submenu */}
-                      <div 
-                        className="absolute top-full left-0 mt-1 w-56 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform-gpu origin-top"
-                        style={{
-                          backgroundColor: BRAND_COLORS.darkNavy,
-                          border: `1px solid ${BRAND_COLORS.softGrey}`
-                        }}
-                      >
-                        <div className="p-2 space-y-1">
-                          {item.subItems.map((sub, sidx) => (
-                            <Link
-                              key={sidx}
-                              href={sub.href}
-                              className="block px-3 py-2 rounded-md text-sm transition-all duration-150 hover:bg-white/5 hover:pl-4 hover:shadow-sm"
-                              style={{ color: BRAND_COLORS.lightGrey }}
-                            >
-                              <div className="font-medium mb-0.5 transition-all duration-150 hover:text-white">
-                                {sub.title}
-                              </div>
-                              <div className="text-xs transition-all duration-150 hover:text-white/80" 
-                                   style={{ color: BRAND_COLORS.softGrey }}>
-                                {sub.description}
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
+                
                     <Link
                       href={item.href}
                       onMouseEnter={() => handleNavHover(idx)}
@@ -475,7 +414,7 @@ export default function Navbar() {
                         {item.title}
                       </span>
                     </Link>
-                  )}
+                  
                 </div>
               ))}
             </div>
@@ -684,47 +623,7 @@ export default function Navbar() {
             <div className="px-4 py-6 space-y-1">
               {navItems.map((item, idx) => (
                 <div key={idx} className="border-b border-white/10 pb-1 last:border-0">
-                  {item.subItems ? (
-                    <>
-                      <button
-                        onClick={() => toggleMobileSubMenu(idx)}
-                        className="flex items-center justify-between w-full px-3 py-3 text-left rounded-lg transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <item.icon className="w-5 h-5 text-white/70" />
-                          <span className="text-white font-medium text-base transition-all duration-200">
-                            {item.title}
-                          </span>
-                        </div>
-                        <HiChevronDown className={`w-5 h-5 text-white/70 transform transition-transform duration-300 ${
-                          mobileSubMenuOpen === idx ? 'rotate-180' : ''
-                        }`} />
-                      </button>
-                      
-                      {/* Mobile Submenu */}
-                      {mobileSubMenuOpen === idx && (
-                        <div className="pl-10 pr-3 space-y-2 mt-1 mb-2 animate-in slide-in-from-top-5 duration-200">
-                          {item.subItems.map((sub, sidx) => (
-                            <Link
-                              key={sidx}
-                              href={sub.href}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className="block px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/5 hover:shadow-sm border-l-2 border-white/20"
-                              style={{ color: BRAND_COLORS.lightGrey }}
-                            >
-                              <div className="font-medium text-sm transition-all duration-300 hover:text-white">
-                                {sub.title}
-                              </div>
-                              <div className="text-xs mt-0.5 transition-all duration-300 hover:text-white/80" 
-                                   style={{ color: BRAND_COLORS.softGrey }}>
-                                {sub.description}
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
+                
                     <Link
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
@@ -735,7 +634,7 @@ export default function Navbar() {
                         {item.title}
                       </span>
                     </Link>
-                  )}
+                  
                 </div>
               ))}
 
