@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { MdOutlineArrowRight } from 'react-icons/md';
+import { MdOutlineArrowRight, MdKeyboardArrowDown } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,23 +13,46 @@ export default function AboutSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const missionRef = useRef<HTMLDivElement>(null);
   const visionRef = useRef<HTMLDivElement>(null);
-  const journeyRef = useRef<HTMLDivElement>(null);
-  const journeyContentRef = useRef<HTMLDivElement>(null);
+  const whyChooseContentRef = useRef<HTMLDivElement>(null);
   
+  // State for dropdown in Why Choose section
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
+  const toggleDropdown = (index: number) => {
+    setOpenDropdown(openDropdown === index ? null : index);
+  };
+
+  // Why Choose items with detailed descriptions
+  const whyChooseItems = [
+    {
+      title: "Industry-aligned curriculum with practical exposure",
+      description: "Our curriculum is developed in collaboration with industry experts to ensure you learn exactly what employers need. Every course includes hands-on projects, real-world case studies, and practical workshops that simulate actual workplace scenarios. You'll graduate with a portfolio of work that demonstrates your skills to potential employers."
+    },
+    {
+      title: "Certified and experienced instructors",
+      description: "Learn from professionals who have years of industry experience. Our instructors are certified experts in their fields who bring real-world knowledge to the classroom. They don't just teach theory - they share practical insights, industry secrets, and mentor you throughout your learning journey."
+    },
+    {
+      title: "Focus on safety standards and professional ethics",
+      description: "Safety is at the core of everything we teach. Our programs emphasize international safety standards, professional ethics, and industry best practices. You'll learn how to maintain safe work environments, follow proper protocols, and make ethical decisions in your professional career."
+    },
+    {
+      title: "Career-oriented training and recognized certifications",
+      description: "Our certifications are recognized by leading employers in the industry. We provide career counseling, resume building workshops, and interview preparation to help you land your dream job. Many of our graduates have gone on to work with top companies in their fields."
+    }
+  ];
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Clear any existing animations
       const elementsToClear = [
         headingRef.current, 
         descriptionRef.current, 
-        contentRef.current,
         missionRef.current,
         visionRef.current,
-        journeyRef.current,
-        journeyContentRef.current
+        whyChooseContentRef.current
       ].filter(Boolean) as HTMLElement[];
       
       if (elementsToClear.length > 0) {
@@ -40,7 +64,7 @@ export default function AboutSection() {
         gsap.fromTo(sectionRef.current,
           { 
             opacity: 0,
-            y: 50
+            y: 30
           },
           {
             opacity: 1,
@@ -57,18 +81,18 @@ export default function AboutSection() {
         );
       }
 
-      // Heading animation
+      // Heading animation - from BOTTOM
       if (headingRef.current) {
         gsap.fromTo(headingRef.current,
           {
-            y: 30,
+            y: 40,
             opacity: 0
           },
           {
             y: 0,
             opacity: 1,
-            duration: 0.8,
-            ease: 'power2.out',
+            duration: 0.9,
+            ease: 'power3.out',
             scrollTrigger: {
               trigger: headingRef.current,
               start: 'top 90%',
@@ -78,18 +102,18 @@ export default function AboutSection() {
         );
       }
 
-      // Description animation
+      // Description animation - from BOTTOM with slight delay
       if (descriptionRef.current) {
         gsap.fromTo(descriptionRef.current,
           {
-            y: 40,
+            y: 30,
             opacity: 0
           },
           {
             y: 0,
             opacity: 1,
             duration: 0.8,
-            delay: 0.1,
+            delay: 0.15,
             ease: 'power2.out',
             scrollTrigger: {
               trigger: descriptionRef.current,
@@ -100,17 +124,17 @@ export default function AboutSection() {
         );
       }
 
-      // Mission animation - from left
+      // Mission animation - from left with optimized timing
       if (missionRef.current) {
         gsap.fromTo(missionRef.current,
           {
-            x: -50,
+            x: -30,
             opacity: 0
           },
           {
             x: 0,
             opacity: 1,
-            duration: 0.9,
+            duration: 0.8,
             ease: 'power2.out',
             scrollTrigger: {
               trigger: missionRef.current,
@@ -121,86 +145,21 @@ export default function AboutSection() {
         );
       }
 
-      // Vision animation - from right
+      // Vision animation - from right with optimized timing
       if (visionRef.current) {
         gsap.fromTo(visionRef.current,
           {
-            x: 50,
+            x: 30,
             opacity: 0
           },
           {
             x: 0,
             opacity: 1,
-            duration: 0.9,
+            duration: 0.8,
             ease: 'power2.out',
             scrollTrigger: {
               trigger: visionRef.current,
               start: 'top 85%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      }
-
-      // Content animation - Why Choose items stagger
-      if (contentRef.current) {
-        gsap.fromTo(contentRef.current.children,
-          {
-            y: 20,
-            opacity: 0
-          },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.08,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: contentRef.current,
-              start: 'top 80%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      }
-
-      // Journey section entrance
-      if (journeyRef.current) {
-        gsap.fromTo(journeyRef.current,
-          {
-            y: 60,
-            opacity: 0
-          },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 1,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: journeyRef.current,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      }
-
-      // Journey content staggered animation
-      if (journeyContentRef.current) {
-        gsap.fromTo(journeyContentRef.current.children,
-          {
-            y: 30,
-            opacity: 0
-          },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.6,
-            stagger: 0.15,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: journeyContentRef.current,
-              start: 'top 80%',
               toggleActions: 'play none none reverse'
             }
           }
@@ -233,7 +192,7 @@ export default function AboutSection() {
       </div>
       
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header with unique underline */}
+        {/* Header with unique underline - Animated from BOTTOM */}
         <div className="text-center mb-12">
           <div className="inline-block relative">
             <h2
@@ -288,9 +247,9 @@ export default function AboutSection() {
           </div>
         </div>
 
-        {/* Why Choose Section - Full width, no image */}
-        <div className="mb-20">
-          <div ref={contentRef} className="max-w-4xl mx-auto">
+        {/* Why Choose Section - with Clickable Dropdowns */}
+        <div className="mb-16">
+          <div ref={whyChooseContentRef} className="max-w-4xl mx-auto">
             {/* Main heading */}
             <div className="mb-8 text-center">
               <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 relative inline-block">
@@ -302,25 +261,54 @@ export default function AboutSection() {
               </p>
             </div>
 
-            {/* Benefits list with MdOutlineArrowRight icons */}
-            <div className="grid md:grid-cols-2 gap-6 mt-10">
-              {[
-                "Industry-aligned curriculum with practical exposure",
-                "Certified and experienced instructors",
-                "Focus on safety standards and professional ethics",
-                "Career-oriented training and recognized certifications"
-              ].map((item, index) => (
+            {/* Benefits list with clickable dropdowns */}
+            <div className="space-y-3 mt-8">
+              {whyChooseItems.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-3 p-4 group hover:bg-white/70 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  className="border border-gray-200 rounded-xl overflow-hidden bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-all duration-300"
                 >
-                  {/* Arrow icon */}
-                  <MdOutlineArrowRight className="flex-shrink-0 mt-1 text-[#B11217] text-2xl transform group-hover:translate-x-1 transition-transform" />
+                  {/* Clickable Header */}
+                  <button
+                    onClick={() => toggleDropdown(index)}
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-white transition-colors duration-200 group"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <MdOutlineArrowRight className="flex-shrink-0 text-[#B11217] text-2xl transform transition-transform group-hover:translate-x-1" />
+                      <span className="text-gray-800 font-medium text-base md:text-lg">{item.title}</span>
+                    </div>
+                    
+                    {/* Dropdown Arrow */}
+                    <motion.div
+                      animate={{ rotate: openDropdown === index ? 180 : 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                    >
+                      <MdKeyboardArrowDown 
+                        className={`w-6 h-6 ${openDropdown === index ? 'text-[#B11217]' : 'text-gray-400'} transition-colors duration-300`} 
+                      />
+                    </motion.div>
+                  </button>
 
-                  {/* Text */}
-                  <span className="text-gray-800 font-medium text-base">
-                    {item}
-                  </span>
+                  {/* Dropdown Content with smooth animation */}
+                  <AnimatePresence>
+                    {openDropdown === index && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-5 pt-0 border-t border-gray-200">
+                          <div className="bg-gradient-to-br from-blue-50/80 to-white p-5 rounded-lg">
+                            <p className="text-gray-700 text-sm md:text-base leading-relaxed">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ))}
             </div>
@@ -333,80 +321,6 @@ export default function AboutSection() {
               >
                 Explore Our Courses
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Our Journey Section */}
-        <div ref={journeyRef} className="relative rounded-3xl overflow-hidden shadow-2xl">
-          {/* Journey Background Image */}
-          <div className="absolute inset-0 w-full h-full">
-            <Image
-              src="https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg"
-              alt="Journey background"
-              fill
-              className="object-cover"
-              quality={85}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B1C3D]/90 to-[#1E3A8A]/90" />
-          </div>
-
-          {/* Journey Content */}
-          <div ref={journeyContentRef} className="relative z-10 py-16 px-6 md:py-20 md:px-10 text-white">
-            <h3 className="text-3xl md:text-4xl font-bold text-center mb-12 relative inline-block w-full">
-              Our Journey
-              <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              {/* Milestone 1 */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-5xl font-bold text-white mb-2">2018</div>
-                <h4 className="text-xl font-semibold text-white mb-2">Foundation</h4>
-                <p className="text-gray-200 text-sm">Started with a mission to bridge the skill gap in technical education with just 20 students.</p>
-              </div>
-
-              {/* Milestone 2 */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-5xl font-bold text-white mb-2">2021</div>
-                <h4 className="text-xl font-semibold text-white mb-2">Expansion</h4>
-                <p className="text-gray-200 text-sm">Opened two new campuses in Lahore and Rawalpindi, launched online certification programs.</p>
-              </div>
-
-              {/* Milestone 3 */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-5xl font-bold text-white mb-2">2024</div>
-                <h4 className="text-xl font-semibold text-white mb-2">1,000+ Alumni</h4>
-                <p className="text-gray-200 text-sm">Celebrating excellence with over 1000 graduates placed in leading companies.</p>
-              </div>
-            </div>
-
-            {/* Additional journey description */}
-            <div className="mt-10 text-center max-w-3xl mx-auto bg-white/10 backdrop-blur-sm p-6 rounded-2xl">
-              <p className="text-white italic text-base md:text-lg">
-                From a small classroom to a thriving community — our journey reflects our commitment 
-                to shaping future-ready professionals through quality technical education.
-              </p>
-            </div>
-
-            {/* Stats Row */}
-            <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">6+</div>
-                <div className="text-sm text-gray-300">Years of Excellence</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">1000+</div>
-                <div className="text-sm text-gray-300">Alumni Network</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">4</div>
-                <div className="text-sm text-gray-300">Campuses</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">15+</div>
-                <div className="text-sm text-gray-300">Industry Partners</div>
-              </div>
             </div>
           </div>
         </div>

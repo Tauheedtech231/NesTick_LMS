@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { MdPlayArrow } from 'react-icons/md';
+import { MdPlayArrow, MdKeyboardArrowDown } from 'react-icons/md';
+import StudentFeedback from '@/components/StudentFeedback';
+import { motion, AnimatePresence } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,11 +21,43 @@ export default function AboutSection() {
   const missionRef = useRef<HTMLDivElement>(null);
   const visionRef = useRef<HTMLDivElement>(null);
   const whyChooseRef = useRef<HTMLDivElement>(null);
-  const whyChooseListRef = useRef<HTMLUListElement>(null);
+  const whyChooseItemsRef = useRef<HTMLDivElement>(null);
   const journeyRef = useRef<HTMLDivElement>(null);
   const journeyContentRef = useRef<HTMLDivElement>(null);
-  const feedbackSliderRef = useRef<HTMLDivElement>(null);
+  const journeyCardsRef = useRef<HTMLDivElement>(null);
+  const journeyLineRef = useRef<HTMLDivElement>(null);
   
+  // State for dropdown in Why Choose section
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
+  const toggleDropdown = (index: number) => {
+    setOpenDropdown(openDropdown === index ? null : index);
+  };
+
+  // Why Choose items with detailed descriptions
+  const whyChooseItems = [
+    {
+      title: "Industry-aligned curriculum with practical exposure",
+      description: "Our curriculum is developed in collaboration with industry experts to ensure you learn exactly what employers need. Every course includes hands-on projects, real-world case studies, and practical workshops that simulate actual workplace scenarios. You'll graduate with a portfolio of work that demonstrates your skills to potential employers.",
+      icon: MdPlayArrow
+    },
+    {
+      title: "Certified and experienced instructors",
+      description: "Learn from professionals who have years of industry experience. Our instructors are certified experts in their fields who bring real-world knowledge to the classroom. They don't just teach theory - they share practical insights, industry secrets, and mentor you throughout your learning journey.",
+      icon: MdPlayArrow
+    },
+    {
+      title: "Focus on safety standards and professional ethics",
+      description: "Safety is at the core of everything we teach. Our programs emphasize international safety standards, professional ethics, and industry best practices. You'll learn how to maintain safe work environments, follow proper protocols, and make ethical decisions in your professional career.",
+      icon: MdPlayArrow
+    },
+    {
+      title: "Career-oriented training and recognized certifications",
+      description: "Our certifications are recognized by leading employers in the industry. We provide career counseling, resume building workshops, and interview preparation to help you land your dream job. Many of our graduates have gone on to work with top companies in their fields.",
+      icon: MdPlayArrow
+    }
+  ];
+
   useEffect(() => {
     const ctx = gsap.context(() => {
       // Clear any existing animations
@@ -37,18 +71,19 @@ export default function AboutSection() {
         missionRef.current,
         visionRef.current,
         whyChooseRef.current,
-        whyChooseListRef.current,
+        whyChooseItemsRef.current,
         journeyRef.current,
         journeyContentRef.current,
-        feedbackSliderRef.current,
+        journeyCardsRef.current,
+        journeyLineRef.current,
       ], { clearProps: "all" });
 
-      // --- "About Mansol" Heading animation from LEFT ---
+      // --- "About Mansol" Heading animation from BOTTOM ---
       if (headingAboutRef.current) {
         gsap.fromTo(headingAboutRef.current,
-          { x: -150, opacity: 0 },
+          { y: 100, opacity: 0 },
           {
-            x: 0,
+            y: 0,
             opacity: 1,
             duration: 1.2,
             ease: 'power3.out',
@@ -61,14 +96,14 @@ export default function AboutSection() {
         );
       }
 
-      // --- Overview description animation from RIGHT with slightly smaller font ---
+      // --- Overview description animation from BOTTOM with delay ---
       if (overviewRef.current) {
         gsap.fromTo(overviewRef.current,
-          { x: 150, opacity: 0 },
+          { y: 80, opacity: 0 },
           {
-            x: 0,
+            y: 0,
             opacity: 1,
-            duration: 1.2,
+            duration: 1,
             ease: 'power3.out',
             scrollTrigger: {
               trigger: overviewRef.current,
@@ -146,7 +181,7 @@ export default function AboutSection() {
         );
       }
 
-      // Why Choose section with list stagger
+      // Why Choose section entrance
       if (whyChooseRef.current) {
         gsap.fromTo(whyChooseRef.current,
           { y: 80, opacity: 0 },
@@ -164,115 +199,127 @@ export default function AboutSection() {
         );
       }
 
-      // Why Choose list items stagger with subtle animation
-      if (whyChooseListRef.current) {
-        gsap.fromTo(whyChooseListRef.current.children,
-          { x: -30, opacity: 0 },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.6,
-            stagger: 0.15,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: whyChooseListRef.current,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse',
-            },
+      // Journey Section Animations
+      if (journeyRef.current) {
+        // Timeline for journey section
+        const journeyTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: journeyRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none reverse',
           }
-        );
-      }
+        });
 
-      // Journey section with left/right/bottom animations for content
-      if (journeyRef.current && journeyContentRef.current) {
-        // Background image fade in
-        gsap.fromTo(journeyRef.current,
+        // Background fade in
+        journeyTl.fromTo(journeyRef.current,
           { opacity: 0 },
-          {
-            opacity: 1,
-            duration: 1.2,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: journeyRef.current,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse',
-            },
-          }
+          { opacity: 1, duration: 1, ease: 'power2.out' }
         );
 
-        // Content children animations: left, right, bottom
-        const children = journeyContentRef.current.children;
-        if (children.length) {
-          gsap.fromTo(children,
+        // Heading animation
+        if (journeyContentRef.current) {
+          const heading = journeyContentRef.current.querySelector('h3');
+          if (heading) {
+            journeyTl.fromTo(heading,
+              { y: -30, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.8, ease: 'back.out(1)' },
+              '-=0.5'
+            );
+          }
+        }
+
+        // Cool centered line animation
+        if (journeyLineRef.current) {
+          journeyTl.fromTo(journeyLineRef.current,
+            { scaleX: 0, opacity: 0 },
             { 
-              y: (i) => i === 2 ? 60 : 0,
-              x: (i) => i === 0 ? -80 : (i === 1 ? 80 : 0),
-              opacity: 0 
+              scaleX: 1, 
+              opacity: 1, 
+              duration: 1.2, 
+              ease: 'power3.out',
+              transformOrigin: 'center'
             },
+            '-=0.6'
+          );
+        }
+
+        // Cards animations - left and right with smooth stagger
+        if (journeyCardsRef.current) {
+          const cards = journeyCardsRef.current.children;
+          
+          // First card from left
+          gsap.fromTo(cards[0],
+            { x: -200, opacity: 0, rotation: -5 },
             {
-              y: 0,
               x: 0,
               opacity: 1,
-              duration: 1,
-              stagger: 0.2,
+              rotation: 0,
+              duration: 1.2,
               ease: 'power3.out',
               scrollTrigger: {
-                trigger: journeyRef.current,
-                start: 'top 80%',
+                trigger: cards[0],
+                start: 'top 85%',
                 toggleActions: 'play none none reverse',
-              },
+              }
+            }
+          );
+
+          // Second card from right
+          gsap.fromTo(cards[1],
+            { x: 200, opacity: 0, rotation: 5 },
+            {
+              x: 0,
+              opacity: 1,
+              rotation: 0,
+              duration: 1.2,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: cards[1],
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              }
+            }
+          );
+
+          // Third card from bottom with slight delay
+          gsap.fromTo(cards[2],
+            { y: 100, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 1,
+              ease: 'back.out(1.2)',
+              delay: 0.3,
+              scrollTrigger: {
+                trigger: cards[2],
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              }
             }
           );
         }
-      }
 
-      // Student Feedback slider (continuous right-to-left with orbiting effect)
-      if (feedbackSliderRef.current) {
-        const slider = feedbackSliderRef.current;
-        const cards = gsap.utils.toArray('.feedback-card');
-        const totalWidth = (cards.length * 280) + ((cards.length - 1) * 24);
-        
-        // Clone cards for seamless loop - with type assertion
-        cards.forEach((card) => {
-          const clone = (card as HTMLElement).cloneNode(true);
-          slider.appendChild(clone);
-        });
-
-        gsap.set(slider, { x: 0 });
-
-        // Main continuous sliding
-        gsap.to(slider, {
-          x: -totalWidth,
-          duration: 45,
-          ease: "none",
-          repeat: -1,
-          modifiers: {
-            x: (x) => {
-              const position = parseFloat(x);
-              if (position <= -totalWidth) {
-                return "0px";
+        // Final description fade in
+        if (journeyContentRef.current) {
+          const description = journeyContentRef.current.querySelector('.journey-description');
+          if (description) {
+            gsap.fromTo(description,
+              { y: 30, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 1,
+                ease: 'power2.out',
+                delay: 0.4,
+                scrollTrigger: {
+                  trigger: description,
+                  start: 'top 90%',
+                  toggleActions: 'play none none reverse',
+                }
               }
-              return x;
-            }
+            );
           }
-        });
-
-        // Orbiting/radial effect on each card (gentle rotation and movement) - with type assertion
-        cards.forEach((card) => {
-          gsap.to(card as HTMLElement, {
-            rotation: 2,
-            x: '+=3',
-            y: '+=2',
-            duration: 4,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut',
-            modifiers: {
-              x: (x) => `${parseFloat(x)}px`,
-              y: (y) => `${parseFloat(y)}px`
-            }
-          });
-        });
+        }
       }
 
     }, sectionRef);
@@ -291,7 +338,7 @@ export default function AboutSection() {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-blue-100/10 to-transparent rounded-full translate-x-48 translate-y-48" />
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-20 md:space-y-28">
-        {/* --- About Mansol Heading at the TOP with left animation --- */}
+        {/* --- About Mansol Heading from BOTTOM --- */}
         <div className="text-center max-w-4xl mx-auto">
           <h2
             ref={headingAboutRef}
@@ -308,7 +355,7 @@ export default function AboutSection() {
           </p>
         </div>
 
-        {/* --- Hero Section with reduced desktop height --- */}
+        {/* --- Hero Section --- */}
         <div ref={heroRef} className="relative rounded-3xl overflow-hidden shadow-2xl">
           <div ref={heroImageRef} className="relative h-[300px] md:h-[380px] lg:h-[420px] w-full">
             <Image
@@ -340,7 +387,7 @@ export default function AboutSection() {
           </div>
         </div>
 
-        {/* --- Mission & Vision Cards (no images) --- */}
+        {/* --- Mission & Vision Cards --- */}
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           <div
             ref={missionRef}
@@ -369,34 +416,64 @@ export default function AboutSection() {
           </div>
         </div>
 
-        {/* --- Why Choose Section with MdPlayArrow icons --- */}
+        {/* --- Why Choose Section with Clickable Dropdowns --- */}
         <div ref={whyChooseRef}>
           <div className="bg-white/70 backdrop-blur-sm p-8 md:p-10 rounded-3xl shadow-xl border border-blue-100">
             <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 relative inline-block">
-              Why Choose TechSafe Education?
+              Why Choose Mansol?
               <span className="absolute -bottom-1 left-0 w-24 h-1 bg-red-700 rounded-full" />
             </h3>
             <p className="text-gray-700 text-base mb-8 max-w-3xl">
               We focus on quality, safety, and long-term value for students.
             </p>
 
-            <ul ref={whyChooseListRef} className="space-y-4 max-w-2xl">
-              {[
-                "Industry-aligned curriculum with practical exposure",
-                "Certified and experienced instructors",
-                "Focus on safety standards and professional ethics",
-                "Career-oriented training and recognized certifications",
-              ].map((item, index) => (
-                <li key={index} className="flex items-start gap-3 p-2 group">
-                  <MdPlayArrow className="flex-shrink-0 mt-1 text-[#B11217] text-xl transform transition-transform group-hover:translate-x-1" />
-                  <span className="text-gray-800 font-medium text-sm md:text-base">{item}</span>
-                </li>
+            <div ref={whyChooseItemsRef} className="space-y-3 max-w-3xl">
+              {whyChooseItems.map((item, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl overflow-hidden bg-white/50">
+                  {/* Clickable Header */}
+                  <button
+                    onClick={() => toggleDropdown(index)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-white/80 transition-colors duration-200 group"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <item.icon className="flex-shrink-0 text-[#B11217] text-xl transform transition-transform group-hover:scale-110" />
+                      <span className="text-gray-800 font-medium text-sm md:text-base">{item.title}</span>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: openDropdown === index ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <MdKeyboardArrowDown className={`w-6 h-6 ${openDropdown === index ? 'text-[#B11217]' : 'text-gray-400'} transition-colors`} />
+                    </motion.div>
+                  </button>
+
+                  {/* Dropdown Content */}
+                  <AnimatePresence>
+                    {openDropdown === index && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-4 pt-0 border-t border-gray-200">
+                          <div className="bg-gradient-to-br from-blue-50/50 to-white p-4 rounded-lg">
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {item.description}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
 
-        {/* --- Our Journey Section with background image --- */}
+        {/* --- Our Journey Section with Cool Centered Line --- */}
         <div
           ref={journeyRef}
           className="relative rounded-3xl overflow-hidden shadow-2xl"
@@ -413,30 +490,43 @@ export default function AboutSection() {
           </div>
 
           <div ref={journeyContentRef} className="relative z-10 py-16 px-6 md:py-20 md:px-10 text-white">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-12 relative inline-block w-full">
+            <h3 className="text-2xl md:text-3xl font-bold text-center mb-6 relative inline-block w-full">
               Our Journey
-              <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
             </h3>
+            
+            {/* Cool Centered Line */}
+            <div ref={journeyLineRef} className="flex justify-center items-center mb-12">
+              <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full"></div>
+              <div className="mx-4 w-3 h-3 bg-[#B11217] rounded-full animate-pulse"></div>
+              <div className="w-32 h-1 bg-gradient-to-r from-[#B11217] via-[#B11217] to-transparent rounded-full"></div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {/* Journey Cards */}
+            <div ref={journeyCardsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {/* Card 1 - From Left */}
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
                 <div className="text-4xl font-bold text-white mb-2">2018</div>
                 <h4 className="text-lg font-semibold text-white mb-2">Foundation</h4>
                 <p className="text-gray-100 text-sm">Started with a mission to bridge the skill gap in technical education.</p>
               </div>
+
+              {/* Card 2 - From Right */}
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
                 <div className="text-4xl font-bold text-white mb-2">2021</div>
                 <h4 className="text-lg font-semibold text-white mb-2">Expansion</h4>
                 <p className="text-gray-100 text-sm">Opened two new campuses and launched online certification programs.</p>
               </div>
+
+              {/* Card 3 - From Bottom */}
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
                 <div className="text-4xl font-bold text-white mb-2">2024</div>
                 <h4 className="text-lg font-semibold text-white mb-2">1,000+ Alumni</h4>
-                <p className="text-gray-100 text-sm">Celebrating a decade of excellence and industry partnerships.</p>
+                <p className="text-gray-100 text-sm">Celebrating excellence and industry partnerships.</p>
               </div>
             </div>
 
-            <div className="mt-10 text-center max-w-3xl mx-auto bg-white/10 backdrop-blur-sm p-4 rounded-2xl">
+            {/* Journey Description */}
+            <div className="journey-description mt-10 text-center max-w-3xl mx-auto bg-white/10 backdrop-blur-sm p-4 rounded-2xl">
               <p className="text-gray-100 italic text-sm md:text-base">
                 From a small classroom to a thriving community — our journey reflects our commitment to shaping future-ready professionals.
               </p>
@@ -444,42 +534,8 @@ export default function AboutSection() {
           </div>
         </div>
 
-        {/* --- Student Feedback Section at the bottom --- */}
-        <div className="overflow-hidden">
-          <h3 className="text-2xl md:text-3xl font-bold text-[#1E3A8A] text-center mb-10 relative inline-block w-full">
-            Student Feedback
-            <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-[#B11217] rounded-full" />
-          </h3>
-
-          <div className="relative w-full overflow-hidden">
-            <div
-              ref={feedbackSliderRef}
-              className="flex gap-6 will-change-transform"
-              style={{ width: 'max-content' }}
-            >
-              <div className="feedback-card bg-white p-6 rounded-2xl shadow-xl w-64 flex-shrink-0 border-t-2 border-blue-200 transform transition-all hover:scale-105">
-                <div className="text-4xl mb-3">👩‍🎓</div>
-                <p className="text-gray-700 text-sm italic">“The hands-on training gave me confidence to work on real projects. Truly life-changing!”</p>
-                <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Priya K.</p>
-              </div>
-              <div className="feedback-card bg-white p-6 rounded-2xl shadow-xl w-64 flex-shrink-0 border-t-2 border-blue-200 transform transition-all hover:scale-105">
-                <div className="text-4xl mb-3">👨‍🎓</div>
-                <p className="text-gray-700 text-sm italic">“Instructors are industry experts who care about your growth. Best decision ever.”</p>
-                <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Rahul M.</p>
-              </div>
-              <div className="feedback-card bg-white p-6 rounded-2xl shadow-xl w-64 flex-shrink-0 border-t-2 border-blue-200 transform transition-all hover:scale-105">
-                <div className="text-4xl mb-3">👩‍💻</div>
-                <p className="text-gray-700 text-sm italic">“The safety focus and ethics taught here set Mansol apart. Highly recommend!”</p>
-                <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Anjali S.</p>
-              </div>
-              <div className="feedback-card bg-white p-6 rounded-2xl shadow-xl w-64 flex-shrink-0 border-t-2 border-blue-200 transform transition-all hover:scale-105">
-                <div className="text-4xl mb-3">👨‍🏫</div>
-                <p className="text-gray-700 text-sm italic">“Great environment and supportive mentors. I landed my dream job thanks to Mansol.”</p>
-                <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Vikram S.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* --- Student Feedback Component (imported) --- */}
+        <StudentFeedback />
       </div>
     </section>
   );

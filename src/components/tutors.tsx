@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { X, Award, Briefcase, Clock, CheckCircle } from 'lucide-react';
+import { X, Award, Briefcase, Clock, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -58,10 +58,9 @@ const trainers = [
 export default function TrainersSlider() {
   const [selectedTrainer, setSelectedTrainer] = useState<typeof trainers[0] | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<Animation | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   
-  // Refs for animations
+  const sliderRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const subHeadingRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
@@ -136,73 +135,68 @@ export default function TrainersSlider() {
           }
         );
       }
-
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
-  useEffect(() => {
-    const slider = sliderRef.current;
-    if (!slider) return;
-
-    const keyframes = [
-      { transform: 'translateX(0)' },
-      { transform: 'translateX(-50%)' }
-    ];
-
-    const options: KeyframeAnimationOptions = {
-      duration: 40000,
-      iterations: Infinity,
-      easing: 'linear'
-    };
-
-    animationRef.current = slider.animate(keyframes, options);
-
-    const handleMouseEnter = () => {
-      animationRef.current?.pause();
-    };
-
-    const handleMouseLeave = () => {
-      animationRef.current?.play();
-    };
-
-    slider.addEventListener('mouseenter', handleMouseEnter);
-    slider.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      animationRef.current?.cancel();
-      slider.removeEventListener('mouseenter', handleMouseEnter);
-      slider.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, []);
-
   const handleTrainerClick = (trainer: typeof trainers[0]) => {
     setSelectedTrainer(trainer);
     setIsPopupOpen(true);
-    animationRef.current?.pause();
   };
 
   const closePopup = () => {
     setIsPopupOpen(false);
-    setTimeout(() => {
-      animationRef.current?.play();
-    }, 300);
   };
 
   const handlePrevTrainer = () => {
+    setCurrentIndex((prev) => (prev === 0 ? trainers.length - 1 : prev - 1));
+  };
+
+  const handleNextTrainer = () => {
+    setCurrentIndex((prev) => (prev === trainers.length - 1 ? 0 : prev + 1));
+  };
+
+  const handlePrevPopup = () => {
     if (!selectedTrainer) return;
     const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
     const prevIndex = currentIndex === 0 ? trainers.length - 1 : currentIndex - 1;
     setSelectedTrainer(trainers[prevIndex]);
   };
 
-  const handleNextTrainer = () => {
+  const handleNextPopup = () => {
     if (!selectedTrainer) return;
     const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
     const nextIndex = currentIndex === trainers.length - 1 ? 0 : currentIndex + 1;
     setSelectedTrainer(trainers[nextIndex]);
   };
+
+  const getVisibleTrainers = () => {
+    const visibleCount = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1;
+    const trainersList = [];
+    
+    for (let i = 0; i < visibleCount; i++) {
+      const index = (currentIndex + i) % trainers.length;
+      trainersList.push(trainers[index]);
+    }
+    
+    return trainersList;
+  };
+
+  const [visibleTrainers, setVisibleTrainers] = useState(getVisibleTrainers());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setVisibleTrainers(getVisibleTrainers());
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [currentIndex]);
+
+  useEffect(() => {
+    setVisibleTrainers(getVisibleTrainers());
+  }, [currentIndex]);
 
   return (
     <div ref={sectionRef} className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
@@ -223,16 +217,35 @@ export default function TrainersSlider() {
           </p>
         </div>
 
-        <div className="relative overflow-hidden py-8">
-          <div 
-            ref={sliderRef}
-            className="flex gap-6 md:gap-8 py-8"
-          >
-            {[...trainers, ...trainers].map((trainer, index) => (
+        <div className="relative py-8">
+          {/* Navigation Buttons */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 lg:-left-4">
+            <button
+              onClick={handlePrevTrainer}
+              className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
+              aria-label="Previous trainers"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
+
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:-right-4">
+            <button
+              onClick={handleNextTrainer}
+              className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
+              aria-label="Next trainers"
+            >
+              <ChevronRight className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
+
+          {/* Trainers Grid */}
+          <div className="flex justify-center gap-6 md:gap-8 py-8 px-12">
+            {visibleTrainers.map((trainer, index) => (
               <div
                 key={`${trainer.id}-${index}`}
                 onClick={() => handleTrainerClick(trainer)}
-                className="flex-shrink-0 cursor-pointer group"
+                className="cursor-pointer group flex-shrink-0"
               >
                 <div className="relative w-64 md:w-72">
                   {/* SQUARE IMAGE CONTAINER */}
@@ -272,6 +285,22 @@ export default function TrainersSlider() {
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Pagination Dots */}
+          <div className="flex justify-center gap-2 mt-6">
+            {trainers.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === currentIndex
+                    ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
             ))}
           </div>
         </div>
@@ -362,7 +391,7 @@ export default function TrainersSlider() {
 
                 <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
                   <button
-                    onClick={handlePrevTrainer}
+                    onClick={handlePrevPopup}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
                   >
                     ← Previous Trainer
@@ -383,7 +412,7 @@ export default function TrainersSlider() {
                   </div>
                   
                   <button
-                    onClick={handleNextTrainer}
+                    onClick={handleNextPopup}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
                   >
                     Next Trainer →
