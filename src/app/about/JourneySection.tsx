@@ -41,73 +41,252 @@ const journeyData: JourneyStep[] = [
 
 export default function JourneySection() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const leftCardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const rightCardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const circlesRef = useRef<(HTMLDivElement | null)[]>([]);
+  const mobileCardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
+      // Timeline line animation
       gsap.fromTo(
-        ".journey-card",
+        timelineRef.current,
+        { height: 0 },
         {
-          opacity: 0,
-          y: 40, // vertical animation (better for mobile)
-          scale: 0.95,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.8,
-          ease: "power2.out",
-          stagger: 0.2,
+          height: "100%",
+          duration: 2,
+          ease: "power2.inOut",
           scrollTrigger: {
             trigger: containerRef.current,
-            start: "top 80%",
+            start: "top 70%",
+            end: "bottom 30%",
+            scrub: 1.5,
           },
         }
       );
+
+      // Left cards animation (from left) - Desktop only
+      leftCardsRef.current.forEach((card, index) => {
+        if (!card) return;
+        gsap.fromTo(
+          card,
+          { opacity: 0, x: -150 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 1,
+            delay: index * 0.2,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+      // Right cards animation (from right) - Desktop only
+      rightCardsRef.current.forEach((card, index) => {
+        if (!card) return;
+        gsap.fromTo(
+          card,
+          { opacity: 0, x: 150 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 1,
+            delay: index * 0.2,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+      // Mobile cards animation (from bottom) - Mobile only
+      mobileCardsRef.current.forEach((card, index) => {
+        if (!card) return;
+        gsap.fromTo(
+          card,
+          { opacity: 0, y: 50 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            delay: index * 0.15,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: card,
+              start: "top 90%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
+      // Circle animations
+      circlesRef.current.forEach((circle, index) => {
+        gsap.fromTo(
+          circle,
+          { scale: 0, opacity: 0 },
+          {
+            scale: 1,
+            opacity: 1,
+            duration: 0.6,
+            delay: index * 0.15,
+            ease: "back.out(1.7)",
+            scrollTrigger: {
+              trigger: circle,
+              start: "top 85%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+
     }, containerRef);
 
     return () => ctx.revert();
   }, []);
 
   return (
-    <section className="relative bg-white py-16 md:py-24 px-4 md:px-16 overflow-hidden">
-      <div
-        ref={containerRef}
-        className="max-w-5xl mx-auto relative"
-      >
-        {/* Vertical Line */}
-        <div className="hidden md:block absolute left-10 top-0 bottom-0 w-[3px] bg-[#E5E7EB]"></div>
+    <section className="relative bg-white py-12 md:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div ref={containerRef} className="max-w-6xl mx-auto relative">
+        
+        {/* Section Heading */}
+        <div className="text-center mb-10 md:mb-14">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1F2933]">
+            Our Journey
+          </h2>
+          <p className="mt-3 text-[#1F2933]/70 max-w-2xl mx-auto text-sm sm:text-base px-4">
+            A progressive path of growth, innovation, and commitment to excellence.
+          </p>
+        </div>
 
-        <div className="space-y-14 md:space-y-20">
-          {journeyData.map((step) => (
-            <div
-              key={step.id}
-              className="relative flex flex-col md:flex-row items-start md:items-center"
-            >
-              {/* Number Circle */}
-              <div className="relative z-10 mb-4 md:mb-0">
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-lg md:text-xl font-bold shadow-md border-4 border-white">
-                  {step.id.toString().padStart(2, "0")}
+        {/* Timeline Container */}
+        <div className="relative">
+          {/* Center Vertical Line - Hidden on mobile */}
+          <div 
+            ref={timelineRef}
+            className="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-[3px] bg-gradient-to-b from-[#1E3A8A] via-[#B11217] to-[#1E3A8A] rounded-full"
+            style={{ height: "0%", top: "0" }}
+          />
+
+          {/* Mobile Vertical Line */}
+          <div 
+            className="md:hidden absolute left-8 transform -translate-x-1/2 w-[3px] bg-gradient-to-b from-[#1E3A8A] via-[#B11217] to-[#1E3A8A] rounded-full"
+            style={{ height: "100%", top: "0" }}
+          />
+
+          {/* Journey Steps */}
+          <div className="relative">
+            {journeyData.map((step, index) => {
+              const isEven = index % 2 === 0;
+
+              return (
+                <div
+                  key={step.id}
+                  className="relative flex items-center justify-center mb-12 md:mb-20 last:mb-0"
+                >
+                  {/* Desktop Layout */}
+                  <div className="hidden md:flex w-full items-center justify-center">
+                    {/* Center Circle */}
+                    <div 
+                      ref={(el) => {
+                        if (el) circlesRef.current[index] = el;
+                      }}
+                      className="absolute left-1/2 transform -translate-x-1/2 z-20"
+                    >
+                      <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-lg lg:text-xl font-bold border-4 border-white shadow-lg hover:scale-110 transition-transform duration-300">
+                        {step.id.toString().padStart(2, "0")}
+                      </div>
+                    </div>
+
+                    {/* Left Card - Even indices (0,2) */}
+                    {isEven && (
+                      <div 
+                        ref={(el) => {
+                          if (el) leftCardsRef.current[Math.floor(index/2)] = el;
+                        }}
+                        className="w-[calc(50%-60px)] mr-auto pr-8"
+                      >
+                        <div className="journey-card bg-gradient-to-br from-[#F4F6F8] to-white border border-[#E5E7EB] rounded-2xl p-6 lg:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+                          <h3 className="text-lg lg:text-xl font-semibold text-[#1F2933] mb-3 group-hover:text-[#1E3A8A] transition-colors duration-300">
+                            {step.title}
+                          </h3>
+                          <p className="text-sm lg:text-base text-[#1F2933]/80 leading-relaxed">
+                            {step.description}
+                          </p>
+                          <div className="mt-4 h-1 w-12 bg-[#B11217] rounded-full group-hover:w-20 transition-all duration-300"></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Right Card - Odd indices (1,3) */}
+                    {!isEven && (
+                      <div 
+                        ref={(el) => {
+                          if (el) rightCardsRef.current[Math.floor(index/2)] = el;
+                        }}
+                        className="w-[calc(50%-60px)] ml-auto pl-8"
+                      >
+                        <div className="journey-card bg-gradient-to-br from-[#F4F6F8] to-white border border-[#E5E7EB] rounded-2xl p-6 lg:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+                          <h3 className="text-lg lg:text-xl font-semibold text-[#1F2933] mb-3 group-hover:text-[#1E3A8A] transition-colors duration-300">
+                            {step.title}
+                          </h3>
+                          <p className="text-sm lg:text-base text-[#1F2933]/80 leading-relaxed">
+                            {step.description}
+                          </p>
+                          <div className="mt-4 h-1 w-12 bg-[#B11217] rounded-full group-hover:w-20 transition-all duration-300"></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Layout */}
+                  <div className="md:hidden w-full pl-16 pr-4">
+                    {/* Mobile Circle */}
+                    <div 
+                      ref={(el) => {
+                        if (el) circlesRef.current[index] = el;
+                      }}
+                      className="absolute left-8 transform -translate-x-1/2 z-20"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-base font-bold border-3 border-white shadow-lg">
+                        {step.id.toString().padStart(2, "0")}
+                      </div>
+                    </div>
+
+                    {/* Mobile Card */}
+                    <div 
+                      ref={(el) => {
+                        if (el) mobileCardsRef.current[index] = el;
+                      }}
+                      className="bg-gradient-to-br from-[#F4F6F8] to-white border border-[#E5E7EB] rounded-xl p-5 hover:shadow-md transition-all duration-300"
+                    >
+                      <h3 className="text-base font-semibold text-[#1F2933] mb-2">
+                        {step.title}
+                      </h3>
+                      <p className="text-xs text-[#1F2933]/80 leading-relaxed">
+                        {step.description}
+                      </p>
+                      <div className="mt-3 h-0.5 w-8 bg-[#B11217] rounded-full"></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+        </div>
 
-              {/* Card */}
-              <div className="md:ml-12 flex-1 w-full">
-                <div className="journey-card bg-[#F4F6F8] border border-[#E5E7EB] rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-lg transition duration-300">
-                  
-                  <h3 className="text-xl md:text-2xl font-semibold text-[#1F2933] mb-3">
-                    {step.title}
-                  </h3>
-
-                  <p className="text-sm md:text-base text-[#1F2933]/80 leading-relaxed">
-                    {step.description}
-                  </p>
-
-                  <div className="mt-4 h-1 w-12 bg-[#B11217] rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Bottom Decorative Element */}
+        <div className="flex justify-center mt-8 md:mt-12">
+          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full"></div>
         </div>
       </div>
     </section>
