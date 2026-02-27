@@ -242,28 +242,28 @@ export default function AboutSection() {
         <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
 
         {/* Content Overlay - Centered with mobile top margin */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <h2
-            ref={headingAboutRef}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold text-white inline-block relative mb-6 mt-8 md:mt-0"
-          >
-            About Mansol
-            <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
-          </h2>
+       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 mt-24 md:mt-0">
+  <h2
+    ref={headingAboutRef}
+    className="text-4xl md:text-5xl lg:text-6xl font-bold text-white inline-block relative mt-8 md:mt-0"
+  >
+    About Mansol
+    <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
+  </h2>
 
-          <p
-            ref={overviewRef}
-            className="text-lg md:text-xl lg:text-2xl text-white/90 leading-relaxed max-w-4xl mx-auto mt-6 px-4"
-          >
-            Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
-          </p>
+  <p
+    ref={overviewRef}
+    className="text-lg md:text-xl lg:text-2xl text-white/90 leading-relaxed max-w-4xl mx-auto mt-6 px-4"
+  >
+    Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
+  </p>
 
-          <div ref={heroButtonRef} className="mt-8">
-            <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-3 px-8 rounded-full text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
-              Explore Our Courses
-            </button>
-          </div>
-        </div>
+  <div ref={heroButtonRef} className="mt-8">
+    <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-3 px-8 rounded-full text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
+      Explore Our Courses
+    </button>
+  </div>
+</div>
       </div>
 
       {/* Rest of the section with padding */}

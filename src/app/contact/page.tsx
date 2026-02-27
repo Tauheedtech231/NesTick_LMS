@@ -517,123 +517,88 @@ export default function ContactForm() {
           {/* Two Column Layout */}
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
             {/* Left Column - Contact Information */}
-            <div 
-              ref={leftColumnRef} 
-              className="lg:w-2/5"
-            >
-              <div className="bg-white rounded-2xl p-6 md:p-8 h-full border border-[#E5E7EB] shadow-xl hover:shadow-2xl transition-shadow duration-300">
-                <h3 className="text-xl md:text-2xl font-bold mb-6 text-[#1E3A8A]">
-                  Contact Information
-                </h3>
+           <div ref={leftColumnRef} className="lg:w-2/5">
+  <div className="bg-white rounded-2xl p-6 md:p-8 h-full border border-[#E5E7EB] shadow-xl hover:shadow-2xl transition-shadow duration-300">
+    
+    <h3 className="text-xl md:text-2xl font-bold mb-6 text-[#1E3A8A]">
+      Contact Information
+    </h3>
 
-                {/* Address */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4 mb-6"
-                >
-                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-                    <HiLocationMarker className="w-5 h-5 text-[#1E3A8A]" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Address</h4>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      123 Business Avenue, Main Boulevard<br />
-                      Lahore, Punjab 54000<br />
-                      Pakistan
-                    </p>
-                  </div>
-                </div>
+    {/* Address */}
+    <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
+      <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+        <HiLocationMarker className="w-5 h-5 text-[#1E3A8A]" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Address</h4>
+        <p className="text-gray-600 text-sm leading-relaxed">
+          123 Business Avenue, Main Boulevard<br />
+          Lahore, Punjab 54000<br />
+          Pakistan
+        </p>
+      </div>
+    </div>
 
-                {/* Phone Numbers */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4 mb-6"
-                >
-                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-                    <HiPhone className="w-5 h-5 text-[#1E3A8A]" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Phone Numbers</h4>
-                    <ul className="text-gray-600 text-sm space-y-1.5">
-                      <li><span className="text-[#1E3A8A] font-medium">General:</span> <a href="tel:03224700200" className="hover:text-[#B11217] transition-colors">0322-4700200</a></li>
-                      <li><span className="text-[#1E3A8A] font-medium">Lahore:</span> <a href="tel:03104700200" className="hover:text-[#B11217] transition-colors">0310-4700200</a></li>
-                      <li><span className="text-[#1E3A8A] font-medium">Sheikhupura:</span> <a href="tel:03054700202" className="hover:text-[#B11217] transition-colors">0305-4700202</a></li>
-                      <li><span className="text-[#1E3A8A] font-medium">Rawalpindi:</span> <a href="tel:03204700607" className="hover:text-[#B11217] transition-colors">0320-4700607</a></li>
-                    </ul>
-                  </div>
-                </div>
+    {/* Phone Numbers */}
+    <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
+      <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+        <HiPhone className="w-5 h-5 text-[#1E3A8A]" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Phone Numbers</h4>
+        <ul className="text-gray-600 text-sm space-y-1.5">
+          <li><span className="text-[#1E3A8A] font-medium">General:</span> <a href="tel:03224700200" className="hover:text-[#B11217] transition-colors">0322-4700200</a></li>
+          <li><span className="text-[#1E3A8A] font-medium">Lahore:</span> <a href="tel:03104700200" className="hover:text-[#B11217] transition-colors">0310-4700200</a></li>
+          <li><span className="text-[#1E3A8A] font-medium">Sheikhupura:</span> <a href="tel:03054700202" className="hover:text-[#B11217] transition-colors">0305-4700202</a></li>
+          <li><span className="text-[#1E3A8A] font-medium">Rawalpindi:</span> <a href="tel:03204700607" className="hover:text-[#B11217] transition-colors">0320-4700607</a></li>
+        </ul>
+      </div>
+    </div>
 
-                {/* Email */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4 mb-6"
-                >
-                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-                    <HiMail className="w-5 h-5 text-[#1E3A8A]" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Email</h4>
-                    <p className="text-gray-600 text-sm">
-                      <a href="mailto:info@mansolhab.com" className="hover:text-[#B11217] transition-colors">
-                        info@mansolhab.com
-                      </a>
-                    </p>
-                  </div>
-                </div>
+    {/* Email */}
+    <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
+      <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+        <HiMail className="w-5 h-5 text-[#1E3A8A]" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Email</h4>
+        <p className="text-gray-600 text-sm">
+          <a href="mailto:info@mansolhab.com" className="hover:text-[#B11217] transition-colors">
+            info@mansolhab.com
+          </a>
+        </p>
+      </div>
+    </div>
 
-                {/* Office Hours */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4 mb-6"
-                >
-                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-                    <HiClock className="w-5 h-5 text-[#1E3A8A]" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Hours</h4>
-                    <p className="text-gray-600 text-sm">Monday - Saturday: 9:00 AM - 5:00 PM</p>
-                    <p className="text-gray-600 text-sm">Sunday: Closed</p>
-                  </div>
-                </div>
+    {/* Office Hours */}
+    <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
+      <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+        <HiClock className="w-5 h-5 text-[#1E3A8A]" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Hours</h4>
+        <p className="text-gray-600 text-sm">Monday - Saturday: 9:00 AM - 5:00 PM</p>
+        <p className="text-gray-600 text-sm">Sunday: Closed</p>
+      </div>
+    </div>
 
-                {/* WhatsApp */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4 mb-6"
-                >
-                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-                    <HiChat className="w-5 h-5 text-[#1E3A8A]" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">WhatsApp</h4>
-                    <p className="text-gray-600 text-sm">
-                      <a href="https://wa.me/923224700200" target="_blank" rel="noopener noreferrer" className="hover:text-[#B11217] transition-colors">
-                        +92 322 4700200
-                      </a>
-                    </p>
-                  </div>
-                </div>
+    {/* WhatsApp */}
+    <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
+      <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+        <HiChat className="w-5 h-5 text-[#1E3A8A]" />
+      </div>
+      <div>
+        <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">WhatsApp</h4>
+        <p className="text-gray-600 text-sm">
+          <a href="https://wa.me/923224700200" target="_blank" rel="noopener noreferrer" className="hover:text-[#B11217] transition-colors">
+            +92 322 4700200
+          </a>
+        </p>
+      </div>
+    </div>
 
-                {/* Social Media Links */}
-                <div className="pt-6 mt-6 border-t border-[#E5E7EB]">
-                  <h4 className="font-semibold text-base mb-4 text-[#0B1C3D]">Follow Us</h4>
-                  <div className="flex gap-4">
-                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
-                      <FaFacebook className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
-                    </a>
-                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
-                      <FaLinkedin className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
-                    </a>
-                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
-                      <FaTwitter className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
-                    </a>
-                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
-                      <FaInstagram className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
+  </div>
+</div>
 
             {/* Right Column - Contact Form */}
             <div 
