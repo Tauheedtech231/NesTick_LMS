@@ -7,14 +7,16 @@ import {
   HiPhone, 
   HiMail, 
   HiClock,
-  HiChat
+  HiChat,
+  HiLocationMarker,
+  HiOutlineChevronDown
 } from "react-icons/hi";
-import { FaLocationArrow } from "react-icons/fa6";
+import { FaLocationArrow, FaFacebook, FaLinkedin, FaTwitter, FaInstagram } from "react-icons/fa6";
 import Image from "next/image";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Brand Colors (matching About section)
+// Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -45,8 +47,11 @@ export default function ContactForm() {
 
   // Refs for animations
   const sectionRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
+  const heroButtonRef = useRef<HTMLDivElement>(null);
+  const mapSectionRef = useRef<HTMLDivElement>(null);
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const rightColumnRef = useRef<HTMLDivElement>(null);
   const contactItemsRef = useRef<HTMLDivElement[]>([]);
@@ -55,6 +60,7 @@ export default function ContactForm() {
   const emailCardRef = useRef<HTMLDivElement>(null);
   const phoneCardRef = useRef<HTMLDivElement>(null);
   const hoursCardRef = useRef<HTMLDivElement>(null);
+  const scrollIndicatorRef = useRef<HTMLDivElement>(null);
   
   // Add to refs arrays
   const addToContactItems = (el: HTMLDivElement | null) => {
@@ -136,10 +142,21 @@ export default function ContactForm() {
   }, [hoveredCard]);
 
   useEffect(() => {
-    // Create a timeline for smoother, coordinated animations
     const ctx = gsap.context(() => {
-      // Initial setup - ensure elements are hidden but not with display:none
-      gsap.set([headingRef.current, descriptionRef.current, leftColumnRef.current, rightColumnRef.current], { 
+      // Initial setup
+      gsap.set([headingRef.current, descriptionRef.current, heroButtonRef.current], { 
+        opacity: 0,
+        y: 30,
+        willChange: "transform, opacity"
+      });
+      
+      gsap.set(mapSectionRef.current, {
+        opacity: 0,
+        y: 40,
+        willChange: "transform, opacity"
+      });
+      
+      gsap.set([leftColumnRef.current, rightColumnRef.current], { 
         opacity: 0,
         y: 30,
         willChange: "transform, opacity"
@@ -163,94 +180,106 @@ export default function ContactForm() {
         willChange: "transform, opacity"
       });
 
-      // Main master timeline for coordinated entrance
-      const masterTl = gsap.timeline({
+      // Hero Section Timeline
+      const heroTl = gsap.timeline({
         scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 85%",
-          end: "bottom 20%",
+          trigger: heroRef.current,
+          start: "top 80%",
           toggleActions: "play none none reverse",
-          invalidateOnRefresh: true, // Better performance on resize
         }
       });
 
-      // Section fade in
-      masterTl.to(sectionRef.current, {
+      heroTl.to(headingRef.current, {
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        ease: "power3.out"
+      })
+      .to(descriptionRef.current, {
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        ease: "power3.out"
+      }, "-=0.6")
+      .to(heroButtonRef.current, {
+        y: 0,
         opacity: 1,
         duration: 0.6,
-        ease: "power2.out"
-      }, 0);
+        ease: "back.out(1.2)"
+      }, "-=0.4");
 
-      // Heading animation - smooth from left
-      masterTl.to(headingRef.current, {
-        x: 0,
+      // Scroll Indicator Animation
+      if (scrollIndicatorRef.current) {
+        gsap.to(scrollIndicatorRef.current, {
+          y: 10,
+          opacity: 0.6,
+          duration: 1.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "power1.inOut"
+        });
+      }
+
+      // Map Section Animation
+      gsap.to(mapSectionRef.current, {
         y: 0,
         opacity: 1,
-        duration: 0.8,
-        ease: "power3.out"
-      }, 0.1);
+        duration: 1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: mapSectionRef.current,
+          start: "top 85%",
+          toggleActions: "play none none reverse",
+        }
+      });
 
-      // Description animation - smooth from right
-      masterTl.to(descriptionRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: "power3.out"
-      }, 0.15);
+      // Main Contact Section Timeline
+      const contactTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 75%",
+          toggleActions: "play none none reverse",
+        }
+      });
 
-      // Left column animation
-      masterTl.to(leftColumnRef.current, {
-        x: 0,
+      contactTl.to([leftColumnRef.current, rightColumnRef.current], {
         y: 0,
         opacity: 1,
         duration: 0.9,
+        stagger: 0.15,
         ease: "power2.out"
       }, 0.2);
 
-      // Right column animation
-      masterTl.to(rightColumnRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.9,
-        ease: "power2.out"
-      }, 0.25);
-
-      // Contact items staggered animation - smoother with reduced motion
       if (contactItemsRef.current.length) {
-        masterTl.to(contactItemsRef.current, {
+        contactTl.to(contactItemsRef.current, {
           x: 0,
           opacity: 1,
           duration: 0.5,
           stagger: 0.08,
           ease: "power2.out"
-        }, 0.3);
+        }, 0.4);
       }
 
-      // Form groups staggered animation
       if (formGroupsRef.current.length) {
-        masterTl.to(formGroupsRef.current, {
+        contactTl.to(formGroupsRef.current, {
           y: 0,
           opacity: 1,
           duration: 0.5,
           stagger: 0.07,
           ease: "power2.out"
-        }, 0.4);
+        }, 0.5);
       }
 
-      // Button animation
-      masterTl.to(buttonRef.current, {
+      contactTl.to(buttonRef.current, {
         scale: 1,
         opacity: 1,
         duration: 0.5,
         ease: "back.out(1.2)"
-      }, 0.6);
+      }, 0.7);
 
     }, sectionRef);
 
     return () => {
-      // Clean up all ScrollTrigger instances and animations
       ScrollTrigger.getAll().forEach(st => st.kill());
       ctx.revert();
     };
@@ -262,7 +291,6 @@ export default function ContactForm() {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -299,9 +327,7 @@ export default function ContactForm() {
       setIsLoading(true);
       
       try {
-        // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
         console.log("Form submitted:", formData);
         setIsSubmitted(true);
         setFormData({
@@ -311,7 +337,6 @@ export default function ContactForm() {
           message: "",
         });
         
-        // Reset success message after 5 seconds
         setTimeout(() => {
           setIsSubmitted(false);
         }, 5000);
@@ -323,154 +348,217 @@ export default function ContactForm() {
     }
   };
 
-  return (
-    <section 
-      ref={sectionRef}
-      className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden opacity-0" // Start hidden
-      style={{ willChange: "transform, opacity" }}
-    >
-      {/* Background Image with Overlay - optimized */}
-      <div className="absolute inset-0 z-0">
-        <Image
-          src="https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"
-          alt="Background"
-          fill
-          className="object-cover"
-          priority
-          sizes="100vw"
-          quality={85}
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0B1C3D]/95 via-[#1E3A8A]/90 to-[#B11217]/80" />
-      </div>
+  const scrollToMap = () => {
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* Section Header */}
-        <div className="text-center mb-8">
-          <h2 
+  return (
+    <>
+      {/* Hero Section with Video Background */}
+      <section 
+        ref={heroRef}
+        className="relative h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden"
+      >
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/contact.mp4" type="video/mp4" />
+          </video>
+          {/* Gradient Overlay */}
+         
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+          <h1 
             ref={headingRef}
-            className="text-3xl md:text-4xl font-bold mb-4 text-white drop-shadow-lg"
-            style={{ transform: "translateX(-30px)" }}
+            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white drop-shadow-lg"
           >
             Get in Touch
-          </h2>
+          </h1>
           <p 
             ref={descriptionRef}
-            className="text-base md:text-lg max-w-2xl mx-auto text-white/90 drop-shadow"
-            style={{ transform: "translateX(30px)" }}
+            className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto"
           >
-            Have questions about our training programs? Contact our team for more information.
+            Have questions about our training programs? We&apos;re here to help you start your journey in technical education.
           </p>
-        </div>
-
-        {/* Three Hover Cards - Email, Phone, and Hours */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10 max-w-4xl mx-auto">
-          {/* Email Card */}
-          <div
-            ref={emailCardRef}
-            onMouseEnter={() => setHoveredCard('email')}
-            onMouseLeave={() => setHoveredCard(null)}
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-[#B11217]/10">
-                <HiMail className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Email Us</h3>
-                <div className="min-h-[28px]">
-                  {hoveredCard === 'email' ? (
-                    <p className="text-base font-mono text-[#B11217]">{displayEmail}</p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Hover to reveal</p>
-                  )}
-                </div>
-              </div>
-              <FaLocationArrow className="w-5 h-5 text-[#B11217] opacity-50" />
-            </div>
-          </div>
-
-          {/* Phone Card */}
-          <div
-            ref={phoneCardRef}
-            onMouseEnter={() => setHoveredCard('phone')}
-            onMouseLeave={() => setHoveredCard(null)}
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-[#B11217]/10">
-                <HiPhone className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Call Us</h3>
-                <div className="min-h-[28px]">
-                  {hoveredCard === 'phone' ? (
-                    <p className="text-base font-mono text-[#B11217]">{displayPhone}</p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Hover to reveal</p>
-                  )}
-                </div>
-              </div>
-              <FaLocationArrow className="w-5 h-5 text-[#B11217] opacity-50" />
-            </div>
-          </div>
-
-          {/* Hours Card */}
-          <div
-            ref={hoursCardRef}
-            onMouseEnter={() => setHoveredCard('hours')}
-            onMouseLeave={() => setHoveredCard(null)}
-            className="bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-[#B11217]/10">
-                <HiClock className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Office Hours</h3>
-                <div className="min-h-[28px]">
-                  {hoveredCard === 'hours' ? (
-                    <p className="text-base font-mono text-[#B11217]">{displayHours}</p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Hover to reveal</p>
-                  )}
-                </div>
-              </div>
-              <FaLocationArrow className="w-5 h-5 text-[#B11217] opacity-50" />
-            </div>
+          <div ref={heroButtonRef}>
+            <button
+              onClick={scrollToMap}
+              className="px-8 py-4 bg-[#1E3A8A] hover:bg-[#B11217] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-base md:text-lg"
+            >
+              Find Us on Map
+            </button>
           </div>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-          {/* Left Column - Contact Information (without office hours) */}
-          <div 
-            ref={leftColumnRef} 
-            className="lg:w-2/5"
-            style={{ transform: "translateX(-30px)" }}
-          >
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 md:p-8 h-full border border-white/30 shadow-xl">
-              <h3 className="text-xl md:text-2xl font-bold mb-6" style={{ color: BRAND_COLORS.deepRed }}>
-                Contact Information
-              </h3>
+        {/* Scroll Indicator */}
+        <div 
+          ref={scrollIndicatorRef}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white cursor-pointer"
+          onClick={scrollToMap}
+        >
+          <HiOutlineChevronDown className="w-6 h-6 animate-bounce" />
+        </div>
+      </section>
 
-              {/* Contact Details */}
-              <div className="space-y-6">
+      {/* Google Map Section */}
+      <section 
+        ref={mapSectionRef}
+        className="py-16 px-4 bg-[#F4F6F8]"
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="rounded-2xl overflow-hidden shadow-2xl h-[400px] md:h-[450px] relative">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d217775.8781844442!2d74.25409443359372!3d31.482634399999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39190483e58107d9%3A0xc23abe6ccc7e2462!2sLahore%2C%20Punjab%2C%20Pakistan!5e0!3m2!1sen!2s!4v1700000000000!5m2!1sen!2s"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="absolute inset-0"
+              title="Google Map Location"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Main Contact Section */}
+      <section 
+        ref={sectionRef}
+        className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white"
+      >
+        <div className="max-w-6xl mx-auto relative z-10">
+          {/* Three Hover Cards */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {/* Email Card */}
+            <div
+              ref={emailCardRef}
+              onMouseEnter={() => setHoveredCard('email')}
+              onMouseLeave={() => setHoveredCard(null)}
+              className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-[#1E3A8A]/10">
+                  <HiMail className="w-6 h-6" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-[#0B1C3D]">Email Us</h3>
+                  <div className="min-h-[28px]">
+                    {hoveredCard === 'email' ? (
+                      <p className="text-base font-mono text-[#B11217]">{displayEmail}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500">Hover to reveal</p>
+                    )}
+                  </div>
+                </div>
+                <FaLocationArrow className="w-5 h-5 text-[#1E3A8A] opacity-50" />
+              </div>
+            </div>
+
+            {/* Phone Card */}
+            <div
+              ref={phoneCardRef}
+              onMouseEnter={() => setHoveredCard('phone')}
+              onMouseLeave={() => setHoveredCard(null)}
+              className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-[#1E3A8A]/10">
+                  <HiPhone className="w-6 h-6" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-[#0B1C3D]">Call Us</h3>
+                  <div className="min-h-[28px]">
+                    {hoveredCard === 'phone' ? (
+                      <p className="text-base font-mono text-[#B11217]">{displayPhone}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500">Hover to reveal</p>
+                    )}
+                  </div>
+                </div>
+                <FaLocationArrow className="w-5 h-5 text-[#1E3A8A] opacity-50" />
+              </div>
+            </div>
+
+            {/* Hours Card */}
+            <div
+              ref={hoursCardRef}
+              onMouseEnter={() => setHoveredCard('hours')}
+              onMouseLeave={() => setHoveredCard(null)}
+              className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-[#1E3A8A]/10">
+                  <HiClock className="w-6 h-6" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-[#0B1C3D]">Office Hours</h3>
+                  <div className="min-h-[28px]">
+                    {hoveredCard === 'hours' ? (
+                      <p className="text-base font-mono text-[#B11217]">{displayHours}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500">Hover to reveal</p>
+                    )}
+                  </div>
+                </div>
+                <FaLocationArrow className="w-5 h-5 text-[#1E3A8A] opacity-50" />
+              </div>
+            </div>
+          </div>
+
+          {/* Two Column Layout */}
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+            {/* Left Column - Contact Information */}
+            <div 
+              ref={leftColumnRef} 
+              className="lg:w-2/5"
+            >
+              <div className="bg-white rounded-2xl p-6 md:p-8 h-full border border-[#E5E7EB] shadow-xl hover:shadow-2xl transition-shadow duration-300">
+                <h3 className="text-xl md:text-2xl font-bold mb-6 text-[#1E3A8A]">
+                  Contact Information
+                </h3>
+
+                {/* Address */}
+                <div 
+                  ref={addToContactItems}
+                  className="flex items-start gap-4 mb-6"
+                >
+                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+                    <HiLocationMarker className="w-5 h-5 text-[#1E3A8A]" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Address</h4>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      123 Business Avenue, Main Boulevard<br />
+                      Lahore, Punjab 54000<br />
+                      Pakistan
+                    </p>
+                  </div>
+                </div>
+
                 {/* Phone Numbers */}
                 <div 
                   ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
+                  className="flex items-start gap-4 mb-6"
                 >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiPhone className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+                    <HiPhone className="w-5 h-5 text-[#1E3A8A]" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Phone Numbers</h4>
-                    <ul className="text-gray-700 text-sm space-y-1.5">
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> General: <a href="tel:03224700200" className="hover:underline hover:text-[#B11217] transition-colors">03224700200</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Lahore: <a href="tel:03104700200" className="hover:underline hover:text-[#B11217] transition-colors">03104700200</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Sheikhupura: <a href="tel:03054700202" className="hover:underline hover:text-[#B11217] transition-colors">03054700202</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Rawalpindi: <a href="tel:03204700607" className="hover:underline hover:text-[#B11217] transition-colors">03204700607</a></li>
+                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Phone Numbers</h4>
+                    <ul className="text-gray-600 text-sm space-y-1.5">
+                      <li><span className="text-[#1E3A8A] font-medium">General:</span> <a href="tel:03224700200" className="hover:text-[#B11217] transition-colors">0322-4700200</a></li>
+                      <li><span className="text-[#1E3A8A] font-medium">Lahore:</span> <a href="tel:03104700200" className="hover:text-[#B11217] transition-colors">0310-4700200</a></li>
+                      <li><span className="text-[#1E3A8A] font-medium">Sheikhupura:</span> <a href="tel:03054700202" className="hover:text-[#B11217] transition-colors">0305-4700202</a></li>
+                      <li><span className="text-[#1E3A8A] font-medium">Rawalpindi:</span> <a href="tel:03204700607" className="hover:text-[#B11217] transition-colors">0320-4700607</a></li>
                     </ul>
                   </div>
                 </div>
@@ -478,197 +566,213 @@ export default function ContactForm() {
                 {/* Email */}
                 <div 
                   ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
+                  className="flex items-start gap-4 mb-6"
                 >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiMail className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+                    <HiMail className="w-5 h-5 text-[#1E3A8A]" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Email</h4>
-                    <p className="text-gray-700 text-sm">
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> <a href="mailto:info@mansolhab.com" className="hover:underline hover:text-[#B11217] transition-colors">info@mansolhab.com</a>
+                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Email</h4>
+                    <p className="text-gray-600 text-sm">
+                      <a href="mailto:info@mansolhab.com" className="hover:text-[#B11217] transition-colors">
+                        info@mansolhab.com
+                      </a>
                     </p>
+                  </div>
+                </div>
+
+                {/* Office Hours */}
+                <div 
+                  ref={addToContactItems}
+                  className="flex items-start gap-4 mb-6"
+                >
+                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+                    <HiClock className="w-5 h-5 text-[#1E3A8A]" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Hours</h4>
+                    <p className="text-gray-600 text-sm">Monday - Saturday: 9:00 AM - 5:00 PM</p>
+                    <p className="text-gray-600 text-sm">Sunday: Closed</p>
                   </div>
                 </div>
 
                 {/* WhatsApp */}
                 <div 
                   ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
+                  className="flex items-start gap-4 mb-6"
                 >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiChat className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                  <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
+                    <HiChat className="w-5 h-5 text-[#1E3A8A]" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>WhatsApp</h4>
-                    <p className="text-gray-700 text-sm">
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> <a href="https://wa.me/923224700200" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-[#B11217] transition-colors">03224700200</a>
+                    <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">WhatsApp</h4>
+                    <p className="text-gray-600 text-sm">
+                      <a href="https://wa.me/923224700200" target="_blank" rel="noopener noreferrer" className="hover:text-[#B11217] transition-colors">
+                        +92 322 4700200
+                      </a>
                     </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Note */}
-              <div className="pt-4 mt-6 border-t border-gray-200">
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  Feel free to contact us for any queries regarding our training programs, 
-                  admissions, or partnership opportunities.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Contact Form */}
-          <div 
-            ref={rightColumnRef} 
-            className="lg:w-3/5"
-            style={{ transform: "translateX(30px)" }}
-          >
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/30 shadow-xl">
-
-              {/* Success Message */}
-              {isSubmitted && (
-                <div className="mb-6 p-4 rounded-lg text-center" 
-                  style={{ 
-                    backgroundColor: `${BRAND_COLORS.deepRed}15`,
-                    border: `1px solid ${BRAND_COLORS.deepRed}40`,
-                    color: BRAND_COLORS.deepRed 
-                  }}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-medium">Thank you! Your message has been sent successfully.</span>
+                {/* Social Media Links */}
+                <div className="pt-6 mt-6 border-t border-[#E5E7EB]">
+                  <h4 className="font-semibold text-base mb-4 text-[#0B1C3D]">Follow Us</h4>
+                  <div className="flex gap-4">
+                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
+                      <FaFacebook className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
+                      <FaLinkedin className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
+                      <FaTwitter className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
+                    </a>
+                    <a href="#" className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center hover:bg-[#1E3A8A] group transition-all duration-300">
+                      <FaInstagram className="w-5 h-5 text-[#1E3A8A] group-hover:text-white transition-colors" />
+                    </a>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Right Column - Contact Form */}
+            <div 
+              ref={rightColumnRef} 
+              className="lg:w-3/5"
+            >
+              <div className="bg-white rounded-2xl p-6 md:p-8 border border-[#E5E7EB] shadow-xl hover:shadow-2xl transition-shadow duration-300">
 
-                {/* Name & Email */}
-                <div 
-                  ref={addToFormGroups}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-5"
-                  style={{ transform: "translateY(20px)" }}
-                >
-                  {/* Name */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="name" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Your Name *
+                {/* Success Message */}
+                {isSubmitted && (
+                  <div className="mb-6 p-4 rounded-lg text-center bg-green-50 border border-green-200">
+                    <div className="flex items-center justify-center gap-2 text-green-700">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium">Thank you! Your message has been sent successfully.</span>
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+
+                  {/* Name & Email */}
+                  <div 
+                    ref={addToFormGroups}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-5"
+                  >
+                    {/* Name */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="name" className="block text-sm font-medium text-[#0B1C3D]">
+                        Your Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="Enter your name"
+                        className={`w-full px-4 py-3 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                          errors.name 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+                            : 'border-[#E5E7EB] focus:border-[#1E3A8A] focus:ring-[#1E3A8A]/20'
+                        }`}
+                      />
+                      {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="email" className="block text-sm font-medium text-[#0B1C3D]">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="Enter your email"
+                        className={`w-full px-4 py-3 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                          errors.email 
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+                            : 'border-[#E5E7EB] focus:border-[#1E3A8A] focus:ring-[#1E3A8A]/20'
+                        }`}
+                      />
+                      {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+                    </div>
+                  </div>
+
+                  {/* Subject */}
+                  <div 
+                    ref={addToFormGroups}
+                    className="space-y-1.5"
+                  >
+                    <label htmlFor="subject" className="block text-sm font-medium text-[#0B1C3D]">
+                      Subject *
                     </label>
                     <input
                       type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
                       onChange={handleChange}
-                      placeholder="Enter your name"
-                      className={`w-full px-4 py-2.5 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                        errors.name 
+                      placeholder="What is this regarding?"
+                      className={`w-full px-4 py-3 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        errors.subject 
                           ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
-                          : 'border-gray-300 focus:border-[#B11217] focus:ring-[#B112174D]'
+                          : 'border-[#E5E7EB] focus:border-[#1E3A8A] focus:ring-[#1E3A8A]/20'
                       }`}
                     />
-                    {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+                    {errors.subject && <p className="text-xs text-red-600">{errors.subject}</p>}
                   </div>
 
-                  {/* Email */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="email" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="Enter your email"
-                      className={`w-full px-4 py-2.5 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                        errors.email 
-                          ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
-                          : 'border-gray-300 focus:border-[#B11217] focus:ring-[#B112174D]'
-                      }`}
-                    />
-                    {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
-                  </div>
-                </div>
-
-                {/* Subject */}
-                <div 
-                  ref={addToFormGroups}
-                  className="space-y-1.5"
-                  style={{ transform: "translateY(20px)" }}
-                >
-                  <label htmlFor="subject" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Subject *
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    placeholder="What is this regarding?"
-                    className={`w-full px-4 py-2.5 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                      errors.subject 
-                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
-                        : 'border-gray-300 focus:border-[#B11217] focus:ring-[#B112174D]'
-                    }`}
-                  />
-                  {errors.subject && <p className="text-xs text-red-600">{errors.subject}</p>}
-                </div>
-
-                {/* Message */}
-                <div 
-                  ref={addToFormGroups}
-                  className="space-y-1.5"
-                  style={{ transform: "translateY(20px)" }}
-                >
-                  <label htmlFor="message" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
-                    Your Message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    placeholder="Write your message here..."
-                    rows={4}
-                    className="w-full px-4 py-2.5 text-sm rounded-lg border bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-[#B11217] transition-all duration-200 resize-none"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <div 
-                  ref={buttonRef}
-                  className="pt-2"
-                  style={{ transform: "scale(0.9)" }}
-                >
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full px-8 py-3 font-semibold text-sm rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed hover:bg-[#9D0E14] focus:ring-[#B112174D] inline-flex items-center justify-center"
-                    style={{ backgroundColor: '#B11217', color: '#FFFFFF' }}
+                  {/* Message */}
+                  <div 
+                    ref={addToFormGroups}
+                    className="space-y-1.5"
                   >
-                    {isLoading ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Sending...</span>
-                      </div>
-                    ) : (
-                      'Send Message'
-                    )}
-                  </button>
-                </div>
-              </form>
+                    <label htmlFor="message" className="block text-sm font-medium text-[#0B1C3D]">
+                      Your Message
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      placeholder="Write your message here..."
+                      rows={5}
+                      className="w-full px-4 py-3 text-sm rounded-lg border border-[#E5E7EB] bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-[#1E3A8A] focus:ring-[#1E3A8A]/20 transition-all duration-200 resize-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div 
+                    ref={buttonRef}
+                    className="pt-2"
+                  >
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full px-8 py-4 bg-[#1E3A8A] hover:bg-[#B11217] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center text-base"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Sending...</span>
+                        </div>
+                      ) : (
+                        'Send Message'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

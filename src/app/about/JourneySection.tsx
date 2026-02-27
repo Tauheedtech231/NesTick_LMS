@@ -42,75 +42,72 @@ const journeyData: JourneyStep[] = [
 export default function JourneySection() {
   const containerRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  const cards = gsap.utils.toArray<HTMLElement>(".journey-card");
-  
-  const animations = cards.map((card: HTMLElement, index: number) => {
-    return gsap.fromTo(
-      card,
-      {
-        opacity: 0,
-        x: index % 2 === 0 ? -100 : 100,
-      },
-      {
-        opacity: 1,
-        x: 0,
-        duration: 1,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: card,
-          start: "top 80%",
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ".journey-card",
+        {
+          opacity: 0,
+          y: 40, // vertical animation (better for mobile)
+          scale: 0.95,
         },
-      }
-    );
-  });
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.8,
+          ease: "power2.out",
+          stagger: 0.2,
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+          },
+        }
+      );
+    }, containerRef);
 
-  // Cleanup function
-  return () => {
-    animations.forEach(animation => animation.kill());
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-  };
-}, []);
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="relative bg-white py-28 px-6 md:px-16">
-      <div ref={containerRef} className="max-w-6xl mx-auto relative">
-
+    <section className="relative bg-white py-16 md:py-24 px-4 md:px-16 overflow-hidden">
+      <div
+        ref={containerRef}
+        className="max-w-5xl mx-auto relative"
+      >
         {/* Vertical Line */}
-        <div className="absolute left-8 md:left-12 top-0 bottom-0 w-[3px] bg-[#E5E7EB]"></div>
+        <div className="hidden md:block absolute left-10 top-0 bottom-0 w-[3px] bg-[#E5E7EB]"></div>
 
-        <div className="space-y-24">
-
-          {journeyData.map((step, index) => (
-            <div key={step.id} className="relative flex items-start">
-
+        <div className="space-y-14 md:space-y-20">
+          {journeyData.map((step) => (
+            <div
+              key={step.id}
+              className="relative flex flex-col md:flex-row items-start md:items-center"
+            >
               {/* Number Circle */}
-              <div className="relative z-10">
-                <div className="w-20 h-20 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-2xl font-bold shadow-lg border-4 border-white">
+              <div className="relative z-10 mb-4 md:mb-0">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-lg md:text-xl font-bold shadow-md border-4 border-white">
                   {step.id.toString().padStart(2, "0")}
                 </div>
               </div>
 
               {/* Card */}
-              <div className="ml-12 md:ml-20 flex-1">
-                <div className="journey-card bg-[#F4F6F8] border border-[#E5E7EB] rounded-3xl p-10 shadow-md hover:shadow-xl transition duration-300">
-
-                  <h3 className="text-3xl md:text-4xl font-semibold text-[#1F2933] mb-4">
+              <div className="md:ml-12 flex-1 w-full">
+                <div className="journey-card bg-[#F4F6F8] border border-[#E5E7EB] rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-lg transition duration-300">
+                  
+                  <h3 className="text-xl md:text-2xl font-semibold text-[#1F2933] mb-3">
                     {step.title}
                   </h3>
 
-                  <p className="text-lg text-[#1F2933]/80 leading-relaxed">
+                  <p className="text-sm md:text-base text-[#1F2933]/80 leading-relaxed">
                     {step.description}
                   </p>
 
-                  {/* Accent Line */}
-                  <div className="mt-6 h-1 w-16 bg-[#B11217] rounded-full"></div>
-
+                  <div className="mt-4 h-1 w-12 bg-[#B11217] rounded-full"></div>
                 </div>
               </div>
-
             </div>
           ))}
-
         </div>
       </div>
     </section>
