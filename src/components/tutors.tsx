@@ -6,9 +6,24 @@ import { X, Award, Briefcase, Clock, CheckCircle, ChevronLeft, ChevronRight } fr
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
+// Register GSAP plugin only on client side
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
-const trainers = [
+interface Trainer {
+  id: number;
+  name: string;
+  role: string;
+  expertise: string;
+  experience: string;
+  image: string;
+  certifications: string[];
+  studentsTrained: string;
+  trainingStyle: string;
+}
+
+const trainers: Trainer[] = [
   {
     id: 1,
     name: 'Raza Hassan Zaheer',
@@ -56,17 +71,26 @@ const trainers = [
 ];
 
 export default function TrainersSlider() {
-  const [selectedTrainer, setSelectedTrainer] = useState<typeof trainers[0] | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   
   const sliderRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const subHeadingRef = useRef<HTMLDivElement>(null);
+  const subHeadingRef = useRef<HTMLParagraphElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
 
+  // Set mounted state
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // GSAP Animations
+  useEffect(() => {
+    if (!isMounted) return;
+
     const ctx = gsap.context(() => {
       // Clear existing animations
       gsap.set([headingRef.current, subHeadingRef.current, badgeRef.current], { 
@@ -138,9 +162,9 @@ export default function TrainersSlider() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [isMounted]);
 
-  const handleTrainerClick = (trainer: typeof trainers[0]) => {
+  const handleTrainerClick = (trainer: Trainer) => {
     setSelectedTrainer(trainer);
     setIsPopupOpen(true);
   };
@@ -172,6 +196,11 @@ export default function TrainersSlider() {
   };
 
   const getVisibleTrainers = () => {
+    if (typeof window === 'undefined') {
+      // Default for SSR
+      return trainers.slice(0, 3);
+    }
+    
     const visibleCount = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1;
     const trainersList = [];
     
@@ -183,20 +212,47 @@ export default function TrainersSlider() {
     return trainersList;
   };
 
-  const [visibleTrainers, setVisibleTrainers] = useState(getVisibleTrainers());
+  const [visibleTrainers, setVisibleTrainers] = useState<Trainer[]>([]);
 
   useEffect(() => {
+    if (!isMounted) return;
+    
+    setVisibleTrainers(getVisibleTrainers());
+
     const handleResize = () => {
       setVisibleTrainers(getVisibleTrainers());
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [currentIndex]);
+  }, [currentIndex, isMounted]);
 
-  useEffect(() => {
-    setVisibleTrainers(getVisibleTrainers());
-  }, [currentIndex]);
+  // Loading skeleton
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-block px-4 py-2 rounded-full mb-4 bg-gray-200 animate-pulse w-32 h-8"></div>
+            <div className="h-12 bg-gray-200 animate-pulse w-96 mx-auto mb-4 rounded"></div>
+            <div className="h-6 bg-gray-200 animate-pulse w-64 mx-auto rounded"></div>
+          </div>
+          
+          <div className="flex justify-center gap-6 py-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-64">
+                <div className="w-64 h-64 bg-gray-200 animate-pulse rounded-2xl mb-4"></div>
+                <div className="text-center">
+                  <div className="h-6 bg-gray-200 animate-pulse w-40 mx-auto mb-2 rounded"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse w-32 mx-auto rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={sectionRef} className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
@@ -219,25 +275,21 @@ export default function TrainersSlider() {
 
         <div className="relative py-8">
           {/* Navigation Buttons */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 lg:-left-4">
-            <button
-              onClick={handlePrevTrainer}
-              className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
-              aria-label="Previous trainers"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
+          <button
+            onClick={handlePrevTrainer}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 lg:-left-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
+            aria-label="Previous trainers"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-700" />
+          </button>
 
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:-right-4">
-            <button
-              onClick={handleNextTrainer}
-              className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
-              aria-label="Next trainers"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
+          <button
+            onClick={handleNextTrainer}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:-right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
+            aria-label="Next trainers"
+          >
+            <ChevronRight className="w-6 h-6 text-gray-700" />
+          </button>
 
           {/* Trainers Grid */}
           <div className="flex justify-center gap-6 md:gap-8 py-8 px-12">
@@ -248,7 +300,7 @@ export default function TrainersSlider() {
                 className="cursor-pointer group flex-shrink-0"
               >
                 <div className="relative w-64 md:w-72">
-                  {/* SQUARE IMAGE CONTAINER */}
+                  {/* Square Image Container */}
                   <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto mb-4">
                     <div className="relative w-full h-full rounded-2xl overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform duration-500">
                       <Image
@@ -257,6 +309,7 @@ export default function TrainersSlider() {
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 256px, 288px"
+                        priority={index === 0}
                       />
                       
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
@@ -264,11 +317,11 @@ export default function TrainersSlider() {
                       </div>
                     </div>
                     
-                    {/* Experience badge on top of square image */}
-                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+                    {/* Experience badge */}
+                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
                       <div className="flex items-center gap-1 bg-red-700 text-white px-4 py-1.5 rounded-full shadow-lg">
                         <Clock className="w-3 h-3" />
-                        <span className="text-xs font-semibold whitespace-nowrap">
+                        <span className="text-xs font-semibold">
                           {trainer.experience}
                         </span>
                       </div>
@@ -294,10 +347,10 @@ export default function TrainersSlider() {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-all ${
                   index === currentIndex
                     ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
-                    : 'bg-gray-300 hover:bg-gray-400'
+                    : 'w-2 bg-gray-300 hover:bg-gray-400'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
@@ -305,18 +358,26 @@ export default function TrainersSlider() {
           </div>
         </div>
 
+        {/* Popup Modal */}
         {isPopupOpen && selectedTrainer && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closePopup}
+          >
+            <div 
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="relative h-48 md:h-56 bg-gradient-to-r from-blue-900 to-gray-900">
                 <button
                   onClick={closePopup}
                   className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20"
+                  aria-label="Close popup"
                 >
                   <X className="w-5 h-5" />
                 </button>
                 
-                {/* SQUARE IMAGE IN POPUP */}
+                {/* Square Image in Popup */}
                 <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
                   <div className="relative w-32 h-32 md:w-40 md:h-40">
                     <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-white shadow-2xl">
@@ -326,13 +387,14 @@ export default function TrainersSlider() {
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 128px, 160px"
+                        priority
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-16 pb-8 px-6 md:px-8">
+              <div className="pt-16 pb-8 px-6 md:px-8 overflow-y-auto max-h-[calc(90vh-200px)]">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">
                     {selectedTrainer.name}
@@ -353,7 +415,7 @@ export default function TrainersSlider() {
                   </div>
                 </div>
 
-                <div className="mb-8">
+                <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 rounded-full bg-red-700" />
                     <h3 className="font-semibold text-gray-900">Expertise</h3>
@@ -363,7 +425,7 @@ export default function TrainersSlider() {
                   </p>
                 </div>
 
-                <div className="mb-8 bg-gray-50 rounded-xl p-4">
+                <div className="mb-6 bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="w-4 h-4 text-red-700" />
                     <h4 className="font-semibold text-gray-900">Training Style</h4>
@@ -371,7 +433,7 @@ export default function TrainersSlider() {
                   <p className="text-gray-600">{selectedTrainer.trainingStyle}</p>
                 </div>
 
-                <div className="mb-8">
+                <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Award className="w-5 h-5 text-red-700" />
                     <h3 className="font-semibold text-gray-900">Certifications</h3>
@@ -389,7 +451,7 @@ export default function TrainersSlider() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-200">
                   <button
                     onClick={handlePrevPopup}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
@@ -402,11 +464,12 @@ export default function TrainersSlider() {
                       <button
                         key={trainer.id}
                         onClick={() => setSelectedTrainer(trainer)}
-                        className={`w-2 h-2 rounded-full transition-all ${
+                        className={`h-2 rounded-full transition-all ${
                           selectedTrainer.id === trainer.id
                             ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
-                            : 'bg-gray-300 hover:bg-gray-400'
+                            : 'w-2 bg-gray-300 hover:bg-gray-400'
                         }`}
+                        aria-label={`Select ${trainer.name}`}
                       />
                     ))}
                   </div>

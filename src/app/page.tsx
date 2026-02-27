@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "next/dynamic"
+
 
 
 import ContactForm from "@/components/query"
@@ -26,14 +26,14 @@ export default function Page() {
       <HeroSection/>
     
 
-    <AboutSection/>
+     <AboutSection/>
 
-      <CoursesPage1/>
+       <CoursesPage1/>
 
       <TrainersSlider/>
-      <CoursesTab/>
+     <CoursesTab/>
 
-      <ContactForm />
+      <ContactForm />   
 
       
     </>

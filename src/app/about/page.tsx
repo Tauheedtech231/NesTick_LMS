@@ -6,6 +6,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MdPlayArrow, MdKeyboardArrowDown } from 'react-icons/md';
 import StudentFeedback from '@/components/StudentFeedback';
+import JourneySection from './JourneySection';
 import { motion, AnimatePresence } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -22,10 +23,6 @@ export default function AboutSection() {
   const visionRef = useRef<HTMLDivElement>(null);
   const whyChooseRef = useRef<HTMLDivElement>(null);
   const whyChooseItemsRef = useRef<HTMLDivElement>(null);
-  const journeyRef = useRef<HTMLDivElement>(null);
-  const journeyContentRef = useRef<HTMLDivElement>(null);
-  const journeyCardsRef = useRef<HTMLDivElement>(null);
-  const journeyLineRef = useRef<HTMLDivElement>(null);
   
   // State for dropdown in Why Choose section
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
@@ -72,10 +69,6 @@ export default function AboutSection() {
         visionRef.current,
         whyChooseRef.current,
         whyChooseItemsRef.current,
-        journeyRef.current,
-        journeyContentRef.current,
-        journeyCardsRef.current,
-        journeyLineRef.current,
       ], { clearProps: "all" });
 
       // --- "About Mansol" Heading animation from BOTTOM ---
@@ -197,129 +190,6 @@ export default function AboutSection() {
             },
           }
         );
-      }
-
-      // Journey Section Animations
-      if (journeyRef.current) {
-        // Timeline for journey section
-        const journeyTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: journeyRef.current,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
-          }
-        });
-
-        // Background fade in
-        journeyTl.fromTo(journeyRef.current,
-          { opacity: 0 },
-          { opacity: 1, duration: 1, ease: 'power2.out' }
-        );
-
-        // Heading animation
-        if (journeyContentRef.current) {
-          const heading = journeyContentRef.current.querySelector('h3');
-          if (heading) {
-            journeyTl.fromTo(heading,
-              { y: -30, opacity: 0 },
-              { y: 0, opacity: 1, duration: 0.8, ease: 'back.out(1)' },
-              '-=0.5'
-            );
-          }
-        }
-
-        // Cool centered line animation
-        if (journeyLineRef.current) {
-          journeyTl.fromTo(journeyLineRef.current,
-            { scaleX: 0, opacity: 0 },
-            { 
-              scaleX: 1, 
-              opacity: 1, 
-              duration: 1.2, 
-              ease: 'power3.out',
-              transformOrigin: 'center'
-            },
-            '-=0.6'
-          );
-        }
-
-        // Cards animations - left and right with smooth stagger
-        if (journeyCardsRef.current) {
-          const cards = journeyCardsRef.current.children;
-          
-          // First card from left
-          gsap.fromTo(cards[0],
-            { x: -200, opacity: 0, rotation: -5 },
-            {
-              x: 0,
-              opacity: 1,
-              rotation: 0,
-              duration: 1.2,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: cards[0],
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              }
-            }
-          );
-
-          // Second card from right
-          gsap.fromTo(cards[1],
-            { x: 200, opacity: 0, rotation: 5 },
-            {
-              x: 0,
-              opacity: 1,
-              rotation: 0,
-              duration: 1.2,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: cards[1],
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              }
-            }
-          );
-
-          // Third card from bottom with slight delay
-          gsap.fromTo(cards[2],
-            { y: 100, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 1,
-              ease: 'back.out(1.2)',
-              delay: 0.3,
-              scrollTrigger: {
-                trigger: cards[2],
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              }
-            }
-          );
-        }
-
-        // Final description fade in
-        if (journeyContentRef.current) {
-          const description = journeyContentRef.current.querySelector('.journey-description');
-          if (description) {
-            gsap.fromTo(description,
-              { y: 30, opacity: 0 },
-              {
-                y: 0,
-                opacity: 1,
-                duration: 1,
-                ease: 'power2.out',
-                delay: 0.4,
-                scrollTrigger: {
-                  trigger: description,
-                  start: 'top 90%',
-                  toggleActions: 'play none none reverse',
-                }
-              }
-            );
-          }
-        }
       }
 
     }, sectionRef);
@@ -473,68 +343,10 @@ export default function AboutSection() {
           </div>
         </div>
 
-        {/* --- Our Journey Section with Cool Centered Line --- */}
-        <div
-          ref={journeyRef}
-          className="relative rounded-3xl overflow-hidden shadow-2xl"
-        >
-          <div className="absolute inset-0 w-full h-full">
-            <Image
-              src="https://images.pexels.com/photos/267885/pexels-photo-267885.jpeg"
-              alt="Journey background"
-              fill
-              className="object-cover"
-              quality={85}
-            />
-            <div className="absolute inset-0 bg-black/60" />
-          </div>
+        {/* --- Journey Section Component --- */}
+        <JourneySection />
 
-          <div ref={journeyContentRef} className="relative z-10 py-16 px-6 md:py-20 md:px-10 text-white">
-            <h3 className="text-2xl md:text-3xl font-bold text-center mb-6 relative inline-block w-full">
-              Our Journey
-            </h3>
-            
-            {/* Cool Centered Line */}
-            <div ref={journeyLineRef} className="flex justify-center items-center mb-12">
-              <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full"></div>
-              <div className="mx-4 w-3 h-3 bg-[#B11217] rounded-full animate-pulse"></div>
-              <div className="w-32 h-1 bg-gradient-to-r from-[#B11217] via-[#B11217] to-transparent rounded-full"></div>
-            </div>
-
-            {/* Journey Cards */}
-            <div ref={journeyCardsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              {/* Card 1 - From Left */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-4xl font-bold text-white mb-2">2018</div>
-                <h4 className="text-lg font-semibold text-white mb-2">Foundation</h4>
-                <p className="text-gray-100 text-sm">Started with a mission to bridge the skill gap in technical education.</p>
-              </div>
-
-              {/* Card 2 - From Right */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-4xl font-bold text-white mb-2">2021</div>
-                <h4 className="text-lg font-semibold text-white mb-2">Expansion</h4>
-                <p className="text-gray-100 text-sm">Opened two new campuses and launched online certification programs.</p>
-              </div>
-
-              {/* Card 3 - From Bottom */}
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border-l-4 border-[#B11217] text-center transform transition-all hover:scale-105 hover:bg-white/20">
-                <div className="text-4xl font-bold text-white mb-2">2024</div>
-                <h4 className="text-lg font-semibold text-white mb-2">1,000+ Alumni</h4>
-                <p className="text-gray-100 text-sm">Celebrating excellence and industry partnerships.</p>
-              </div>
-            </div>
-
-            {/* Journey Description */}
-            <div className="journey-description mt-10 text-center max-w-3xl mx-auto bg-white/10 backdrop-blur-sm p-4 rounded-2xl">
-              <p className="text-gray-100 italic text-sm md:text-base">
-                From a small classroom to a thriving community — our journey reflects our commitment to shaping future-ready professionals.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* --- Student Feedback Component (imported) --- */}
+        {/* --- Student Feedback Component --- */}
         <StudentFeedback />
       </div>
     </section>

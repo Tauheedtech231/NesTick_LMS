@@ -1,99 +1,304 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 
-gsap.registerPlugin(ScrollTrigger);
+interface Student {
+  id: number;
+  name: string;
+  role: string;
+  image: string;
+  feedback: string;
+}
+
+const students: Student[] = [
+  {
+    id: 1,
+    name: "Ali Khan",
+    role: "Frontend Developer Intern",
+    image:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80",
+    feedback:
+      "This LMS transformed my internship journey. The structure and mentorship were exceptional.",
+  },
+  {
+    id: 2,
+    name: "Sara Ahmed",
+    role: "UI/UX Intern",
+    image:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
+    feedback:
+      "The gamified learning experience kept me motivated every single week.",
+  },
+  {
+    id: 3,
+    name: "Hassan Raza",
+    role: "Backend Developer Intern",
+    image:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500&q=80",
+    feedback:
+      "Project-based internship tracking helped me improve real-world skills.",
+  },
+  {
+    id: 4,
+    name: "Ayesha Malik",
+    role: "Software Engineering Student",
+    image:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&q=80",
+    feedback:
+      "Performance dashboards and feedback system are truly next level.",
+  },
+];
 
 export default function StudentFeedback() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const cardsRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<Student | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [circleSize, setCircleSize] = useState(500);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Heading animation
-      if (headingRef.current) {
-        gsap.fromTo(headingRef.current,
-          { y: 50, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 1,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: headingRef.current,
-              start: 'top 85%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
+    setMounted(true);
+    
+    // Calculate circle size based on viewport
+    const calculateSize = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      
+      // Desktop: larger size, Mobile: smaller size
+      if (vw >= 1024) {
+        // Desktop - larger orbit
+        const minSize = Math.min(vw * 0.45, vh * 0.7, 700);
+        setCircleSize(minSize);
+      } else {
+        // Mobile - smaller orbit
+        const minSize = Math.min(vw * 0.8, vh * 0.4, 450);
+        setCircleSize(minSize);
       }
+    };
 
-      // Cards stagger animation
-      if (cardsRef.current) {
-        gsap.fromTo(cardsRef.current.children,
-          { y: 60, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.8,
-            stagger: 0.2,
-            ease: 'back.out(1.2)',
-            scrollTrigger: {
-              trigger: cardsRef.current,
-              start: 'top 80%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
-      }
-    }, sectionRef);
-
-    return () => ctx.revert();
+    calculateSize();
+    window.addEventListener('resize', calculateSize);
+    return () => window.removeEventListener('resize', calculateSize);
   }, []);
 
+  // Brand Colors
+  const brandColors = {
+    darkNavy: '#0B1C3D',
+    darkRoyalBlue: '#1E3A8A',
+    deepRed: '#B11217',
+    teal: '#14B8A6',
+    lightGrey: '#F4F6F8',
+    softGrey: '#E5E7EB',
+  };
+
+  if (!mounted) return null;
+
+  // Desktop: larger rings, Mobile: smaller rings
+  const isDesktop = typeof window !== 'undefined' ? window.innerWidth >= 1024 : false;
+  
+  const ringSizes = {
+    large: isDesktop ? circleSize * 1.3 : circleSize * 1.2,
+    medium: circleSize,
+    small: isDesktop ? circleSize * 0.75 : circleSize * 0.7,
+    orbit: isDesktop ? circleSize * 0.75 : circleSize * 0.7
+  };
+
   return (
-    <section ref={sectionRef} className="py-12">
-      <h3
-        ref={headingRef}
-        className="text-2xl md:text-3xl font-bold text-[#1E3A8A] text-center mb-10 relative inline-block w-full"
-      >
-        Student Feedback
-        <span className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-[#B11217] rounded-full" />
-      </h3>
+    <section className="relative w-full min-h-screen flex flex-col items-center justify-start lg:justify-center bg-white text-gray-900 py-12 lg:py-8 overflow-hidden">
+      {/* Background Pattern - Light Grey - Full width */}
+      <div className="absolute inset-0 w-full h-full opacity-30">
+        <div className="absolute inset-0 w-full h-full" style={{
+          backgroundImage: 'radial-gradient(circle at 2px 2px, #0B1C3D 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
 
-      <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-        {/* Feedback Card 1 */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-2 border-blue-200 hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="text-4xl mb-3">👩‍🎓</div>
-          <p className="text-gray-700 text-sm italic">“The hands-on training gave me confidence to work on real projects. Truly life-changing!”</p>
-          <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Priya K.</p>
+      {/* Gradient Overlay - Full width */}
+      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#0B1C3D]/5 via-transparent to-[#1E3A8A]/5"></div>
+
+      {/* Content Container - Full width with proper padding */}
+      <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        {/* Center Content */}
+        <div className="text-center max-w-2xl px-4 mb-8 lg:mb-12 mt-8 lg:mt-0">
+          <div className="inline-block px-4 py-2 rounded-full mb-4 lg:mb-6 bg-[#F4F6F8] border border-[#E5E7EB]">
+            <span className="text-xs lg:text-sm font-semibold text-[#B11217]">
+              Student Testimonials
+            </span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-[#0B1C3D]">
+            Student Success Stories
+          </h2>
+          <p className="mt-3 lg:mt-4 text-sm sm:text-base lg:text-lg text-gray-600">
+            Real feedback from students using our LMS internship platform.
+          </p>
         </div>
 
-        {/* Feedback Card 2 */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-2 border-blue-200 hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="text-4xl mb-3">👨‍🎓</div>
-          <p className="text-gray-700 text-sm italic">“Instructors are industry experts who care about your growth. Best decision ever.”</p>
-          <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Rahul M.</p>
-        </div>
+        {/* Orbit Container - Full width with centered content */}
+        <div className="relative w-full flex items-center justify-center overflow-visible min-h-[350px] sm:min-h-[400px] lg:min-h-[500px]">
+          {/* Outer Rings - Responsive and fully visible */}
+          <div 
+            className="relative flex items-center justify-center"
+            style={{ 
+              width: ringSizes.large,
+              height: ringSizes.large
+            }}
+          >
+            {/* Ring 1 - Largest */}
+            <div 
+              className="absolute rounded-full border border-[#1E3A8A]/20"
+              style={{ 
+                width: ringSizes.large,
+                height: ringSizes.large
+              }}
+            ></div>
+            
+            {/* Ring 2 - Middle */}
+            <div 
+              className="absolute rounded-full border border-[#0B1C3D]/15"
+              style={{ 
+                width: ringSizes.medium,
+                height: ringSizes.medium
+              }}
+            ></div>
+            
+            {/* Ring 3 - Smallest */}
+            <div 
+              className="absolute rounded-full border border-[#B11217]/10"
+              style={{ 
+                width: ringSizes.small,
+                height: ringSizes.small
+              }}
+            ></div>
+            
+            {/* Rotating Orbit with Student Images */}
+            <div 
+              className="absolute"
+              style={{ 
+                width: ringSizes.orbit,
+                height: ringSizes.orbit
+              }}
+            >
+              <motion.div 
+                className="relative w-full h-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+              >
+                {students.map((student, index) => {
+                  const angle = (index / students.length) * 360;
+                  const radius = ringSizes.orbit / 2;
 
-        {/* Feedback Card 3 */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-2 border-blue-200 hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="text-4xl mb-3">👩‍💻</div>
-          <p className="text-gray-700 text-sm italic">“The safety focus and ethics taught here set Mansol apart. Highly recommend!”</p>
-          <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Anjali S.</p>
-        </div>
-
-        {/* Feedback Card 4 */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-2 border-blue-200 hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="text-4xl mb-3">👨‍🏫</div>
-          <p className="text-gray-700 text-sm italic">“Great environment and supportive mentors. I landed my dream job thanks to Mansol.”</p>
-          <p className="mt-4 font-bold text-[#1E3A8A] text-sm">— Vikram S.</p>
+                  return (
+                    <div
+                      key={student.id}
+                      className="absolute left-1/2 top-1/2"
+                      style={{
+                        transform: `rotate(${angle}deg) translateX(${radius}px) rotate(-${angle}deg)`,
+                        transformOrigin: '0 0',
+                      }}
+                    >
+                      <motion.button
+                        onClick={() => setSelected(student)}
+                        className="relative rounded-full border-4 border-white shadow-xl hover:scale-110 transition duration-300 pointer-events-auto"
+                        style={{ 
+                          width: isDesktop ? Math.min(90, ringSizes.orbit * 0.2) : Math.min(70, ringSizes.orbit * 0.2),
+                          height: isDesktop ? Math.min(90, ringSizes.orbit * 0.2) : Math.min(70, ringSizes.orbit * 0.2),
+                          borderColor: brandColors.darkRoyalBlue,
+                          marginLeft: isDesktop ? -45 : -35,
+                          marginTop: isDesktop ? -45 : -35
+                        }}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Image
+                          src={student.image}
+                          alt={student.name}
+                          fill
+                          className="rounded-full object-cover"
+                          sizes={isDesktop ? "90px" : "70px"}
+                        />
+                        {/* Hover effect ring */}
+                        <div className="absolute inset-0 rounded-full border-2 border-[#B11217] opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                      </motion.button>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top gradient bar */}
+              <div className="h-2 bg-gradient-to-r from-[#0B1C3D] via-[#1E3A8A] to-[#B11217]"></div>
+              
+              <button
+                onClick={() => setSelected(null)}
+                className="absolute top-4 right-4 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 hover:text-[#B11217] transition-colors z-10"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="p-8">
+                {/* Profile Image with brand colored ring */}
+                <div className="relative w-28 h-28 mx-auto mb-6">
+                  <div className="absolute inset-0 rounded-full border-4 border-[#B11217] animate-pulse"></div>
+                  <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white">
+                    <Image
+                      src={selected.image}
+                      alt={selected.name}
+                      fill
+                      className="object-cover"
+                      sizes="112px"
+                    />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <h3 className="text-2xl font-bold text-[#0B1C3D] mb-1">
+                  {selected.name}
+                </h3>
+                <p className="text-[#B11217] font-medium text-sm mb-4">
+                  {selected.role}
+                </p>
+
+                {/* Quote icon */}
+                <div className="text-4xl text-[#1E3A8A]/20 mb-2"></div>
+
+                <p className="text-gray-700 leading-relaxed mb-6 relative">
+                  {selected.feedback}
+                </p>
+
+                {/* Decorative dots */}
+                <div className="flex justify-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#0B1C3D]"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#1E3A8A]"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#B11217]"></div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
