@@ -242,7 +242,7 @@ export default function AboutSection() {
         <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
 
         {/* Content Overlay - Centered with mobile top margin */}
-       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 mt-24 md:mt-0">
+<div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 mt-24 md:mt-0">
   <h2
     ref={headingAboutRef}
     className="text-4xl md:text-5xl lg:text-6xl font-bold text-white inline-block relative mt-8 md:mt-0"
@@ -258,7 +258,7 @@ export default function AboutSection() {
     Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
   </p>
 
-  <div ref={heroButtonRef} className="mt-8">
+  <div ref={heroButtonRef} className="mt-8 mb-12 md:mb-0">
     <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-3 px-8 rounded-full text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
       Explore Our Courses
     </button>

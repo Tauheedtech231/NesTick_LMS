@@ -527,7 +527,7 @@ export default function ContactForm() {
     {/* Address */}
     <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
       <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-        <HiLocationMarker className="w-5 h-5 text-[#1E3A8A]" />
+        <HiLocationMarker className="w-5 h-5 text-[#B11217]" />
       </div>
       <div>
         <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Address</h4>
@@ -542,7 +542,7 @@ export default function ContactForm() {
     {/* Phone Numbers */}
     <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
       <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-        <HiPhone className="w-5 h-5 text-[#1E3A8A]" />
+        <HiPhone className="w-5 h-5 text-[#B11217]" />
       </div>
       <div>
         <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Phone Numbers</h4>
@@ -558,7 +558,7 @@ export default function ContactForm() {
     {/* Email */}
     <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
       <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-        <HiMail className="w-5 h-5 text-[#1E3A8A]" />
+        <HiMail className="w-5 h-5 text-[#B11217]" />
       </div>
       <div>
         <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Email</h4>
@@ -573,7 +573,7 @@ export default function ContactForm() {
     {/* Office Hours */}
     <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
       <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-        <HiClock className="w-5 h-5 text-[#1E3A8A]" />
+        <HiClock className="w-5 h-5 text-[#B11217]" />
       </div>
       <div>
         <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">Office Hours</h4>
@@ -585,7 +585,7 @@ export default function ContactForm() {
     {/* WhatsApp */}
     <div ref={addToContactItems} className="flex items-start gap-4 mb-6">
       <div className="p-3 rounded-xl shrink-0 bg-[#1E3A8A]/10">
-        <HiChat className="w-5 h-5 text-[#1E3A8A]" />
+        <HiChat className="w-5 h-5 text-[#B11217]" />
       </div>
       <div>
         <h4 className="font-semibold text-base mb-2 text-[#0B1C3D]">WhatsApp</h4>
@@ -720,7 +720,7 @@ export default function ContactForm() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full px-8 py-4 bg-[#1E3A8A] hover:bg-[#B11217] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center text-base"
+                      className="w-full px-8 py-4 bg-[#B11217] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/50 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center text-base"
                     >
                       {isLoading ? (
                         <div className="flex items-center justify-center gap-2">
