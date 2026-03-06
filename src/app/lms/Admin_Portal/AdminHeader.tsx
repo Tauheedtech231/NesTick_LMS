@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  HiHome, HiAcademicCap, HiUserCircle, HiLogout, 
-  HiMenu, HiX, HiSearch, HiChevronDown, HiCog, 
-  HiBell, HiViewGrid, HiCreditCard, HiChartBar
+  HiHome, HiAcademicCap, HiLogout, 
+  HiMenu, HiX, HiSearch, 
+  HiCreditCard, HiChartBar
 } from 'react-icons/hi'
 /* eslint-disable */
 
@@ -194,12 +194,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 <span className="text-base text-white">Payments</span>
               </Link>
             </li>
-            <li>
-              <Link href="/lms/Admin_Portal/reports" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/reports') ? 'bg-white/10 font-medium' : ''}`}>
-                <HiChartBar className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Reports</span>
-              </Link>
-            </li>
+         
           </ul>
         </nav>
 

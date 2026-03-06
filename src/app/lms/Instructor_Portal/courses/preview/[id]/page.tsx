@@ -7,21 +7,21 @@ import { useRouter, useParams } from 'next/navigation'
 import {
   ArrowLeft,
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   FileVideo,
   FileImage,
   File,
-  AlertCircle,
+  Clock,
+  Award,
+  Layers,
   HelpCircle,
-  CheckCircle,
-  XCircle,
-  Lock,
-  PlayCircle,
-  Download
+  Loader2,
+  AlertCircle,
+ 
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -34,291 +34,166 @@ const BRAND_COLORS = {
   brightRed: '#D32F2F'
 }
 
-// Published courses data – explicitly typed as Course[]
-const publishedCourses: Course[] = [
-  {
-    id: 'pipe-fitter',
-    title: 'Pipe Fitter',
-    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-    category: 'Technical Training',
-    status: 'published',
-    instructorName: 'System Instructor',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-    duration: '8 Weeks',
-    level: 'Beginner to Advanced',
-    price: 'PKR 25,000',
-    highlights: [
-      'Learn pipe cutting, threading, and installation',
-      'Blueprint reading and interpretation',
-      'Pipe system design and layout',
-      'Safety protocols and standards',
-      'Hands-on workshop training',
-      'Industry certification preparation'
-    ]
-  },
-  {
-    id: 'safety-inspector',
-    title: 'Safety Inspector',
-    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-    category: 'Safety Training',
-    status: 'published',
-    instructorName: 'System Instructor',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-    duration: '6 Weeks',
-    level: 'Intermediate',
-    price: 'PKR 30,000',
-    highlights: [
-      'OSHA standards and regulations',
-      'Site inspection methodologies',
-      'Risk assessment techniques',
-      'Safety documentation',
-      'Emergency response planning',
-      'Certification exam preparation'
-    ]
-  },
-  {
-    id: 'welding',
-    title: 'Professional Welding',
-    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-    category: 'Technical Training',
-    status: 'published',
-    instructorName: 'System Instructor',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-    duration: '10 Weeks',
-    level: 'Beginner to Professional',
-    price: 'PKR 35,000',
-    highlights: [
-      'MIG, TIG, and Arc welding techniques',
-      'Metal identification and preparation',
-      'Weld quality inspection',
-      'Safety equipment usage',
-      'Industry-standard certification',
-      'Portfolio development'
-    ]
-  }
-];
-
 interface Course {
   id: string;
   title: string;
   description: string;
   category: string;
-  status: 'draft' | 'published';
+  duration: string;
+  level: string;
   instructorName: string;
-  isPublished?: boolean;          // optional, for published courses
-  image?: string;                 // optional
-  duration?: string;              // optional
-  level?: string;                 // optional
-  price?: string;                 // optional
-  highlights?: string[];          // optional
+  image?: string;
+  status: 'draft' | 'published';
+  stats: {
+    slides: number;
+    files: number;
+    quizzes: number;
+    assignments: number;
+  };
 }
 
 interface Slide {
   id: string;
-  courseId: string;
   slideNumber: number;
   title: string;
+  files: SlideFile[];
+  quiz?: Quiz;
+  assignments: Assignment[];
 }
 
-interface SlideContent {
-  slideId: string;
-  files: {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-  }[];
+interface SlideFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
 }
 
 interface Quiz {
+  id: string;
   slideId: string;
-  questions: {
-    id: string;
-    question: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
+  questions: QuizQuestion[];
 }
 
-export default function PreviewCoursePage() {
-  const router = useRouter()
-  const params = useParams()
-  const courseId = params.id as string
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+}
 
-  const [loading, setLoading] = useState(true)
-  const [course, setCourse] = useState<Course | null>(null)
-  const [slides, setSlides] = useState<Slide[]>([])
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
-  const [slideContents, setSlideContents] = useState<{ [slideId: string]: SlideContent }>({})
-  const [slideQuizzes, setSlideQuizzes] = useState<{ [slideId: string]: Quiz }>({})
-  const [isPublishedCourse, setIsPublishedCourse] = useState(false)
+interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  dueDate?: string;
+  totalMarks: number;
+  passingMarks: number;
+  file?: {
+    name: string;
+    url: string;
+  };
+  status: string;
+}
+
+export default function CoursePreviewPage() {
+  const router = useRouter();
+  const params = useParams();
+  const courseId = params.id as string;
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [expandedSlides, setExpandedSlides] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    loadPreviewData()
-  }, [courseId])
+    fetchPreviewData();
+  }, [courseId]);
 
-  const loadPreviewData = () => {
+  const fetchPreviewData = async () => {
     try {
-      // First check if it's a published course
-      const publishedCourse = publishedCourses.find((c) => c.id === courseId)
-      
-      if (publishedCourse) {
-        setIsPublishedCourse(true)
-        setCourse(publishedCourse)
-      } else {
-        // Load from localStorage courses
-        const courses = JSON.parse(localStorage.getItem('courses') || '[]')
-        const foundCourse = courses.find((c: Course) => c.id === courseId)
-        
-        if (!foundCourse) {
-          alert('Course not found')
-          router.push('/lms/Instructor_Portal/courses')
-          return
-        }
-        setCourse(foundCourse)
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/instructors/course/preview/${courseId}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load preview');
       }
 
-      // Load slides (works for both types)
-      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-      const courseSlides = allSlides
-        .filter((s: Slide) => s.courseId === courseId)
-        .sort((a: Slide, b: Slide) => a.slideNumber - b.slideNumber)
-      
-      // If no slides for published course, create default preview slides
-      if (courseSlides.length === 0 && publishedCourse) {
-        const defaultSlides = [
-          {
-            id: `${courseId}_slide_1`,
-            courseId: courseId,
-            slideNumber: 1,
-            title: 'Introduction to the Course'
-          },
-          {
-            id: `${courseId}_slide_2`,
-            courseId: courseId,
-            slideNumber: 2,
-            title: 'Key Concepts'
-          },
-          {
-            id: `${courseId}_slide_3`,
-            courseId: courseId,
-            slideNumber: 3,
-            title: 'Practical Applications'
-          },
-          {
-            id: `${courseId}_slide_4`,
-            courseId: courseId,
-            slideNumber: 4,
-            title: 'Assessment Preparation'
-          }
-        ]
-        setSlides(defaultSlides)
+      if (result.success) {
+        setCourse(result.data.course);
+        setSlides(result.data.slides || []);
         
-        // Create default content for preview
-        const defaultContents: { [slideId: string]: SlideContent } = {}
-        defaultSlides.forEach(slide => {
-          defaultContents[slide.id] = {
-            slideId: slide.id,
-            files: [
-              {
-                id: `file_${slide.id}_1`,
-                name: `Lecture Notes - ${slide.title}.pdf`,
-                type: 'application/pdf',
-                size: 1024 * 1024 * 1.5, // 1.5 MB
-                url: '#',
-              },
-              {
-                id: `file_${slide.id}_2`,
-                name: `Video Tutorial - ${slide.title}.mp4`,
-                type: 'video/mp4',
-                size: 1024 * 1024 * 25, // 25 MB
-                url: '#',
-              }
-            ]
-          }
-        })
-        setSlideContents(defaultContents)
-      } else {
-        setSlides(courseSlides)
+        // Auto-expand first slide
+        if (result.data.slides?.length > 0) {
+          setExpandedSlides(new Set([result.data.slides[0].id]));
+        }
       }
-
-      // Load content
-      const allContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-      const contentsMap: { [slideId: string]: SlideContent } = {}
-      allContents.forEach((content: SlideContent) => {
-        if (content.slideId && (courseSlides.some((s: Slide) => s.id === content.slideId) || publishedCourse)) {
-          contentsMap[content.slideId] = content
-        }
-      })
-      setSlideContents(contentsMap)
-
-      // Load quizzes
-      const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-      const quizzesMap: { [slideId: string]: Quiz } = {}
-      allQuizzes.forEach((quiz: Quiz) => {
-        if (quiz.slideId && (courseSlides.some((s: { id: string }) => s.id === quiz.slideId) || publishedCourse)) {
-          quizzesMap[quiz.slideId] = quiz
-        }
-      })
-      setSlideQuizzes(quizzesMap)
-    } catch (error) {
-      console.error('Error loading preview:', error)
+    } catch (error: any) {
+      console.error('Error loading preview:', error);
+      setError(error.message || 'Failed to load preview');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const toggleSlide = (slideId: string) => {
+    setExpandedSlides(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(slideId)) {
+        newSet.delete(slideId);
+      } else {
+        newSet.add(slideId);
+      }
+      return newSet;
+    });
+  };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.includes('video')) return <FileVideo className="w-5 h-5 text-blue-500" />
-    if (fileType.includes('image')) return <FileImage className="w-5 h-5 text-green-500" />
-    if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
-    if (fileType.includes('word') || fileType.includes('document')) return <FileText className="w-5 h-5 text-blue-700" />
-    return <File className="w-5 h-5 text-gray-500" />
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-  }
-
-  const currentSlide = slides[currentSlideIndex]
-  const currentContent = currentSlide ? slideContents[currentSlide.id] : null
-  const currentQuiz = currentSlide ? slideQuizzes[currentSlide.id] : null
+    if (fileType.includes('video')) return <FileVideo className="w-4 h-4 text-blue-500" />;
+    if (fileType.includes('image')) return <FileImage className="w-4 h-4 text-green-500" />;
+    if (fileType.includes('pdf')) return <FileText className="w-4 h-4 text-red-500" />;
+    return <File className="w-4 h-4 text-gray-500" />;
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white p-4 sm:p-6">
-        <div className="max-w-4xl mx-auto animate-pulse">
-          <div className="h-8 w-48 bg-gray-200 rounded mb-6"></div>
-          <div className="h-64 bg-gray-100 rounded-lg"></div>
+      <div className="min-h-screen bg-white p-6 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+          <p className="text-sm text-darkGrey">Loading preview...</p>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!course) {
+  if (error || !course) {
     return (
-      <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
-          <h3 className="text-lg font-medium mb-2">Course not found</h3>
-          <Link href="/lms/Instructor_Portal/courses" className="text-darkRoyalBlue hover:underline">
-            Back to courses
+      <div className="min-h-screen bg-white p-6 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold mb-2 text-darkGrey">Error Loading Preview</h3>
+          <p className="text-darkGrey/70 mb-6">{error || 'Course not found'}</p>
+          <Link
+            href="/lms/Instructor_Portal/courses"
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg inline-flex items-center gap-2 hover:bg-darkRoyalBlue/90 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Courses
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="max-w-4xl mx-auto mb-6">
+      <div className="mb-6">
         <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
           <div className="flex items-center gap-4 mb-4">
             <Link
@@ -328,202 +203,255 @@ export default function PreviewCoursePage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                  {course.title}
-                </h1>
-                {isPublishedCourse && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
-                    <PlayCircle className="w-3 h-3" />
-                    System Course
-                  </span>
-                )}
-              </div>
-              <p className="text-darkGrey text-sm mt-1">{course.description}</p>
-              <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
-                <span className="px-2 py-1 bg-white rounded-full">{course.category}</span>
-                <span className="text-darkGrey/60">Instructor: {course.instructorName}</span>
-                {course.duration && (
-                  <span className="text-darkGrey/60">Duration: {course.duration}</span>
-                )}
-                {course.level && (
-                  <span className="text-darkGrey/60">Level: {course.level}</span>
-                )}
-                {course.price && (
-                  <span className="text-darkGrey/60">Price: {course.price}</span>
-                )}
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  course.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {course.status === 'published' ? 'Published' : 'Draft'}
-                </span>
-              </div>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
+                Course Preview
+              </h1>
+              <p className="text-darkGrey text-sm mt-1">Preview how students will see your course</p>
             </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              course.status === 'published' 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {course.status === 'published' ? 'Published' : 'Draft'}
+            </span>
           </div>
+        </div>
+      </div>
 
-          {/* Course Image for published courses */}
-          {isPublishedCourse && course.image && (
-            <div className="mt-4 rounded-lg overflow-hidden h-48 sm:h-64">
+      {/* Course Overview Card */}
+      <div className="bg-white rounded-xl border border-softGrey p-6 mb-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Course Image */}
+          <div className="w-full md:w-48 h-32 rounded-lg overflow-hidden bg-softGrey flex-shrink-0">
+            {course.image ? (
               <img 
                 src={course.image} 
                 alt={course.title}
                 className="w-full h-full object-cover"
               />
-            </div>
-          )}
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <BookOpen className="w-8 h-8" style={{ color: BRAND_COLORS.softGrey }} />
+              </div>
+            )}
+          </div>
 
-          {/* Highlights for published courses */}
-          {isPublishedCourse && course.highlights && course.highlights.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium text-darkGrey mb-2">Course Highlights</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {course.highlights.map((highlight, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-xs text-darkGrey/70">{highlight}</span>
-                  </div>
-                ))}
+          {/* Course Info */}
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+              {course.title}
+            </h2>
+            <p className="text-darkGrey/70 text-sm mb-4">{course.description}</p>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                <Layers className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                <span>{course.stats.slides} Slides</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                <FileText className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                <span>{course.stats.files} Files</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                <HelpCircle className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                <span>{course.stats.quizzes} Quizzes</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                <Award className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                <span>{course.stats.assignments} Assignments</span>
               </div>
             </div>
-          )}
+
+            <div className="flex flex-wrap gap-4 mt-4 text-xs text-darkGrey/60">
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                Duration: {course.duration || 'Self-paced'}
+              </span>
+              <span className="flex items-center gap-1">
+                Level: {course.level || 'All Levels'}
+              </span>
+              <span className="flex items-center gap-1">
+                Instructor: {course.instructorName}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main preview area */}
-      <div className="max-w-4xl mx-auto">
+      {/* Slides List */}
+      <div className="bg-white rounded-xl border border-softGrey p-6">
+        <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
+          Course Content ({slides.length} {slides.length === 1 ? 'Slide' : 'Slides'})
+        </h3>
+
         {slides.length === 0 ? (
-          <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
-            <BookOpen className="w-16 h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-            <h3 className="text-lg font-medium mb-2">No slides yet</h3>
-            <p className="text-darkGrey/70">This course has no content to preview.</p>
+          <div className="text-center py-12 border-2 border-dashed border-softGrey rounded-lg">
+            <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
+            <p className="text-darkGrey/70 text-sm">No slides in this course yet</p>
           </div>
         ) : (
-          <>
-            {/* Slide navigation */}
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={() => setCurrentSlideIndex(i => Math.max(0, i - 1))}
-                disabled={currentSlideIndex === 0}
-                className="p-2 rounded-lg border border-softGrey disabled:opacity-50 disabled:cursor-not-allowed hover:bg-lightGrey transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-darkGrey">
-                  Slide {currentSlideIndex + 1} of {slides.length}
-                </span>
-                {isPublishedCourse && (
-                  <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
-                    Preview Mode
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => setCurrentSlideIndex(i => Math.min(slides.length - 1, i + 1))}
-                disabled={currentSlideIndex === slides.length - 1}
-                className="p-2 rounded-lg border border-softGrey disabled:opacity-50 disabled:cursor-not-allowed hover:bg-lightGrey transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="space-y-3">
+            {slides.map((slide) => {
+              const isExpanded = expandedSlides.has(slide.id);
+              const hasQuiz = slide.quiz && slide.quiz.questions && slide.quiz.questions.length > 0;
+              const hasAssignments = slide.assignments && slide.assignments.length > 0;
+              const hasFiles = slide.files && slide.files.length > 0;
 
-            {/* Current slide title */}
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                {currentSlide?.title}
-              </h2>
-            </div>
-
-            {/* Content files */}
-            {currentContent && currentContent.files.length > 0 && (
-              <div className="bg-white rounded-lg border border-softGrey p-6 mb-6">
-                <h3 className="font-medium text-darkGrey mb-4">Materials</h3>
-                <div className="space-y-3">
-                  {currentContent.files.map(file => (
-                    <div key={file.id} className="flex items-center justify-between p-3 bg-lightGrey rounded-lg">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {getFileIcon(file.type)}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-darkGrey truncate">{file.name}</p>
-                          <p className="text-xs text-darkGrey/60">{formatFileSize(file.size)}</p>
+              return (
+                <div key={slide.id} className="border border-softGrey rounded-lg overflow-hidden">
+                  {/* Slide Header */}
+                  <div 
+                    className="flex items-center justify-between p-4 bg-lightGrey cursor-pointer hover:bg-lightGrey/80 transition-colors"
+                    onClick={() => toggleSlide(slide.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-xs font-medium">
+                        {slide.slideNumber}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-darkGrey">{slide.title}</h4>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-darkGrey/60">
+                          {hasFiles && <span>{slide.files.length} files</span>}
+                          {hasQuiz && <span>1 quiz</span>}
+                          {hasAssignments && <span>{slide.assignments.length} assignments</span>}
                         </div>
                       </div>
-                      {file.url && file.url !== '#' ? (
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1 text-xs bg-darkRoyalBlue text-white rounded hover:bg-darkRoyalBlue/90 transition-colors flex items-center gap-1"
-                        >
-                          <Download className="w-3 h-3" />
-                          View
-                        </a>
+                    </div>
+                    <div>
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-darkGrey/60" />
                       ) : (
-                        <span className="px-3 py-1 text-xs bg-softGrey text-darkGrey/60 rounded">
-                          Preview Only
-                        </span>
+                        <ChevronDown className="w-5 h-5 text-darkGrey/60" />
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {/* Quiz */}
-            {currentQuiz && currentQuiz.questions.length > 0 && (
-              <div className="bg-white rounded-lg border border-softGrey p-6">
-                <h3 className="font-medium text-darkGrey mb-4">Quiz</h3>
-                <div className="space-y-6">
-                  {currentQuiz.questions.map((q, idx) => (
-                    <div key={q.id} className="border-b border-softGrey last:border-0 pb-4 last:pb-0">
-                      <p className="font-medium text-darkGrey mb-2">
-                        {idx + 1}. {q.question}
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {q.options.map((opt, optIdx) => {
-                          const isCorrect = optIdx === q.correctAnswer
-                          return (
-                            <div
-                              key={optIdx}
-                              className={`flex items-center gap-2 p-2 rounded-lg ${
-                                isCorrect ? 'bg-green-50 border border-green-200' : 'bg-lightGrey'
-                              }`}
-                            >
-                              {isCorrect ? (
-                                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                              ) : (
-                                <XCircle className="w-4 h-4 text-darkGrey/30 flex-shrink-0" />
-                              )}
-                              <span className="text-sm text-darkGrey flex-1">{opt}</span>
-                              {isCorrect && (
-                                <span className="ml-auto text-xs font-medium text-green-600">Correct answer</span>
-                              )}
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="p-4 space-y-4">
+                      {/* Files Section */}
+                      {hasFiles && (
+                        <div>
+                          <h5 className="text-sm font-medium text-darkGrey mb-2">Materials</h5>
+                          <div className="space-y-2">
+                            {slide.files.map((file) => (
+                              <div key={file.id} className="flex items-center gap-3 p-2 bg-lightGrey rounded-lg">
+                                {getFileIcon(file.type)}
+                                <div className="flex-1">
+                                  <p className="text-sm text-darkGrey">{file.name}</p>
+                                  <p className="text-xs text-darkGrey/60">
+                                    {(file.size / 1024).toFixed(0)} KB
+                                  </p>
+                                </div>
+                                <a 
+                                  href={file.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-darkRoyalBlue hover:underline"
+                                >
+                                  View
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quiz Section */}
+                      {hasQuiz && slide.quiz && (
+                        <div className={hasFiles ? 'border-t pt-4' : ''}>
+                          <h5 className="text-sm font-medium text-darkGrey mb-2">Quiz</h5>
+                          <div className="bg-lightGrey rounded-lg p-3">
+                            <p className="text-sm text-darkGrey mb-2">
+                              {slide.quiz.questions.length} Question{slide.quiz.questions.length !== 1 ? 's' : ''}
+                            </p>
+                            <div className="space-y-2">
+                              {slide.quiz.questions.map((q, idx) => (
+                                <div key={q.id} className="bg-white rounded-lg p-2 border border-softGrey">
+                                  <p className="text-xs font-medium mb-1">Q{idx + 1}: {q.question}</p>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {q.options.map((opt, optIdx) => (
+                                      <div key={optIdx} className="flex items-center gap-1 text-xs">
+                                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                          optIdx === q.correctAnswer 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                          {String.fromCharCode(65 + optIdx)}
+                                        </span>
+                                        <span className="truncate">{opt}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-darkGrey/60 mt-4">
-                  * Correct answers are highlighted for preview only. Students will see the quiz without indicators.
-                </p>
-              </div>
-            )}
+                          </div>
+                        </div>
+                      )}
 
-            {/* No content message */}
-            {(!currentContent || currentContent.files.length === 0) && (!currentQuiz || currentQuiz.questions.length === 0) && (
-              <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
-                <HelpCircle className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
-                <h3 className="text-base font-medium mb-2">No content on this slide</h3>
-                <p className="text-darkGrey/70 text-sm">
-                  This slide has no files or quiz questions.
-                </p>
-              </div>
-            )}
-          </>
+                      {/* Assignments Section */}
+                      {hasAssignments && (
+                        <div className={(hasFiles || hasQuiz) ? 'border-t pt-4' : ''}>
+                          <h5 className="text-sm font-medium text-darkGrey mb-2">Assignments</h5>
+                          <div className="space-y-2">
+                            {slide.assignments.map((assignment) => (
+                              <div key={assignment.id} className="bg-lightGrey rounded-lg p-3">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-darkGrey">{assignment.title}</p>
+                                    <p className="text-xs text-darkGrey/60 mt-1">{assignment.description}</p>
+                                  </div>
+                                  <span className={`px-2 py-1 rounded-full text-[10px] font-medium ${
+                                    assignment.status === 'published' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {assignment.status}
+                                  </span>
+                                </div>
+                                <div className="flex gap-4 mt-2 text-xs text-darkGrey/60">
+                                  <span>Marks: {assignment.totalMarks}</span>
+                                  <span>Passing: {assignment.passingMarks}</span>
+                                  {assignment.dueDate && (
+                                    <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                                  )}
+                                </div>
+                                {assignment.file && (
+                                  <a 
+                                    href={assignment.file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 mt-2 text-xs text-darkRoyalBlue hover:underline"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    {assignment.file.name}
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
+
+      {/* Back to Edit Button */}
+      <div className="mt-6 flex justify-center">
+        <Link
+          href={`/lms/Instructor_Portal/courses/edit/${courseId}`}
+          className="px-6 py-2.5 bg-darkRoyalBlue text-white rounded-lg font-medium hover:bg-darkRoyalBlue/90 transition-colors"
+        >
+          Edit Course
+        </Link>
+      </div>
     </div>
-  )
+  );
 }

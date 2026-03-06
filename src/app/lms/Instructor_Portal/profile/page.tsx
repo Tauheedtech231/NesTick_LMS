@@ -3,6 +3,7 @@
 /* eslint-disable */
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   User, 
   Mail, 
@@ -10,25 +11,21 @@ import {
   Calendar, 
   Book, 
   Award, 
-  GraduationCap, 
   Briefcase,
-  Star,
-  CheckCircle,
-  XCircle,
   Users,
   Clock,
-  MapPin,
   Plus,
   Trash2,
   Edit2,
   Save,
-  X,
-  Upload,
   Camera,
   Loader2,
   FileText,
   Building2,
-  CalendarDays
+  AlertCircle,
+  RefreshCw,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
 // Brand Colors
@@ -53,30 +50,93 @@ interface Qualification {
   description: string;
 }
 
+interface Experience {
+  id: string;
+  position: string;
+  company: string;
+  duration: string;
+  description: string;
+}
+
 interface InstructorProfile {
   id: string;
-  userId: string;
-  fullName: string;
+  instructor_id: string;
+  full_name: string;
   email: string;
   phone: string;
   specialization: string;
   department: string;
   bio: string;
-  profilePicture: string;
-  qualifications: Qualification[];
-  experience: Qualification[];
-  createdAt: string;
-  updatedAt: string;
+  profile_picture: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InstructorData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+// Success Toast Component
+function SuccessToast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-slideIn">
+      <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 flex items-center gap-3">
+        <CheckCircle className="w-5 h-5 text-green-600" />
+        <p className="text-sm font-medium text-green-800">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// Error Toast Component
+function ErrorToast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-slideIn">
+      <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 flex items-center gap-3">
+        <XCircle className="w-5 h-5 text-red-600" />
+        <p className="text-sm font-medium text-red-800">{message}</p>
+      </div>
+    </div>
+  );
 }
 
 export default function ProfilePage() {
-  const [instructor, setInstructor] = useState<any>(null);
+  const router = useRouter();
+  const [instructor, setInstructor] = useState<InstructorData | null>(null);
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [experience, setExperience] = useState<Experience[]>([]);
+  const [assignedCourse, setAssignedCourse] = useState<any>(null);
+  
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [assignedCourse, setAssignedCourse] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Toast states
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Form states
   const [editForm, setEditForm] = useState({
@@ -96,11 +156,11 @@ export default function ProfilePage() {
     description: ''
   });
 
-  const [newExperience, setNewExperience] = useState<Qualification>({
+  const [newExperience, setNewExperience] = useState<Experience>({
     id: '',
-    degree: '',
-    institution: '',
-    year: '',
+    position: '',
+    company: '',
+    duration: '',
     description: ''
   });
 
@@ -110,80 +170,110 @@ export default function ProfilePage() {
   const [editingExperience, setEditingExperience] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchInstructorData();
+    checkAuthAndFetchData();
   }, []);
 
-  const fetchInstructorData = async () => {
+  const showSuccessToast = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccess(true);
+  };
+
+  const showErrorToast = (message: string) => {
+    setErrorMessage(message);
+    setShowError(true);
+  };
+
+  const checkAuthAndFetchData = async () => {
     try {
       const userData = localStorage.getItem('currentUser');
-      
-      if (userData) {
-        const user = JSON.parse(userData);
-        console.log('Profile - Current user:', user);
-        
-        if (user.role === 'instructor') {
-          // Get instructor credentials from instructor_users
-          const instructorUsers = JSON.parse(localStorage.getItem('instructor_users') || '[]');
-          const instructorUser = instructorUsers.find((inst: any) => 
-            inst.email === user.email || inst.id === user.id
-          );
-          
-          // Get or create instructor profile
-          let instructorProfiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-          let instructorProfile = instructorProfiles.find((p: InstructorProfile) => 
-            p.userId === user.id || p.email === user.email
-          );
-
-          if (!instructorProfile) {
-            // Create default profile
-            instructorProfile = {
-              id: `profile_${Date.now()}`,
-              userId: user.id,
-              fullName: instructorUser?.name || user.name || user.email.split('@')[0],
-              email: instructorUser?.email || user.email,
-              phone: instructorUser?.phone || '',
-              specialization: '',
-              department: '',
-              bio: 'No biography available.',
-              profilePicture: '',
-              qualifications: [],
-              experience: [],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-            
-            instructorProfiles.push(instructorProfile);
-            localStorage.setItem('instructor_profiles', JSON.stringify(instructorProfiles));
-          }
-
-          // Get assigned course
-          if (instructorUser?.courseId) {
-            const courses = JSON.parse(localStorage.getItem('lms_courses') || '[]');
-            const course = courses.find((c: any) => c.id === instructorUser.courseId);
-            setAssignedCourse(course);
-          }
-
-          setInstructor({
-            ...user,
-            ...instructorUser,
-            isDemoAccount: user.email === 'instructor@gmail.com'
-          });
-
-          setProfile(instructorProfile);
-          setEditForm({
-            fullName: instructorProfile.fullName,
-            email: instructorProfile.email,
-            phone: instructorProfile.phone || '',
-            specialization: instructorProfile.specialization || '',
-            department: instructorProfile.department || '',
-            bio: instructorProfile.bio || ''
-          });
-        }
+      if (!userData) {
+        router.push('/lms/auth/login?type=instructor');
+        return;
       }
+
+      const user = JSON.parse(userData);
+      if (user.role !== 'instructor') {
+        router.push('/lms/auth/login?type=instructor');
+        return;
+      }
+
+      setInstructor(user);
+      await fetchProfileData(user.id);
+      
     } catch (error) {
-      console.error('Error fetching instructor data:', error);
+      console.error('Auth error:', error);
+      setError('Authentication failed');
+      setLoading(false);
+    }
+  };
+
+  const fetchProfileData = async (instructorId: string, showRefreshing = false) => {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      console.log('🔍 Fetching profile for instructor:', instructorId);
+
+      const response = await fetch(`/api/instructors/profile?instructorId=${instructorId}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch profile');
+      }
+
+      if (result.success) {
+        const { profile: profileData, qualifications: quals, experience: exp, assignedCourse: course } = result.data;
+        
+        setProfile(profileData);
+        
+        // Map qualifications
+        const mappedQuals = (quals || []).map((q: any) => ({
+          id: q.id,
+          degree: q.degree,
+          institution: q.institution,
+          year: q.year || '',
+          description: q.description || ''
+        }));
+        setQualifications(mappedQuals);
+        
+        // Map experience
+        const mappedExp = (exp || []).map((e: any) => ({
+          id: e.id,
+          position: e.position,
+          company: e.company,
+          duration: e.duration || '',
+          description: e.description || ''
+        }));
+        setExperience(mappedExp);
+        
+        setAssignedCourse(course);
+        
+        setEditForm({
+          fullName: profileData.full_name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          specialization: profileData.specialization || '',
+          department: profileData.department || '',
+          bio: profileData.bio || 'No biography available.'
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      setError(error.message || 'Failed to load profile');
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (instructor) {
+      fetchProfileData(instructor.id, true);
     }
   };
 
@@ -192,150 +282,179 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (JPEG, PNG)');
+      showErrorToast('Please upload an image file (JPEG, PNG)');
       return;
     }
 
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('File size should be less than 2MB');
+      showErrorToast('File size should be less than 2MB');
       return;
     }
 
     setUploading(true);
 
     try {
-      // Create form data
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'profile');
-      formData.append('userId', profile.userId);
+      formData.append('profileId', profile.id);
 
-      // Upload to Cloudinary via API route
-      const response = await fetch('/api/upload/cloudinary', {
+      const response = await fetch('/api/instructors/profile/upload', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
       const result = await response.json();
 
-      if (result.success) {
-        // Update profile with new image URL
-        const updatedProfile = {
-          ...profile,
-          profilePicture: result.data.secure_url,
-          updatedAt: new Date().toISOString()
-        };
-
-        // Save to localStorage
-        const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-        const updatedProfiles = profiles.map((p: InstructorProfile) =>
-          p.id === profile.id ? updatedProfile : p
-        );
-        localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
-
-        setProfile(updatedProfile);
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
       }
-    } catch (error) {
+
+      if (result.success) {
+        setProfile({
+          ...profile,
+          profile_picture: result.data.url,
+          updated_at: new Date().toISOString()
+        });
+        showSuccessToast('Profile picture updated successfully');
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      showErrorToast(error.message || 'Failed to upload image');
     } finally {
       setUploading(false);
     }
   };
 
   // ============ PERSONAL INFO SAVE ============
-  const handleSavePersonalInfo = () => {
+  const handleSavePersonalInfo = async () => {
     if (!profile) return;
 
-    // Validate required fields
     if (!editForm.fullName.trim()) {
-      alert('Full name is required');
+      showErrorToast('Full name is required');
       return;
     }
 
     if (!editForm.email.trim()) {
-      alert('Email is required');
+      showErrorToast('Email is required');
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(editForm.email)) {
-      alert('Please enter a valid email address');
+      showErrorToast('Please enter a valid email address');
       return;
     }
 
-    const updatedProfile = {
-      ...profile,
-      fullName: editForm.fullName,
-      email: editForm.email,
-      phone: editForm.phone,
-      specialization: editForm.specialization,
-      department: editForm.department,
-      bio: editForm.bio,
-      updatedAt: new Date().toISOString()
-    };
+    setSaving(true);
 
-    // Save to localStorage
-    const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-    const updatedProfiles = profiles.map((p: InstructorProfile) =>
-      p.id === profile.id ? updatedProfile : p
-    );
-    localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
+    try {
+      const response = await fetch('/api/instructors/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: profile.id,
+          data: editForm
+        })
+      });
 
-    setProfile(updatedProfile);
-    setEditMode(false);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+
+      if (result.success) {
+        setProfile({
+          ...profile,
+          full_name: result.data.full_name,
+          email: result.data.email,
+          phone: result.data.phone || '',
+          specialization: result.data.specialization || '',
+          department: result.data.department || '',
+          bio: result.data.bio || '',
+          updated_at: result.data.updated_at
+        });
+        setEditMode(false);
+        showSuccessToast('Profile updated successfully');
+      }
+    } catch (error: any) {
+      console.error('Save error:', error);
+      showErrorToast(error.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // ============ QUALIFICATIONS ============
-  const handleAddQualification = () => {
-    if (!profile) return;
-
-    if (!newQualification.degree.trim() || !newQualification.institution.trim()) {
-      alert('Degree and Institution are required');
+  // ============ QUALIFICATIONS - FIXED ============
+  const handleAddQualification = async () => {
+    if (!profile) {
+      showErrorToast('Profile not found');
       return;
     }
 
-    const qualification: Qualification = {
-      ...newQualification,
-      id: editingQualification || `qual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    let updatedQualifications;
-    if (editingQualification) {
-      // Edit existing
-      updatedQualifications = profile.qualifications.map(q =>
-        q.id === editingQualification ? qualification : q
-      );
-    } else {
-      // Add new
-      updatedQualifications = [...profile.qualifications, qualification];
+    if (!newQualification.degree.trim() || !newQualification.institution.trim()) {
+      showErrorToast('Degree and Institution are required');
+      return;
     }
 
-    const updatedProfile = {
-      ...profile,
-      qualifications: updatedQualifications,
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      // Prepare qualification object - NO ID for add action
+      const qualificationData: any = {
+        degree: newQualification.degree,
+        institution: newQualification.institution,
+        year: newQualification.year || '',
+        description: newQualification.description || ''
+      };
 
-    // Save to localStorage
-    const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-    const updatedProfiles = profiles.map((p: InstructorProfile) =>
-      p.id === profile.id ? updatedProfile : p
-    );
-    localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
+      // ONLY add id for update action
+      if (editingQualification) {
+        qualificationData.id = editingQualification;
+      }
 
-    setProfile(updatedProfile);
-    setNewQualification({ id: '', degree: '', institution: '', year: '', description: '' });
-    setShowQualificationForm(false);
-    setEditingQualification(null);
+      const requestBody = {
+        action: editingQualification ? 'update' : 'add',
+        profileId: profile.id,
+        qualification: qualificationData
+      };
+
+      console.log('📤 Sending qualification request:', requestBody);
+
+      const response = await fetch('/api/instructors/profile/qualifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save qualification');
+      }
+
+      if (result.success) {
+        // Update qualifications state with the returned data
+        const updatedQuals = result.data.map((q: any) => ({
+          id: q.id,
+          degree: q.degree,
+          institution: q.institution,
+          year: q.year || '',
+          description: q.description || ''
+        }));
+        
+        setQualifications(updatedQuals);
+        
+        // Reset form
+        setNewQualification({ id: '', degree: '', institution: '', year: '', description: '' });
+        setShowQualificationForm(false);
+        setEditingQualification(null);
+        
+        showSuccessToast(editingQualification ? 'Qualification updated successfully' : 'Qualification added successfully');
+      }
+    } catch (error: any) {
+      console.error('Error saving qualification:', error);
+      showErrorToast(error.message || 'Failed to save qualification');
+    }
   };
 
   const handleEditQualification = (qualification: Qualification) => {
@@ -344,92 +463,161 @@ export default function ProfilePage() {
     setShowQualificationForm(true);
   };
 
-  const handleRemoveQualification = (id: string) => {
-    if (!profile) return;
-    if (!confirm('Are you sure you want to remove this qualification?')) return;
+  const handleRemoveQualification = async (id: string) => {
+    if (!profile || !confirm('Are you sure you want to remove this qualification?')) return;
 
-    const updatedProfile = {
-      ...profile,
-      qualifications: profile.qualifications.filter(q => q.id !== id),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const response = await fetch('/api/instructors/profile/qualifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          profileId: profile.id,
+          qualification: { id }
+        })
+      });
 
-    const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-    const updatedProfiles = profiles.map((p: InstructorProfile) =>
-      p.id === profile.id ? updatedProfile : p
-    );
-    localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
+      const result = await response.json();
 
-    setProfile(updatedProfile);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove qualification');
+      }
+
+      if (result.success) {
+        // Update qualifications state with the returned data
+        const updatedQuals = result.data.map((q: any) => ({
+          id: q.id,
+          degree: q.degree,
+          institution: q.institution,
+          year: q.year || '',
+          description: q.description || ''
+        }));
+        
+        setQualifications(updatedQuals);
+        showSuccessToast('Qualification removed successfully');
+      }
+    } catch (error: any) {
+      console.error('Error removing qualification:', error);
+      showErrorToast(error.message || 'Failed to remove qualification');
+    }
   };
 
-  // ============ EXPERIENCE ============
-  const handleAddExperience = () => {
-    if (!profile) return;
-
-    if (!newExperience.degree.trim() || !newExperience.institution.trim()) {
-      alert('Position and Company are required');
+  // ============ EXPERIENCE - FIXED ============
+  const handleAddExperience = async () => {
+    if (!profile) {
+      showErrorToast('Profile not found');
       return;
     }
 
-    const experience: Qualification = {
-      ...newExperience,
-      id: editingExperience || `exp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    let updatedExperience;
-    if (editingExperience) {
-      updatedExperience = profile.experience.map(e =>
-        e.id === editingExperience ? experience : e
-      );
-    } else {
-      updatedExperience = [...profile.experience, experience];
+    if (!newExperience.position.trim() || !newExperience.company.trim()) {
+      showErrorToast('Position and Company are required');
+      return;
     }
 
-    const updatedProfile = {
-      ...profile,
-      experience: updatedExperience,
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      // Prepare experience object - NO ID for add action
+      const experienceData: any = {
+        position: newExperience.position,
+        company: newExperience.company,
+        duration: newExperience.duration || '',
+        description: newExperience.description || ''
+      };
 
-    const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-    const updatedProfiles = profiles.map((p: InstructorProfile) =>
-      p.id === profile.id ? updatedProfile : p
-    );
-    localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
+      // ONLY add id for update action
+      if (editingExperience) {
+        experienceData.id = editingExperience;
+      }
 
-    setProfile(updatedProfile);
-    setNewExperience({ id: '', degree: '', institution: '', year: '', description: '' });
-    setShowExperienceForm(false);
-    setEditingExperience(null);
+      const requestBody = {
+        action: editingExperience ? 'update' : 'add',
+        profileId: profile.id,
+        experience: experienceData
+      };
+
+      console.log('📤 Sending experience request:', requestBody);
+
+      const response = await fetch('/api/instructors/profile/experience', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save experience');
+      }
+
+      if (result.success) {
+        // Update experience state with the returned data
+        const updatedExp = result.data.map((e: any) => ({
+          id: e.id,
+          position: e.position,
+          company: e.company,
+          duration: e.duration || '',
+          description: e.description || ''
+        }));
+        
+        setExperience(updatedExp);
+        
+        // Reset form
+        setNewExperience({ id: '', position: '', company: '', duration: '', description: '' });
+        setShowExperienceForm(false);
+        setEditingExperience(null);
+        
+        showSuccessToast(editingExperience ? 'Experience updated successfully' : 'Experience added successfully');
+      }
+    } catch (error: any) {
+      console.error('Error saving experience:', error);
+      showErrorToast(error.message || 'Failed to save experience');
+    }
   };
 
-  const handleEditExperience = (experience: Qualification) => {
-    setNewExperience(experience);
-    setEditingExperience(experience.id);
+  const handleEditExperience = (exp: Experience) => {
+    setNewExperience(exp);
+    setEditingExperience(exp.id);
     setShowExperienceForm(true);
   };
 
-  const handleRemoveExperience = (id: string) => {
-    if (!profile) return;
-    if (!confirm('Are you sure you want to remove this experience?')) return;
+  const handleRemoveExperience = async (id: string) => {
+    if (!profile || !confirm('Are you sure you want to remove this experience?')) return;
 
-    const updatedProfile = {
-      ...profile,
-      experience: profile.experience.filter(e => e.id !== id),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const response = await fetch('/api/instructors/profile/experience', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          profileId: profile.id,
+          experience: { id }
+        })
+      });
 
-    const profiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-    const updatedProfiles = profiles.map((p: InstructorProfile) =>
-      p.id === profile.id ? updatedProfile : p
-    );
-    localStorage.setItem('instructor_profiles', JSON.stringify(updatedProfiles));
+      const result = await response.json();
 
-    setProfile(updatedProfile);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove experience');
+      }
+
+      if (result.success) {
+        // Update experience state with the returned data
+        const updatedExp = result.data.map((e: any) => ({
+          id: e.id,
+          position: e.position,
+          company: e.company,
+          duration: e.duration || '',
+          description: e.description || ''
+        }));
+        
+        setExperience(updatedExp);
+        showSuccessToast('Experience removed successfully');
+      }
+    } catch (error: any) {
+      console.error('Error removing experience:', error);
+      showErrorToast(error.message || 'Failed to remove experience');
+    }
   };
 
-  // Helper functions
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -439,7 +627,7 @@ export default function ProfilePage() {
   };
 
   const getInitials = (name: string) => {
-    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   if (loading) {
@@ -455,13 +643,19 @@ export default function ProfilePage() {
     );
   }
 
-  if (!instructor || !profile) {
+  if (error || !profile || !instructor) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6">
-        <div className="text-center py-8 sm:py-12">
-          <User className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
-          <h3 className="text-base sm:text-lg font-medium mb-1" style={{ color: BRAND_COLORS.darkGrey }}>No profile data found</h3>
-          <p className="text-darkGrey/70 text-sm">Please log in as an instructor to view profile.</p>
+        <div className="max-w-md mx-auto text-center py-12">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold mb-2 text-darkGrey">Error Loading Profile</h3>
+          <p className="text-darkGrey/70 mb-6">{error || 'Profile not found'}</p>
+          <button
+            onClick={() => router.push('/lms/Instructor_Portal/dashboard')}
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -469,6 +663,20 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
+      {/* Toasts */}
+      {showSuccess && (
+        <SuccessToast
+          message={successMessage}
+          onClose={() => setShowSuccess(false)}
+        />
+      )}
+      {showError && (
+        <ErrorToast
+          message={errorMessage}
+          onClose={() => setShowError(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <div className="bg-lightGrey rounded-xl p-4 sm:p-5 border border-softGrey">
@@ -481,49 +689,69 @@ export default function ProfilePage() {
                 Manage your personal information, qualifications, and experience
               </p>
             </div>
-            {!editMode ? (
+            <div className="flex gap-2">
               <button
-                onClick={() => setEditMode(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ 
-                  backgroundColor: BRAND_COLORS.darkRoyalBlue,
-                  color: BRAND_COLORS.white 
-                }}
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-darkGrey/30 hover:bg-lightGrey"
               >
-                <Edit2 className="w-4 h-4" />
-                Edit Profile
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
               </button>
-            ) : (
-              <div className="flex gap-2">
+              {!editMode ? (
                 <button
-                  onClick={() => {
-                    setEditMode(false);
-                    setEditForm({
-                      fullName: profile.fullName,
-                      email: profile.email,
-                      phone: profile.phone || '',
-                      specialization: profile.specialization || '',
-                      department: profile.department || '',
-                      bio: profile.bio || ''
-                    });
-                  }}
-                  className="px-4 py-2 border border-darkGrey/30 rounded-lg text-sm font-medium hover:bg-lightGrey transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSavePersonalInfo}
+                  onClick={() => setEditMode(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   style={{ 
-                    backgroundColor: BRAND_COLORS.deepRed,
+                    backgroundColor: BRAND_COLORS.darkRoyalBlue,
                     color: BRAND_COLORS.white 
                   }}
                 >
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                  <Edit2 className="w-4 h-4" />
+                  Edit Profile
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditMode(false);
+                      setEditForm({
+                        fullName: profile.full_name,
+                        email: profile.email,
+                        phone: profile.phone || '',
+                        specialization: profile.specialization || '',
+                        department: profile.department || '',
+                        bio: profile.bio || ''
+                      });
+                    }}
+                    className="px-4 py-2 border border-darkGrey/30 rounded-lg text-sm font-medium hover:bg-lightGrey transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSavePersonalInfo}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ 
+                      backgroundColor: BRAND_COLORS.deepRed,
+                      color: BRAND_COLORS.white 
+                    }}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="h-1 w-12 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
         </div>
@@ -537,10 +765,10 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 mb-5 sm:mb-6">
               {/* Profile Picture with Upload */}
               <div className="relative group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-lightGrey flex items-center justify-center">
-                {profile.profilePicture ? (
+                {profile.profile_picture ? (
                   <img
-                    src={profile.profilePicture}
-                    alt={profile.fullName}
+                    src={profile.profile_picture}
+                    alt={profile.full_name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -551,7 +779,7 @@ export default function ProfilePage() {
                       color: BRAND_COLORS.white,
                     }}
                   >
-                    {getInitials(profile.fullName)}
+                    {getInitials(profile.full_name)}
                   </div>
                 )}
 
@@ -583,12 +811,7 @@ export default function ProfilePage() {
                       placeholder="Full Name"
                     />
                   ) : (
-                    <h2 className="text-xl sm:text-2xl font-bold text-darkGrey">{profile.fullName}</h2>
-                  )}
-                  {instructor.isDemoAccount && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
-                      Demo
-                    </span>
+                    <h2 className="text-xl sm:text-2xl font-bold text-darkGrey">{profile.full_name}</h2>
                   )}
                 </div>
                 
@@ -700,7 +923,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-xs sm:text-sm text-darkGrey/70">Member Since</p>
                     <p className="font-medium text-darkGrey text-sm">
-                      {formatDate(profile.createdAt)}
+                      {formatDate(profile.created_at)}
                     </p>
                   </div>
                 </div>
@@ -716,7 +939,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-xs sm:text-sm text-darkGrey/70">Last Updated</p>
                     <p className="font-medium text-darkGrey text-sm">
-                      {formatDate(profile.updatedAt)}
+                      {formatDate(profile.updated_at)}
                     </p>
                   </div>
                 </div>
@@ -827,9 +1050,9 @@ export default function ProfilePage() {
             )}
 
             {/* Qualifications List */}
-            {profile.qualifications.length > 0 ? (
+            {qualifications.length > 0 ? (
               <div className="space-y-2">
-                {profile.qualifications.map((qual) => (
+                {qualifications.map((qual) => (
                   <div key={qual.id} className="flex items-start justify-between p-2 border border-softGrey rounded-lg hover:bg-lightGrey/50">
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -860,7 +1083,11 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-darkGrey/70 py-4 text-sm">No qualifications added yet.</p>
+              <div className="text-center py-6">
+                <Award className="w-8 h-8 mx-auto mb-2 text-darkGrey/30" />
+                <p className="text-darkGrey/70 text-sm">No qualifications added yet.</p>
+                <p className="text-xs text-darkGrey/50 mt-1">Click "Add" to add your qualifications</p>
+              </div>
             )}
           </div>
 
@@ -870,7 +1097,7 @@ export default function ProfilePage() {
               <h3 className="text-base sm:text-lg font-semibold text-darkGrey">Work Experience</h3>
               <button
                 onClick={() => {
-                  setNewExperience({ id: '', degree: '', institution: '', year: '', description: '' });
+                  setNewExperience({ id: '', position: '', company: '', duration: '', description: '' });
                   setEditingExperience(null);
                   setShowExperienceForm(true);
                 }}
@@ -894,22 +1121,22 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <input
                     type="text"
-                    value={newExperience.degree}
-                    onChange={(e) => setNewExperience({ ...newExperience, degree: e.target.value })}
+                    value={newExperience.position}
+                    onChange={(e) => setNewExperience({ ...newExperience, position: e.target.value })}
                     placeholder="Position / Job Title *"
                     className="w-full px-2 py-1.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
                   />
                   <input
                     type="text"
-                    value={newExperience.institution}
-                    onChange={(e) => setNewExperience({ ...newExperience, institution: e.target.value })}
+                    value={newExperience.company}
+                    onChange={(e) => setNewExperience({ ...newExperience, company: e.target.value })}
                     placeholder="Company / Organization *"
                     className="w-full px-2 py-1.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
                   />
                   <input
                     type="text"
-                    value={newExperience.year}
-                    onChange={(e) => setNewExperience({ ...newExperience, year: e.target.value })}
+                    value={newExperience.duration}
+                    onChange={(e) => setNewExperience({ ...newExperience, duration: e.target.value })}
                     placeholder="Duration (e.g., 2020-2023)"
                     className="w-full px-2 py-1.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
                   />
@@ -931,7 +1158,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         setShowExperienceForm(false);
                         setEditingExperience(null);
-                        setNewExperience({ id: '', degree: '', institution: '', year: '', description: '' });
+                        setNewExperience({ id: '', position: '', company: '', duration: '', description: '' });
                       }}
                       className="px-3 py-1.5 border border-darkGrey/30 rounded-lg text-sm font-medium"
                     >
@@ -943,17 +1170,17 @@ export default function ProfilePage() {
             )}
 
             {/* Experience List */}
-            {profile.experience.length > 0 ? (
+            {experience.length > 0 ? (
               <div className="space-y-2">
-                {profile.experience.map((exp) => (
+                {experience.map((exp) => (
                   <div key={exp.id} className="flex items-start justify-between p-2 border border-softGrey rounded-lg hover:bg-lightGrey/50">
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <Briefcase className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
-                        <h4 className="font-medium text-darkGrey text-sm">{exp.degree}</h4>
+                        <h4 className="font-medium text-darkGrey text-sm">{exp.position}</h4>
                       </div>
-                      <p className="text-xs text-darkGrey/70">{exp.institution}</p>
-                      {exp.year && <p className="text-xs text-darkGrey/60 mt-0.5">{exp.year}</p>}
+                      <p className="text-xs text-darkGrey/70">{exp.company}</p>
+                      {exp.duration && <p className="text-xs text-darkGrey/60 mt-0.5">{exp.duration}</p>}
                       {exp.description && (
                         <p className="text-xs text-darkGrey/70 mt-1">{exp.description}</p>
                       )}
@@ -976,7 +1203,11 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-darkGrey/70 py-4 text-sm">No work experience added yet.</p>
+              <div className="text-center py-6">
+                <Briefcase className="w-8 h-8 mx-auto mb-2 text-darkGrey/30" />
+                <p className="text-darkGrey/70 text-sm">No work experience added yet.</p>
+                <p className="text-xs text-darkGrey/50 mt-1">Click "Add" to add your experience</p>
+              </div>
             )}
           </div>
 
@@ -1007,7 +1238,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-1.5 text-sm">
                       <Users className="w-4 h-4 text-darkGrey/70" />
                       <span className="text-darkGrey/70 text-xs">Capacity:</span>
-                      <span className="text-darkGrey text-xs">{assignedCourse.students}</span>
+                      <span className="text-darkGrey text-xs">{assignedCourse.student_capacity || assignedCourse.students}</span>
                     </div>
                   </div>
                 </div>
@@ -1031,22 +1262,22 @@ export default function ProfilePage() {
               Account Statistics
             </h3>
 
-            <ul className="list-disc list-inside space-y-1.5 text-sm text-darkGrey">
-              <li>
-                <span className="font-medium text-darkNavy">Assigned Course:</span>{" "}
-                {assignedCourse ? "1" : "None"}
+            <ul className="space-y-2 text-sm text-darkGrey">
+              <li className="flex justify-between">
+                <span className="text-darkGrey/70">Assigned Course:</span>
+                <span className="font-medium">{assignedCourse ? "1" : "None"}</span>
               </li>
-              <li>
-                <span className="font-medium text-darkNavy">Qualifications:</span>{" "}
-                {profile.qualifications.length}
+              <li className="flex justify-between">
+                <span className="text-darkGrey/70">Qualifications:</span>
+                <span className="font-medium">{qualifications.length}</span>
               </li>
-              <li>
-                <span className="font-medium text-darkNavy">Experience:</span>{" "}
-                {profile.experience.length}
+              <li className="flex justify-between">
+                <span className="text-darkGrey/70">Experience:</span>
+                <span className="font-medium">{experience.length}</span>
               </li>
-              <li>
-                <span className="font-medium text-darkNavy">Member Since:</span>{" "}
-                {formatDate(profile.createdAt)}
+              <li className="flex justify-between">
+                <span className="text-darkGrey/70">Member Since:</span>
+                <span className="font-medium">{formatDate(profile.created_at)}</span>
               </li>
             </ul>
           </div>
@@ -1057,34 +1288,26 @@ export default function ProfilePage() {
               Account Type
             </h3>
 
-            <ol className="list-decimal list-inside space-y-1.5 text-sm text-darkGrey">
-              <li>
-                <span className="font-medium">Role:</span>{" "}
-                <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-darkGrey/70">Role:</span>
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-600">
                   Instructor
                 </span>
-              </li>
-              <li>
-                <span className="font-medium">Account Status:</span>{" "}
-                <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-darkGrey/70">Status:</span>
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
                   Active
                 </span>
-              </li>
-              <li>
-                <span className="font-medium">Account Type:</span>{" "}
-                <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
-                  instructor.isDemoAccount ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
-                }`}>
-                  {instructor.isDemoAccount ? 'Demo Account' : 'Regular Account'}
-                </span>
-              </li>
-              <li>
-                <span className="font-medium">Profile ID:</span>{" "}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-darkGrey/70">Profile ID:</span>
                 <span className="text-xs font-mono text-darkGrey/70 truncate max-w-[120px]">
-                  {profile.id}
+                  {profile.id.substring(0, 8)}...
                 </span>
-              </li>
-            </ol>
+              </div>
+            </div>
           </div>
 
           {/* Profile Completion */}
@@ -1093,11 +1316,11 @@ export default function ProfilePage() {
               Profile Completion
             </h3>
             
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <div>
-                <div className="flex justify-between text-sm mb-0.5">
-                  <span className="text-darkGrey text-xs">Personal Info</span>
-                  <span className="font-medium text-darkRoyalBlue text-xs">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-darkGrey">Personal Info</span>
+                  <span className="font-medium text-darkRoyalBlue">
                     {editForm.fullName && editForm.email ? '100%' : '50%'}
                   </span>
                 </div>
@@ -1107,52 +1330,42 @@ export default function ProfilePage() {
               </div>
               
               <div>
-                <div className="flex justify-between text-sm mb-0.5">
-                  <span className="text-darkGrey text-xs">Qualifications</span>
-                  <span className="font-medium text-darkRoyalBlue text-xs">
-                    {profile.qualifications.length > 0 ? '100%' : '0%'}
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-darkGrey">Qualifications</span>
+                  <span className="font-medium text-darkRoyalBlue">
+                    {qualifications.length > 0 ? '100%' : '0%'}
                   </span>
                 </div>
                 <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
-                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: profile.qualifications.length > 0 ? '100%' : '0%' }}></div>
+                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: qualifications.length > 0 ? '100%' : '0%' }}></div>
                 </div>
               </div>
               
               <div>
-                <div className="flex justify-between text-sm mb-0.5">
-                  <span className="text-darkGrey text-xs">Experience</span>
-                  <span className="font-medium text-darkRoyalBlue text-xs">
-                    {profile.experience.length > 0 ? '100%' : '0%'}
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-darkGrey">Experience</span>
+                  <span className="font-medium text-darkRoyalBlue">
+                    {experience.length > 0 ? '100%' : '0%'}
                   </span>
                 </div>
                 <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
-                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: profile.experience.length > 0 ? '100%' : '0%' }}></div>
+                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: experience.length > 0 ? '100%' : '0%' }}></div>
                 </div>
               </div>
               
               <div>
-                <div className="flex justify-between text-sm mb-0.5">
-                  <span className="text-darkGrey text-xs">Profile Picture</span>
-                  <span className="font-medium text-darkRoyalBlue text-xs">
-                    {profile.profilePicture ? '100%' : '0%'}
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-darkGrey">Profile Picture</span>
+                  <span className="font-medium text-darkRoyalBlue">
+                    {profile.profile_picture ? '100%' : '0%'}
                   </span>
                 </div>
                 <div className="h-1.5 bg-lightGrey rounded-full overflow-hidden">
-                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: profile.profilePicture ? '100%' : '0%' }}></div>
+                  <div className="h-full bg-darkRoyalBlue rounded-full" style={{ width: profile.profile_picture ? '100%' : '0%' }}></div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Demo Account Notice */}
-          {instructor.isDemoAccount && (
-            <div className="bg-lightGrey rounded-lg p-3 border border-softGrey">
-              <h4 className="font-medium text-darkGrey text-sm mb-1">Demo Account Notice</h4>
-              <p className="text-xs text-darkGrey/70">
-                This is a demo instructor account. Contact admin for full access.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

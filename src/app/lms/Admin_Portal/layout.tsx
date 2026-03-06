@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminNavbar from './AdminHeader'
-import DataInitializer from './components/DataInitializer'
 
 // Loading component for admin layout
 function AdminLayoutLoading() {
@@ -48,19 +47,16 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
-      <DataInitializer />
-      <div className="min-h-screen bg-gray-50">
-        <AdminNavbar />
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar />
 
-        {/* Main Content */}
-        <main className="min-h-screen md:ml-72">
-          <div className="p-4 md:p-6">
-            {children}
-          </div>
-        </main>
-      </div>
-    </>
+      {/* Main Content */}
+      <main className="min-h-screen md:ml-72">
+        <div className="p-4 md:p-6">
+          {children}
+        </div>
+      </main>
+    </div>
   )
 }
 

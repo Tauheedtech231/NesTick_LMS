@@ -700,7 +700,7 @@ export default function CoursesPage1() {
                     </div>
 
                     <Link
-                      href={`/courses/${course.id}`}
+                      href={`/courses`}
                       className="block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] group"
                       style={{
                         backgroundColor:
@@ -711,7 +711,7 @@ export default function CoursesPage1() {
                       }}
                     >
                       <span className="flex items-center justify-center text-sm">
-                        View Course Details
+                        View more
                         <HiArrowRight className="w-3 h-3 ml-2 transform group-hover:translate-x-1 transition-transform" />
                       </span>
                     </Link>

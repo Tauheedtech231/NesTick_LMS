@@ -1,7 +1,7 @@
 // app/api/upload/route.ts
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-
+/* eslint-disable */
 // Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dfp9qc0gu',

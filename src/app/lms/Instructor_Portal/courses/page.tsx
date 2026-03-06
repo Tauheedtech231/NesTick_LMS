@@ -8,18 +8,18 @@ import {
   BookOpen,
   Plus,
   Search,
-  Edit,
   Trash2,
-  Eye,
   CheckCircle,
   XCircle,
   ChevronDown,
   SlidersHorizontal,
   FileVideo,
-  PlayCircle,
-  FileText
+  RefreshCw,
+  AlertCircle,
+  Loader2,
+  Eye
 } from 'lucide-react'
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -31,61 +31,6 @@ const BRAND_COLORS = {
   teal: '#1FB6C9',
   brightRed: '#D32F2F'
 }
-
-// Published courses data with course images
-const publishedCourses = [
-  {
-    id: 'pipe-fitter',
-    title: 'Pipe Fitter',
-    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-    studentCapacity: 20,
-    category: 'Technical Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    courseImage: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-    duration: '8 Weeks',
-    level: 'Beginner to Advanced',
-    price: 'PKR 25,000'
-  },
-  {
-    id: 'safety-inspector',
-    title: 'Safety Inspector',
-    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-    studentCapacity: 15,
-    category: 'Safety Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    courseImage: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-    duration: '6 Weeks',
-    level: 'Intermediate',
-    price: 'PKR 30,000'
-  },
-  {
-    id: 'welding',
-    title: 'Professional Welding',
-    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-    studentCapacity: 12,
-    category: 'Technical Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    courseImage: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-    duration: '10 Weeks',
-    level: 'Beginner to Professional',
-    price: 'PKR 35,000'
-  }
-];
 
 interface Course {
   id: string;
@@ -101,62 +46,17 @@ interface Course {
   updatedAt: string;
   isPublished?: boolean;
   courseImage?: string;
+  image?: string;
   duration?: string;
   level?: string;
   price?: string;
-}
-
-interface Slide {
-  id: string;
-  courseId: string;
-  slideNumber: number;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface SlideContent {
-  slideId: string;
-  courseId: string;
-  files: {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
-  }[];
-}
-/* eslint-disable */
-
-interface Quiz {
-  slideId: string;
-  courseId: string;
-  questions: any[];
-}
-
-interface Assignment {
-  id: string;
-  courseId: string;
-  title: string;
-  description: string;
-  dueDate: string;
-  totalMarks: number;
-  passingMarks: number;
-  file?: {
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
+  stats?: {
+    slides: number;
+    files: number;
+    quizzes: number;
+    assignments: number;
   };
-  status: 'published' | 'draft';
-  createdAt: string;
-  updatedAt: string;
 }
-/* eslint-disable */
 
 export default function CoursesPage() {
   const router = useRouter()
@@ -164,30 +64,22 @@ export default function CoursesPage() {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([])
   const [instructor, setInstructor] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all')
   const [showFilters, setShowFilters] = useState(false)
-  const [courseStats, setCourseStats] = useState<{
-    [key: string]: {
-      slides: number, 
-      files: number, 
-      quizzes: number,
-      assignments: number
-    }
-  }>({})
-  const [showPublished, setShowPublished] = useState(true)
 
   useEffect(() => {
-    loadInstructorData()
+    checkAuthAndLoadData()
   }, [])
 
   useEffect(() => {
     filterCourses()
-  }, [searchTerm, statusFilter, courses, showPublished])
+  }, [searchTerm, statusFilter, courses])
 
-  const loadInstructorData = () => {
+  const checkAuthAndLoadData = async () => {
     try {
-      // Get current instructor
       const currentUserStr = localStorage.getItem('currentUser')
       if (!currentUserStr) {
         router.push('/lms/auth/login?type=instructor')
@@ -201,119 +93,72 @@ export default function CoursesPage() {
       }
 
       setInstructor(currentUser)
-
-      // Load courses from localStorage for this instructor
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-      const instructorCourses = allCourses.filter((c: Course) => 
-        c.instructorId === currentUser.id || c.instructorName === currentUser.name
-      ).map((c: any) => ({
-        ...c,
-        courseImage: c.image || c.courseImage,
-      }))
-      
-      // Combine with published courses if enabled
-      let allAvailableCourses = [...instructorCourses]
-      
-      if (showPublished) {
-        allAvailableCourses = [...publishedCourses, ...instructorCourses]
-      }
-      
-      setCourses(allAvailableCourses)
-      setFilteredCourses(allAvailableCourses)
-      
-      // Load stats for each course
-      loadCourseStats(allAvailableCourses)
-      
-      // Initialize published course data if not exists
-      initializePublishedCourseData()
+      await fetchCoursesFromAPI()
       
     } catch (error) {
-      console.error('Error loading courses:', error)
-    } finally {
+      console.error('Auth error:', error)
+      setError('Authentication failed')
       setLoading(false)
     }
   }
 
-  const initializePublishedCourseData = () => {
-    // Check if published courses have slides initialized
-    publishedCourses.forEach(course => {
-      const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-      const courseSlides = existingSlides.filter((s: Slide) => s.courseId === course.id)
-      
-      if (courseSlides.length === 0) {
-        // Create default slides for published courses
-        const defaultSlides = [
-          {
-            id: `${course.id}_slide_1`,
-            courseId: course.id,
-            slideNumber: 1,
-            title: 'Introduction',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: `${course.id}_slide_2`,
-            courseId: course.id,
-            slideNumber: 2,
-            title: 'Fundamentals',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: `${course.id}_slide_3`,
-            courseId: course.id,
-            slideNumber: 3,
-            title: 'Advanced Concepts',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ]
-        
-        const updatedSlides = [...existingSlides, ...defaultSlides]
-        localStorage.setItem('slides', JSON.stringify(updatedSlides))
+  const fetchCoursesFromAPI = async (showRefreshing = false) => {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
       }
-    })
+      setError(null)
+
+      const response = await fetch('/api/instructors/course')
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch courses')
+      }
+
+      if (result.success) {
+        const apiCourses = result.data.map((course: any) => ({
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          studentCapacity: course.student_capacity,
+          category: course.category,
+          status: course.status,
+          instructorId: course.instructor_id,
+          instructorName: course.instructor_name || 'Instructor',
+          image: course.image,
+          courseImage: course.image,
+          duration: course.duration,
+          level: course.level,
+          price: course.price ? `PKR ${course.price.toLocaleString()}` : undefined,
+          createdAt: course.created_at,
+          updatedAt: course.updated_at,
+          isPublished: false,
+          stats: course.stats || { slides: 0, files: 0, quizzes: 0, assignments: 0 }
+        }))
+
+        setCourses(apiCourses)
+        setFilteredCourses(apiCourses)
+      }
+      
+    } catch (error: any) {
+      console.error('Error fetching courses:', error)
+      setError(error.message || 'Failed to load courses')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }
 
-  const loadCourseStats = (courses: Course[]) => {
-    const slides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const slideContent = JSON.parse(localStorage.getItem('slideContent') || '[]')
-    const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-    
-    const stats: {[key: string]: {slides: number, files: number, quizzes: number, assignments: number}} = {}
-    
-    courses.forEach(course => {
-      const courseSlides = slides.filter((s: Slide) => s.courseId === course.id)
-      const courseSlideIds = courseSlides.map((s: Slide) => s.id)
-      
-      const courseFiles = slideContent.filter((sc: SlideContent) => 
-        courseSlideIds.includes(sc.slideId)
-      ).reduce((acc: number, sc: SlideContent) => acc + (sc.files?.length || 0), 0)
-      
-      const courseQuizzes = quizzes.filter((q: Quiz) => 
-        courseSlideIds.includes(q.slideId)
-      ).reduce((acc: number, q: Quiz) => acc + (q.questions?.length || 0), 0)
-
-      const courseAssignments = assignments.filter((a: Assignment) => 
-        a.courseId === course.id
-      ).length
-      
-      stats[course.id] = {
-        slides: courseSlides.length,
-        files: courseFiles,
-        quizzes: courseQuizzes,
-        assignments: courseAssignments
-      }
-    })
-    
-    setCourseStats(stats)
+  const handleRefresh = () => {
+    fetchCoursesFromAPI(true)
   }
 
   const filterCourses = () => {
     let filtered = [...courses]
     
-    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(course => 
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -322,7 +167,6 @@ export default function CoursesPage() {
       )
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(course => course.status === statusFilter)
     }
@@ -330,53 +174,33 @@ export default function CoursesPage() {
     setFilteredCourses(filtered)
   }
 
-  const handleDeleteCourse = (courseId: string, isPublished?: boolean) => {
-    if (isPublished) {
-      alert('Published courses cannot be deleted. You can hide them using the toggle switch.')
-      return
-    }
-    
+  const handleDeleteCourse = async (courseId: string) => {
     if (!confirm('Are you sure you want to delete this course? All slides, content, quizzes, and assignments will be permanently removed.')) {
       return
     }
     
-    // Delete course
-    const updatedCourses = courses.filter(c => c.id !== courseId)
-    localStorage.setItem('courses', JSON.stringify(updatedCourses.filter(c => !c.isPublished)))
-    
-    // Delete associated slides
-    const slides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const updatedSlides = slides.filter((s: Slide) => s.courseId !== courseId)
-    localStorage.setItem('slides', JSON.stringify(updatedSlides))
-    
-    // Delete associated slide content
-    const slideContent = JSON.parse(localStorage.getItem('slideContent') || '[]')
-    const updatedContent = slideContent.filter((sc: SlideContent) => sc.courseId !== courseId)
-    localStorage.setItem('slideContent', JSON.stringify(updatedContent))
-    
-    // Delete associated quizzes
-    const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-    const updatedQuizzes = quizzes.filter((q: Quiz) => q.courseId !== courseId)
-    localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes))
-    
-    // Delete associated assignments
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-    const updatedAssignments = assignments.filter((a: Assignment) => a.courseId !== courseId)
-    localStorage.setItem('assignments', JSON.stringify(updatedAssignments))
-    
-    setCourses(updatedCourses)
+    try {
+      const response = await fetch(`/api/instructors/course/${courseId}`, {
+        method: 'DELETE',
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete course')
+      }
+
+      const updatedCourses = courses.filter(c => c.id !== courseId)
+      setCourses(updatedCourses)
+      alert('Course deleted successfully!')
+      
+    } catch (error: any) {
+      console.error('Error deleting course:', error)
+      alert(error.message || 'Failed to delete course')
+    }
   }
 
-  const getStatusBadge = (status: string, isPublished?: boolean) => {
-    if (isPublished) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-          <PlayCircle className="w-3 h-3" />
-          Published
-        </span>
-      )
-    }
-    
+  const getStatusBadge = (status: string) => {
     if (status === 'published') {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
@@ -397,18 +221,39 @@ export default function CoursesPage() {
     router.push(`/lms/Instructor_Portal/courses/edit/${courseId}?tab=slides`)
   }
 
+  const handlePreviewCourse = (courseId: string) => {
+    router.push(`/lms/Instructor_Portal/courses/preview/${courseId}`)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-10 w-48 bg-gray-200 rounded mb-6"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="h-48 bg-gray-100 rounded-lg"></div>
-              ))}
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              <p className="text-sm text-darkGrey">Loading courses from database...</p>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="max-w-md mx-auto text-center py-12">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold mb-2 text-darkGrey">Error Loading Courses</h3>
+          <p className="text-darkGrey/70 mb-6">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg inline-flex items-center gap-2 hover:bg-darkRoyalBlue/90 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
         </div>
       </div>
     )
@@ -425,26 +270,19 @@ export default function CoursesPage() {
                 My Courses
               </h1>
               <p className="text-darkGrey mt-1 text-sm">
-                Manage your courses, slides, content, and assignments
+                {courses.length} total courses
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Toggle for showing/hiding published courses */}
-              <label className="flex items-center gap-2 text-sm">
-                <span className="text-darkGrey/70">Show Published</span>
-                <button
-                  onClick={() => setShowPublished(!showPublished)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                    showPublished ? 'bg-teal-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      showPublished ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </label>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 rounded-lg border border-darkGrey/30 hover:bg-lightGrey transition-colors disabled:opacity-50"
+                title="Refresh"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              
               <Link
                 href="/lms/Instructor_Portal/courses/add"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
@@ -465,7 +303,6 @@ export default function CoursesPage() {
       <div className="mb-6">
         <div className="bg-white rounded-lg border border-softGrey p-4">
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-darkGrey/40" />
               <input
@@ -477,9 +314,7 @@ export default function CoursesPage() {
               />
             </div>
             
-            {/* Filter and view section */}
             <div className="flex items-center gap-2">
-              {/* Filter Button - Mobile */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="sm:hidden px-3 py-2 border border-softGrey rounded-lg flex items-center gap-2"
@@ -489,7 +324,6 @@ export default function CoursesPage() {
                 <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
               
-              {/* Status Filter - Desktop */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -502,7 +336,6 @@ export default function CoursesPage() {
             </div>
           </div>
           
-          {/* Mobile Filters */}
           {showFilters && (
             <div className="mt-4 sm:hidden">
               <select
@@ -564,9 +397,8 @@ export default function CoursesPage() {
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Course</th>
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Status</th>
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Slides</th>
-                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Files</th>
-                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Quizzes</th>
-                  <th className="text-left text-xs font-medium py-3 px-4 text-white">Assignments</th>
+
+  
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Actions</th>
                 </tr>
               </thead>
@@ -575,16 +407,18 @@ export default function CoursesPage() {
                   <tr key={course.id} className="hover:bg-lightGrey/50 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        {/* Course Image - Show for all courses with fallback */}
                         <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-softGrey">
-                          {course.courseImage ? (
+                          {course.courseImage || course.image ? (
                             <img 
-                              src={course.courseImage} 
+                              src={course.courseImage || course.image || ''} 
                               alt={course.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5" style="color: #1E3A8A" ...></div>';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-5 h-5" style="color: #1E3A8A" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg></div>';
+                                }
                               }}
                             />
                           ) : (
@@ -599,60 +433,42 @@ export default function CoursesPage() {
                           {course.duration && course.level && (
                             <p className="text-xs text-purple-600 mt-1">{course.duration} • {course.level}</p>
                           )}
+                          {course.price && (
+                            <p className="text-xs text-green-600 mt-1">{course.price}</p>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {getStatusBadge(course.status, course.isPublished)}
+                      {getStatusBadge(course.status)}
                     </td>
                     <td className="py-3 px-4 text-sm text-darkGrey">
-                      {courseStats[course.id]?.slides || 0}
+                      {course.stats?.slides || 0}
                     </td>
-                    <td className="py-3 px-4 text-sm text-darkGrey">
-                      {courseStats[course.id]?.files || 0}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-darkGrey">
-                      {courseStats[course.id]?.quizzes || 0}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" style={{ color: BRAND_COLORS.teal }} />
-                        <span className="text-sm text-darkGrey">
-                          {courseStats[course.id]?.assignments || 0}
-                        </span>
-                      </div>
-                    </td>
+                    
+                   
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleManageSlides(course.id)}
-                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
-                          title="Manage Slides"
-                        >
-                          <FileVideo className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
-                        </button>
-                        {!course.isPublished && (
-                          <Link
-                            href={`/lms/Instructor_Portal/courses/edit/${course.id}`}
-                            className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
-                            title="Edit Course"
-                          >
-                            <Edit className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                          </Link>
-                        )}
-                        <Link
-                          href={`/lms/Instructor_Portal/courses/preview/${course.id}`}
+                          onClick={() => handlePreviewCourse(course.id)}
                           className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
                           title="Preview Course"
                         >
                           <Eye className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
-                        </Link>
+                        </button>
                         <button
-                          onClick={() => handleDeleteCourse(course.id, course.isPublished)}
+                          onClick={() => handleManageSlides(course.id)}
                           className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
-                          title={course.isPublished ? "Published courses cannot be deleted" : "Delete Course"}
+                          title="Manage Slides & Content"
                         >
-                          <Trash2 className="w-4 h-4" style={{ color: course.isPublished ? BRAND_COLORS.softGrey : BRAND_COLORS.brightRed }} />
+                          <FileVideo className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          title="Delete Course"
+                        >
+                          <Trash2 className="w-4 h-4" style={{ color: BRAND_COLORS.brightRed }} />
                         </button>
                       </div>
                     </td>
@@ -666,33 +482,27 @@ export default function CoursesPage() {
 
       {/* Summary Stats */}
       {filteredCourses.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-lg border border-softGrey p-3">
             <p className="text-xs text-darkGrey/60">Total Courses</p>
             <p className="text-lg font-semibold text-darkGrey">{filteredCourses.length}</p>
           </div>
           <div className="bg-white rounded-lg border border-softGrey p-3">
             <p className="text-xs text-darkGrey/60">Published</p>
-            <p className="text-lg font-semibold text-darkGrey">
-              {filteredCourses.filter(c => c.status === 'published' || c.isPublished).length}
+            <p className="text-lg font-semibold text-green-600">
+              {filteredCourses.filter(c => c.status === 'published').length}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-softGrey p-3">
             <p className="text-xs text-darkGrey/60">Drafts</p>
-            <p className="text-lg font-semibold text-darkGrey">
+            <p className="text-lg font-semibold text-amber-600">
               {filteredCourses.filter(c => c.status === 'draft').length}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-softGrey p-3">
-            <p className="text-xs text-darkGrey/60">System Courses</p>
-            <p className="text-lg font-semibold text-darkGrey">
-              {filteredCourses.filter(c => c.isPublished).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg border border-softGrey p-3">
             <p className="text-xs text-darkGrey/60">Total Assignments</p>
-            <p className="text-lg font-semibold text-darkGrey">
-              {Object.values(courseStats).reduce((sum, stat) => sum + (stat.assignments || 0), 0)}
+            <p className="text-lg font-semibold text-darkRoyalBlue">
+              {filteredCourses.reduce((sum, course) => sum + (course.stats?.assignments || 0), 0)}
             </p>
           </div>
         </div>

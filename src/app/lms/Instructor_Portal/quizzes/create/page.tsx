@@ -1,9 +1,10 @@
+// lms/Instructor_Portal/quizzes/create/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Save, X, Plus, Trash2, Calendar, Clock } from 'lucide-react'
+import { Save, X, Plus, Trash2, Calendar, Clock, Loader2 } from 'lucide-react'
 /* eslint-disable */
 
 const BRAND_COLORS = {
@@ -26,11 +27,18 @@ interface Question {
   points: number;
 }
 
+interface Course {
+  id: string;
+  title: string;
+}
+
 export default function CreateQuizPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [instructor, setInstructor] = useState<any>(null)
-  const [course, setCourse] = useState<any>(null)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [error, setError] = useState<string | null>(null)
   
   const [quiz, setQuiz] = useState({
     title: '',
@@ -54,46 +62,116 @@ export default function CreateQuizPage() {
   ])
 
   useEffect(() => {
-    const loadInstructorData = () => {
-      try {
-        const currentUserStr = localStorage.getItem('currentUser')
-        if (!currentUserStr) {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
-
-        const currentUser = JSON.parse(currentUserStr)
-        if (currentUser.role !== 'instructor') {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
-
-        setInstructor(currentUser)
-
-        // Load assigned course
-        const courses = JSON.parse(localStorage.getItem('courses') || '[]')
-        const courseId = currentUser.courseId || currentUser.assignedCourseId
-        const assignedCourse = courses.find((c: any) => c.id === courseId)
-        setCourse(assignedCourse)
-        
-        // Set default dates
-        const now = new Date()
-        const defaultStart = now.toISOString().slice(0, 16)
-        const defaultEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
-        
-        setQuiz(prev => ({
-          ...prev,
-          startDate: defaultStart,
-          endDate: defaultEnd
-        }))
-        
-      } catch (error) {
-        console.error('Error loading instructor data:', error)
-      }
-    }
-
     loadInstructorData()
   }, [router])
+
+  const loadInstructorData = async () => {
+    try {
+      setFetching(true)
+      setError(null)
+
+      // Get current instructor from localStorage
+      const currentUserStr = localStorage.getItem('currentUser')
+      if (!currentUserStr) {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
+
+      const currentUser = JSON.parse(currentUserStr)
+      if (currentUser.role !== 'instructor') {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
+
+      setInstructor(currentUser)
+
+      // Fetch assigned course from database
+      const courseId = currentUser.courseId || currentUser.assignedCourseId
+      
+      if (courseId) {
+        try {
+          const response = await fetch(`/api/instructors/course/${courseId}`)
+          const result = await response.json()
+          
+          if (result.success) {
+            setCourse({
+              id: result.data.course.id,
+              title: result.data.course.title
+            })
+          }
+        } catch (error) {
+          console.error('Error fetching course:', error)
+          // Fallback to localStorage
+          const courses = JSON.parse(localStorage.getItem('courses') || '[]')
+          const assignedCourse = courses.find((c: any) => c.id === courseId)
+          setCourse(assignedCourse || null)
+        }
+      }
+      
+      // Set default dates
+      const now = new Date()
+      const defaultStart = now.toISOString().slice(0, 16)
+      const defaultEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+      
+      setQuiz(prev => ({
+        ...prev,
+        startDate: defaultStart,
+        endDate: defaultEnd
+      }))
+      
+    } catch (error) {
+      console.error('Error loading instructor data:', error)
+      setError('Failed to load instructor data')
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  // ============ DATABASE FUNCTIONS ============
+// Update the saveQuizToDB function
+const saveQuizToDB = async () => {
+  try {
+    const totalQuestions = questions.length
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0)
+
+    const response = await fetch('/api/instructors/quizzes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: quiz.title,
+        description: quiz.description,
+        duration: quiz.duration,
+        startDate: quiz.startDate,
+        endDate: quiz.endDate,
+        status: quiz.status,
+        instructorId: instructor.id,
+        instructorName: instructor.name || instructor.fullName || 'Instructor',
+        // courseId is optional now - can be null
+        courseId: instructor.courseId || instructor.assignedCourseId || null,
+        courseTitle: course?.title || null,
+        totalQuestions,
+        totalPoints,
+        questions: questions.map(q => ({
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          points: q.points
+        }))
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to save quiz');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error saving quiz to DB:', error);
+    throw error;
+  }
+};
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -115,7 +193,6 @@ export default function CreateQuizPage() {
     setQuestions(newQuestions)
   }
 
-  // Fixed: Properly type the updateQuestion function
   const updateQuestion = (index: number, field: keyof Question, value: string | number | string[]) => {
     const newQuestions = [...questions]
     
@@ -140,7 +217,7 @@ export default function CreateQuizPage() {
     setQuestions(newQuestions)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!quiz.title.trim()) {
@@ -168,70 +245,58 @@ export default function CreateQuizPage() {
       return
     }
 
+    // Validate end date is after start date
+    if (new Date(quiz.endDate) <= new Date(quiz.startDate)) {
+      alert('End date must be after start date')
+      return
+    }
+
     setLoading(true)
 
     try {
-      // Calculate totals
-      const totalQuestions = questions.length
-      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0)
+      // Save to database
+      const result = await saveQuizToDB();
       
-      // Create quiz object
-      const quizId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      const newQuiz = {
-        id: quizId,
-        ...quiz,
-        totalQuestions,
-        totalPoints,
-        instructorId: instructor.id,
-        instructorName: instructor.name || instructor.fullName,
-        courseId: instructor.courseId || instructor.assignedCourseId,
-        courseTitle: course?.title || 'Course',
-        questions,
-        attempts: 0,
-        averageScore: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-
-      // Save to localStorage
-      const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-      const updatedQuizzes = [...existingQuizzes, newQuiz]
-      localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes))
-
-      // Also save to instructor_quizzes
-      const existingInstructorQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-      localStorage.setItem('instructor_quizzes', JSON.stringify([...existingInstructorQuizzes, newQuiz]))
-
-      // Save activity
-      const activity = {
-        id: `activity_${Date.now()}`,
-        type: 'quiz',
-        title: newQuiz.title,
-        description: 'Quiz created',
-        courseId: instructor.courseId || instructor.assignedCourseId,
-        instructorId: instructor.id,
-        timestamp: new Date().toISOString(),
-        action: 'created',
-        metadata: newQuiz
-      }
-
-      const existingActivities = JSON.parse(localStorage.getItem('instructor_activities') || '[]')
-      const updatedActivities = [...existingActivities, activity]
-      localStorage.setItem('instructor_activities', JSON.stringify(updatedActivities))
-
-      alert(`Quiz ${quiz.status === 'published' ? 'published' : 'saved as draft'} successfully!`)
+      alert(result.message || `Quiz ${quiz.status === 'published' ? 'published' : 'saved as draft'} successfully!`)
       router.push('/lms/Instructor_Portal/quizzes')
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating quiz:', error)
-      alert('Failed to create quiz')
+      alert(error.message || 'Failed to create quiz')
     } finally {
       setLoading(false)
     }
   }
 
-  if (!instructor) {
-    return <div className="min-h-screen bg-white p-6">Loading...</div>
+  if (fetching) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+            <p className="text-sm text-darkGrey">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <div className="max-w-md mx-auto text-center py-12">
+          <div className="text-red-500 mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold mb-2">Error</h3>
+          <p className="text-darkGrey/70 mb-6">{error}</p>
+          <button
+            onClick={() => router.push('/lms/Instructor_Portal/dashboard')}
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -521,7 +586,7 @@ export default function CreateQuizPage() {
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 {quiz.status === 'published' ? 'Publishing...' : 'Saving...'}
               </>
             ) : (

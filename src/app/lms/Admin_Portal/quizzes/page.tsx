@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { 
   HiSearch, HiFilter, HiDocumentDownload,
-  HiCheckCircle, HiXCircle, HiX
+  HiX
 } from 'react-icons/hi'
 
 interface QuizResult {

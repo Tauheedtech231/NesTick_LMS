@@ -28,56 +28,115 @@ import {
   BarChart3,
   UserPlus,
   List,
-  LogOut
+  LogOut,
+  Loader2,
+  Wallet,
+  PieChart,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react'
 import Link from 'next/link'
 
+// Types
 type PaymentStudent = {
   id: string;
+  enrollmentId: string;
+  studentId: string;
   name: string;
   email: string;
   phone: string;
+  cnic: string;
+  address: string;
+  education: string;
+  experience: string;
   course: string;
-  amount: string;
+  courseId: string;
+  amount: number;
   paymentDate: string;
   paymentMethod: string;
   transactionId: string;
   status: 'pending' | 'verified' | 'rejected';
   screenshotUrl: string;
   uploadedAt: string;
+  cnicFrontUrl: string;
+  cnicBackUrl: string;
+  educationalDocUrl: string;
+  credentialsSent?: boolean;
 }
 
 type StudentCredentials = {
-  id: string;
+  enrollmentId: string;
   studentId: string;
   studentName: string;
   studentEmail: string;
   course: string;
+  courseId: string;
   username: string;
   password: string;
   sentDate: string;
-  status: 'sent' | 'failed';
+  amount: number;
+  verifiedDate: string;
+  credentialsSent: boolean;
+}
+
+type RevenueStats = {
+  totalRevenue: number;
+  averagePrice: number;
+  payingStudents: number;
+  verifiedEnrollments: number;
+}
+
+type Stats = {
+  totalEnrollments: number;
+  pendingPayments: number;
+  verifiedPayments: number;
+  rejectedPayments: number;
+  totalRevenue: number;
+  sentCredentials: number;
+  failedCredentials: number;
+  monthlyRevenue: {
+    month: string;
+    amount: number;
+    count: number;
+  }[];
+  topCourses: {
+    course: string;
+    revenue: number;
+    count: number;
+  }[];
 }
 
 export default function AdminDashboard() {
   const [paymentStudents, setPaymentStudents] = useState<PaymentStudent[]>([])
   const [studentCredentials, setStudentCredentials] = useState<StudentCredentials[]>([])
+  const [revenueStats, setRevenueStats] = useState<RevenueStats>({
+    totalRevenue: 0,
+    averagePrice: 0,
+    payingStudents: 0,
+    verifiedEnrollments: 0
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [isSendingCredentials, setIsSendingCredentials] = useState<string | null>(null)
+  const [isVerifying, setIsVerifying] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [activeTab, setActiveTab] = useState<'payments' | 'credentials'>('payments')
+  const [activeTab, setActiveTab] = useState<'payments' | 'credentials' | 'revenue'>('payments')
   const [showScreenshotModal, setShowScreenshotModal] = useState(false)
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<PaymentStudent | null>(null)
   const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [selectedCredentials, setSelectedCredentials] = useState<StudentCredentials | null>(null)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<{type: 'student' | 'credential', id: string, name: string} | null>(null)
-
-  // Enrollment chart data
-  const [enrollmentMonths, setEnrollmentMonths] = useState<string[]>([])
-  const [enrollmentValues, setEnrollmentValues] = useState<number[]>([])
+  const [stats, setStats] = useState<Stats>({
+    totalEnrollments: 0,
+    pendingPayments: 0,
+    verifiedPayments: 0,
+    rejectedPayments: 0,
+    totalRevenue: 0,
+    sentCredentials: 0,
+    failedCredentials: 0,
+    monthlyRevenue: [],
+    topCourses: []
+  })
 
   // Brand Colors
   const BRAND_COLORS = {
@@ -89,858 +148,883 @@ export default function AdminDashboard() {
     softGrey: '#E5E7EB',
     darkGrey: '#1F2933',
     teal: '#1FB6C9',
-    brightRed: '#D32F2F'
+    brightRed: '#D32F2F',
+    success: '#10B981',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+    purple: '#8B5CF6',
+    indigo: '#6366F1'
   }
 
-  // Load data function
-  const loadDataFromLocalStorage = () => {
-    setIsLoading(true);
-    
+  // Load data from API
+  const loadData = async () => {
+    setIsLoading(true)
     try {
-      console.log("🔍 Loading payment data from localStorage...");
+      // Fetch all enrollments
+      const enrollmentsRes = await fetch('/api/admin/enrollments')
+      const enrollmentsData = await enrollmentsRes.json()
       
-      const studentsWithPayments: PaymentStudent[] = [];
-      
-      // Check for uploadedFiles
-      const uploadedFilesStr = localStorage.getItem('uploadedFiles');
-      if (uploadedFilesStr) {
-        try {
-          const uploadedFiles = JSON.parse(uploadedFilesStr);
-          if (uploadedFiles && uploadedFiles.length > 0) {
-            uploadedFiles.forEach((file: any) => {
-              if (file && file.studentName && file.thumbnail) {
-                studentsWithPayments.push({
-                  id: file.id || `file-${Date.now()}`,
-                  name: file.studentName,
-                  email: file.email || 'Not available',
-                  phone: file.phone || 'Not available',
-                  course: file.course || 'Unknown Course',
-                  amount: file.amount || 'PKR 25,000',
-                  paymentDate: file.uploadDate ? new Date(file.uploadDate).toLocaleDateString() : new Date().toLocaleDateString(),
-                  paymentMethod: file.paymentMethod || 'JazzCash',
-                  transactionId: file.transactionId || `TXN-${Math.random().toString(36).substr(2, 8)}`,
-                  status: 'pending',
-                  screenshotUrl: file.thumbnail || '',
-                  uploadedAt: file.uploadDate || new Date().toISOString()
-                });
-              }
-            });
-          }
-        } catch (error) {
-          console.error("❌ Error parsing uploadedFiles:", error);
-        }
-      }
-      
-      // Check for paymentSubmission
-      const paymentSubmissionStr = localStorage.getItem('paymentSubmission');
-      if (paymentSubmissionStr) {
-        try {
-          const paymentSubmission = JSON.parse(paymentSubmissionStr);
-          if (paymentSubmission && paymentSubmission.studentName) {
-            const exists = studentsWithPayments.some(s => s.transactionId === paymentSubmission.transactionId);
-            if (!exists) {
-              studentsWithPayments.push({
-                id: `payment-${Date.now()}`,
-                name: paymentSubmission.studentName,
-                email: 'Not available',
-                phone: 'Not available',
-                course: paymentSubmission.course || 'Unknown Course',
-                amount: paymentSubmission.amount || 'PKR 25,000',
-                paymentDate: paymentSubmission.paymentDate || new Date().toLocaleDateString(),
-                paymentMethod: paymentSubmission.paymentMethod || 'JazzCash',
-                transactionId: paymentSubmission.transactionId || `TXN-${Math.random().toString(36).substr(2, 8)}`,
-                status: 'pending',
-                screenshotUrl: paymentSubmission.screenshotUrl || '',
-                uploadedAt: paymentSubmission.uploadedAt || new Date().toISOString()
-              });
-            }
-          }
-        } catch (error) {
-          console.error("❌ Error parsing paymentSubmission:", error);
-        }
-      }
-      
-      setPaymentStudents(studentsWithPayments);
-      
-      // Load credentials from localStorage
-      const credentialsStr = localStorage.getItem('studentCredentials');
-      if (credentialsStr) {
-        try {
-          const credentials = JSON.parse(credentialsStr);
-          setStudentCredentials(credentials);
-        } catch (error) {
-          console.error("❌ Error parsing credentials:", error);
-        }
+      if (enrollmentsData.success) {
+        const students = enrollmentsData.data.map((item: any) => ({
+          id: item.student_id,
+          enrollmentId: item.id,
+          studentId: item.student_id,
+          name: item.student_name,
+          email: item.student_email,
+          phone: item.student_phone || '',
+          cnic: item.student_cnic || '',
+          address: item.student_address || '',
+          education: item.student_education || '',
+          experience: item.student_experience || '',
+          course: item.course_title,
+          courseId: item.course_id,
+          amount: item.course_price || 0,
+          paymentDate: item.payment_date || item.enrollment_date,
+          paymentMethod: item.payment_method || 'Bank Transfer',
+          transactionId: item.transaction_id || `TXN-${Math.random().toString(36).substr(2, 8)}`,
+          status: item.payment_status,
+          screenshotUrl: item.slip_url || '',
+          uploadedAt: item.enrollment_date,
+          cnicFrontUrl: item.cnic_front_url || '',
+          cnicBackUrl: item.cnic_back_url || '',
+          educationalDocUrl: item.educational_doc_url || '',
+          credentialsSent: item.credentials_sent || false
+        }))
+        setPaymentStudents(students)
       }
 
-      // Load enrollments for chart
-      const enrollmentsStr = localStorage.getItem('enrollments');
-      let enrollments = [];
-      if (enrollmentsStr) {
-        try {
-          enrollments = JSON.parse(enrollmentsStr);
-        } catch (error) {
-          console.error("❌ Error parsing enrollments:", error);
-        }
-      }
-
-      // Generate chart data (last 6 months)
-      const months: string[] = [];
-      const values: number[] = [];
-      const now = new Date();
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        months.push(d.toLocaleString('default', { month: 'short', year: 'numeric' }));
-      }
-
-      const monthMap = new Map(months.map((m, idx) => [m, idx]));
-      const sums = new Array(months.length).fill(0);
-
-      enrollments.forEach((e: any) => {
-        const date = new Date(e.enrolledDate || e.enrollmentDate || Date.now());
-        const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-        const idx = monthMap.get(monthKey);
-        if (idx !== undefined) sums[idx] += 1;
-      });
-
-      setEnrollmentMonths(months);
-      setEnrollmentValues(sums);
+      // Fetch credentials (verified students)
+      const credentialsRes = await fetch('/api/admin/credentials')
+      const credentialsData = await credentialsRes.json()
       
+      if (credentialsData.success) {
+        setStudentCredentials(credentialsData.data)
+      }
+
+      // Fetch revenue stats
+      const revenueRes = await fetch('/api/admin/revenue')
+      const revenueData = await revenueRes.json()
+      
+      if (revenueData.success) {
+        setRevenueStats(revenueData.data)
+      }
+
+      // Fetch stats with revenue data
+      const statsRes = await fetch('/api/admin/stats')
+      const statsData = await statsRes.json()
+      
+      if (statsData.success) {
+        setStats(statsData.data)
+      }
+
     } catch (error) {
-      console.error("❌ Error loading data:", error);
+      console.error('Error loading data:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
-  // Load data on component mount
   useEffect(() => {
-    loadDataFromLocalStorage();
+    loadData()
   }, [])
 
-  // Handle verify payment
-  const handleVerifyPayment = (studentId: string) => {
-    setPaymentStudents(prev => prev.map(student => 
-      student.id === studentId ? { ...student, status: 'verified' as const } : student
-    ));
-  }
-
-  // Handle reject payment
-  const handleRejectPayment = (studentId: string) => {
-    setPaymentStudents(prev => prev.map(student => 
-      student.id === studentId ? { ...student, status: 'rejected' as const } : student
-    ));
-    alert('Payment rejected!');
-  }
-
-  // Handle delete item
-  const handleDeleteItem = () => {
-    if (!itemToDelete) return;
-
-    if (itemToDelete.type === 'student') {
-      setPaymentStudents(prev => prev.filter(student => student.id !== itemToDelete.id));
-      setStudentCredentials(prev => prev.filter(cred => cred.studentId !== itemToDelete.id));
-      
-      const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
-      const paymentSubmission = JSON.parse(localStorage.getItem('paymentSubmission') || '[]');
-      
-      const newUploadedFiles = uploadedFiles.filter((file: any) => file.id !== itemToDelete.id);
-      const newPaymentSubmission = paymentSubmission.filter((sub: any) => sub.id !== itemToDelete.id);
-      
-      localStorage.setItem('uploadedFiles', JSON.stringify(newUploadedFiles));
-      localStorage.setItem('paymentSubmission', JSON.stringify(newPaymentSubmission));
-    } else {
-      setStudentCredentials(prev => prev.filter(cred => cred.id !== itemToDelete.id));
-      
-      const credentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
-      const newCredentials = credentials.filter((cred: StudentCredentials) => cred.id !== itemToDelete.id);
-      localStorage.setItem('studentCredentials', JSON.stringify(newCredentials));
-    }
-    
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-    alert(`${itemToDelete.type === 'student' ? 'Student' : 'Credential'} deleted successfully!`);
-  }
-
-  // Send credentials to student
-  const sendCredentialsToStudent = async (student: PaymentStudent) => {
-    if (!student.email || student.email === 'Not available') {
-      alert('Student email is required to send credentials. Please make sure the student provided an email.');
-      return;
-    }
-
-    setIsSendingCredentials(student.id);
-    
+  // Handle verify payment only
+  const handleVerifyPayment = async (enrollmentId: string, studentId: string) => {
+    setIsVerifying(enrollmentId)
     try {
-      const response = await fetch('/api/send-credentials', {
+      const response = await fetch('/api/admin/verify-payment', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enrollmentId, studentId, status: 'verified' })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update local state
+        setPaymentStudents(prev => prev.map(s => 
+          s.enrollmentId === enrollmentId ? { ...s, status: 'verified' } : s
+        ))
+        
+        // Refresh all data to update revenue
+        await loadData()
+        
+        alert('Payment verified successfully!')
+      } else {
+        throw new Error(data.error || 'Verification failed')
+      }
+    } catch (error: any) {
+      console.error('Error verifying payment:', error)
+      alert(`❌ Failed to verify payment: ${error.message}`)
+    } finally {
+      setIsVerifying(null)
+    }
+  }
+
+  // Send credentials to student (after verification)
+  const sendCredentialsToStudent = async (student: PaymentStudent) => {
+    if (!student.email) {
+      alert('Student email is required')
+      return
+    }
+
+    // First verify the payment
+    await handleVerifyPayment(student.enrollmentId, student.studentId)
+    
+    // Then send credentials
+    setIsSendingCredentials(student.enrollmentId)
+
+    try {
+      const response = await fetch('/api/admin/generate-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentEmail: student.email,
-          studentName: student.name,
-          courseName: student.course,
-          amount: student.amount,
-          paymentMethod: student.paymentMethod
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        const newCredential: StudentCredentials = {
-          id: `cred-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          studentId: student.id,
+          studentId: student.studentId,
+          enrollmentId: student.enrollmentId,
           studentName: student.name,
           studentEmail: student.email,
           course: student.course,
-          username: result.credentials.username,
-          password: result.credentials.password,
-          sentDate: new Date().toISOString(),
-          status: 'sent'
-        };
+          courseId: student.courseId
+        })
+      })
 
-        const existingCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
-        const updatedCredentials = [...existingCredentials, newCredential];
-        
-        localStorage.setItem('studentCredentials', JSON.stringify(updatedCredentials));
-        setStudentCredentials(updatedCredentials);
+      const data = await response.json()
 
-        handleVerifyPayment(student.id);
-        
-        alert(`✅ Credentials sent successfully to ${student.email}!\n\nUsername: ${result.credentials.username}\nPassword: ${result.credentials.password}\n\nCredentials have been saved to localStorage.`);
+      if (data.success) {
+        alert(`✅ Credentials sent successfully to ${student.email}!`)
+        setShowScreenshotModal(false)
+        await loadData()
       } else {
-        throw new Error(result.message || 'Failed to send credentials');
+        throw new Error(data.error || 'Failed to send credentials')
       }
     } catch (error: any) {
-      console.error('❌ Error sending credentials:', error);
-      alert(`❌ Failed to send credentials: ${error.message}`);
-      
-      const failedCredential: StudentCredentials = {
-        id: `cred-failed-${Date.now()}`,
-        studentId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
-        course: student.course,
-        username: 'FAILED',
-        password: 'FAILED',
-        sentDate: new Date().toISOString(),
-        status: 'failed'
-      };
-
-      const existingCredentials = JSON.parse(localStorage.getItem('studentCredentials') || '[]');
-      const updatedCredentials = [...existingCredentials, failedCredential];
-      
-      localStorage.setItem('studentCredentials', JSON.stringify(updatedCredentials));
-      setStudentCredentials(updatedCredentials);
+      console.error('Error sending credentials:', error)
+      alert(`❌ Failed to send credentials: ${error.message}`)
     } finally {
-      setIsSendingCredentials(null);
-      setShowScreenshotModal(false);
+      setIsSendingCredentials(null)
     }
   }
 
-  // View screenshot
-  const viewScreenshot = (student: PaymentStudent) => {
-    if (student.screenshotUrl && student.screenshotUrl.length > 100) {
-      setSelectedScreenshot(student.screenshotUrl);
-      setSelectedStudentDetails(student);
-      setShowScreenshotModal(true);
-    } else {
-      alert('No valid screenshot available for this student.');
-    }
-  }
+  // Handle reject payment
+  const handleRejectPayment = async (enrollmentId: string, studentId: string) => {
+    if (!confirm('Are you sure you want to reject this payment?')) return
 
-  // Download screenshot
-  const downloadScreenshot = (student: PaymentStudent) => {
-    if (student.screenshotUrl) {
-      const link = document.createElement('a');
-      link.href = student.screenshotUrl;
-      link.download = `payment-${student.name}-${student.transactionId}.jpg`;
-      link.click();
-    } else {
-      alert('No screenshot available to download.');
-    }
-  }
+    try {
+      const response = await fetch('/api/admin/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enrollmentId, studentId, status: 'rejected' })
+      })
 
-  // View credentials
-  const viewCredentials = (credential: StudentCredentials) => {
-    setSelectedCredentials(credential);
-    setShowCredentialsModal(true);
-  }
-
-  // Resend credentials
-  const resendCredentials = async (credential: StudentCredentials) => {
-    if (confirm(`Resend credentials to ${credential.studentEmail}?`)) {
-      try {
-        const response = await fetch('/api/send-credentials', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            studentEmail: credential.studentEmail,
-            studentName: credential.studentName,
-            courseName: credential.course,
-            username: credential.username,
-            password: credential.password,
-            isResend: true
-          }),
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          alert(`✅ Credentials resent successfully to ${credential.studentEmail}!`);
-        } else {
-          throw new Error(result.message);
-        }
-      } catch (error: any) {
-        alert(`❌ Failed to resend credentials: ${error.message}`);
+      const data = await response.json()
+      
+      if (data.success) {
+        setPaymentStudents(prev => prev.map(s => 
+          s.enrollmentId === enrollmentId ? { ...s, status: 'rejected' } : s
+        ))
+        alert('Payment rejected!')
+        await loadData()
       }
+    } catch (error: any) {
+      console.error('Error rejecting payment:', error)
+      alert(`❌ Failed to reject payment: ${error.message}`)
     }
   }
 
-  // Filter students (global search applies to both tables)
+  // Filter students
   const filteredStudents = paymentStudents.filter(student => {
     const matchesSearch = 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.transactionId.toLowerCase().includes(searchTerm.toLowerCase());
+      student.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesStatus = selectedStatus === 'all' || student.status === selectedStatus;
+    const matchesStatus = selectedStatus === 'all' || student.status === selectedStatus
     
-    return matchesSearch && matchesStatus;
-  });
+    return matchesSearch && matchesStatus
+  })
 
   const filteredCredentials = studentCredentials.filter(cred => 
     cred.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cred.course.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cred.studentEmail.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  )
 
-  // Calculate stats
-  const totalSubmissions = paymentStudents.length;
-  const pendingVerifications = paymentStudents.filter(s => s.status === 'pending').length;
-  const verifiedPayments = paymentStudents.filter(s => s.status === 'verified').length;
-  const rejectedPayments = paymentStudents.filter(s => s.status === 'rejected').length;
-  const totalRevenue = paymentStudents.reduce((sum, student) => {
-    const amountStr = student.amount.replace('PKR ', '').replace(/,/g, '');
-    const amount = parseFloat(amountStr) || 25000;
-    return sum + amount;
-  }, 0);
-  const sentCredentials = studentCredentials.filter(c => c.status === 'sent').length;
-  const failedCredentials = studentCredentials.filter(c => c.status === 'failed').length;
-
-  // Chart helpers
-  const maxEnrollments = Math.max(...enrollmentValues, 1);
-  const chartHeight = 160;
+  // Calculate revenue statistics
+  const totalVerifiedRevenue = revenueStats.totalRevenue
+  const pendingRevenue = paymentStudents
+    .filter(s => s.status === 'pending')
+    .reduce((sum, s) => sum + s.amount, 0)
+  const averageRevenuePerStudent = revenueStats.payingStudents > 0 
+    ? Math.round(revenueStats.totalRevenue / revenueStats.payingStudents) 
+    : 0
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white p-4">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-white p-4">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-darkRoyalBlue"></div>
-          <p className="mt-4 text-darkGrey">Loading payment data...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-indigo-200 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-gray-600 mt-4 font-medium">Loading dashboard data...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen">
       {/* Top Bar */}
-      <div className="sticky top-0 z-40 bg-white border-b border-softGrey px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-indigo-100 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between shadow-sm">
         <div className="flex-1 max-w-md relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-darkGrey/50" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-400" />
           <input
             type="text"
             placeholder="Search payments, students, courses..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-softGrey focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 text-sm"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white/50 backdrop-blur-sm text-sm"
           />
         </div>
         <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-lightGrey transition-colors relative">
-            <Bell className="w-5 h-5 text-darkGrey" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-brightRed rounded-full"></span>
+          <button 
+            onClick={loadData}
+            className="p-2.5 rounded-xl bg-white hover:bg-indigo-50 transition-colors shadow-sm border border-indigo-100"
+            title="Refresh"
+          >
+            <RefreshCw className="w-5 h-5 text-indigo-600" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-darkRoyalBlue flex items-center justify-center text-white font-semibold text-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-lg">
               A
             </div>
-            <span className="text-sm font-medium hidden sm:inline">Admin</span>
+            <span className="text-sm font-medium text-gray-700 hidden sm:inline">Admin</span>
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
-        {/* Quick Actions */}
-        <div className="mb-6 flex flex-wrap gap-3">
-          <Link href="/lms/Admin_Portal/instructors/add" className="inline-flex items-center gap-2 px-4 py-2 bg-darkRoyalBlue text-white rounded-lg hover:bg-darkRoyalBlue/90 transition-colors text-sm">
-            <UserPlus className="w-4 h-4" />
-            Add Instructor
-          </Link>
-          <Link href="/lms/Admin_Portal/instructors" className="inline-flex items-center gap-2 px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors text-sm">
-            <List className="w-4 h-4" />
-            View Instructors
-          </Link>
-          <Link href="/lms/Admin_Portal/payments" className="inline-flex items-center gap-2 px-4 py-2 border border-teal text-teal rounded-lg hover:bg-teal/5 transition-colors text-sm">
-            <CreditCard className="w-4 h-4" />
-            Payments
-          </Link>
-          <Link href="/lms/Admin_Portal/reports" className="inline-flex items-center gap-2 px-4 py-2 border border-softGrey text-darkGrey rounded-lg hover:bg-lightGrey transition-colors text-sm">
-            <BarChart3 className="w-4 h-4" />
-            Reports
-          </Link>
-          <button
-            onClick={loadDataFromLocalStorage}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-deepRed text-white rounded-lg hover:bg-deepRed/90 transition-colors text-sm"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-        </div>
-
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* Welcome Section */}
-        <div className="mb-6 sm:mb-8">
-          <div
-            className="rounded-2xl p-5 sm:p-7 border border-softGrey"
-            style={{
-              background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue} 0%, ${BRAND_COLORS.darkNavy} 100%)`,
-            }}
-          >
-            <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight text-white">
-                Welcome back, Admin 👋
-              </h1>
-              <p className="text-white text-sm sm:text-base lg:text-lg leading-relaxed max-w-xl">
-                Manage student payments and credentials seamlessly from one dashboard.
+        <div className="mb-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 text-white shadow-xl">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative z-10">
+              <h1 className="text-3xl font-bold mb-2">Welcome back, Admin! 👋</h1>
+              <p className="text-indigo-100 text-lg max-w-2xl">
+                Manage student payments, track revenue, and send credentials from one dashboard.
               </p>
             </div>
-            <div className="mt-5 flex justify-center">
-              <div className="h-1.5 w-14 rounded-full" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
-            </div>
+            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+            <div className="absolute right-20 bottom-0 w-32 h-32 bg-white/10 rounded-full"></div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-base sm:text-lg font-semibold mb-5 text-center" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-            Payment Overview
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {/* Total Submissions */}
-            <div className="rounded-2xl border border-softGrey p-5 transition-colors duration-200" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Total Submissions</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{totalSubmissions}</p>
-                </div>
-                <div className="p-3 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Enrollments */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Enrollments</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalEnrollments}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-md">
+                <Users className="w-6 h-6 text-white" />
               </div>
             </div>
+            <div className="mt-4 text-xs text-gray-500">All time enrollments</div>
+          </div>
 
-            {/* Pending Verification */}
-            <div className="rounded-2xl border border-softGrey p-5 transition-colors duration-200" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Pending Verification</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.deepRed }}>{pendingVerifications}</p>
-                </div>
-                <div className="p-3 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${BRAND_COLORS.deepRed}20` }}>
-                  <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: BRAND_COLORS.deepRed }} />
-                </div>
+          {/* Pending Verification */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Verification</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pendingPayments}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow-md">
+                <AlertCircle className="w-6 h-6 text-white" />
               </div>
             </div>
+            <div className="mt-4 text-xs text-amber-600">Awaiting review</div>
+          </div>
 
-            {/* Verified Payments */}
-            <div className="rounded-2xl border border-softGrey p-5 transition-colors duration-200" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Verified Payments</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.teal }}>{verifiedPayments}</p>
-                </div>
-                <div className="p-3 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${BRAND_COLORS.teal}20` }}>
-                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: BRAND_COLORS.teal }} />
-                </div>
+          {/* Verified Payments */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Verified Payments</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.verifiedPayments}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-md">
+                <CheckCircle className="w-6 h-6 text-white" />
               </div>
             </div>
+            <div className="mt-4 text-xs text-emerald-600">Successfully verified</div>
+          </div>
 
-            {/* Total Revenue */}
-            <div className="rounded-2xl border border-softGrey p-5 transition-colors duration-200" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Total Revenue</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                    PKR {totalRevenue.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20` }}>
-                  <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                </div>
+          {/* Total Revenue */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">
+                  PKR {totalVerifiedRevenue.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Avg: PKR {averageRevenuePerStudent.toLocaleString()}/student
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md">
+                <Wallet className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Revenue Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Verified Revenue */}
+          <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-700">Verified Revenue</p>
+                <p className="text-2xl font-bold text-emerald-600">PKR {totalVerifiedRevenue.toLocaleString()}</p>
+                <p className="text-xs text-emerald-600 mt-1">
+                  <ArrowUpRight className="w-3 h-3 inline" /> From {revenueStats.payingStudents} students
+                </p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-lg">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Revenue */}
+          <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-700">Pending Revenue</p>
+                <p className="text-2xl font-bold text-amber-600">PKR {pendingRevenue.toLocaleString()}</p>
+                <p className="text-xs text-amber-600 mt-1">
+                  <ArrowDownRight className="w-3 h-3 inline" /> Awaiting verification
+                </p>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-lg">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Projected Total */}
+          <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">Projected Total</p>
+                <p className="text-2xl font-bold text-purple-600">PKR {(totalVerifiedRevenue + pendingRevenue).toLocaleString()}</p>
+                <p className="text-xs text-purple-600 mt-1">
+                  If all pending verified
+                </p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Credentials Status */}
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-base sm:text-lg font-semibold mb-4 text-center" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-            Credentials Status
-          </h2>
-          <div className="rounded-2xl border border-softGrey p-5" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <ul className="flex flex-col sm:flex-row sm:justify-between gap-4">
-              <li className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BRAND_COLORS.teal }}></span>
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Sent Credentials</p>
-                  <p className="text-lg sm:text-xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{sentCredentials}</p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BRAND_COLORS.brightRed }}></span>
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Failed Credentials</p>
-                  <p className="text-lg sm:text-xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{failedCredentials}</p>
-                </div>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BRAND_COLORS.brightRed }}></span>
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-darkGrey">Rejected Payments</p>
-                  <p className="text-lg sm:text-xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{rejectedPayments}</p>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Enrollment Trend Chart */}
-        <div className="mb-6 sm:mb-8">
-          <div className="bg-white rounded-xl border border-softGrey p-5 shadow-sm">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-              <TrendingUp className="w-5 h-5" />
-              Student Enrollment Trend
-            </h3>
-            <div className="relative h-40">
-              <div className="flex items-end justify-between gap-2 h-full">
-                {enrollmentMonths.map((month, i) => {
-                  const value = enrollmentValues[i] || 0;
-                  const barHeight = (value / maxEnrollments) * 120 || 4;
-                  return (
-                    <div key={month} className="flex-1 flex flex-col items-center group">
-                      <div className="relative w-full flex justify-center mb-1">
-                        <span className="text-xs font-semibold bg-lightGrey px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 whitespace-nowrap shadow-sm z-10">
-                          {value} student{value !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <div
-                        className="w-full max-w-[30px] rounded-t-lg transition-all duration-300 group-hover:brightness-110"
-                        style={{
-                          height: `${barHeight}px`,
-                          backgroundColor: BRAND_COLORS.darkRoyalBlue,
-                        }}
-                      ></div>
-                      <span className="text-xs font-medium mt-2 text-darkGrey/80">{month.split(' ')[0]}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="absolute inset-x-0 top-0 h-[120px] pointer-events-none border-b border-dashed border-softGrey"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Control Panel */}
-        <div className="mb-6 sm:mb-8">
-          <div className="rounded-2xl border border-softGrey p-5" style={{ backgroundColor: BRAND_COLORS.lightGrey }}>
-            <div className="flex flex-col gap-5">
-              {/* Search + Filter Row */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Status Filter (redundant with global search, but kept for convenience) */}
-                <div className="w-full sm:w-48">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white border border-softGrey text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20 transition-colors"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="verified">Verified</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-start">
-                <button
-                  onClick={() => {
-                    if (confirm('Clear all localStorage data? This will delete all students and credentials.')) {
-                      localStorage.removeItem('studentCredentials');
-                      localStorage.removeItem('uploadedFiles');
-                      localStorage.removeItem('paymentSubmission');
-                      localStorage.removeItem('enrollments');
-                      alert('LocalStorage cleared!');
-                      loadDataFromLocalStorage();
-                    }
-                  }}
-                  className="px-5 py-3 rounded-xl text-darkRoyalBlue border border-darkRoyalBlue hover:bg-darkRoyalBlue/10 transition-colors font-medium text-sm sm:text-base"
-                >
-                  Clear All Data
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs for Tables */}
         <div className="mb-8">
-          <div className="bg-white rounded-2xl border border-softGrey overflow-hidden">
-            <div className="flex border-b border-softGrey">
-              <button
-                onClick={() => setActiveTab('payments')}
-                className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
-                  activeTab === 'payments'
-                    ? 'text-darkRoyalBlue'
-                    : 'text-darkGrey/60 hover:text-darkGrey'
-                }`}
-                style={{ color: activeTab === 'payments' ? BRAND_COLORS.darkRoyalBlue : undefined }}
-              >
-                Payment Submissions
-                {activeTab === 'payments' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }} />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('credentials')}
-                className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
-                  activeTab === 'credentials'
-                    ? 'text-darkRoyalBlue'
-                    : 'text-darkGrey/60 hover:text-darkGrey'
-                }`}
-                style={{ color: activeTab === 'credentials' ? BRAND_COLORS.darkRoyalBlue : undefined }}
-              >
-                Sent Credentials
-                {activeTab === 'credentials' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }} />
-                )}
-              </button>
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Sent Credentials</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.sentCredentials}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Rejected Payments</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.rejectedPayments}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg Revenue/Student</p>
+                  <p className="text-xl font-bold text-indigo-600">
+                    PKR {averageRevenuePerStudent.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Paying Students</p>
+                  <p className="text-xl font-bold text-gray-900">{revenueStats.payingStudents}</p>
+                </div>
+              </div>
             </div>
-
-            {/* Payment Submissions Table */}
-            {activeTab === 'payments' && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed divide-y divide-softGrey">
-                  <thead className="bg-[#1E3A8A]">
-                    <tr>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Student</th>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Course</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Amount</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Method</th>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Transaction ID</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-white">Status</th>
-                      <th className="w-1/6 px-4 py-3 text-center text-sm sm:text-base font-semibold text-white">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-softGrey">
-                    {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student, idx) => (
-                        <tr key={student.id} className={`transition-colors hover:bg-[#E5F1FF] ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F7FAFC]'}`}>
-                          <td className="px-4 py-3 text-sm sm:text-base font-medium text-darkGrey truncate" title={student.name}>{student.name}</td>
-                          <td className="px-4 py-3 text-sm sm:text-base text-darkGrey truncate" title={student.course}>{student.course}</td>
-                          <td className="px-4 py-3 text-sm sm:text-base font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{student.amount}</td>
-                          <td className="px-4 py-3 text-sm sm:text-base text-darkGrey truncate">{student.paymentMethod}</td>
-                          <td className="px-4 py-3 text-sm sm:text-xs font-mono text-darkGrey truncate" title={student.transactionId}>{student.transactionId}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white`}
-                              style={{ backgroundColor: student.status === 'verified' ? BRAND_COLORS.teal : student.status === 'rejected' ? BRAND_COLORS.brightRed : BRAND_COLORS.darkRoyalBlue }}>
-                              {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-center gap-2">
-                              {student.screenshotUrl && student.screenshotUrl.length > 100 && (
-                                <button onClick={() => viewScreenshot(student)} className="p-2 text-darkRoyalBlue hover:bg-darkRoyalBlue/10 rounded-lg transition-colors" title="View Screenshot">
-                                  <Eye className="w-4 h-4 sm:w-5" />
-                                </button>
-                              )}
-                              <button onClick={() => { setItemToDelete({ type: 'student', id: student.id, name: student.name }); setShowDeleteModal(true); }} className="p-2 text-brightRed hover:bg-brightRed/10 rounded-lg transition-colors" title="Delete Student">
-                                <Trash2 className="w-4 h-4 sm:w-5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="text-center py-8 text-darkGrey/70">
-                          <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-                          <h3 className="text-base sm:text-lg font-medium mb-2">
-                            {searchTerm ? 'No matching payments found' : 'No payment submissions yet'}
-                          </h3>
-                          <p className="text-sm sm:text-base max-w-md mx-auto">
-                            {searchTerm ? 'Try a different search term' : 'Students will appear here after they upload payment screenshots'}
-                          </p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Sent Credentials Table */}
-            {activeTab === 'credentials' && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed divide-y divide-softGrey">
-                  <thead className="bg-lightGrey">
-                    <tr>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Student</th>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Course</th>
-                      <th className="w-1/6 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Email</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Username</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Password</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Status</th>
-                      <th className="w-1/12 px-4 py-3 text-left text-sm sm:text-base font-semibold text-darkGrey">Sent Date</th>
-                      <th className="w-1/6 px-4 py-3 text-center text-sm sm:text-base font-semibold text-darkGrey">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-softGrey">
-                    {studentCredentials.length > 0 ? (
-                      filteredCredentials.map((credential, idx) => (
-                        <tr key={credential.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-lightGrey/10'} transition-colors hover:bg-lightGrey/20`}>
-                          <td className="px-4 py-3 text-sm sm:text-base font-medium text-darkGrey truncate" title={credential.studentName}>{credential.studentName}</td>
-                          <td className="px-4 py-3 text-sm sm:text-base text-darkGrey truncate" title={credential.course}>{credential.course}</td>
-                          <td className="px-4 py-3 text-sm sm:text-base text-darkGrey truncate" title={credential.studentEmail}>{credential.studentEmail}</td>
-                          <td className="px-4 py-3"><span className="text-sm sm:text-base font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey truncate block" title={credential.username}>{credential.username}</span></td>
-                          <td className="px-4 py-3"><span className="text-sm sm:text-base font-mono bg-lightGrey px-2 py-1 rounded text-darkGrey truncate block" title={credential.password}>{credential.password}</span></td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white`}
-                              style={{ backgroundColor: credential.status === 'sent' ? BRAND_COLORS.teal : BRAND_COLORS.brightRed }}>
-                              {credential.status.charAt(0).toUpperCase() + credential.status.slice(1)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm sm:text-base text-darkGrey">{new Date(credential.sentDate).toLocaleDateString()}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-center gap-2">
-                              <button onClick={() => { const text = `Username: ${credential.username}\nPassword: ${credential.password}`; navigator.clipboard.writeText(text); alert('Credentials copied to clipboard!'); }} className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-lightGrey rounded transition-colors" title="Copy Credentials"><Key className="w-4 h-4 sm:w-5" /></button>
-                              <button onClick={() => viewCredentials(credential)} className="p-2 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded transition-colors" title="View Details"><Eye className="w-4 h-4 sm:w-5" /></button>
-                              <button onClick={() => { setItemToDelete({ type: 'credential', id: credential.id, name: credential.studentName }); setShowDeleteModal(true); }} className="p-2 text-brightRed hover:bg-brightRed/10 rounded transition-colors" title="Delete"><Trash2 className="w-4 h-4 sm:w-5" /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="text-center py-12 text-darkGrey/70">
-                          <Key className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
-                          <h3 className="text-base sm:text-lg font-medium mb-2">No credentials sent yet</h3>
-                          <p className="text-sm sm:text-base max-w-md mx-auto">Verify a payment to send login credentials to students</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-indigo-100">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:w-64">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-indigo-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="verified">Verified</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div className="text-sm text-gray-500 self-center">
+                Showing {filteredStudents.length} of {paymentStudents.length} submissions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
+          <div className="flex border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-1">
+            <button
+              onClick={() => setActiveTab('payments')}
+              className={`flex-1 py-3 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'payments'
+                  ? 'bg-white text-indigo-700 shadow-md'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-white/50'
+              }`}
+            >
+              Payment Submissions ({filteredStudents.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('credentials')}
+              className={`flex-1 py-3 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'credentials'
+                  ? 'bg-white text-indigo-700 shadow-md'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-white/50'
+              }`}
+            >
+              Verified Students ({filteredCredentials.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('revenue')}
+              className={`flex-1 py-3 text-sm font-medium rounded-lg transition-all ${
+                activeTab === 'revenue'
+                  ? 'bg-white text-indigo-700 shadow-md'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-white/50'
+              }`}
+            >
+              Revenue Details
+            </button>
+          </div>
+
+          {/* Payments Table */}
+          {activeTab === 'payments' && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-indigo-100">
+                <thead className="bg-gradient-to-r from-indigo-600 to-purple-600">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Student</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Amount</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-white">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-indigo-100 bg-white">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student, idx) => (
+                      <tr key={student.enrollmentId} className="hover:bg-indigo-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-gray-900">{student.name}</p>
+                            <p className="text-xs text-gray-500">{student.email}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{student.course}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-bold text-indigo-600">
+                            PKR {student.amount.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white shadow-sm`}
+                            style={{ 
+                              backgroundColor: student.status === 'verified' 
+                                ? BRAND_COLORS.teal 
+                                : student.status === 'rejected' 
+                                  ? BRAND_COLORS.brightRed 
+                                  : BRAND_COLORS.darkRoyalBlue 
+                            }}>
+                            {student.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <button 
+                              onClick={() => {
+                                setSelectedStudentDetails(student)
+                                setSelectedScreenshot(student.screenshotUrl)
+                                setShowScreenshotModal(true)
+                              }} 
+                              className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center py-12 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-indigo-300" />
+                        <p>No payment submissions found</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Credentials Table */}
+          {activeTab === 'credentials' && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-indigo-100">
+                <thead className="bg-gradient-to-r from-emerald-600 to-teal-600">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Student</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Amount</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Verified Date</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-white">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-indigo-100 bg-white">
+                  {filteredCredentials.length > 0 ? (
+                    filteredCredentials.map((cred, idx) => (
+                      <tr key={cred.enrollmentId} className="hover:bg-emerald-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-gray-900">{cred.studentName}</p>
+                            <p className="text-xs text-gray-500">{cred.studentEmail}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{cred.course}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-bold text-emerald-600">
+                            PKR {cred.amount?.toLocaleString() || '0'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {cred.verifiedDate ? new Date(cred.verifiedDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white bg-emerald-600 shadow-sm">
+                              {cred.credentialsSent ? 'Credentials Sent' : 'Verified'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center py-12 text-gray-500">
+                        <Key className="w-12 h-12 mx-auto mb-4 text-emerald-300" />
+                        <p>No verified students yet</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Revenue Details Tab */}
+          {activeTab === 'revenue' && (
+            <div className="p-6 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Revenue Summary */}
+                <div className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-6 border border-indigo-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
+                      <span className="text-gray-600">Verified Revenue:</span>
+                      <span className="font-bold text-lg text-emerald-600">
+                        PKR {totalVerifiedRevenue.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
+                      <span className="text-gray-600">Pending Revenue:</span>
+                      <span className="font-bold text-lg text-amber-600">
+                        PKR {pendingRevenue.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
+                      <span className="text-gray-600">Paying Students:</span>
+                      <span className="font-bold text-lg text-indigo-600">
+                        {revenueStats.payingStudents}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Average per Student:</span>
+                      <span className="font-bold text-lg text-purple-600">
+                        PKR {averageRevenuePerStudent.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Course-wise Revenue */}
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-6 border border-purple-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
+                  <div className="space-y-3">
+                    {paymentStudents
+                      .filter(s => s.status === 'verified')
+                      .reduce((acc: any[], student) => {
+                        const existing = acc.find(c => c.course === student.course)
+                        if (existing) {
+                          existing.revenue += student.amount
+                          existing.count++
+                        } else {
+                          acc.push({
+                            course: student.course,
+                            revenue: student.amount,
+                            count: 1
+                          })
+                        }
+                        return acc
+                      }, [])
+                      .sort((a, b) => b.revenue - a.revenue)
+                      .slice(0, 5)
+                      .map((course, idx) => (
+                        <div key={idx} className="flex justify-between items-center py-2 border-b border-purple-100 last:border-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{course.course}</p>
+                            <p className="text-xs text-gray-500">{course.count} student{course.count > 1 ? 's' : ''}</p>
+                          </div>
+                          <span className="font-bold text-purple-600">
+                            PKR {course.revenue.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Recent Verified Payments */}
+                <div className="md:col-span-2 bg-gradient-to-br from-emerald-50 to-white rounded-xl p-6 border border-emerald-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-emerald-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Student</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Course</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Amount</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100">
+                        {paymentStudents
+                          .filter(s => s.status === 'verified')
+                          .slice(0, 5)
+                          .map((student, idx) => (
+                            <tr key={student.enrollmentId} className="hover:bg-emerald-50">
+                              <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{student.course}</td>
+                              <td className="px-4 py-3 text-sm font-bold text-emerald-600">
+                                PKR {student.amount.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500">
+                                {new Date(student.paymentDate).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Screenshot Modal */}
-        {showScreenshotModal && selectedScreenshot && selectedStudentDetails && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden border border-softGrey">
-              <div className="p-4 border-b border-softGrey flex justify-between items-center bg-lightGrey">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold truncate" style={{ color: BRAND_COLORS.darkNavy }}>Payment Screenshot - {selectedStudentDetails.name}</h3>
-                  <p className="text-xs sm:text-sm text-darkGrey/70 truncate">Transaction ID: {selectedStudentDetails.transactionId}</p>
+        {showScreenshotModal && selectedStudentDetails && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+              <div className="p-4 border-b border-indigo-100 flex justify-between items-center bg-gradient-to-r from-indigo-600 to-purple-600">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Student Details - {selectedStudentDetails.name}
+                  </h3>
                 </div>
-                <button onClick={() => setShowScreenshotModal(false)} className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors ml-2 flex-shrink-0"><X className="w-5 h-5" /></button>
+                <button 
+                  onClick={() => setShowScreenshotModal(false)} 
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
               </div>
-              <div className="p-4 sm:p-6 overflow-auto max-h-[calc(90vh-100px)]">
-                <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-                  <div className="lg:w-2/3">
-                    <div className="border border-softGrey rounded-lg overflow-hidden bg-lightGrey">
-                      <img src={selectedScreenshot} alt="Payment Screenshot" className="w-full h-auto max-h-[300px] sm:max-h-[400px] object-contain" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load'; }} />
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      <div className="flex justify-center">
-                        <button onClick={() => downloadScreenshot(selectedStudentDetails)} className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center text-sm sm:text-base"><Download className="w-4 h-4 mr-2" />Download Screenshot</button>
-                      </div>
-                      <div className="flex justify-center">
-                        <button onClick={() => { setShowScreenshotModal(false); setItemToDelete({ type: 'student', id: selectedStudentDetails.id, name: selectedStudentDetails.name }); setShowDeleteModal(true); }} className="px-4 py-2 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium flex items-center text-sm sm:text-base"><Trash2 className="w-4 h-4 mr-2" />Delete Student</button>
-                      </div>
-                      {selectedStudentDetails.status === 'pending' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                          <button onClick={() => sendCredentialsToStudent(selectedStudentDetails)} disabled={isSendingCredentials === selectedStudentDetails.id} className="w-full py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm sm:text-base" style={{ backgroundColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.white }}>
-                            {isSendingCredentials === selectedStudentDetails.id ? (<> <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Sending...</>) : (<> <Send className="w-4 h-4" /> Verify & Send Credentials</>)}
-                          </button>
-                          <button onClick={() => { if (confirm(`Reject payment from ${selectedStudentDetails.name}?`)) { handleRejectPayment(selectedStudentDetails.id); setShowScreenshotModal(false); } }} className="w-full py-3 border border-brightRed text-brightRed rounded-lg hover:bg-brightRed/5 transition-colors font-medium text-sm sm:text-base">✗ Reject Payment</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="lg:w-1/3">
-                    <div className="bg-lightGrey rounded-lg p-4 border border-softGrey">
-                      <h4 className="font-semibold mb-3 text-sm sm:text-base" style={{ color: BRAND_COLORS.darkNavy }}>Student Details</h4>
+              <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] bg-gray-50">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Student Info */}
+                  <div className="space-y-4">
+                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5 text-indigo-600" />
+                        Personal Information
+                      </h4>
                       <div className="space-y-3">
-                        <div className="flex items-start"><User className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Name</p><p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.name}</p></div></div>
-                        <div className="flex items-start"><FileSpreadsheet className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Course</p><p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.course}</p></div></div>
-                        <div className="flex items-start"><DollarSign className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Amount</p><p className="font-bold text-sm" style={{ color: BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.amount}</p></div></div>
-                        <div className="flex items-start"><CreditCard className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Payment Method</p><p className="font-medium text-darkGrey text-sm">{selectedStudentDetails.paymentMethod}</p></div></div>
-                        <div className="flex items-start"><Calendar className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Transaction ID</p><p className="font-mono text-xs bg-white px-2 py-1 rounded border border-softGrey text-darkGrey truncate">{selectedStudentDetails.transactionId}</p></div></div>
-                        <div className="flex items-start"><CheckCircle className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Status</p><span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white`} style={{ backgroundColor: selectedStudentDetails.status === 'verified' ? BRAND_COLORS.teal : selectedStudentDetails.status === 'rejected' ? BRAND_COLORS.brightRed : BRAND_COLORS.darkRoyalBlue }}>{selectedStudentDetails.status.charAt(0).toUpperCase() + selectedStudentDetails.status.slice(1)}</span></div></div>
-                        {selectedStudentDetails.email && selectedStudentDetails.email !== 'Not available' && (<div className="flex items-start"><Mail className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Email</p><p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.email}</p></div></div>)}
-                        {selectedStudentDetails.phone && selectedStudentDetails.phone !== 'Not available' && (<div className="flex items-start"><Phone className="w-4 h-4 text-darkGrey/70 mr-2 mt-0.5 flex-shrink-0" /><div className="flex-1 min-w-0"><p className="text-xs text-darkGrey/70">Phone</p><p className="font-medium text-darkGrey text-sm truncate">{selectedStudentDetails.phone}</p></div></div>)}
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Name:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.name}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Email:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.email}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Phone:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.phone}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">CNIC:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.cnic}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Address:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.address}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Education:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.education}</span></p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-indigo-600" />
+                        Course & Payment
+                      </h4>
+                      <div className="space-y-3">
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Course:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.course}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Amount:</span> <span className="font-bold text-indigo-600">PKR {selectedStudentDetails.amount.toLocaleString()}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Method:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.paymentMethod}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Transaction:</span> <span className="font-mono text-sm text-gray-700">{selectedStudentDetails.transactionId}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Status:</span> 
+                          <span className={`ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white shadow-sm`}
+                            style={{ 
+                              backgroundColor: selectedStudentDetails.status === 'verified' 
+                                ? BRAND_COLORS.teal 
+                                : selectedStudentDetails.status === 'rejected' 
+                                  ? BRAND_COLORS.brightRed 
+                                  : BRAND_COLORS.darkRoyalBlue 
+                            }}>
+                            {selectedStudentDetails.status}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Documents */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        Documents
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedStudentDetails.cnicFrontUrl && (
+                          <a href={selectedStudentDetails.cnicFrontUrl} target="_blank" rel="noopener noreferrer" 
+                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                            <FileText className="w-4 h-4" />
+                            View CNIC Front
+                          </a>
+                        )}
+                        {selectedStudentDetails.cnicBackUrl && (
+                          <a href={selectedStudentDetails.cnicBackUrl} target="_blank" rel="noopener noreferrer" 
+                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                            <FileText className="w-4 h-4" />
+                            View CNIC Back
+                          </a>
+                        )}
+                        {selectedStudentDetails.educationalDocUrl && (
+                          <a href={selectedStudentDetails.educationalDocUrl} target="_blank" rel="noopener noreferrer" 
+                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                            <FileText className="w-4 h-4" />
+                            View Educational Document
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Credentials Details Modal */}
-        {showCredentialsModal && selectedCredentials && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-            <div className="bg-white rounded-2xl w-full max-w-md border border-softGrey shadow-lg">
-              <div className="flex justify-between items-center p-4 sm:p-5 border-b border-softGrey bg-lightGrey">
-                <div className="flex-1 min-w-0"><h3 className="text-base sm:text-lg font-semibold truncate" style={{ color: BRAND_COLORS.darkNavy }}>Credentials Details</h3><p className="text-xs sm:text-sm text-darkGrey/70 truncate">{selectedCredentials.studentName}</p></div>
-                <button onClick={() => setShowCredentialsModal(false)} className="p-2 text-darkGrey hover:text-darkGrey hover:bg-white rounded-lg transition-colors ml-2 flex-shrink-0"><X className="w-5 h-5" /></button>
-              </div>
-              <div className="p-4 sm:p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-4"><div className="flex-1"><p className="text-xs sm:text-sm text-darkGrey/70">Student Name</p><p className="font-medium text-darkGrey text-sm sm:text-base">{selectedCredentials.studentName}</p></div><div className="flex-1"><p className="text-xs sm:text-sm text-darkGrey/70">Email</p><p className="font-medium text-darkGrey text-sm sm:text-base truncate">{selectedCredentials.studentEmail}</p></div></div>
-                <div><p className="text-xs sm:text-sm text-darkGrey/70">Course</p><p className="font-medium text-darkGrey text-sm sm:text-base">{selectedCredentials.course}</p></div>
-                <div className="bg-lightGrey p-3 sm:p-4 rounded-xl border border-softGrey"><h4 className="font-semibold mb-2 text-sm sm:text-base" style={{ color: BRAND_COLORS.darkNavy }}>Login Credentials</h4><div className="space-y-2"><div><p className="text-xs sm:text-sm text-darkGrey/70 mb-1">Username</p><p className="font-mono text-sm sm:text-base bg-white px-3 py-2 rounded border border-softGrey text-darkGrey break-all">{selectedCredentials.username}</p></div><div><p className="text-xs sm:text-sm text-darkGrey/70 mb-1">Password</p><p className="font-mono text-sm sm:text-base bg-white px-3 py-2 rounded border border-softGrey text-darkGrey break-all">{selectedCredentials.password}</p></div></div></div>
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-4"><div><p className="text-xs sm:text-sm text-darkGrey/70">Sent Date</p><p className="font-medium text-darkGrey text-sm sm:text-base">{new Date(selectedCredentials.sentDate).toLocaleDateString()} at {new Date(selectedCredentials.sentDate).toLocaleTimeString()}</p></div><div className="mt-2 sm:mt-0"><p className="text-xs sm:text-sm text-darkGrey/70">Status</p><span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white`} style={{ backgroundColor: selectedCredentials.status === 'sent' ? BRAND_COLORS.teal : BRAND_COLORS.brightRed }}>{selectedCredentials.status.charAt(0).toUpperCase() + selectedCredentials.status.slice(1)}</span></div></div>
-                <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
-                  <button onClick={() => { const text = `Username: ${selectedCredentials.username}\nPassword: ${selectedCredentials.password}`; navigator.clipboard.writeText(text); alert('Credentials copied to clipboard!'); }} className="flex-1 py-2.5 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"><Key className="w-4 h-4" />Copy Credentials</button>
-                  {selectedCredentials.status === 'sent' && (<button onClick={() => { resendCredentials(selectedCredentials); setShowCredentialsModal(false); }} className="flex-1 py-2.5 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base" style={{ backgroundColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.white }}><Send className="w-4 h-4" />Resend</button>)}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && itemToDelete && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-md w-full border border-softGrey">
-              <div className="p-4 border-b border-softGrey bg-lightGrey rounded-t-xl"><h3 className="text-lg font-semibold text-center" style={{ color: BRAND_COLORS.darkNavy }}>Confirm Delete</h3></div>
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brightRed/10 flex items-center justify-center"><Trash2 className="w-8 h-8" style={{ color: BRAND_COLORS.brightRed }} /></div>
-                <h4 className="text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Delete {itemToDelete.type === 'student' ? 'Student' : 'Credentials'}?</h4>
-                <p className="text-darkGrey mb-4">Are you sure you want to delete <span className="font-semibold">{itemToDelete.name}</span>? {itemToDelete.type === 'student' ? ' This will also remove any associated credentials.' : ''}</p>
-                <p className="text-sm text-brightRed mb-6">This action cannot be undone.</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button onClick={() => { setShowDeleteModal(false); setItemToDelete(null); }} className="flex-1 py-3 border border-softGrey text-darkGrey rounded-lg hover:bg-lightGrey transition-colors font-medium">Cancel</button>
-                  <button onClick={handleDeleteItem} className="flex-1 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: BRAND_COLORS.brightRed, color: BRAND_COLORS.white }}>Delete</button>
+                  {/* Payment Slip */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-indigo-600" />
+                      Payment Slip
+                    </h4>
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
+                      <img 
+                        src={selectedStudentDetails.screenshotUrl} 
+                        alt="Payment Slip" 
+                        className="w-full h-auto"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load'
+                        }}
+                      />
+                    </div>
+                    
+                    {selectedStudentDetails.status === 'pending' && (
+                      <div className="mt-6 space-y-3">
+                        <button
+                          onClick={() => sendCredentialsToStudent(selectedStudentDetails)}
+                          disabled={isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId}
+                          className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                        >
+                          {isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4" />
+                              Verify & Send Credentials
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => handleRejectPayment(selectedStudentDetails.enrollmentId, selectedStudentDetails.studentId)}
+                          disabled={isSendingCredentials === selectedStudentDetails.enrollmentId}
+                          className="w-full py-3 border-2 border-red-600 text-red-600 rounded-xl hover:bg-red-50 font-medium disabled:opacity-50 transition-all"
+                        >
+                          Reject Payment
+                        </button>
+                      </div>
+                    )}
+                    
+                    {selectedStudentDetails.status === 'verified' && (
+                      <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 text-center">
+                        <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-600" />
+                        <p className="text-emerald-800 font-medium">Payment Verified</p>
+                        <p className="text-sm text-emerald-600 mt-2">
+                          Amount: PKR {selectedStudentDetails.amount.toLocaleString()} added to revenue
+                        </p>
+                        {selectedStudentDetails.credentialsSent && (
+                          <p className="text-xs text-emerald-600 mt-2 bg-emerald-100 p-2 rounded-lg">
+                            ✓ Credentials sent successfully
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {selectedStudentDetails.status === 'rejected' && (
+                      <div className="mt-6 p-6 bg-gradient-to-br from-red-50 to-white rounded-xl border border-red-200 text-center">
+                        <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-600" />
+                        <p className="text-red-800 font-medium">Payment Rejected</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -948,5 +1032,5 @@ export default function AdminDashboard() {
         )}
       </div>
     </div>
-  );
+  )
 }

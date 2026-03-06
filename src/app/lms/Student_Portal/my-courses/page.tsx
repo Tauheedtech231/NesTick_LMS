@@ -1,9 +1,10 @@
-// app/lms/Student_Portal/my-courses/page.tsx (FIXED VERSION)
+// app/lms/Student_Portal/my-courses/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { HiClock, HiDocumentText, HiUser, HiChartBar } from 'react-icons/hi';
+import { HiClock, HiUser, HiOutlineRefresh, HiXCircle, HiSearch, HiBookOpen, HiAcademicCap } from 'react-icons/hi';
+import { Loader2 } from 'lucide-react';
 /* eslint-disable */
 
 type Course = {
@@ -13,8 +14,6 @@ type Course = {
   instructorName?: string;
   description: string;
   category: string;
-  progress: number;
-  status: 'not_started' | 'in_progress' | 'completed';
   enrolledDate: string;
   modules: any[];
   totalModules: number;
@@ -24,6 +23,7 @@ type Course = {
   duration?: string;
   level?: string;
   instructorImage?: string;
+  enrollmentId: string;
 };
 
 const BRAND_COLORS = {
@@ -37,105 +37,27 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// Demo courses to show when user has no enrollments
-const DEMO_COURSES: Course[] = [
-  {
-    id: 'demo-1',
-    title: 'Introduction to Web Development',
-    instructor: 'Sarah Johnson',
-    instructorName: 'Sarah Johnson',
-    description: 'Learn the fundamentals of HTML, CSS, and JavaScript. Build your first responsive website from scratch.',
-    category: 'Web Development',
-    progress: 45,
-    status: 'in_progress',
-    enrolledDate: new Date().toISOString(),
-    modules: [],
-    totalModules: 12,
-    completedModules: 5,
-    image: 'https://images.unsplash.com/photo-1593720213429-5c0b6c8f8b8a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    duration: '8 weeks',
-    level: 'Beginner'
-  },
-  {
-    id: 'demo-2',
-    title: 'Data Science Fundamentals',
-    instructor: 'Michael Chen',
-    instructorName: 'Michael Chen',
-    description: 'Master the basics of data analysis, Python programming, and visualization. Hands-on projects included.',
-    category: 'Data Science',
-    progress: 20,
-    status: 'in_progress',
-    enrolledDate: new Date().toISOString(),
-    modules: [],
-    totalModules: 15,
-    completedModules: 3,
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    duration: '10 weeks',
-    level: 'Intermediate'
-  },
-  {
-    id: 'demo-3',
-    title: 'UX/UI Design Principles',
-    instructor: 'Emily Rodriguez',
-    instructorName: 'Emily Rodriguez',
-    description: 'Discover the art of creating intuitive user experiences. Learn wireframing, prototyping, and user testing.',
-    category: 'Design',
-    progress: 0,
-    status: 'not_started',
-    enrolledDate: new Date().toISOString(),
-    modules: [],
-    totalModules: 10,
-    completedModules: 0,
-    image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    duration: '6 weeks',
-    level: 'Beginner'
-  },
-  {
-    id: 'demo-4',
-    title: 'Digital Marketing Mastery',
-    instructor: 'David Kim',
-    instructorName: 'David Kim',
-    description: 'Comprehensive guide to SEO, social media marketing, and analytics. Build a complete marketing strategy.',
-    category: 'Marketing',
-    progress: 100,
-    status: 'completed',
-    enrolledDate: new Date().toISOString(),
-    modules: [],
-    totalModules: 8,
-    completedModules: 8,
-    image: 'https://images.unsplash.com/photo-1557838923-2985c318be48?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    duration: '4 weeks',
-    level: 'Intermediate'
-  }
-];
-
 export default function MyCoursesPage() {
   const [user, setUser] = useState<any>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [overallProgress, setOverallProgress] = useState(0);
-  const [showingDemo, setShowingDemo] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Helper function to get instructor name from various sources
+  // Helper function to get instructor name
   const getInstructorName = (course: any): string => {
-    // Check all possible fields where instructor name might be stored
     const instructorName = 
       course.instructorName || 
       course.instructor || 
       course.instructor_name || 
-      course.createdBy ||
-      course.creator ||
-      course.teacher ||
       'Not Assigned';
     
-    // If it's an object with a name property
     if (typeof instructorName === 'object' && instructorName !== null) {
-      return instructorName.name || instructorName.fullName || instructorName.displayName || 'Instructor';
+      return instructorName.name || instructorName.fullName || 'Instructor';
     }
     
-    // If it's a string and not empty
     if (typeof instructorName === 'string' && instructorName.trim()) {
       return instructorName;
     }
@@ -143,163 +65,122 @@ export default function MyCoursesPage() {
     return 'Not Assigned';
   };
 
-  // Function to load courses with real-time progress
-  const loadCoursesWithProgress = () => {
+  // Load user from localStorage
+  useEffect(() => {
     try {
       const currentUserStr = localStorage.getItem('currentUser');
       if (!currentUserStr) {
-        // No user logged in – show demo courses
-        setCourses([]);
-        setFilteredCourses(DEMO_COURSES);
-        setOverallProgress(0);
-        setShowingDemo(true);
-        setLoading(false);
+        window.location.href = '/lms/auth/login?type=student';
         return;
       }
-      
+
       const userData = JSON.parse(currentUserStr);
-      setUser(userData);
-
-      // Get all courses from localStorage (for instructor names)
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-      
-      // Create a map of courseId to course details for quick lookup
-      const courseDetailsMap = new Map();
-      allCourses.forEach((course: any) => {
-        courseDetailsMap.set(course.id, course);
-      });
-
-      // Get studentCourses
-      const studentCoursesStr = localStorage.getItem('studentCourses');
-      if (!studentCoursesStr) {
-        // No enrolled courses – show demo courses
-        setCourses([]);
-        setFilteredCourses(DEMO_COURSES);
-        setOverallProgress(0);
-        setShowingDemo(true);
-        setLoading(false);
+      if (userData.role !== 'student') {
+        window.location.href = '/lms/auth/login?type=student';
         return;
       }
 
-      const studentCoursesData = JSON.parse(studentCoursesStr);
-
-      // For each course, get the latest progress and correct instructor name
-      const typedCourses: Course[] = studentCoursesData.map((course: any) => {
-        // Get the latest completion data for this course and student
-        const completedSlidesKey = `completedSlides_${userData.id}_${course.id}`;
-        const savedCompletedSlides = localStorage.getItem(completedSlidesKey);
-        
-        // Get total slides for this course
-        const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
-        const courseSlides = allSlides.filter((s: any) => s.courseId === course.id);
-        const totalSlides = courseSlides.length;
-        
-        // Calculate completed slides
-        const completedSlides = savedCompletedSlides ? JSON.parse(savedCompletedSlides).length : 0;
-        
-        // Calculate progress based on slides completion
-        const progress = totalSlides > 0 
-          ? Math.round((completedSlides / totalSlides) * 100) 
-          : course.progress || 0;
-
-        // Get completed modules count
-        const completedModules = completedSlides;
-
-        // Get course details from the main courses list
-        const courseDetails = courseDetailsMap.get(course.id) || {};
-        
-        // Get instructor name with priority:
-        // 1. From courseDetails (most accurate)
-        // 2. From the course object itself
-        // 3. From studentCourses data
-        // 4. Default fallback
-        const instructorName = 
-          getInstructorName(courseDetails) || 
-          getInstructorName(course) || 
-          course.instructorName ||
-          course.instructor ||
-          'Not Assigned';
-
-        return {
-          id: course.id,
-          title: courseDetails.title || course.title || 'Untitled Course',
-          instructor: instructorName,
-          instructorName: instructorName,
-          description: courseDetails.description || course.description || 'Course description not available.',
-          category: courseDetails.category || course.category || 'General',
-          progress: progress,
-          status: progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started',
-          enrolledDate: course.enrolledDate || new Date().toISOString(),
-          modules: course.modules || [],
-          totalModules: totalSlides || course.totalModules || 1,
-          completedModules: completedModules,
-          lastAccessed: course.lastAccessed,
-          image: courseDetails.image || course.image || course.courseImage,
-          duration: courseDetails.duration || course.duration || 'Self-paced',
-          level: courseDetails.level || course.level || 'All Levels',
-          instructorImage: courseDetails.instructorImage
-        };
-      });
-
-      // Update studentCourses with latest progress to keep it in sync
-      localStorage.setItem('studentCourses', JSON.stringify(typedCourses));
-
-      // Calculate overall progress
-      const totalProgress = typedCourses.reduce((sum, course) => sum + course.progress, 0);
-      const avgProgress = typedCourses.length > 0 
-        ? Math.round(totalProgress / typedCourses.length) 
-        : 0;
-      
-      setOverallProgress(avgProgress);
-      setCourses(typedCourses);
-      setFilteredCourses(typedCourses);
-      setShowingDemo(false);
-
-      console.log('Loaded courses with instructors:', typedCourses.map(c => ({
-        title: c.title,
-        instructor: c.instructor
-      })));
-
+      setUser(userData);
     } catch (error) {
-      console.error('Error loading courses:', error);
-      // On error, show demo courses as fallback
-      setFilteredCourses(DEMO_COURSES);
-      setShowingDemo(true);
+      console.error('Error loading user:', error);
+      setError('Failed to load user data');
+    }
+  }, []);
+
+  // Fetch enrolled courses from API
+  const fetchEnrolledCourses = async (showRefreshing = false) => {
+    if (!user?.email) return;
+
+    if (showRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      console.log('🔍 Fetching enrolled courses for:', user.email);
+
+      // Get student's enrollments from database
+      const response = await fetch(`/api/students/enrollments?email=${encodeURIComponent(user.email)}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch enrollments');
+      }
+
+      if (result.success && result.data) {
+        console.log('📊 Enrollments found:', result.data.length);
+
+        // Get course details for each enrollment
+        const coursesWithDetails = await Promise.all(
+          result.data.map(async (enrollment: any) => {
+            // Fetch course details
+            const courseResponse = await fetch(`/api/instructors/course/${enrollment.course_id}`);
+            const courseResult = await courseResponse.json();
+
+            if (!courseResponse.ok || !courseResult.success) {
+              return null;
+            }
+
+            const course = courseResult.data.course;
+
+            return {
+              id: course.id,
+              title: course.title,
+              instructor: getInstructorName(course),
+              instructorName: getInstructorName(course),
+              description: course.description || course.title,
+              category: course.category || 'General',
+              enrolledDate: enrollment.enrollment_date,
+              modules: [],
+              totalModules: 10,
+              completedModules: 0,
+              lastAccessed: enrollment.last_accessed,
+              image: course.image || '',
+              duration: course.duration || 'Self-paced',
+              level: course.level || 'All Levels',
+              enrollmentId: enrollment.id
+            };
+          })
+        );
+
+        const validCourses = coursesWithDetails.filter(Boolean) as Course[];
+        setCourses(validCourses);
+        setFilteredCourses(validCourses);
+        localStorage.setItem('studentCourses', JSON.stringify(validCourses));
+      } else {
+        setCourses([]);
+        setFilteredCourses([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching enrolled courses:', error);
+      setError(error.message || 'Failed to load courses');
+      
+      try {
+        const studentCoursesStr = localStorage.getItem('studentCourses');
+        if (studentCoursesStr) {
+          const savedCourses = JSON.parse(studentCoursesStr);
+          setCourses(savedCourses);
+          setFilteredCourses(savedCourses);
+        }
+      } catch (localError) {
+        console.error('Error loading from localStorage:', localError);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadCoursesWithProgress();
-
-    // Add event listener for storage changes (when data updates in other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('completedSlides_') || 
-          e.key?.startsWith('completedContent_') || 
-          e.key === 'studentCourses' ||
-          e.key === 'courses') {
-        loadCoursesWithProgress();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Also listen for custom events (for same-tab updates)
-    const handleCourseProgressUpdate = () => {
-      loadCoursesWithProgress();
-    };
-
-    window.addEventListener('courseProgressUpdated', handleCourseProgressUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('courseProgressUpdated', handleCourseProgressUpdate);
-    };
-  }, []);
+    if (user?.email) {
+      fetchEnrolledCourses();
+    }
+  }, [user]);
 
   useEffect(() => {
-    const displayCourses = showingDemo ? DEMO_COURSES : courses;
+    const displayCourses = courses;
     let filtered = displayCourses;
 
     if (searchTerm) {
@@ -313,260 +194,218 @@ export default function MyCoursesPage() {
     }
 
     setFilteredCourses(filtered);
-  }, [searchTerm, courses, showingDemo]);
+  }, [searchTerm, courses]);
+
+  const handleRefresh = () => {
+    if (user?.email) {
+      fetchEnrolledCourses(true);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div
-            className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent"
-            style={{ borderColor: BRAND_COLORS.deepRed }}
-          ></div>
-          <p className="mt-4 text-gray-600">Loading your courses...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: BRAND_COLORS.deepRed }} />
+          <p className="text-gray-600">Loading your courses...</p>
         </div>
       </div>
     );
   }
 
-  const displayCourses = showingDemo ? DEMO_COURSES : courses;
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <HiXCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold mb-2 text-gray-900">Error Loading Courses</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 rounded-lg text-white font-medium"
+            style={{ backgroundColor: BRAND_COLORS.deepRed }}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 sm:space-y-5 p-3 sm:p-4 md:p-5">
-      {/* Header with search and overall progress */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            My Courses
+    <div className="min-h-screen bg-white">
+      {/* Hero Section with Clean Background */}
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-200 px-4 sm:px-6 py-10 sm:py-12">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center justify-center p-3 bg-white shadow-md rounded-full mb-4">
+            <HiBookOpen className="w-8 h-8 text-indigo-600" />
+          </div>
+          
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+            My Learning Journey
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
-            {user?.fullName?.split(' ')[0] || 'Student'} • {displayCourses.length}{' '}
-            {displayCourses.length === 1 ? 'course' : 'courses'} 
-            {showingDemo && ' (demo)'}
+          
+          <p className="text-lg text-gray-600 mb-6">
+            Welcome back, {user?.name?.split(' ')[0] || 'Student'}! You're enrolled in {courses.length} {courses.length === 1 ? 'course' : 'courses'}
           </p>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {/* Overall Progress Badge - only for real courses */}
-          {!showingDemo && courses.length > 0 && (
-            <div 
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200"
-            >
-              <HiChartBar className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
-              <div>
-                <p className="text-xs text-gray-500">Overall Progress</p>
-                <p className="text-sm font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
-                  {overallProgress}%
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Search */}
-          <div className="w-full sm:w-64 md:w-80">
+          {/* Search Input - Clean Design */}
+          <div className="relative max-w-xl mx-auto">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm sm:text-base">
-                🔍
-              </span>
+              <HiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search courses..."
+                placeholder="Search your courses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
+                className="w-full pl-12 pr-12 py-4 text-base bg-white rounded-full border border-gray-200 focus:border-indigo-300 focus:outline-none focus:ring-4 focus:ring-indigo-50 shadow-sm placeholder-gray-400"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors"
                 >
-                  ✕
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               )}
             </div>
+            
+            {/* Search Stats */}
+            {searchTerm && filteredCourses.length > 0 && (
+              <div className="absolute left-0 right-0 -bottom-8 text-sm text-gray-500">
+                Found {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} matching "{searchTerm}"
+              </div>
+            )}
           </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="absolute top-6 right-6 p-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <HiOutlineRefresh className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Mobile Overall Progress - only for real courses */}
-      {!showingDemo && courses.length > 0 && (
-        <div className="sm:hidden bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <HiChartBar className="w-5 h-5" style={{ color: BRAND_COLORS.teal }} />
-              <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Empty State - No Enrolled Courses */}
+        {courses.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-10 text-center">
+            <div className="p-3 sm:p-4 bg-indigo-50 rounded-full w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 flex items-center justify-center">
+              <HiAcademicCap className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
             </div>
-            <span className="text-lg font-bold" style={{ color: BRAND_COLORS.deepRed }}>
-              {overallProgress}%
-            </span>
-          </div>
-          <div className="mt-2 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${overallProgress}%`,
-                backgroundColor: BRAND_COLORS.deepRed,
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Cards - only for real courses */}
-      {!showingDemo && courses.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-xs text-gray-500">Total</p>
-            <p className="text-lg sm:text-xl font-bold text-gray-900">{courses.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p className="text-xs text-gray-500">Completed</p>
-            <p className="text-lg sm:text-xl font-bold text-green-600">
-              {courses.filter(c => c.status === 'completed').length}
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+              No Enrolled Courses
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 mb-5 max-w-md mx-auto">
+              You haven't enrolled in any courses yet. Browse available courses to start your learning journey!
             </p>
-          </div>
-        </div>
-      )}
-
-      {/* Demo indicator message */}
-      {showingDemo && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-          You are viewing demo courses. <a href="/courses" className="font-medium underline">Browse real courses</a> to start learning.
-        </div>
-      )}
-
-      {/* Course grid */}
-      {filteredCourses.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {filteredCourses.map((course) => (
             <Link
-              key={course.id}
-              href={showingDemo ? `/lms/Student_Portal/demo-courses/${course.id}` : `/lms/Student_Portal/my-courses/${course.id}`}
-              className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+              href="/courses"
+              className="inline-block px-5 py-2 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
-              <div className="p-4 sm:p-5">
-                {/* Image if available */}
-                {course.image && (
-                  <div className="h-32 sm:h-36 overflow-hidden mb-3 sm:mb-4 rounded-lg">
-                    <img
-                      src={course.image}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Category and progress */}
-                <div className="flex justify-between items-start mb-2 sm:mb-3">
-                  <span
-                    className="text-xs font-semibold px-2 py-1 rounded"
-                    style={{
-                      backgroundColor: `${BRAND_COLORS.teal}20`,
-                      color: BRAND_COLORS.teal,
-                    }}
-                  >
-                    {course.category}
-                  </span>
-                  <span className="text-xs font-medium text-gray-500">
-                    {course.progress}%
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
-                  {course.title}
-                </h3>
-
-             
-
-                {/* Description */}
-                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                  {course.description}
-                </p>
-
-                {/* Duration & Level */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                    {course.duration}
-                  </span>
-                  <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                    {course.level}
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div className="mb-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-medium" style={{ color: BRAND_COLORS.deepRed }}>
-                      {course.progress}%
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${course.progress}%`,
-                        backgroundColor: BRAND_COLORS.deepRed,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Meta info */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="flex items-center">
-                    <HiDocumentText className="w-3 h-3 mr-1" />
-                    {course.completedModules}/{course.totalModules} lessons
-                  </span>
-                  {course.status === 'completed' && (
-                    <span className="text-green-600 font-medium">✓ Completed</span>
-                  )}
-                  {course.status === 'in_progress' && (
-                    <span className="text-yellow-600 font-medium">● In Progress</span>
-                  )}
-                  {course.status === 'not_started' && (
-                    <span className="text-gray-400 font-medium">○ Not Started</span>
-                  )}
-                </div>
-              </div>
+              Browse Courses
             </Link>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-10 text-center">
-          <div className="text-5xl sm:text-6xl mb-4">📚</div>
-          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-            {searchTerm ? 'No matching courses' : 'No courses available'}
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-600 mb-5 max-w-md mx-auto">
-            {searchTerm
-              ? `No courses found matching "${searchTerm}"`
-              : showingDemo 
-                ? "No demo courses to display." 
-                : "You haven't enrolled in any courses yet. Browse available courses to get started."}
-          </p>
-          {searchTerm ? (
+          </div>
+        )}
+
+        {/* No matching courses */}
+        {courses.length > 0 && filteredCourses.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-10 text-center">
+            <div className="p-3 sm:p-4 bg-gray-100 rounded-full w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 flex items-center justify-center">
+              <HiSearch className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500" />
+            </div>
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+              No matching courses
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 mb-5 max-w-md mx-auto">
+              No courses found matching "{searchTerm}"
+            </p>
             <button
               onClick={() => setSearchTerm('')}
-              className="px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-purple-900 transition-colors"
+              className="px-5 py-2 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors"
+              style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
               Clear Search
             </button>
-          ) : !showingDemo && (
-            // eslint-disable-next-line @next/next/no-html-link-for-pages
-            <a
-              href="/courses"
-              className="inline-block px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-purple-900 transition-colors"
-            >
-              Browse Courses
-            </a>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Course grid */}
+        {filteredCourses.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {filteredCourses.map((course) => (
+              <Link
+                key={course.id}
+                href={`/lms/Student_Portal/my-courses/${course.id}`}
+                className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+              >
+                <div className="p-4 sm:p-5">
+                  {/* Image if available */}
+                  {course.image && (
+                    <div className="h-32 sm:h-36 overflow-hidden mb-3 sm:mb-4 rounded-lg">
+                      <img
+                        src={course.image}
+                        alt={course.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Category */}
+                  <div className="mb-2 sm:mb-3">
+                    <span
+                      className="text-xs font-semibold px-2 py-1 rounded"
+                      style={{
+                        backgroundColor: `${BRAND_COLORS.teal}20`,
+                        color: BRAND_COLORS.teal,
+                      }}
+                    >
+                      {course.category}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
+                    {course.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                    {course.description}
+                  </p>
+
+                  {/* Duration & Level */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 flex items-center gap-1">
+                      <HiClock className="w-3 h-3" />
+                      {course.duration}
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                      {course.level}
+                    </span>
+                  </div>
+
+                  {/* Instructor */}
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <HiUser className="w-3 h-3 text-gray-400" />
+                    <span className="truncate">{course.instructor}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-// app/lms/Student_Portal/my-courses/[id]/page.tsx (UPDATED with assignment files)
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -15,16 +14,20 @@ import {
   HiOutlineXCircle,
   HiChevronDown,
   HiChevronUp,
-  HiRefresh,
   HiChartBar,
   HiTrendingUp,
   HiTrendingDown,
-  HiStar,
   HiDocumentReport,
-  HiPaperClip
+  HiPaperClip,
+  HiRefresh,
+  HiEye,
+  HiEyeOff,
+  HiChartPie,
+  HiCalendar,
+  HiTrendingUp as HiTrendingUpIcon
 } from 'react-icons/hi';
 import { IoMdRadioButtonOff } from 'react-icons/io';
-/* eslint-disable */
+import { Loader2 } from 'lucide-react';
 
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
@@ -47,29 +50,27 @@ interface Slide {
   updatedAt: string;
 }
 
-interface SlideContent {
-  slideId: string;
-  courseId: string;
-  files: {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
-  }[];
+interface SlideFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  publicId: string;
+  uploadedAt: string;
+}
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
 }
 
 interface Quiz {
   slideId: string;
   courseId: string;
-  questions: {
-    id: string;
-    question: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
+  questions: QuizQuestion[];
 }
 
 interface QuizAttempt {
@@ -80,9 +81,15 @@ interface QuizAttempt {
   score: number;
   passed: boolean;
   attemptedAt: string;
-  studentId?: string;
-  studentEmail?: string;
-  studentName?: string;
+}
+
+interface AssignmentFile {
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  publicId: string;
+  uploadedAt: string;
 }
 
 interface Assignment {
@@ -94,34 +101,28 @@ interface Assignment {
   dueDate: string;
   totalMarks: number;
   passingMarks: number;
-  file?: {
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
-  };
+  file?: AssignmentFile;
   status: 'published' | 'draft';
   createdAt: string;
   updatedAt: string;
 }
 
+interface AssignmentSubmissionFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  publicId: string;
+  uploadedAt: string;
+}
+
 interface AssignmentSubmission {
   assignmentId: string;
-  courseId?: string;
-  studentId: string;
+  courseId: string;
   studentEmail: string;
   studentName: string;
-  files: {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
-  }[];
+  files: AssignmentSubmissionFile[];
   submittedAt: string;
   status: 'submitted' | 'graded' | 'late';
   score?: number;
@@ -136,8 +137,6 @@ interface Course {
   duration?: string;
   image?: string;
   instructorName?: string;
-  instructorImage?: string;
-  price?: string;
   level?: string;
 }
 
@@ -150,276 +149,110 @@ interface SlidePerformance {
   quizAttempted: boolean;
   quizScore?: number;
   quizPassed?: boolean;
-  hasAssignment?: boolean;
-  assignmentSubmitted?: boolean;
-  assignmentScore?: number;
-  completedAt?: string;
+  hasAssignment: boolean;
+  assignmentSubmitted: boolean;
 }
 
-// ========== DEMO DATA FOR HARDCODED COURSES (only for demo user) ==========
-const DEMO_SLIDES: Record<string, Slide[]> = {
-  'pipe-fitter': [
-    { id: 'pf-1', courseId: 'pipe-fitter', slideNumber: 1, title: 'Introduction to Pipe Fitting', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pf-2', courseId: 'pipe-fitter', slideNumber: 2, title: 'Pipe Materials and Specifications', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pf-3', courseId: 'pipe-fitter', slideNumber: 3, title: 'Cutting and Threading Techniques', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pf-4', courseId: 'pipe-fitter', slideNumber: 4, title: 'Installation and Assembly', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'pf-5', courseId: 'pipe-fitter', slideNumber: 5, title: 'Safety and Quality Standards', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  ],
-  'safety-inspector': [
-    { id: 'si-1', courseId: 'safety-inspector', slideNumber: 1, title: 'Role of a Safety Inspector', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'si-2', courseId: 'safety-inspector', slideNumber: 2, title: 'OSHA Standards and Regulations', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'si-3', courseId: 'safety-inspector', slideNumber: 3, title: 'Hazard Identification and Risk Assessment', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'si-4', courseId: 'safety-inspector', slideNumber: 4, title: 'Inspection Procedures and Reporting', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'si-5', courseId: 'safety-inspector', slideNumber: 5, title: 'Emergency Preparedness', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  ],
-  'welding': [
-    { id: 'w-1', courseId: 'welding', slideNumber: 1, title: 'Welding Basics and Safety', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'w-2', courseId: 'welding', slideNumber: 2, title: 'MIG Welding Techniques', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'w-3', courseId: 'welding', slideNumber: 3, title: 'TIG Welding Fundamentals', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'w-4', courseId: 'welding', slideNumber: 4, title: 'Arc Welding and Equipment', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'w-5', courseId: 'welding', slideNumber: 5, title: 'Welding Inspection and Quality Control', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  ]
-};
+interface CourseData {
+  course: Course;
+  slides: Slide[];
+  contents: Record<string, SlideFile[]>;
+  quizzes: Record<string, Quiz>;
+  assignments: Assignment[];
+  progress: {
+    completedSlides: string[];
+    completedContent: string[];
+    progressPercentage: number;
+    studyHours: number;
+    status: string;
+  };
+  quizAttempts: Record<string, QuizAttempt>;
+  assignmentSubmissions: Record<string, AssignmentSubmission>;
+}
 
-const DEMO_SLIDE_CONTENTS: Record<string, SlideContent[]> = {
-  'pipe-fitter': [
-    {
-      slideId: 'pf-1',
-      courseId: 'pipe-fitter',
-      files: [
-        { id: 'pf-1-file1', name: 'Pipe Fitting Overview.pdf', type: 'application/pdf', size: 245760, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'pf-1-file2', name: 'Introduction Video.mp4', type: 'video/mp4', size: 5242880, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'pf-2',
-      courseId: 'pipe-fitter',
-      files: [
-        { id: 'pf-2-file1', name: 'Pipe Materials Chart.pdf', type: 'application/pdf', size: 102400, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'pf-2-file2', name: 'Specifications Guide.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'pf-3',
-      courseId: 'pipe-fitter',
-      files: [
-        { id: 'pf-3-file1', name: 'Cutting Techniques.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'pf-3-file2', name: 'Threading Demo.mp4', type: 'video/mp4', size: 6291456, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'pf-4',
-      courseId: 'pipe-fitter',
-      files: [
-        { id: 'pf-4-file1', name: 'Assembly Guide.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'pf-5',
-      courseId: 'pipe-fitter',
-      files: [
-        { id: 'pf-5-file1', name: 'Safety Checklist.pdf', type: 'application/pdf', size: 153600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    }
-  ],
-  'safety-inspector': [
-    {
-      slideId: 'si-1',
-      courseId: 'safety-inspector',
-      files: [
-        { id: 'si-1-file1', name: 'Role Description.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'si-2',
-      courseId: 'safety-inspector',
-      files: [
-        { id: 'si-2-file1', name: 'OSHA Quick Reference.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'si-2-file2', name: 'Regulations Video.mp4', type: 'video/mp4', size: 5242880, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'si-3',
-      courseId: 'safety-inspector',
-      files: [
-        { id: 'si-3-file1', name: 'Hazard ID Worksheet.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'si-4',
-      courseId: 'safety-inspector',
-      files: [
-        { id: 'si-4-file1', name: 'Inspection Form.pdf', type: 'application/pdf', size: 256000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'si-5',
-      courseId: 'safety-inspector',
-      files: [
-        { id: 'si-5-file1', name: 'Emergency Plan.pdf', type: 'application/pdf', size: 204800, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    }
-  ],
-  'welding': [
-    {
-      slideId: 'w-1',
-      courseId: 'welding',
-      files: [
-        { id: 'w-1-file1', name: 'Welding Safety Manual.pdf', type: 'application/pdf', size: 307200, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'w-1-file2', name: 'Safety Video.mp4', type: 'video/mp4', size: 6291456, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'w-2',
-      courseId: 'welding',
-      files: [
-        { id: 'w-2-file1', name: 'MIG Guide.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'w-2-file2', name: 'MIG Demo.mp4', type: 'video/mp4', size: 7340032, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'w-3',
-      courseId: 'welding',
-      files: [
-        { id: 'w-3-file1', name: 'TIG Techniques.pdf', type: 'application/pdf', size: 512000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'w-4',
-      courseId: 'welding',
-      files: [
-        { id: 'w-4-file1', name: 'Arc Welding.pdf', type: 'application/pdf', size: 409600, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() },
-        { id: 'w-4-file2', name: 'Equipment Setup.mp4', type: 'video/mp4', size: 8388608, url: 'https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    },
-    {
-      slideId: 'w-5',
-      courseId: 'welding',
-      files: [
-        { id: 'w-5-file1', name: 'Inspection Checklist.pdf', type: 'application/pdf', size: 256000, url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', publicId: 'dummy', uploadedAt: new Date().toISOString() }
-      ]
-    }
-  ]
-};
+interface DetailedSlideProgress {
+  assignmentSubmitted: any;
+  hasAssignment: any;
+  slideId: string;
+  slideNumber: number;
+  title: string;
+  totalFiles: number;
+  completedFiles: number;
+  progress: number;
+  status: string;
+  timeSpent: number;
+  lastAccessed: string;
+  completedAt: string | null;
+}
 
-const DEMO_QUIZZES: Record<string, Quiz[]> = {
-  'pipe-fitter': [
-    {
-      slideId: 'pf-2',
-      courseId: 'pipe-fitter',
-      questions: [
-        { id: 'pf-q1', question: 'What is the most common material for residential plumbing?', options: ['Copper', 'PVC', 'Steel', 'Cast Iron'], correctAnswer: 1 },
-        { id: 'pf-q2', question: 'Which standard specifies pipe fitting dimensions?', options: ['ISO 9001', 'ASME B16.9', 'ASTM A53', 'ANSI B16.5'], correctAnswer: 1 }
-      ]
-    },
-    {
-      slideId: 'pf-4',
-      courseId: 'pipe-fitter',
-      questions: [
-        { id: 'pf-q3', question: 'When joining pipes, what should be applied to threads?', options: ['Glue', 'Teflon tape', 'Grease', 'Paint'], correctAnswer: 1 }
-      ]
-    }
-  ],
-  'safety-inspector': [
-    {
-      slideId: 'si-2',
-      courseId: 'safety-inspector',
-      questions: [
-        { id: 'si-q1', question: 'OSHA stands for?', options: ['Occupational Safety and Health Administration', 'Organization for Safety and Health Affairs', 'Office of Safety and Hazard Assessment', 'None'], correctAnswer: 0 },
-        { id: 'si-q2', question: 'What is the general duty clause?', options: ['Employers must provide a workplace free from recognized hazards', 'Employees must wear PPE', 'Inspections must be announced', 'All accidents must be reported'], correctAnswer: 0 }
-      ]
-    }
-  ],
-  'welding': [
-    {
-      slideId: 'w-2',
-      courseId: 'welding',
-      questions: [
-        { id: 'w-q1', question: 'MIG stands for?', options: ['Metal Inert Gas', 'Manual Inert Gas', 'Metallic Induction Gun', 'Multiple Ignition Generator'], correctAnswer: 0 },
-        { id: 'w-q2', question: 'What shielding gas is commonly used in MIG welding?', options: ['Oxygen', 'Argon/CO2 mix', 'Helium', 'Nitrogen'], correctAnswer: 1 }
-      ]
-    },
-    {
-      slideId: 'w-3',
-      courseId: 'welding',
-      questions: [
-        { id: 'w-q3', question: 'TIG welding uses which type of electrode?', options: ['Consumable', 'Non-consumable', 'Flux-cored', 'Stick'], correctAnswer: 1 }
-      ]
-    }
-  ]
-};
+interface DetailedProgressData {
+  course: {
+    id: string;
+    title: string;
+    description: string;
+    duration: string;
+    level: string;
+    instructorName: string;
+  };
+  slides: DetailedSlideProgress[];
+  summary: {
+    totalSlides: number;
+    completedSlides: number;
+    courseProgress: number;
+    totalTimeSpent: number;
+    lastActive: string | null;
+  };
+}
 
-const DEMO_ASSIGNMENTS: Record<string, Assignment[]> = {
-  'pipe-fitter': [
-    {
-      id: 'pf-assign-1',
-      slideId: 'pf-3',
-      courseId: 'pipe-fitter',
-      title: 'Pipe Cutting and Threading Exercise',
-      description: 'Submit a video or photos of you cutting and threading a pipe following the techniques shown.',
-      dueDate: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
-      totalMarks: 100,
-      passingMarks: 70,
-      file: {
-        name: 'Pipe Cutting Instructions.pdf',
-        type: 'application/pdf',
-        size: 512000,
-        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        publicId: 'dummy',
-        uploadedAt: new Date().toISOString()
-      },
-      status: 'published',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ],
-  'safety-inspector': [
-    {
-      id: 'si-assign-1',
-      slideId: 'si-4',
-      courseId: 'safety-inspector',
-      title: 'Workplace Inspection Report',
-      description: 'Conduct a mock inspection of a workspace and submit a report using the provided form.',
-      dueDate: new Date(Date.now() + 5*24*60*60*1000).toISOString(),
-      totalMarks: 100,
-      passingMarks: 75,
-      file: {
-        name: 'Inspection Form Template.docx',
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        size: 256000,
-        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        publicId: 'dummy',
-        uploadedAt: new Date().toISOString()
-      },
-      status: 'published',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ],
-  'welding': [
-    {
-      id: 'w-assign-1',
-      slideId: 'w-4',
-      courseId: 'welding',
-      title: 'Arc Welding Practice',
-      description: 'Submit a video of you performing an arc weld, along with a photo of the finished bead.',
-      dueDate: new Date(Date.now() + 10*24*60*60*1000).toISOString(),
-      totalMarks: 100,
-      passingMarks: 70,
-      file: {
-        name: 'Welding Techniques Reference.pdf',
-        type: 'application/pdf',
-        size: 1024000,
-        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        publicId: 'dummy',
-        uploadedAt: new Date().toISOString()
-      },
-      status: 'published',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ]
-};
+interface AnalyticsData {
+  enrollment: {
+    id: string;
+    studentName: string;
+    studentEmail: string;
+    enrolledAt: string;
+    status: string;
+  };
+  course: {
+    id: string;
+    title: string;
+    duration: string;
+  };
+  progress: {
+    overall: number;
+    status: string;
+    studyHours: number;
+    lastAccessed: string;
+  };
+  slides: {
+    total: number;
+    completed: number;
+    inProgress: number;
+    completionRate: number;
+    totalTimeSpent: number;
+  };
+  content: {
+    totalViews: number;
+    completedViews: number;
+    completionRate: number;
+    totalWatchTime: number;
+  };
+  quizzes: {
+    totalAttempts: number;
+    averageScore: number;
+    passedQuizzes: number;
+    passRate: number;
+  };
+  activity: {
+    daily: Array<{ date: string; slidesAccessed: number }>;
+    peakHours: Array<{ hour: number; activityCount: number }>;
+    totalActiveDays: number;
+  };
+  summary: {
+    totalTimeInvested: number;
+    consistencyScore: number;
+    predictedCompletion: string;
+  };
+}
 
 export default function StudentCourseDetailPage() {
   const params = useParams();
@@ -427,319 +260,395 @@ export default function StudentCourseDetailPage() {
   const courseId = params.id as string;
 
   const [user, setUser] = useState<any>(null);
+  const [enrollmentId, setEnrollmentId] = useState<string>('');
   const [course, setCourse] = useState<Course | null>(null);
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [slideContents, setSlideContents] = useState<Map<string, SlideContent>>(new Map());
+  const [slideContents, setSlideContents] = useState<Map<string, SlideFile[]>>(new Map());
   const [quizzes, setQuizzes] = useState<Map<string, Quiz>>(new Map());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentSubmissions, setAssignmentSubmissions] = useState<Map<string, AssignmentSubmission>>(new Map());
   const [completedSlides, setCompletedSlides] = useState<Set<string>>(new Set());
   const [completedContent, setCompletedContent] = useState<Set<string>>(new Set());
   const [quizAttempts, setQuizAttempts] = useState<Map<string, QuizAttempt>>(new Map());
+  
+  // New states for detailed progress and analytics
+  const [detailedProgress, setDetailedProgress] = useState<DetailedProgressData | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loadingDetailed, setLoadingDetailed] = useState(false);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
   const [expandedSlides, setExpandedSlides] = useState<Set<string>>(new Set());
-  const [quizFeedback, setQuizFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
   const [showPerformance, setShowPerformance] = useState(false);
-  
-  // Assignment submission states
   const [activeAssignment, setActiveAssignment] = useState<string | null>(null);
   const [assignmentFiles, setAssignmentFiles] = useState<File[]>([]);
   const [uploadingAssignment, setUploadingAssignment] = useState(false);
+  const [quizFeedback, setQuizFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
   const [assignmentFeedback, setAssignmentFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
+  const [trackingContent, setTrackingContent] = useState<Record<string, boolean>>({});
 
-  // ========== 📋 LOAD ALL COURSES (HARDCODED + LOCALSTORAGE) ==========
-  const loadAllCourses = () => {
+  // Load user from localStorage
+  useEffect(() => {
     try {
-      // Hardcoded courses from instructor file
-      const hardcodedCourses = [
-        {
-          id: 'pipe-fitter',
-          title: 'Pipe Fitter',
-          description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-          category: 'Technical Training',
-          duration: '8 Weeks',
-          instructorName: 'System Instructor',
-          level: 'Beginner to Advanced',
-          image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-        },
-        {
-          id: 'safety-inspector',
-          title: 'Safety Inspector',
-          description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-          category: 'Safety Training',
-          duration: '6 Weeks',
-          instructorName: 'System Instructor',
-          level: 'Intermediate',
-          image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-        },
-        {
-          id: 'welding',
-          title: 'Professional Welding',
-          description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-          category: 'Technical Training',
-          duration: '10 Weeks',
-          instructorName: 'System Instructor',
-          level: 'Beginner to Professional',
-          image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-        }
-      ];
-      
-      // Get courses from localStorage (instructor created courses)
-      const localStorageCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-      
-      // Combine all courses
-      const allCourses = [...hardcodedCourses, ...localStorageCourses];
-      
-      // Remove duplicates by id
-      const uniqueCourses = allCourses.filter((course, index, self) => 
-        index === self.findIndex((c) => c.id === course.id)
-      );
-      
-      return uniqueCourses;
-      
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (!currentUserStr) {
+        router.push('/lms/auth/login?type=student');
+        return;
+      }
+      const userData = JSON.parse(currentUserStr);
+      if (userData.role !== 'student') {
+        router.push('/lms/auth/login?type=student');
+        return;
+      }
+      setUser(userData);
     } catch (error) {
-      console.error('Error loading courses:', error);
-      return [];
+      console.error('Error loading user:', error);
+      setError('Failed to load user data');
+    }
+  }, [router]);
+
+  // Fetch enrollment ID
+  const fetchEnrollmentId = async () => {
+    if (!user?.email) return null;
+
+    try {
+      const response = await fetch(`/api/students/enrollments?email=${encodeURIComponent(user.email)}`);
+      const result = await response.json();
+
+      if (result.success && result.data.length > 0) {
+        const enrollment = result.data.find((e: any) => e.course_id === courseId);
+        if (enrollment) {
+          setEnrollmentId(enrollment.id);
+          return enrollment.id;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching enrollment:', error);
+      return null;
     }
   };
 
-  // ========== 📥 LOAD ALL DATA ==========
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('Loading data for course:', courseId);
+  // Load course data from API
+  const loadCourseData = async (showRefreshing = false) => {
+    if (!user?.email) return;
+
+    if (showRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      // Get enrollment ID first
+      let eid = enrollmentId;
+      if (!eid) {
+        eid = await fetchEnrollmentId();
+      }
+
+      // Fetch course details
+      const response = await fetch(
+        `/api/students/courses/${courseId}?studentEmail=${encodeURIComponent(user.email)}${eid ? `&enrollmentId=${eid}` : ''}`
+      );
+      
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load course');
+      }
+
+      if (result.success && result.data) {
+        const data: CourseData = result.data;
         
-        // Get current user
-        const currentUserStr = localStorage.getItem('currentUser');
-        if (!currentUserStr) {
-          router.push('/login');
-          return;
-        }
-        const userData = JSON.parse(currentUserStr);
-        setUser(userData);
-        console.log('Current user:', userData);
-
-        // Determine if this is the demo user (only student@gmail.com gets demo content)
-        const isDemoUser = userData.email === 'student@gmail.com';
-        console.log('Is demo user:', isDemoUser);
-
-        // Load course from all courses (hardcoded + localStorage)
-        const allCourses = loadAllCourses();
-        const foundCourse = allCourses.find((c: any) => c.id === courseId);
+        setCourse(data.course);
+        setSlides(data.slides || []);
         
-        if (!foundCourse) {
-          console.error('Course not found:', courseId);
-          router.push('/lms/Student_Portal/my-courses');
-          return;
-        }
-        setCourse(foundCourse);
-        console.log('Found course:', foundCourse);
-
-        // Check if it's a demo course (hardcoded id)
-        const isDemoCourse = ['pipe-fitter', 'safety-inspector', 'welding'].includes(courseId);
-
-        // ========== LOAD SLIDES (from localStorage, fallback to demo only if demo user) ==========
-        let courseSlides: Slide[] = [];
-        const allSlides = JSON.parse(localStorage.getItem('slides') || '[]');
-        const localStorageSlides = allSlides
-          .filter((s: Slide) => s.courseId === courseId)
-          .sort((a: Slide, b: Slide) => a.slideNumber - b.slideNumber);
-        
-        if (localStorageSlides.length > 0) {
-          // Always prefer slides from localStorage (instructor created)
-          courseSlides = localStorageSlides;
-        } else if (isDemoCourse && isDemoUser) {
-          // Only use demo slides for demo user and demo course
-          courseSlides = DEMO_SLIDES[courseId] || [];
-        }
-        setSlides(courseSlides);
-
-        // ========== LOAD SLIDE CONTENTS ==========
-        const contentsMap = new Map<string, SlideContent>();
-        const allContents = JSON.parse(localStorage.getItem('slideContent') || '[]');
-        const localStorageContents = allContents.filter((c: SlideContent) => c.courseId === courseId);
-        localStorageContents.forEach((content: SlideContent) => {
-          contentsMap.set(content.slideId, content);
+        // Set slide contents
+        const contentsMap = new Map();
+        Object.entries(data.contents || {}).forEach(([slideId, files]) => {
+          contentsMap.set(slideId, files);
         });
-
-        if (contentsMap.size === 0 && isDemoCourse && isDemoUser) {
-          const demoContents = DEMO_SLIDE_CONTENTS[courseId] || [];
-          demoContents.forEach((content: SlideContent) => {
-            contentsMap.set(content.slideId, content);
-          });
-        }
         setSlideContents(contentsMap);
-
-        // ========== LOAD QUIZZES ==========
-        const quizzesMap = new Map<string, Quiz>();
-        const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-        const localStorageQuizzes = allQuizzes.filter((q: Quiz) => q.courseId === courseId);
-        localStorageQuizzes.forEach((quiz: Quiz) => {
-          quizzesMap.set(quiz.slideId, quiz);
-        });
-
-        if (quizzesMap.size === 0 && isDemoCourse && isDemoUser) {
-          const demoQuizzes = DEMO_QUIZZES[courseId] || [];
-          demoQuizzes.forEach((quiz: Quiz) => {
-            quizzesMap.set(quiz.slideId, quiz);
-          });
-        }
-        setQuizzes(quizzesMap);
-
-        // ========== LOAD ASSIGNMENTS ==========
-        let courseAssignments: Assignment[] = [];
-        const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-        const localStorageAssignments = allAssignments.filter((a: Assignment) => 
-          a.courseId === courseId && a.status === 'published'
-        );
         
-        if (localStorageAssignments.length > 0) {
-          courseAssignments = localStorageAssignments;
-        } else if (isDemoCourse && isDemoUser) {
-          courseAssignments = DEMO_ASSIGNMENTS[courseId] || [];
+        // Set quizzes
+        const quizzesMap = new Map();
+        Object.entries(data.quizzes || {}).forEach(([slideId, quiz]) => {
+          quizzesMap.set(slideId, quiz);
+        });
+        setQuizzes(quizzesMap);
+        
+        // Set assignments
+        setAssignments(data.assignments || []);
+        
+        // Set progress
+        if (data.progress) {
+          setCompletedSlides(new Set(data.progress.completedSlides || []));
+          setCompletedContent(new Set(data.progress.completedContent || []));
         }
-        setAssignments(courseAssignments);
-
-        // ========== LOAD ASSIGNMENT SUBMISSIONS ==========
-        const allSubmissions = JSON.parse(localStorage.getItem('assignmentSubmissions') || '[]');
-        const submissionsMap = new Map<string, AssignmentSubmission>();
-        allSubmissions.forEach((sub: AssignmentSubmission) => {
-          if (sub.studentId === userData.id || sub.studentEmail === userData.email) {
-            submissionsMap.set(sub.assignmentId, sub);
-          }
+        
+        // Set quiz attempts
+        const attemptsMap = new Map();
+        Object.entries(data.quizAttempts || {}).forEach(([slideId, attempt]) => {
+          attemptsMap.set(slideId, attempt);
+        });
+        setQuizAttempts(attemptsMap);
+        
+        // Set assignment submissions
+        const submissionsMap = new Map();
+        Object.entries(data.assignmentSubmissions || {}).forEach(([key, sub]) => {
+          submissionsMap.set(key, sub);
         });
         setAssignmentSubmissions(submissionsMap);
-
-        // ========== LOAD COMPLETED SLIDES ==========
-        const completedKey = `completedSlides_${userData.id}_${courseId}`;
-        const savedCompleted = localStorage.getItem(completedKey);
-        console.log('Completed slides key:', completedKey, 'value:', savedCompleted);
         
-        if (savedCompleted) {
-          setCompletedSlides(new Set(JSON.parse(savedCompleted)));
-        }
-
-        // ========== LOAD COMPLETED CONTENT ==========
-        const completedContentKey = `completedContent_${userData.id}_${courseId}`;
-        const savedContent = localStorage.getItem(completedContentKey);
-        if (savedContent) {
-          setCompletedContent(new Set(JSON.parse(savedContent)));
-        }
-
-        // ========== LOAD QUIZ ATTEMPTS ==========
-        const attemptsKey = `quizAttempts_${userData.id}`;
-        const savedAttempts = localStorage.getItem(attemptsKey);
-        console.log('Quiz attempts key:', attemptsKey, 'value:', savedAttempts);
-        
-        if (savedAttempts) {
-          const attempts = JSON.parse(savedAttempts);
-          const attemptsMap = new Map<string, QuizAttempt>();
-          Object.entries(attempts).forEach(([quizId, attempt]: [string, any]) => {
-            if (attempt.courseId === courseId) {
-              attemptsMap.set(quizId, attempt);
-            }
-          });
-          setQuizAttempts(attemptsMap);
-        }
-
-        // ========== UPDATE STUDENT COURSES PROGRESS ==========
-        updateStudentCoursesProgress(
-          userData.id, 
-          courseId, 
-          courseSlides, 
-          savedCompleted ? JSON.parse(savedCompleted) : []
-        );
-
-        // ========== AUTO-EXPAND FIRST INCOMPLETE SLIDE ==========
-        if (courseSlides.length > 0) {
-          const completed = new Set(savedCompleted ? JSON.parse(savedCompleted) : []);
-          const firstIncomplete = courseSlides.find((s: { id: unknown; }) => !completed.has(s.id));
+        // Auto-expand first incomplete slide
+        if (data.slides?.length > 0) {
+          const completed = new Set(data.progress?.completedSlides || []);
+          const firstIncomplete = data.slides.find((s: Slide) => !completed.has(s.id));
           if (firstIncomplete) {
             setExpandedSlides(new Set([firstIncomplete.id]));
           } else {
-            setExpandedSlides(new Set([courseSlides[0].id]));
+            setExpandedSlides(new Set([data.slides[0].id]));
           }
         }
 
-        // ========== SHOW SUMMARY ==========
-        console.log('===== LOAD SUMMARY =====');
-        console.log('Total slides:', courseSlides.length);
-        console.log('Slides with content:', contentsMap.size);
-        console.log('Slides with quizzes:', quizzesMap.size);
-        console.log('Total assignments:', courseAssignments.length);
-        console.log('========================');
-
-      } catch (error) {
-        console.error('Error loading course details:', error);
-      } finally {
-        setLoading(false);
+        // Load detailed progress and analytics if we have enrollmentId
+        if (eid) {
+          await loadDetailedProgress(eid);
+          await loadAnalytics(eid);
+        }
       }
-    };
+    } catch (error: any) {
+      console.error('Error loading course:', error);
+      setError(error.message || 'Failed to load course');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    loadData();
-  }, [courseId, router]);
+  // Load detailed progress
+  const loadDetailedProgress = async (eid: string) => {
+    if (!eid) return;
+    
+    setLoadingDetailed(true);
+    try {
+      const response = await fetch(`/api/students/progress/detailed?enrollmentId=${eid}&courseId=${courseId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setDetailedProgress(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading detailed progress:', error);
+    } finally {
+      setLoadingDetailed(false);
+    }
+  };
 
-  // Update studentCourses progress
-  const updateStudentCoursesProgress = (
-    studentId: string, 
-    cId: string, 
-    allSlides: Slide[], 
-    completedIds: string[]
-  ) => {
-    const studentCoursesStr = localStorage.getItem('studentCourses');
-    if (!studentCoursesStr) return;
+  // Load analytics
+  const loadAnalytics = async (eid: string) => {
+    if (!eid || !user?.email) return;
+    
+    setLoadingAnalytics(true);
+    try {
+      const response = await fetch(
+        `/api/students/analytics?enrollmentId=${eid}&studentEmail=${encodeURIComponent(user.email)}&courseId=${courseId}`
+      );
+      const result = await response.json();
+      
+      if (result.success) {
+        setAnalytics(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.email) {
+      loadCourseData();
+    }
+  }, [user]);
+
+  // Update progress API call
+  const updateProgress = async (slideId?: string, contentType?: string, contentId?: string) => {
+    if (!user?.email || !enrollmentId) return;
 
     try {
-      const studentCourses = JSON.parse(studentCoursesStr);
-      const courseIndex = studentCourses.findIndex((c: any) => c.id === cId);
-      if (courseIndex === -1) return;
+      const response = await fetch('/api/students/progress/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId,
+          contentType,
+          contentId
+        })
+      });
 
-      const progress = allSlides.length > 0 
-        ? Math.round((completedIds.length / allSlides.length) * 100) 
-        : 0;
-      const status = progress === 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started';
-
-      studentCourses[courseIndex] = {
-        ...studentCourses[courseIndex],
-        progress,
-        status,
-        completedModules: completedIds.length,
-        totalModules: allSlides.length
-      };
-
-      localStorage.setItem('studentCourses', JSON.stringify(studentCourses));
+      const result = await response.json();
+      if (result.success && result.data) {
+        setCompletedSlides(new Set(result.data.completedSlides || []));
+        setCompletedContent(new Set(result.data.completedContent || []));
+      }
     } catch (error) {
-      console.error('Error updating student courses:', error);
+      console.error('Error updating progress:', error);
+    }
+  };
+
+  // NEW: Track content view with detailed tracking
+  const trackContentView = async (slideId: string, fileId: string, completed: boolean, durationWatched: number = 0) => {
+    if (!user?.email || !enrollmentId) return;
+
+    const trackingKey = `${slideId}_${fileId}`;
+    if (trackingContent[trackingKey]) return; // Prevent duplicate tracking
+    
+    setTrackingContent(prev => ({ ...prev, [trackingKey]: true }));
+
+    try {
+      const response = await fetch('/api/students/track/content-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId,
+          contentId: fileId,
+          durationWatched,
+          completed
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Content view tracked:', result.data);
+        
+        // Update local state based on response
+        if (result.data.slideProgress.status === 'completed') {
+          // If slide auto-completed, update completedSlides
+          setCompletedSlides(prev => new Set([...prev, slideId]));
+        }
+        
+        // Refresh detailed progress
+        if (enrollmentId) {
+          loadDetailedProgress(enrollmentId);
+        }
+      }
+    } catch (error) {
+      console.error('Error tracking content view:', error);
+    } finally {
+      setTrackingContent(prev => ({ ...prev, [trackingKey]: false }));
+    }
+  };
+
+  // NEW: Auto-complete slide
+  const autoCompleteSlide = async (slideId: string) => {
+    if (!user?.email || !enrollmentId) return;
+
+    try {
+      const response = await fetch('/api/students/slide/auto-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Slide auto-completed:', result.data);
+        
+        if (result.data.slideCompleted) {
+          setCompletedSlides(prev => new Set([...prev, slideId]));
+          
+          setQuizFeedback({
+            show: true,
+            message: '🎉 Lesson automatically completed!',
+            type: 'success'
+          });
+          setTimeout(() => setQuizFeedback(null), 3000);
+        }
+        
+        // Refresh detailed progress
+        if (enrollmentId) {
+          loadDetailedProgress(enrollmentId);
+        }
+      }
+    } catch (error) {
+      console.error('Error auto-completing slide:', error);
+    }
+  };
+
+  // Mark content as complete (updated with tracking)
+  const markContentComplete = async (slideId: string, fileId: string) => {
+    if (!user) return;
+
+    const contentKey = `${slideId}_${fileId}`;
+    const isCurrentlyCompleted = completedContent.has(contentKey);
+    const newCompleted = !isCurrentlyCompleted;
+    
+    // Optimistic update
+    const newCompletedSet = new Set(completedContent);
+    if (newCompleted) {
+      newCompletedSet.add(contentKey);
+    } else {
+      newCompletedSet.delete(contentKey);
+    }
+    setCompletedContent(newCompletedSet);
+
+    // Track view
+    await trackContentView(slideId, fileId, newCompleted, 30); // Assume 30 seconds watched
+
+    // Check if all files are now completed
+    const slideFiles = slideContents.get(slideId) || [];
+    const allCompleted = slideFiles.every(f => 
+      newCompletedSet.has(`${slideId}_${f.id}`)
+    );
+
+    if (allCompleted) {
+      // Try to auto-complete the slide
+      await autoCompleteSlide(slideId);
     }
   };
 
   // Check if slide can be marked complete
   const canMarkSlideComplete = (slideId: string): boolean => {
-    const slideContent = slideContents.get(slideId);
+    const slideFiles = slideContents.get(slideId) || [];
     const quiz = quizzes.get(slideId);
-    const quizId = `${courseId}_${slideId}`;
-    const quizAttempt = quizAttempts.get(quizId);
+    const quizAttempt = quiz ? quizAttempts.get(slideId) : null;
+    const slideAssignments = assignments.filter(a => a.slideId === slideId);
     
-    // Check if all content is completed
-    const allContentCompleted = slideContent?.files.every(f => 
+    const allContentCompleted = slideFiles.every(f => 
       completedContent.has(`${slideId}_${f.id}`)
-    ) ?? true;
+    );
     
-    // Check if quiz is attempted (if exists)
     const quizAttempted = quiz ? !!quizAttempt : true;
     
-    // Check if all assignments for this slide are submitted
-    const slideAssignments = assignments.filter(a => a.slideId === slideId);
     const allAssignmentsSubmitted = slideAssignments.length === 0 || 
       slideAssignments.every(a => assignmentSubmissions.has(a.id));
     
     return allContentCompleted && quizAttempted && allAssignmentsSubmitted;
   };
 
-  // Mark slide as complete (only if all conditions are met)
-  const markSlideComplete = (slideId: string) => {
+  // Mark slide as complete (updated)
+  const markSlideComplete = async (slideId: string) => {
     if (!user) return;
     
     if (!canMarkSlideComplete(slideId)) {
@@ -752,70 +661,29 @@ export default function StudentCourseDetailPage() {
       return;
     }
 
-    setCompletedSlides(prev => {
-      if (prev.has(slideId)) return prev; // Already completed
-      
-      const newSet = new Set(prev);
-      newSet.add(slideId);
-
-      // Save to localStorage
-      const completedKey = `completedSlides_${user.id}_${courseId}`;
-      localStorage.setItem(completedKey, JSON.stringify(Array.from(newSet)));
-
-      // Update studentCourses
-      updateStudentCoursesProgress(user.id, courseId, slides, Array.from(newSet));
-
-      // Show feedback
-      setQuizFeedback({
-        show: true,
-        message: `✓ Lesson ${slides.find(s => s.id === slideId)?.slideNumber} completed!`,
-        type: 'success'
-      });
-      setTimeout(() => setQuizFeedback(null), 2000);
-
-      return newSet;
+    // Optimistic update
+    const newCompleted = new Set(completedSlides);
+    newCompleted.add(slideId);
+    setCompletedSlides(newCompleted);
+    
+    // Call API
+    await updateProgress(slideId, 'slide');
+    
+    // Auto-complete check
+    await autoCompleteSlide(slideId);
+    
+    setQuizFeedback({
+      show: true,
+      message: `✓ Lesson completed!`,
+      type: 'success'
     });
+    setTimeout(() => setQuizFeedback(null), 2000);
   };
 
-  // Mark content as complete (videos/pdfs only)
-  const markContentComplete = (slideId: string, contentId: string) => {
-    if (!user) return;
-
-    setCompletedContent(prev => {
-      const newSet = new Set(prev);
-      const contentKey = `${slideId}_${contentId}`;
-      
-      if (newSet.has(contentKey)) {
-        newSet.delete(contentKey);
-      } else {
-        newSet.add(contentKey);
-      }
-
-      // Save to localStorage
-      const completedContentKey = `completedContent_${user.id}_${courseId}`;
-      localStorage.setItem(completedContentKey, JSON.stringify(Array.from(newSet)));
-
-      return newSet;
-    });
-  };
-
-  // Toggle slide expansion
-  const toggleSlideExpansion = (slideId: string) => {
-    setExpandedSlides(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(slideId)) {
-        newSet.delete(slideId);
-      } else {
-        newSet.add(slideId);
-      }
-      return newSet;
-    });
-  };
-
-  // Handle quiz submission (no retake)
-  const handleQuizSubmit = (slideId: string) => {
+  // Handle quiz submission (updated)
+  const handleQuizSubmit = async (slideId: string) => {
     const quiz = quizzes.get(slideId);
-    if (!quiz || !user) return;
+    if (!quiz || !user || !enrollmentId) return;
 
     // Check if all questions answered
     if (quizAnswers.some(a => a === -1 || a === undefined)) {
@@ -828,9 +696,10 @@ export default function StudentCourseDetailPage() {
       return;
     }
 
-    // Check if quiz already attempted (no retake)
-    const quizId = `${courseId}_${slideId}`;
-    if (quizAttempts.has(quizId)) {
+    const quizId = slideId;
+
+    // Check if quiz already attempted
+    if (quizAttempts.has(slideId)) {
       setQuizFeedback({
         show: true,
         message: 'You have already attempted this quiz. No retakes allowed.',
@@ -852,47 +721,81 @@ export default function StudentCourseDetailPage() {
     const score = Math.round((correctCount / quiz.questions.length) * 100);
     const passed = score >= 70;
 
-    const attempt: QuizAttempt = {
-      quizId,
-      slideId,
-      courseId,
-      answers: [...quizAnswers],
-      score,
-      passed,
-      attemptedAt: new Date().toISOString(),
-      studentId: user.id,
-      studentEmail: user.email,
-      studentName: user.fullName || user.name || 'Student'
-    };
+    try {
+      const response = await fetch('/api/students/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId,
+          quizId,
+          answers: quizAnswers,
+          score,
+          passed
+        })
+      });
 
-    // Save attempt
-    const attemptsKey = `quizAttempts_${user.id}`;
-    const existingAttemptsStr = localStorage.getItem(attemptsKey) || '{}';
-    const existingAttempts = JSON.parse(existingAttemptsStr);
-    existingAttempts[quizId] = attempt;
-    localStorage.setItem(attemptsKey, JSON.stringify(existingAttempts));
+      const result = await response.json();
 
-    // Update state
-    setQuizAttempts(new Map([...quizAttempts, [quizId, attempt]]));
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit quiz');
+      }
 
-    // Show feedback
-    setQuizFeedback({
-      show: true,
-      message: passed 
-        ? `🎉 Quiz completed! You scored ${score}%` 
-        : `You scored ${score}%. Review the material.`,
-      type: passed ? 'success' : 'error'
-    });
-    setTimeout(() => setQuizFeedback(null), 4000);
+      if (result.success) {
+        const attempt: QuizAttempt = {
+          quizId,
+          slideId,
+          courseId,
+          answers: quizAnswers,
+          score,
+          passed,
+          attemptedAt: new Date().toISOString()
+        };
 
-    // Reset active quiz
+        setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
+
+        setQuizFeedback({
+          show: true,
+          message: passed ? `🎉 Quiz passed! Score: ${score}%` : `Score: ${score}%`,
+          type: passed ? 'success' : 'error'
+        });
+        setTimeout(() => setQuizFeedback(null), 4000);
+
+        // Check if slide can be auto-completed
+        const slideFiles = slideContents.get(slideId) || [];
+        const allContentCompleted = slideFiles.every(f => 
+          completedContent.has(`${slideId}_${f.id}`)
+        );
+        
+        if (allContentCompleted) {
+          await autoCompleteSlide(slideId);
+        }
+
+        // Refresh detailed progress
+        if (enrollmentId) {
+          loadDetailedProgress(enrollmentId);
+          loadAnalytics(enrollmentId);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      setQuizFeedback({
+        show: true,
+        message: error.message || 'Failed to submit quiz',
+        type: 'error'
+      });
+      setTimeout(() => setQuizFeedback(null), 3000);
+    }
+
     setActiveQuiz(null);
     setQuizAnswers([]);
   };
 
-  // Handle assignment submission
-  const handleAssignmentSubmit = async (assignmentId: string) => {
-    if (!user) return;
+  // Handle assignment submission (updated)
+  const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => {
+    if (!user || !enrollmentId) return;
     
     if (assignmentFiles.length === 0) {
       setAssignmentFeedback({
@@ -907,22 +810,21 @@ export default function StudentCourseDetailPage() {
     setUploadingAssignment(true);
 
     try {
+      // Step 1: Upload files to Cloudinary
       const uploadedFiles = [];
       
-      for (let i = 0; i < assignmentFiles.length; i++) {
-        const file = assignmentFiles[i];
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('type', 'assignment_submission');
+      for (const file of assignmentFiles) {
+        const cloudinaryFormData = new FormData();
+        cloudinaryFormData.append('file', file);
+        cloudinaryFormData.append('type', 'assignment_submission');
 
         const response = await fetch('/api/upload/cloudinary', {
           method: 'POST',
-          body: formData,
+          body: cloudinaryFormData,
         });
 
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
+          continue;
         }
 
         const result = await response.json();
@@ -940,25 +842,43 @@ export default function StudentCourseDetailPage() {
         }
       }
 
-      if (uploadedFiles.length > 0) {
+      if (uploadedFiles.length === 0) {
+        throw new Error('Failed to upload any files');
+      }
+
+      // Step 2: Submit assignment data
+      const submitFormData = new FormData();
+      submitFormData.append('enrollmentId', enrollmentId);
+      submitFormData.append('studentEmail', user.email);
+      submitFormData.append('studentName', user.name || 'Student');
+      submitFormData.append('courseId', courseId);
+      submitFormData.append('slideId', slideId);
+      submitFormData.append('assignmentId', assignmentId);
+      submitFormData.append('files', JSON.stringify(uploadedFiles));
+
+      const response = await fetch('/api/students/assignment/submit', {
+        method: 'POST',
+        body: submitFormData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit');
+      }
+
+      if (result.success) {
         const submission: AssignmentSubmission = {
           assignmentId,
-          courseId: courseId,
-          studentId: user.id,
+          courseId,
           studentEmail: user.email,
-          studentName: user.fullName || user.name || 'Student',
+          studentName: user.name || 'Student',
           files: uploadedFiles,
           submittedAt: new Date().toISOString(),
           status: 'submitted'
         };
 
-        // Save submission
-        const existingSubmissions = JSON.parse(localStorage.getItem('assignmentSubmissions') || '[]');
-        const updatedSubmissions = [...existingSubmissions.filter((s: AssignmentSubmission) => s.assignmentId !== assignmentId), submission];
-        localStorage.setItem('assignmentSubmissions', JSON.stringify(updatedSubmissions));
-
-        // Update state
-        setAssignmentSubmissions(new Map([...assignmentSubmissions, [assignmentId, submission]]));
+        setAssignmentSubmissions(new Map(assignmentSubmissions.set(assignmentId, submission)));
 
         setAssignmentFeedback({
           show: true,
@@ -967,15 +887,32 @@ export default function StudentCourseDetailPage() {
         });
         setTimeout(() => setAssignmentFeedback(null), 3000);
 
-        // Reset
+        // Check if slide can be auto-completed
+        const slideFiles = slideContents.get(slideId) || [];
+        const allContentCompleted = slideFiles.every(f => 
+          completedContent.has(`${slideId}_${f.id}`)
+        );
+        const quiz = quizzes.get(slideId);
+        const quizAttempted = quiz ? quizAttempts.has(slideId) : true;
+        
+        if (allContentCompleted && quizAttempted) {
+          await autoCompleteSlide(slideId);
+        }
+
+        // Refresh detailed progress and analytics
+        if (enrollmentId) {
+          loadDetailedProgress(enrollmentId);
+          loadAnalytics(enrollmentId);
+        }
+        
         setActiveAssignment(null);
         setAssignmentFiles([]);
       }
-    } catch (error) {
-      console.error('Submission error:', error);
+    } catch (error: any) {
+      console.error('❌ Submission error:', error);
       setAssignmentFeedback({
         show: true,
-        message: 'Failed to submit assignment. Please try again.',
+        message: error.message || 'Failed to submit assignment',
         type: 'error'
       });
       setTimeout(() => setAssignmentFeedback(null), 3000);
@@ -988,13 +925,8 @@ export default function StudentCourseDetailPage() {
   const getSlidePerformance = (): SlidePerformance[] => {
     return slides.map(slide => {
       const quiz = quizzes.get(slide.id);
-      const quizId = `${courseId}_${slide.id}`;
-      const attempt = quizAttempts.get(quizId);
+      const attempt = quiz ? quizAttempts.get(slide.id) : null;
       const slideAssignments = assignments.filter(a => a.slideId === slide.id);
-      const hasAssignment = slideAssignments.length > 0;
-      const assignmentSubmitted = hasAssignment && slideAssignments.some(a => assignmentSubmissions.has(a.id));
-      const assignment = hasAssignment ? slideAssignments[0] : undefined;
-      const submission = assignment ? assignmentSubmissions.get(assignment.id) : undefined;
       
       return {
         slideId: slide.id,
@@ -1005,9 +937,8 @@ export default function StudentCourseDetailPage() {
         quizAttempted: !!attempt,
         quizScore: attempt?.score,
         quizPassed: attempt?.passed,
-        hasAssignment,
-        assignmentSubmitted,
-        assignmentScore: submission?.score
+        hasAssignment: slideAssignments.length > 0,
+        assignmentSubmitted: slideAssignments.some(a => assignmentSubmissions.has(a.id))
       };
     });
   };
@@ -1026,7 +957,6 @@ export default function StudentCourseDetailPage() {
     const quizPassRate = slidesWithQuiz.length > 0 ? Math.round((passedQuizzes / slidesWithQuiz.length) * 100) : 0;
     const assignmentRate = slidesWithAssignment.length > 0 ? Math.round((submittedAssignments / slidesWithAssignment.length) * 100) : 0;
     
-    // Determine overall performance level
     let performanceLevel = 'Needs Improvement';
     let performanceColor = BRAND_COLORS.deepRed;
     let performanceIcon = HiTrendingDown;
@@ -1073,28 +1003,68 @@ export default function StudentCourseDetailPage() {
   const getFileIcon = (fileType: string) => {
     if (fileType.includes('video')) return <HiPlay className="w-5 h-5 text-blue-600" />;
     if (fileType.includes('pdf')) return <HiDocumentText className="w-5 h-5 text-red-500" />;
-    if (fileType.includes('word') || fileType.includes('document')) return <HiDocumentText className="w-5 h-5 text-blue-700" />;
     if (fileType.includes('image')) return <HiDocumentText className="w-5 h-5 text-green-500" />;
-    if (fileType.includes('sheet') || fileType.includes('excel')) return <HiDocumentText className="w-5 h-5 text-green-600" />;
-    if (fileType.includes('presentation') || fileType.includes('powerpoint')) return <HiDocumentText className="w-5 h-5 text-orange-500" />;
+    if (fileType.includes('word') || fileType.includes('document')) return <HiDocumentText className="w-5 h-5 text-blue-700" />;
     return <HiDocumentText className="w-5 h-5 text-gray-500" />;
+  };
+
+  const toggleSlideExpansion = (slideId: string) => {
+    setExpandedSlides(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(slideId)) {
+        newSet.delete(slideId);
+      } else {
+        newSet.add(slideId);
+      }
+      return newSet;
+    });
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'No date';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return 'Invalid date';
+    }
+  };
+
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div 
-            className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-transparent" 
-            style={{ borderColor: BRAND_COLORS.deepRed }}
-          ></div>
-          <p className="mt-4 text-gray-600">Loading course materials...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: BRAND_COLORS.deepRed }} />
+          <p className="text-gray-600">Loading course materials...</p>
         </div>
       </div>
     );
   }
 
-  if (!course) return null;
+  if (error || !course) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-5xl mb-4">😕</div>
+          <h2 className="text-xl font-bold mb-2">Error Loading Course</h2>
+          <p className="text-gray-600 mb-6">{error || 'Course not found'}</p>
+          <Link
+            href="/lms/Student_Portal/my-courses"
+            className="inline-block px-6 py-3 rounded-lg text-white"
+            style={{ backgroundColor: BRAND_COLORS.deepRed }}
+          >
+            Back to My Courses
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-5xl mx-auto">
@@ -1115,150 +1085,303 @@ export default function StudentCourseDetailPage() {
         </div>
       )}
 
-      {/* Back button */}
-      <Link
-        href="/lms/Student_Portal/my-courses"
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors group"
-      >
-        <HiArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-        Back to My Courses
-      </Link>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/lms/Student_Portal/my-courses"
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <HiArrowLeft className="w-5 h-5 mr-2" />
+          Back to Courses
+        </Link>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+            title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+          >
+            {showAnalytics ? <HiEyeOff className="w-5 h-5" /> : <HiChartPie className="w-5 h-5" />}
+          </button>
+          
+          <button
+            onClick={() => loadCourseData(true)}
+            disabled={refreshing}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
 
-      {/* Course header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          {course.image && (
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-              <img 
-                src={course.image} 
-                alt={course.title} 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+      {/* Analytics Section */}
+      {showAnalytics && (
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-indigo-900">Learning Analytics</h2>
+            {loadingAnalytics && <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />}
+          </div>
+          
+          {analytics ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Progress Card */}
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                <div className="flex items-center gap-2 text-indigo-600 mb-2">
+                  <HiChartBar className="w-5 h-5" />
+                  <span className="text-sm font-medium">Progress</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{analytics.progress.overall}%</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {analytics.slides.completed} of {analytics.slides.total} lessons
+                </p>
+              </div>
+
+              {/* Time Invested Card */}
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                <div className="flex items-center gap-2 text-green-600 mb-2">
+                  <HiClock className="w-5 h-5" />
+                  <span className="text-sm font-medium">Time Invested</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatTime(analytics.summary.totalTimeInvested)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Study hours: {analytics.progress.studyHours.toFixed(1)}h
+                </p>
+              </div>
+
+              {/* Quiz Performance Card */}
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                <div className="flex items-center gap-2 text-purple-600 mb-2">
+                  <HiDocumentText className="w-5 h-5" />
+                  <span className="text-sm font-medium">Quiz Average</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{analytics.quizzes.averageScore}%</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {analytics.quizzes.passedQuizzes} of {analytics.quizzes.totalAttempts} passed
+                </p>
+              </div>
+
+              {/* Consistency Score Card */}
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                <div className="flex items-center gap-2 text-orange-600 mb-2">
+                  <HiTrendingUpIcon className="w-5 h-5" />
+                  <span className="text-sm font-medium">Consistency</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">{analytics.summary.consistencyScore}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {analytics.activity.totalActiveDays} active days
+                </p>
+              </div>
+
+              {/* Detailed Stats */}
+              <div className="md:col-span-2 lg:col-span-4 bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Files Viewed</p>
+                    <p className="text-lg font-semibold">
+                      {analytics.content.completedViews} / {analytics.content.totalViews}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Watch Time</p>
+                    <p className="text-lg font-semibold">{formatTime(analytics.content.totalWatchTime)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Peak Hour</p>
+                    <p className="text-lg font-semibold">
+                      {analytics.activity.peakHours[0]?.hour || 0}:00
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Predicted Completion</p>
+                    <p className="text-lg font-semibold text-green-600">
+                      {analytics.summary.predictedCompletion === 'Completed' 
+                        ? '✅ Completed' 
+                        : analytics.summary.predictedCompletion}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              {loadingAnalytics ? 'Loading analytics...' : 'No analytics data available yet'}
             </div>
           )}
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
-            <p className="text-sm text-gray-600 mt-1">{course.description}</p>
-            <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-500">
-              <span className="flex items-center">
-                <HiClock className="w-4 h-4 mr-1" />
-                {course.duration || 'Self-paced'}
-              </span>
-              <span className="flex items-center">
-                <HiDocumentText className="w-4 h-4 mr-1" />
-                {totalCount} {totalCount === 1 ? 'lesson' : 'lessons'}
-              </span>
-              {course.level && (
-                <span className="flex items-center px-2 py-1 bg-gray-100 rounded-full text-xs">
-                  {course.level}
-                </span>
-              )}
-            </div>
+        </div>
+      )}
+
+      {/* Course Header */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{course.title}</h1>
+        <p className="text-gray-600 mb-4">{course.description}</p>
+        
+        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+          <span className="flex items-center">
+            <HiClock className="w-4 h-4 mr-1" />
+            {course.duration || 'Self-paced'}
+          </span>
+          <span className="flex items-center">
+            <HiDocumentText className="w-4 h-4 mr-1" />
+            {totalCount} {totalCount === 1 ? 'lesson' : 'lessons'}
+          </span>
+          {course.level && (
+            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+              {course.level}
+            </span>
+          )}
+          {course.instructorName && (
+            <span className="flex items-center">
+              Instructor: {course.instructorName}
+            </span>
+          )}
+        </div>
+
+        {/* Progress */}
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">
+              Progress ({completedCount}/{totalCount} lessons)
+            </span>
+            <span className="text-sm font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
+              {progress}%
+            </span>
+          </div>
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full rounded-full transition-all duration-500" 
+              style={{ width: `${progress}%`, backgroundColor: BRAND_COLORS.deepRed }}
+            />
           </div>
         </div>
 
-        {/* Overall progress and performance */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Progress */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Progress ({completedCount}/{totalCount} lessons)
-              </span>
-              <span className="text-sm font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
-                {progress}%
-              </span>
+        {/* Performance */}
+        <div className="mt-4 bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PerformanceIcon className="w-5 h-5" style={{ color: overallPerformance.performanceColor }} />
+              <span className="text-sm font-medium text-gray-700">Performance</span>
             </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all duration-500 ease-out" 
-                style={{ 
-                  width: `${progress}%`, 
-                  backgroundColor: BRAND_COLORS.deepRed 
-                }}
-              ></div>
-            </div>
+            <span 
+              className="text-sm font-semibold px-2 py-1 rounded-full"
+              style={{ 
+                backgroundColor: `${overallPerformance.performanceColor}20`,
+                color: overallPerformance.performanceColor
+              }}
+            >
+              {overallPerformance.performanceLevel}
+            </span>
           </div>
-
-          {/* Performance */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <PerformanceIcon className="w-5 h-5" style={{ color: overallPerformance.performanceColor }} />
-                <span className="text-sm font-medium text-gray-700">Overall Performance</span>
-              </div>
-              <span 
-                className="text-sm font-semibold px-2 py-1 rounded-full"
-                style={{ 
-                  backgroundColor: `${overallPerformance.performanceColor}20`,
-                  color: overallPerformance.performanceColor
-                }}
-              >
-                {overallPerformance.performanceLevel}
-              </span>
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <div>
+              <p className="text-xs text-gray-500">Completion</p>
+              <p className="text-sm font-semibold">{overallPerformance.completionRate}%</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <div>
-                <p className="text-xs text-gray-500">Completion</p>
-                <p className="text-sm font-semibold">{overallPerformance.completionRate}%</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Quiz Pass</p>
-                <p className="text-sm font-semibold">{overallPerformance.quizPassRate}%</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Assignment</p>
-                <p className="text-sm font-semibold">{overallPerformance.assignmentRate}%</p>
-              </div>
+            <div>
+              <p className="text-xs text-gray-500">Quiz Pass</p>
+              <p className="text-sm font-semibold">{overallPerformance.quizPassRate}%</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Assignment</p>
+              <p className="text-sm font-semibold">{overallPerformance.assignmentRate}%</p>
             </div>
           </div>
         </div>
-
-        {/* Completion message */}
-        {progress === 100 && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700 flex items-center gap-2">
-              <HiCheckCircle className="w-5 h-5" />
-              🎉 Congratulations! You have completed all lessons in this course.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Performance Toggle */}
       <button
         onClick={() => setShowPerformance(!showPerformance)}
-        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
       >
         <HiChartBar className="w-4 h-4" />
         {showPerformance ? 'Hide' : 'Show'} Detailed Performance
         {showPerformance ? <HiChevronUp className="w-4 h-4" /> : <HiChevronDown className="w-4 h-4" />}
       </button>
 
-      {/* Detailed Performance Table */}
+      {/* Performance Table */}
       {showPerformance && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-            Lesson Performance
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Lesson</th>
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Status</th>
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz</th>
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz Score</th>
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment</th>
-                  <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getSlidePerformance().map((perf) => (
-                  <tr key={perf.slideId} className="border-b border-gray-100 last:border-0">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Lesson</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Status</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Score</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Files</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detailedProgress ? (
+                detailedProgress.slides.map((slide) => (
+                  <tr key={slide.slideId} className="border-b border-gray-100">
+                    <td className="py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        Lesson {slide.slideNumber}: {slide.title}
+                      </p>
+                    </td>
+                    <td className="py-3">
+                      {slide.status === 'completed' ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600">
+                          <HiCheckCircle className="w-4 h-4" />
+                          Completed
+                        </span>
+                      ) : slide.status === 'in_progress' ? (
+                        <span className="text-xs text-blue-600">In Progress</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Not Started</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {/* Quiz status from existing data */}
+                      {quizzes.get(slide.slideId) ? (
+                        quizAttempts.get(slide.slideId) ? (
+                          <span className={`text-xs ${quizAttempts.get(slide.slideId)?.passed ? 'text-green-600' : 'text-yellow-600'}`}>
+                            {quizAttempts.get(slide.slideId)?.passed ? 'Passed' : 'Failed'}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Not Attempted</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {quizAttempts.get(slide.slideId)?.score ? (
+                        <span className={`text-sm font-medium ${
+                          (quizAttempts.get(slide.slideId)?.score || 0) >= 70 ? 'text-green-600' : 'text-yellow-600'
+                        }`}>
+                          {quizAttempts.get(slide.slideId)?.score}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {slide.hasAssignment ? (
+                        slide.assignmentSubmitted ? (
+                          <span className="text-xs text-green-600">Submitted</span>
+                        ) : (
+                          <span className="text-xs text-yellow-600">Pending</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      <span className="text-xs text-gray-600">
+                        {slide.completedFiles}/{slide.totalFiles}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                getSlidePerformance().map((perf) => (
+                  <tr key={perf.slideId} className="border-b border-gray-100">
                     <td className="py-3">
                       <p className="text-sm font-medium text-gray-900">
                         Lesson {perf.slideNumber}: {perf.title}
@@ -1277,14 +1400,7 @@ export default function StudentCourseDetailPage() {
                     <td className="py-3">
                       {perf.hasQuiz ? (
                         perf.quizAttempted ? (
-                          <span className={`flex items-center gap-1 text-xs ${
-                            perf.quizPassed ? 'text-green-600' : 'text-yellow-600'
-                          }`}>
-                            {perf.quizPassed ? (
-                              <HiCheckCircle className="w-4 h-4" />
-                            ) : (
-                              <HiOutlineXCircle className="w-4 h-4" />
-                            )}
+                          <span className={`text-xs ${perf.quizPassed ? 'text-green-600' : 'text-yellow-600'}`}>
                             {perf.quizPassed ? 'Passed' : 'Failed'}
                           </span>
                         ) : (
@@ -1296,9 +1412,7 @@ export default function StudentCourseDetailPage() {
                     </td>
                     <td className="py-3">
                       {perf.quizScore ? (
-                        <span className={`text-sm font-medium ${
-                          perf.quizScore >= 70 ? 'text-green-600' : 'text-yellow-600'
-                        }`}>
+                        <span className={`text-sm font-medium ${perf.quizScore >= 70 ? 'text-green-600' : 'text-yellow-600'}`}>
                           {perf.quizScore}%
                         </span>
                       ) : (
@@ -1308,10 +1422,7 @@ export default function StudentCourseDetailPage() {
                     <td className="py-3">
                       {perf.hasAssignment ? (
                         perf.assignmentSubmitted ? (
-                          <span className="text-xs text-green-600 flex items-center gap-1">
-                            <HiCheckCircle className="w-4 h-4" />
-                            Submitted
-                          </span>
+                          <span className="text-xs text-green-600">Submitted</span>
                         ) : (
                           <span className="text-xs text-yellow-600">Pending</span>
                         )
@@ -1319,67 +1430,56 @@ export default function StudentCourseDetailPage() {
                         <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="py-3">
-                      {perf.assignmentScore ? (
-                        <span className={`text-sm font-medium ${
-                          perf.assignmentScore >= 70 ? 'text-green-600' : 'text-yellow-600'
-                        }`}>
-                          {perf.assignmentScore}%
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
+          
+          {loadingDetailed && (
+            <div className="text-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Slides list */}
+      {/* Lessons */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-          Course Lessons
-        </h2>
+        <h2 className="text-lg font-semibold mb-4">Course Lessons</h2>
         
         {slides.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
-            <HiDocumentText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">No lessons available for this course yet.</p>
-            <p className="text-sm text-gray-400 mt-2">Check back later for updates.</p>
+            <p className="text-gray-500">No lessons available yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {slides.map((slide) => {
               const isCompleted = completedSlides.has(slide.id);
               const isExpanded = expandedSlides.has(slide.id);
-              const slideContent = slideContents.get(slide.id);
+              const slideFiles = slideContents.get(slide.id) || [];
               const quiz = quizzes.get(slide.id);
-              const quizId = `${courseId}_${slide.id}`;
-              const attempt = quiz ? quizAttempts.get(quizId) : null;
-              const hasFiles = slideContent && slideContent.files.length > 0;
-              const allContentCompleted = slideContent?.files.every(f => 
-                completedContent.has(`${slide.id}_${f.id}`)
-              ) ?? true;
-              const quizAttempted = quiz ? !!attempt : true;
+              const attempt = quiz ? quizAttempts.get(slide.id) : null;
               const slideAssignments = assignments.filter(a => a.slideId === slide.id);
               const hasAssignment = slideAssignments.length > 0;
-              const assignmentSubmitted = hasAssignment && slideAssignments.some(a => assignmentSubmissions.has(a.id));
               const canComplete = canMarkSlideComplete(slide.id);
+
+              // Get detailed progress for this slide if available
+              const slideDetail = detailedProgress?.slides.find(s => s.slideId === slide.id);
+              const completedFilesCount = slideDetail?.completedFiles || 
+                slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
 
               return (
                 <div 
                   key={slide.id} 
-                  className={`border rounded-lg overflow-hidden transition-all ${
+                  className={`border rounded-lg overflow-hidden ${
                     isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'
                   }`}
                 >
-                  {/* Slide header with completion status and expand/collapse */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="relative">
+                      <div>
                         {isCompleted ? (
                           <HiCheckCircle className="w-6 h-6 text-green-600" />
                         ) : (
@@ -1388,30 +1488,25 @@ export default function StudentCourseDetailPage() {
                       </div>
                       <button
                         onClick={() => toggleSlideExpansion(slide.id)}
-                        className="flex items-center gap-2 flex-1 text-left"
+                        className="flex-1 text-left"
                       >
-                        <div>
-                          <h3 className={`font-medium ${isCompleted ? 'text-gray-700' : 'text-gray-900'}`}>
-                            Lesson {slide.slideNumber}: {slide.title}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-xs text-gray-500">
-                              {hasFiles && `${slideContent?.files.length || 0} file(s)`}
-                              {hasFiles && quiz && ' • '}
-                              {quiz && '1 quiz'}
-                              {(hasFiles || quiz) && hasAssignment && ' • '}
-                              {hasAssignment && `${slideAssignments.length} assignment(s)`}
-                            </p>
-                            {canComplete && !isCompleted && (
-                              <span className="text-xs text-blue-600">Ready to complete</span>
-                            )}
-                          </div>
+                        <h3 className={`font-medium ${isCompleted ? 'text-gray-700' : 'text-gray-900'}`}>
+                          Lesson {slide.slideNumber}: {slide.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <span>{slideFiles.length} file(s)</span>
+                          {slideFiles.length > 0 && (
+                            <span className="text-blue-600">
+                              {completedFilesCount}/{slideFiles.length} completed
+                            </span>
+                          )}
+                          {quiz && <span>• 1 quiz</span>}
+                          {hasAssignment && <span>• {slideAssignments.length} assignment(s)</span>}
                         </div>
                       </button>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      {/* Performance indicators */}
+                    <div className="flex items-center gap-2">
                       {quiz && attempt && (
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           attempt.passed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
@@ -1419,81 +1514,63 @@ export default function StudentCourseDetailPage() {
                           Quiz: {attempt.score}%
                         </span>
                       )}
-                      {hasAssignment && assignmentSubmitted && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                          Assignment ✓
-                        </span>
-                      )}
                       <button
                         onClick={() => toggleSlideExpansion(slide.id)}
-                        className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                        className="p-1 hover:bg-gray-200 rounded-full"
                       >
-                        {isExpanded ? (
-                          <HiChevronUp className="w-5 h-5 text-gray-500" />
-                        ) : (
-                          <HiChevronDown className="w-5 h-5 text-gray-500" />
-                        )}
+                        {isExpanded ? <HiChevronUp className="w-5 h-5" /> : <HiChevronDown className="w-5 h-5" />}
                       </button>
                     </div>
                   </div>
 
-                  {/* Expanded content */}
+                  {/* Expanded Content */}
                   {isExpanded && (
                     <div className="p-4 space-y-4">
-                      {/* Slide content (files) */}
-                      {hasFiles && (
+                      {/* Files */}
+                      {slideFiles.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                            <HiDocumentText className="w-4 h-4" />
-                            Lesson Materials
-                          </h4>
-                          <div className="grid gap-2">
-                            {slideContent?.files.map((file) => {
-                              const contentKey = `${slide.id}_${file.id}`;
-                              const isContentCompleted = completedContent.has(contentKey);
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
+                          <div className="space-y-2">
+                            {slideFiles.map((file) => {
+                              const isContentCompleted = completedContent.has(`${slide.id}_${file.id}`);
                               
                               return (
-                                <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-3 flex-1">
                                     {getFileIcon(file.type)}
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm text-gray-700 truncate">{file.name}</p>
-                                      <p className="text-xs text-gray-400">
-                                        {(file.size / 1024).toFixed(0)} KB
-                                      </p>
+                                    <div>
+                                      <p className="text-sm text-gray-700">{file.name}</p>
+                                      <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
                                     </div>
                                   </div>
                                   
                                   <div className="flex items-center gap-2">
-                                    {/* Mark as complete button (only for non-quiz content) */}
                                     <button
                                       onClick={() => markContentComplete(slide.id, file.id)}
-                                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                      disabled={trackingContent[`${slide.id}_${file.id}`]}
+                                      className={`px-3 py-1 rounded-lg text-xs font-medium ${
                                         isContentCompleted
                                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                           : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                      }`}
+                                      } disabled:opacity-50`}
                                     >
-                                      {isContentCompleted ? '✓ Completed' : 'Mark Complete'}
+                                      {trackingContent[`${slide.id}_${file.id}`] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        isContentCompleted ? '✓ Completed' : 'Mark Complete'
+                                      )}
                                     </button>
-
-                                    {/* View/Download button */}
-                                    {file.type.startsWith('video') ? (
-                                      <button
-                                        onClick={() => window.open(file.url, '_blank')}
-                                        className="text-sm text-blue-600 hover:underline px-3 py-1 flex-shrink-0"
-                                      >
-                                        Watch
-                                      </button>
-                                    ) : (
-                                      <a
-                                        href={file.url}
-                                        download={file.name}
-                                        className="text-sm text-blue-600 hover:underline px-3 py-1 flex-shrink-0"
-                                      >
-                                        Download
-                                      </a>
-                                    )}
+                                    
+                                    <a
+                                      href={file.url}
+                                      download={file.name}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:underline px-3 py-1 flex items-center gap-1"
+                                    >
+                                      <HiDownload className="w-4 h-4" />
+                                      Download
+                                    </a>
                                   </div>
                                 </div>
                               );
@@ -1502,13 +1579,10 @@ export default function StudentCourseDetailPage() {
                         </div>
                       )}
 
-                      {/* Quiz section - No retake option */}
+                      {/* Quiz */}
                       {quiz && (
-                        <div className={hasFiles ? 'border-t pt-4' : ''}>
-                          <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
-                            Knowledge Check - Quiz
-                          </h4>
+                        <div className={slideFiles.length > 0 ? 'border-t pt-4' : ''}>
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">Quiz</h4>
                           
                           {attempt ? (
                             <div className={`p-4 rounded-lg ${
@@ -1524,46 +1598,45 @@ export default function StudentCourseDetailPage() {
                                   <p className={`text-sm font-medium ${
                                     attempt.passed ? 'text-green-700' : 'text-yellow-700'
                                   }`}>
-                                    {attempt.passed ? 'Passed' : 'Failed'} – Score: {attempt.score}%
+                                    Score: {attempt.score}% - {attempt.passed ? 'Passed' : 'Failed'}
                                   </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Attempted on {new Date(attempt.attemptedAt).toLocaleDateString()}
+                                  <p className="text-xs text-gray-500">
+                                    Attempted on {formatDate(attempt.attemptedAt)}
                                   </p>
                                 </div>
                               </div>
                             </div>
                           ) : activeQuiz === slide.id ? (
                             <div className="space-y-4">
-                              {quiz.questions.map((q, qIndex) => (
+                              {quiz.questions.map((q, idx) => (
                                 <div key={q.id} className="border border-gray-200 rounded-lg p-4">
                                   <p className="text-sm font-medium mb-3">
-                                    Question {qIndex + 1}: {q.question}
+                                    Question {idx + 1}: {q.question}
                                   </p>
-                                  <div className="space-y-2 ml-2">
-                                    {q.options.map((opt, optIndex) => (
-                                      <label key={optIndex} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
+                                  <div className="space-y-2">
+                                    {q.options.map((opt, optIdx) => (
+                                      <label key={optIdx} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
                                         <input
                                           type="radio"
                                           name={`q-${q.id}`}
-                                          value={optIndex}
-                                          checked={quizAnswers[qIndex] === optIndex}
+                                          checked={quizAnswers[idx] === optIdx}
                                           onChange={() => {
                                             const newAnswers = [...quizAnswers];
-                                            newAnswers[qIndex] = optIndex;
+                                            newAnswers[idx] = optIdx;
                                             setQuizAnswers(newAnswers);
                                           }}
-                                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                          className="w-4 h-4 text-blue-600"
                                         />
-                                        <span className="text-gray-700">{opt}</span>
+                                        <span>{opt}</span>
                                       </label>
                                     ))}
                                   </div>
                                 </div>
                               ))}
-                              <div className="flex gap-2 pt-2">
+                              <div className="flex gap-2">
                                 <button
                                   onClick={() => handleQuizSubmit(slide.id)}
-                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                                 >
                                   Submit Quiz
                                 </button>
@@ -1572,7 +1645,7 @@ export default function StudentCourseDetailPage() {
                                     setActiveQuiz(null);
                                     setQuizAnswers([]);
                                   }}
-                                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
                                 >
                                   Cancel
                                 </button>
@@ -1584,111 +1657,66 @@ export default function StudentCourseDetailPage() {
                                 setActiveQuiz(slide.id);
                                 setQuizAnswers(new Array(quiz.questions.length).fill(-1));
                               }}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                              className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100"
                             >
-                              <span>Start Quiz</span>
-                              <HiArrowLeft className="w-4 h-4 rotate-180" />
+                              Start Quiz
                             </button>
                           )}
                         </div>
                       )}
 
-                      {/* Assignment section */}
+                      {/* Assignments */}
                       {hasAssignment && (
-                        <div className={(hasFiles || quiz) ? 'border-t pt-4' : ''}>
-                          <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                            <HiDocumentReport className="w-4 h-4" />
-                            Assignment
-                          </h4>
+                        <div className={(slideFiles.length > 0 || quiz) ? 'border-t pt-4' : ''}>
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">Assignments</h4>
                           
                           {slideAssignments.map((assignment) => {
                             const submission = assignmentSubmissions.get(assignment.id);
                             
                             return (
                               <div key={assignment.id} className="space-y-3">
-                                {/* Assignment details with instructor's file */}
                                 <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                  <h5 className="font-medium text-gray-900">{assignment.title}</h5>
+                                  <h5 className="font-medium">{assignment.title}</h5>
                                   <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
                                   
                                   <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1">
-                                      <HiClock className="w-3 h-3" />
-                                      Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                                    </span>
-                                    <span>Total Marks: {assignment.totalMarks}</span>
+                                    <span>Due: {formatDate(assignment.dueDate)}</span>
+                                    <span>Total: {assignment.totalMarks}</span>
                                     <span>Passing: {assignment.passingMarks}</span>
                                   </div>
 
-                                  {/* Instructor's attached file - NEW SECTION */}
                                   {assignment.file && (
-                                    <div className="mt-3 p-2 bg-white rounded-lg border border-gray-200">
-                                      <p className="text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
-                                        <HiPaperClip className="w-3 h-3" />
-                                        Assignment File from Instructor:
-                                      </p>
+                                    <div className="mt-3 p-2 bg-white rounded-lg border">
+                                      <p className="text-xs font-medium text-gray-500 mb-1">Assignment File:</p>
                                       <a
                                         href={assignment.file.url}
                                         download={assignment.file.name}
-                                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
                                       >
-                                        {getFileIcon(assignment.file.type)}
-                                        <span className="text-sm text-blue-600 hover:underline flex-1">
-                                          {assignment.file.name}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                          ({(assignment.file.size / 1024).toFixed(0)} KB)
-                                        </span>
-                                        <HiDownload className="w-4 h-4 text-gray-400" />
+                                        <HiPaperClip className="w-4 h-4" />
+                                        {assignment.file.name}
+                                        <HiDownload className="w-4 h-4 ml-1" />
                                       </a>
                                     </div>
                                   )}
                                 </div>
 
-                                {/* Submission section */}
                                 {submission ? (
                                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                                     <div className="flex items-center gap-3">
                                       <HiCheckCircle className="w-6 h-6 text-green-600" />
                                       <div>
-                                        <p className="text-sm font-medium text-green-700">
-                                          Assignment Submitted
+                                        <p className="text-sm font-medium text-green-700">Submitted</p>
+                                        <p className="text-xs text-gray-500">
+                                          {formatDate(submission.submittedAt)}
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                          Submitted on {new Date(submission.submittedAt).toLocaleDateString()}
-                                        </p>
-                                        {submission.files && submission.files.length > 0 && (
-                                          <div className="mt-2">
-                                            <p className="text-xs font-medium text-gray-600 mb-1">Your submissions:</p>
-                                            {submission.files.map((file, idx) => (
-                                              <a
-                                                key={idx}
-                                                href={file.url}
-                                                download={file.name}
-                                                className="flex items-center gap-2 text-xs text-blue-600 hover:underline mt-1"
-                                              >
-                                                {getFileIcon(file.type)}
-                                                {file.name}
-                                              </a>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {submission.score && (
-                                          <p className="text-sm font-medium text-green-600 mt-2">
-                                            Score: {submission.score}%
-                                            {submission.feedback && ` - Feedback: ${submission.feedback}`}
-                                          </p>
-                                        )}
                                       </div>
                                     </div>
                                   </div>
                                 ) : activeAssignment === assignment.id ? (
                                   <div className="border border-gray-200 rounded-lg p-4">
-                                    <div className="mb-4">
-                                      <p className="text-sm text-gray-600">Upload your assignment files:</p>
-                                    </div>
-
-                                    {/* File upload */}
                                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                                       <input
                                         type="file"
@@ -1696,44 +1724,33 @@ export default function StudentCourseDetailPage() {
                                         onChange={(e) => setAssignmentFiles(Array.from(e.target.files || []))}
                                         className="hidden"
                                         id={`assignment-${assignment.id}`}
-                                        disabled={uploadingAssignment}
                                       />
                                       <label
                                         htmlFor={`assignment-${assignment.id}`}
-                                        className="cursor-pointer block"
+                                        className="cursor-pointer block text-center"
                                       >
-                                        <div className="text-center">
-                                          <HiDocumentText className="w-8 h-8 mx-auto text-gray-400" />
-                                          <p className="text-sm text-gray-600 mt-2">
-                                            Click to upload files
-                                          </p>
-                                          {assignmentFiles.length > 0 && (
-                                            <div className="mt-2">
-                                              {assignmentFiles.map((file, idx) => (
-                                                <p key={idx} className="text-xs text-green-600">
-                                                  {file.name}
-                                                </p>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
+                                        <HiDocumentText className="w-8 h-8 mx-auto text-gray-400" />
+                                        <p className="text-sm text-gray-600 mt-2">Click to upload files</p>
+                                        {assignmentFiles.map((file, idx) => (
+                                          <p key={idx} className="text-xs text-green-600 mt-1">{file.name}</p>
+                                        ))}
                                       </label>
                                     </div>
 
                                     <div className="flex gap-2 mt-4">
                                       <button
-                                        onClick={() => handleAssignmentSubmit(assignment.id)}
+                                        onClick={() => handleAssignmentSubmit(assignment.id, slide.id)}
                                         disabled={uploadingAssignment || assignmentFiles.length === 0}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
                                       >
-                                        {uploadingAssignment ? 'Uploading...' : 'Submit Assignment'}
+                                        {uploadingAssignment ? 'Uploading...' : 'Submit'}
                                       </button>
                                       <button
                                         onClick={() => {
                                           setActiveAssignment(null);
                                           setAssignmentFiles([]);
                                         }}
-                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
                                       >
                                         Cancel
                                       </button>
@@ -1742,7 +1759,7 @@ export default function StudentCourseDetailPage() {
                                 ) : (
                                   <button
                                     onClick={() => setActiveAssignment(assignment.id)}
-                                    className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                    className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                                   >
                                     Start Assignment
                                   </button>
@@ -1753,13 +1770,13 @@ export default function StudentCourseDetailPage() {
                         </div>
                       )}
 
-                      {/* Complete lesson button (appears when all requirements met) */}
+                      {/* Complete Lesson Button */}
                       {canComplete && !isCompleted && (
                         <button
                           onClick={() => markSlideComplete(slide.id)}
-                          className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                          className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
                         >
-                          <HiCheckCircle className="w-4 h-4" />
+                          <HiCheckCircle className="w-4 h-4 inline mr-2" />
                           Mark Lesson as Complete
                         </button>
                       )}
@@ -1771,43 +1788,6 @@ export default function StudentCourseDetailPage() {
           </div>
         )}
       </div>
-
-      {/* Navigation buttons */}
-      <div className="flex justify-between items-center pt-4">
-        <Link
-          href="/lms/Student_Portal/my-courses"
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-        >
-          Back to Courses
-        </Link>
-        
-        {progress === 100 && (
-          <Link
-            href="/lms/Student_Portal/certificates"
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
-          >
-            <HiCheckCircle className="w-4 h-4" />
-            View Certificate
-          </Link>
-        )}
-      </div>
-
-      {/* Add CSS for animations */}
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

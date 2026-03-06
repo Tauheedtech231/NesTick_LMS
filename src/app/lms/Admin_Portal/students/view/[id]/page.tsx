@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { HiArrowLeft, HiAcademicCap, HiCalendar, HiCash, HiChartBar, HiUser, HiMail, HiPhone, HiDocumentText, HiClock, HiCheckCircle, HiXCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiAcademicCap, HiCalendar,  HiUser, HiMail, HiPhone, HiDocumentText, HiClock, HiCheckCircle, HiXCircle } from 'react-icons/hi'
 import Link from 'next/link'
 /* eslint-disable */
 

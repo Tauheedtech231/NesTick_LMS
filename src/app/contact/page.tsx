@@ -11,8 +11,8 @@ import {
   HiLocationMarker,
   HiOutlineChevronDown
 } from "react-icons/hi";
-import { FaLocationArrow, FaFacebook, FaLinkedin, FaTwitter, FaInstagram } from "react-icons/fa6";
-import Image from "next/image";
+import { FaLocationArrow} from "react-icons/fa6";
+
 
 gsap.registerPlugin(ScrollTrigger);
 

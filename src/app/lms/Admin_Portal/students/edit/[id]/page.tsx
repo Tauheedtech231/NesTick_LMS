@@ -4,9 +4,9 @@ import { useState, useEffect, FormEvent, ChangeEvent } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  User, Mail, Phone, MapPin, Calendar, BookOpen,
-  GraduationCap, DollarSign, CheckCircle, AlertCircle,
-  ArrowLeft, Save, Loader2, Shield,
+  User,  BookOpen,
+  GraduationCap,  CheckCircle, AlertCircle,
+  ArrowLeft, Save, Loader2, 
   TrendingUpIcon
 } from 'lucide-react'
 /* eslint-disable */

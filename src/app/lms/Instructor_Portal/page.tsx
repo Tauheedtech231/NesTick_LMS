@@ -8,12 +8,10 @@ import {
   BookOpen,
   Users,
   FileText,
-  FileUp,
   ClipboardCheck,
   Clock,
   AlertCircle,
   ChevronRight,
-  Upload,
   MessageSquare,
   BarChart,
   Award,
@@ -23,16 +21,15 @@ import {
   CheckCircle,
   FileVideo,
   RefreshCw,
-  Grid,
   BookMarked,
   PlayCircle,
   UserPlus,
   FileEdit,
   BookCopy,
   GraduationCap,
-  Target
+  Target,
+  Loader2
 } from 'lucide-react'
-/* eslint-disable */
 
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
@@ -47,256 +44,146 @@ const BRAND_COLORS = {
 }
 
 interface Instructor {
-  fullName: string
   id: string;
   name: string;
   email: string;
-  courseId?: string;
-  assignedCourseId?: string;
-  profileData?: {
-    specialization: string;
-    experience: string;
-    qualification: string;
-    rating: number;
-    totalStudents: number;
-  };
+}
+
+interface DashboardStats {
+  totalCourses: number;
+  activeCourses: number;
+  totalStudents: number;
+  mockQuizzes: number;
 }
 
 interface Course {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   category: string;
-  duration?: string;
-  studentCapacity?: number;  // Maximum students allowed
-  students?: string | number; // Legacy field
-  price?: string;
-  rating?: number;
-  modules?: any[];
-  enrolledStudents?: number;
-  instructor?: string;
-  instructorId?: string;
-  image?: string;
-  courseImage?: string;
-  status?: 'draft' | 'published';
-  isPublished?: boolean;
-  maxStudents?: number; // For consistency
+  duration: string;
+  level: string;
+  price: number;
+  image: string;
+  status: 'draft' | 'published';
+  studentCapacity: number;
+  createdAt: string;
+  updatedAt: string;
+  stats: {
+    enrolledStudents: number;
+    totalSlides: number;
+    totalQuizzes: number;
+    totalAssignments: number;
+  };
 }
 
 interface Activity {
-  id: string;
-  type: 'enrollment' | 'course_update' | 'quiz_created' | 'slide_added';
-  title: string;
+  type: 'enrollment' | 'quiz_attempt' | 'certificate';
   description: string;
-  courseName: string;
-  timestamp: string;
-  icon?: any;
+  time: string;
+  user: string;
+  course: string;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  courses: Course[];
+  recentActivity: Activity[];
 }
 
 export default function InstructorDashboard() {
   const router = useRouter()
   const [instructor, setInstructor] = useState<Instructor | null>(null)
-  const [assignedCourses, setAssignedCourses] = useState<Course[]>([])
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([])
-  const [stats, setStats] = useState({
-    totalCourses: 0,
-    totalStudents: 0,
-    activeCourses: 0,
-    totalQuizzes: 0
-  })
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Fix hydration
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Load instructor data
   useEffect(() => {
-    const loadInstructorData = () => {
-      try {
-        // Get current instructor from localStorage
-        const currentUserStr = localStorage.getItem('currentUser')
-        if (!currentUserStr) {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
-
-        const currentUser = JSON.parse(currentUserStr)
-        if (currentUser.role !== 'instructor') {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
-
-        setInstructor(currentUser)
-
-        // Load all courses from localStorage (key 'courses')
-        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-        
-        // Find courses assigned to this instructor by instructorId
-        const instructorCourses = allCourses.filter((course: Course) => {
-          return course.instructorId === currentUser.id
-        })
-
-        console.log('Assigned courses found:', instructorCourses.length)
-        setAssignedCourses(instructorCourses)
-
-        // Calculate stats
-        let totalMaxStudents = 0
-        let activePublished = 0
-
-        instructorCourses.forEach((course: Course) => {
-          // Get maximum student capacity
-          let maxStudents = 0
-          
-          // Check different possible fields for maximum capacity
-          if (typeof course.studentCapacity === 'number') {
-            maxStudents = course.studentCapacity
-          } else if (typeof course.maxStudents === 'number') {
-            maxStudents = course.maxStudents
-          } else if (typeof course.students === 'string') {
-            // Parse strings like "Max 20 per batch" or "20"
-            const parsed = parseInt(course.students.replace(/\D/g, '')) || 0
-            maxStudents = parsed
-          } else if (typeof course.students === 'number') {
-            maxStudents = course.students
-          }
-          
-          totalMaxStudents += maxStudents
-
-          // Count as active if published
-          if (course.status === 'published' || course.isPublished) {
-            activePublished++
-          }
-        })
-
-        // Count total quizzes from localStorage (key 'quizzes')
-        const quizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-        const instructorQuizzes = quizzes.filter((q: any) => 
-          q.instructorId === currentUser.id || 
-          q.courseId && instructorCourses.some((c: { id: any }) => c.id === q.courseId)
-        )
-
-        setStats({
-          totalCourses: instructorCourses.length,
-          totalStudents: totalMaxStudents,
-          activeCourses: activePublished,
-          totalQuizzes: instructorQuizzes.length
-        })
-
-        // Load recent activities
-        loadRecentActivities()
-        
-      } catch (error) {
-        console.error('Error loading instructor data:', error)
-      } finally {
-        setLoading(false)
-      }
+    if (isMounted) {
+      loadInstructorData()
     }
+  }, [isMounted])
 
-    loadInstructorData()
-  }, [router])
-
-  const loadRecentActivities = () => {
+  const loadInstructorData = async () => {
     try {
       const currentUserStr = localStorage.getItem('currentUser')
-      if (!currentUserStr) return
+      if (!currentUserStr) {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
 
       const currentUser = JSON.parse(currentUserStr)
-      const activities: Activity[] = []
+      if (currentUser.role !== 'instructor') {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
 
-      // 1. Get activities from instructor_quizzes (quiz_created)
-      const instructorQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-      instructorQuizzes.forEach((quiz: any) => {
-        if (quiz.instructorId === currentUser.id) {
-          activities.push({
-            id: `quiz_${quiz.id}`,
-            type: 'quiz_created',
-            title: 'Quiz Created',
-            description: `${quiz.title} with ${quiz.totalQuestions || 10} questions`,
-            courseName: quiz.courseTitle || 'Course',
-            timestamp: quiz.createdAt || new Date().toISOString()
-          })
-        }
-      })
-
-      // 2. Get activities from teaching_materials (slide_added/materials uploaded)
-      const teachingMaterials = JSON.parse(localStorage.getItem('teaching_materials') || '[]')
-      teachingMaterials.forEach((material: any) => {
-        // Find if this material belongs to this instructor's course
-        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-        const course = allCourses.find((c: any) => c.id === material.courseId && c.instructorId === currentUser.id)
-        
-        if (course) {
-          activities.push({
-            id: `material_${material.id}`,
-            type: 'slide_added',
-            title: 'Material Uploaded',
-            description: `${material.title} (${material.type || 'File'}) added to course`,
-            courseName: course.title || 'Course',
-            timestamp: material.uploadedAt || material.createdAt || new Date().toISOString()
-          })
-        }
-      })
-
-      // 3. Get activities from course updates (course_update)
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-      allCourses.forEach((course: any) => {
-        if (course.instructorId === currentUser.id && course.updatedAt) {
-          activities.push({
-            id: `course_${course.id}`,
-            type: 'course_update',
-            title: 'Course Updated',
-            description: `${course.title} was updated`,
-            courseName: course.title || 'Course',
-            timestamp: course.updatedAt || new Date().toISOString()
-          })
-        }
-      })
-
-      // 4. Get enrollment activities from enrollments tracking
-      const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]')
-      const students = JSON.parse(localStorage.getItem('lms_students') || '[]')
-      enrollments.forEach((enrollment: any) => {
-        const course = allCourses.find((c: any) => c.id === enrollment.courseId && c.instructorId === currentUser.id)
-        if (course) {
-          const student = students.find((s: any) => s.id === enrollment.studentId)
-          const studentName = student?.name || enrollment.studentName || 'A student'
-          activities.push({
-            id: `enrollment_${enrollment.id}`,
-            type: 'enrollment',
-            title: 'New Student Enrolled',
-            description: `${studentName} enrolled in ${course.title}`,
-            courseName: course.title || 'Course',
-            timestamp: enrollment.enrolledAt || enrollment.createdAt || new Date().toISOString()
-          })
-        }
-      })
-
-      // Sort activities by timestamp (most recent first)
-      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-      // Keep only the most recent 10 activities
-      const recentActivities = activities.slice(0, 10)
-
-      setRecentActivities(recentActivities)
+      setInstructor(currentUser)
+      await fetchDashboardData(currentUser.id)
       
     } catch (error) {
-      console.error('Error loading activities:', error)
+      console.error('Error loading instructor data:', error)
+      setError('Failed to load user data')
+      setLoading(false)
     }
   }
 
-  const getActivityIcon = (type: Activity['type']) => {
+  const fetchDashboardData = async (instructorId: string, showRefreshing = false) => {
+    if (showRefreshing) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/instructors/dashboard?instructorId=${instructorId}`)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch dashboard data')
+      }
+
+      if (result.success) {
+        setDashboardData(result.data)
+      }
+    } catch (error: any) {
+      console.error('Error fetching dashboard data:', error)
+      setError(error.message || 'Failed to load dashboard')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    if (instructor?.id) {
+      fetchDashboardData(instructor.id, true)
+    }
+  }
+
+  const getActivityIcon = (type: string) => {
     switch (type) {
       case 'enrollment': return <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-      case 'course_update': return <FileEdit className="w-4 h-4 sm:w-5 sm:h-5" />
-      case 'quiz_created': return <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-      case 'slide_added': return <FileVideo className="w-4 h-4 sm:w-5 sm:h-5" />
+      case 'quiz_attempt': return <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+      case 'certificate': return <Award className="w-4 h-4 sm:w-5 sm:h-5" />
       default: return <BookCopy className="w-4 h-4 sm:w-5 sm:h-5" />
     }
   }
 
-  const getActivityColor = (type: Activity['type']) => {
+  const getActivityColor = (type: string) => {
     switch (type) {
       case 'enrollment': return { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-100' }
-      case 'course_update': return { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' }
-      case 'quiz_created': return { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' }
-      case 'slide_added': return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' }
+      case 'quiz_attempt': return { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' }
+      case 'certificate': return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' }
       default: return { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100' }
     }
   }
@@ -309,49 +196,28 @@ export default function InstructorDashboard() {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
+    if (diffMins < 1) return 'Just now'
     if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`
     if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
     return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
   }
 
-  const getMaxStudentCount = (course: Course): number => {
-    // Check different possible fields for maximum capacity
-    if (typeof course.studentCapacity === 'number') {
-      return course.studentCapacity
-    }
-    if (typeof course.maxStudents === 'number') {
-      return course.maxStudents
-    }
-    if (typeof course.students === 'string') {
-      const parsed = parseInt(course.students.replace(/\D/g, '')) || 0
-      return parsed
-    }
-    if (typeof course.students === 'number') {
-      return course.students
-    }
-    return 0
-  }
-
-  if (loading) {
+  if (!isMounted || loading) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-32 bg-gray-100 rounded-lg"></div>
-              ))}
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              <p className="text-sm text-darkGrey">Loading dashboard...</p>
             </div>
-            <div className="h-64 bg-gray-100 rounded-lg mb-8"></div>
-            <div className="h-96 bg-gray-100 rounded-lg"></div>
           </div>
         </div>
       </div>
     )
   }
 
-  if (!instructor) {
+  if (error || !instructor) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -360,7 +226,7 @@ export default function InstructorDashboard() {
             Access Denied
           </h2>
           <p className="text-darkGrey/70 mb-6">
-            Please log in as an instructor to access this page.
+            {error || 'Please log in as an instructor to access this page.'}
           </p>
           <Link 
             href="/lms/auth/login?type=instructor"
@@ -377,9 +243,16 @@ export default function InstructorDashboard() {
     )
   }
 
+  const stats = dashboardData?.stats || {
+    totalCourses: 0,
+    activeCourses: 0,
+    totalStudents: 0,
+    mockQuizzes: 0
+  }
+
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
-      {/* Header with Royal Blue Background */}
+      {/* Header */}
       <div className="mb-6 sm:mb-8">
         <div className="rounded-xl p-4 sm:p-6" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
@@ -400,6 +273,14 @@ export default function InstructorDashboard() {
             </div>
             
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
+                title="Refresh"
+              >
+                <RefreshCw className={`w-5 h-5 text-white ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-white/70">Today's Date</p>
                 <p className="font-medium text-white">
@@ -441,17 +322,17 @@ export default function InstructorDashboard() {
           </div>
         </div>
 
-        {/* Total Maximum Students Card - UPDATED */}
+        {/* Total Students Card */}
         <div className="bg-white rounded-lg border border-softGrey p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-darkGrey/70 mb-1">Maximum Students</p>
+              <p className="text-xs font-medium text-darkGrey/70 mb-1">Total Students</p>
               <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
                 {stats.totalStudents}
               </h3>
               <div className="flex items-center gap-1 mt-1">
                 <Target className="w-3 h-3 text-green-500" />
-                <span className="text-xs text-green-600 font-medium">Total capacity</span>
+                <span className="text-xs text-green-600 font-medium">Enrolled</span>
               </div>
             </div>
             <div className="p-2 rounded-lg bg-green-50">
@@ -470,7 +351,7 @@ export default function InstructorDashboard() {
               </h3>
               <div className="flex items-center gap-1 mt-1">
                 <CheckCircle className="w-3 h-3 text-teal-500" />
-                <span className="text-xs text-teal-600 font-medium">Currently teaching</span>
+                <span className="text-xs text-teal-600 font-medium">Published</span>
               </div>
             </div>
             <div className="p-2 rounded-lg" style={{ backgroundColor: `${BRAND_COLORS.teal}10` }}>
@@ -479,13 +360,13 @@ export default function InstructorDashboard() {
           </div>
         </div>
 
-        {/* Total Mock Quizzes Card */}
+        {/* Mock Quizzes Card */}
         <div className="bg-white rounded-lg border border-softGrey p-4">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-darkGrey/70 mb-1">Mock Quizzes</p>
               <h3 className="text-2xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                {stats.totalQuizzes}
+                {stats.mockQuizzes}
               </h3>
               <div className="flex items-center gap-1 mt-1">
                 <ClipboardCheck className="w-3 h-3 text-purple-500" />
@@ -499,7 +380,7 @@ export default function InstructorDashboard() {
         </div>
       </div>
 
-      {/* Assigned Courses Section */}
+      {/* Courses Section */}
       <div className="mb-6 sm:mb-8">
         <div className="bg-white rounded-lg border border-softGrey overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-softGrey">
@@ -509,62 +390,51 @@ export default function InstructorDashboard() {
             <p className="text-xs text-darkGrey/70 mt-1">Manage your courses and track progress</p>
           </div>
           
-          {assignedCourses.length > 0 ? (
+          {dashboardData?.courses && dashboardData.courses.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-lightGrey">
                   <tr>
                     <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Course Name</th>
                     <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Category</th>
-                    <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Max Students</th>
+                    <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Students</th>
                     <th className="text-left text-xs font-medium text-darkGrey/70 py-3 px-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-softGrey">
-                  {assignedCourses.map((course) => {
-                    const maxStudents = getMaxStudentCount(course)
-                    
-                    return (
-                      <tr key={course.id} className="hover:bg-lightGrey/50 transition-colors">
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="font-medium text-darkGrey text-sm">{course.title}</p>
-                            <p className="text-xs text-darkGrey/60 mt-0.5 line-clamp-1">{course.description || ''}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-darkGrey">{course.category}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Target className="w-4 h-4 text-darkGrey/40" />
-                            <span className="text-sm text-darkGrey font-medium">
-                              {maxStudents > 0 ? maxStudents : 'Unlimited'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/lms/Instructor_Portal/courses/edit/${course.id}`}
-                              className="p-1.5 rounded-lg hover:bg-lightGrey transition-colors"
-                              title="Edit Course"
-                            >
-                              <Edit className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
-                            </Link>
-                            <Link
-                              href={`/lms/Instructor_Portal/students?course=${course.id}`}
-                              className="p-1.5 rounded-lg hover:bg-lightGrey transition-colors"
-                              title="View Students"
-                            >
-                              <Users className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
-                            </Link>
+                  {dashboardData.courses.map((course) => (
+                    <tr key={course.id} className="hover:bg-lightGrey/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="font-medium text-darkGrey text-sm">{course.title}</p>
+                          <p className="text-xs text-darkGrey/60 mt-0.5 line-clamp-1">{course.description || ''}</p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-darkGrey">{course.category}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-darkGrey/40" />
+                          <span className="text-sm text-darkGrey font-medium">
+                            {course.stats.enrolledStudents} / {course.studentCapacity}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/lms/Instructor_Portal/courses/edit/${course.id}`}
+                            className="p-1.5 rounded-lg hover:bg-lightGrey transition-colors"
+                            title="Edit Course"
+                          >
+                            <Edit className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+                          </Link>
                           
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -592,7 +462,7 @@ export default function InstructorDashboard() {
         </div>
       </div>
 
-      {/* Recent Activity Section - Hardcoded Data */}
+      {/* Recent Activity Section */}
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 sm:gap-6">
         <div className="bg-white rounded-lg border border-softGrey p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
@@ -600,24 +470,25 @@ export default function InstructorDashboard() {
               Recent Activity
             </h2>
             <button 
-              onClick={loadRecentActivities}
+              onClick={handleRefresh}
+              disabled={refreshing}
               className="text-xs font-medium flex items-center gap-1"
               style={{ color: BRAND_COLORS.darkRoyalBlue }}
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
           </div>
           
-          {recentActivities.length > 0 ? (
+          {dashboardData?.recentActivity && dashboardData.recentActivity.length > 0 ? (
             <div className="space-y-3">
-              {recentActivities.map((activity) => {
+              {dashboardData.recentActivity.map((activity, index) => {
                 const colors = getActivityColor(activity.type)
                 return (
                   <div 
-                    key={activity.id}
+                    key={index}
                     className="flex items-start gap-3 p-3 rounded-lg border"
-                    style={{ borderColor: colors.border.replace('border-', '').split('-')[1] + '20' }}
+                    style={{ borderColor: colors.border }}
                   >
                     <div className={`p-2 rounded-lg ${colors.bg}`}>
                       <div className={colors.text}>
@@ -627,18 +498,15 @@ export default function InstructorDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-darkGrey text-sm">
-                            {activity.title}
-                          </h4>
                           <p className="text-xs text-darkGrey/70 mt-0.5">
                             {activity.description}
                           </p>
                           <p className="text-xs text-darkGrey/50 mt-1">
-                            Course: {activity.courseName}
+                            Course: {activity.course}
                           </p>
                         </div>
                         <span className="text-xs text-darkGrey/60 whitespace-nowrap">
-                          {formatTimeAgo(activity.timestamp)}
+                          {formatTimeAgo(activity.time)}
                         </span>
                       </div>
                     </div>

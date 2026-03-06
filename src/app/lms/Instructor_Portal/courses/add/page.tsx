@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Save,
+ 
   X,
   Plus,
   Trash2,
@@ -19,15 +19,12 @@ import {
   FileVideo,
   FileImage,
   File,
-  Edit3,
   AlertCircle,
   HelpCircle,
   Loader2,
-  User,
   Camera,
   IndianRupee,
   Calendar,
-  Clock,
   Award,
   Download
 } from 'lucide-react'
@@ -57,8 +54,8 @@ interface Course {
   instructorName: string;
   instructorImage?: string;
   image?: string;
-  price?: string;
-  originalPrice?: string;
+  price?: number;
+  originalPrice?: number;
   duration?: string;
   level?: string;
   createdAt: string;
@@ -101,7 +98,7 @@ interface Quiz {
 
 interface Assignment {
   id: string;
-  slideId: string;  // Changed from courseId to slideId
+  slideId: string;
   courseId: string;
   title: string;
   description: string;
@@ -128,6 +125,7 @@ export default function AddCoursePage() {
   const [uploading, setUploading] = useState<{[key: string]: boolean}>({})
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingAssignment, setUploadingAssignment] = useState(false)
+  const [saving, setSaving] = useState(false)
   
   // Course image states
   const [courseImage, setCourseImage] = useState<string>('')
@@ -180,6 +178,13 @@ export default function AddCoursePage() {
     uploadedAt: string;
   } | null>(null)
 
+  // Quiz state
+  const [currentQuizQuestion, setCurrentQuizQuestion] = useState({
+    question: '',
+    options: ['', '', '', ''],
+    correctAnswer: 0
+  })
+
   useEffect(() => {
     // Load instructor data
     const currentUserStr = localStorage.getItem('currentUser')
@@ -227,17 +232,157 @@ export default function AddCoursePage() {
     setAssignments(courseAssignments)
   }
 
+  // ============ DATABASE FUNCTIONS ============
+  const saveCourseToDB = async () => {
+    if (!instructor) return null;
+
+    try {
+      const response = await fetch('/api/instructors/course/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: courseDetails.title,
+          description: courseDetails.description,
+          studentCapacity: courseDetails.studentCapacity,
+          category: courseDetails.category,
+          status: courseDetails.status,
+          instructorId: instructor.id,
+          instructorName: instructor.name || instructor.fullName || 'Instructor',
+          instructorImage: instructor.image || '',
+          image: courseImage,
+          price: courseDetails.price ? parseFloat(courseDetails.price) : null,
+          originalPrice: showDiscount && courseDetails.originalPrice ? parseFloat(courseDetails.originalPrice) : null,
+          duration: courseDetails.duration,
+          level: courseDetails.level
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save course');
+      }
+
+      return result.data.courseId;
+    } catch (error) {
+      console.error('Error saving course to DB:', error);
+      throw error;
+    }
+  };
+
+  const saveSlidesToDB = async (courseId: string) => {
+    try {
+      const response = await fetch('/api/instructors/course/slides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId,
+          slides: slides.map(s => ({
+            id: s.id,
+            slideNumber: s.slideNumber,
+            title: s.title
+          }))
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save slides');
+      }
+    } catch (error) {
+      console.error('Error saving slides to DB:', error);
+      throw error;
+    }
+  };
+
+  const saveFilesToDB = async (courseId: string) => {
+    try {
+      for (const [slideId, content] of Object.entries(slideContents)) {
+        if (content.files.length > 0) {
+          const response = await fetch('/api/instructors/course/files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slideId,
+              courseId,
+              files: content.files
+            })
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to save files');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving files to DB:', error);
+      throw error;
+    }
+  };
+
+  const saveQuizzesToDB = async (courseId: string) => {
+    try {
+      for (const [slideId, quiz] of Object.entries(slideQuizzes)) {
+        if (quiz.questions.length > 0) {
+          const response = await fetch('/api/instructors/course/quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slideId,
+              courseId,
+              questions: quiz.questions
+            })
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to save quiz');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving quizzes to DB:', error);
+      throw error;
+    }
+  };
+
+  const saveAssignmentsToDB = async (courseId: string) => {
+    try {
+      const response = await fetch('/api/instructors/course/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignments: assignments.map(a => ({
+            ...a,
+            courseId
+          }))
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save assignments');
+      }
+    } catch (error) {
+      console.error('Error saving assignments to DB:', error);
+      throw error;
+    }
+  };
+
   // ============ COURSE IMAGE UPLOAD FUNCTIONS ============
   const handleImageUpload = async (file: File) => {
     if (!file) return
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file')
       return
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size should be less than 5MB')
       return
@@ -246,19 +391,16 @@ export default function AddCoursePage() {
     setUploadingImage(true)
 
     try {
-      // Create preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setCourseImagePreview(reader.result as string)
       }
       reader.readAsDataURL(file)
 
-      // Create form data
       const formData = new FormData()
       formData.append('file', file)
       formData.append('type', 'course_image')
 
-      // Upload to Cloudinary via API route
       const response = await fetch('/api/upload/cloudinary', {
         method: 'POST',
         body: formData,
@@ -329,39 +471,48 @@ export default function AddCoursePage() {
     return Object.keys(errors).length === 0
   }
 
-  const handleSaveStep1 = () => {
+  const handleSaveStep1 = async () => {
     if (!validateStep1()) return
     if (!instructor) return
     
-    // Generate unique course ID
-    const newCourseId = `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    setSaving(true)
     
-    const newCourse: Course = {
-      id: newCourseId,
-      title: courseDetails.title,
-      description: courseDetails.description,
-      studentCapacity: courseDetails.studentCapacity,
-      category: courseDetails.category,
-      status: courseDetails.status,
-      instructorId: instructor.id,
-      instructorName: instructor.name || instructor.fullName || 'Instructor',
-      instructorImage: instructor.image || '',
-      image: courseImage,
-      price: courseDetails.price ? `PKR ${Number(courseDetails.price).toLocaleString()}` : undefined,
-      originalPrice: showDiscount && courseDetails.originalPrice ? `PKR ${Number(courseDetails.originalPrice).toLocaleString()}` : undefined,
-      duration: courseDetails.duration,
-      level: courseDetails.level,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    try {
+      // Save to database first
+      const newCourseId = await saveCourseToDB()
+      
+      if (newCourseId) {
+        // Also save to localStorage for backward compatibility
+        const newCourse: Course = {
+          id: newCourseId,
+          title: courseDetails.title,
+          description: courseDetails.description,
+          studentCapacity: courseDetails.studentCapacity,
+          category: courseDetails.category,
+          status: courseDetails.status,
+          instructorId: instructor.id,
+          instructorName: instructor.name || instructor.fullName || 'Instructor',
+          instructorImage: instructor.image || '',
+          image: courseImage,
+          price: courseDetails.price ? Number(courseDetails.price) : undefined,
+          originalPrice: showDiscount && courseDetails.originalPrice ? Number(courseDetails.originalPrice) : undefined,
+          duration: courseDetails.duration,
+          level: courseDetails.level,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        
+        const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+        localStorage.setItem('courses', JSON.stringify([...existingCourses, newCourse]))
+        
+        setCourseId(newCourseId)
+        setCurrentStep(2)
+      }
+    } catch (error: any) {
+      alert(error.message || 'Failed to save course')
+    } finally {
+      setSaving(false)
     }
-    
-    // Save to localStorage
-    const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-    const updatedCourses = [...existingCourses, newCourse]
-    localStorage.setItem('courses', JSON.stringify(updatedCourses))
-    
-    setCourseId(newCourseId)
-    setCurrentStep(2)
   }
 
   // ============ STEP 2 FUNCTIONS ============
@@ -378,12 +529,9 @@ export default function AddCoursePage() {
     const updatedSlides = [...slides, newSlide]
     setSlides(updatedSlides)
     
-    // Save to localStorage
     const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const updatedSlidesStorage = [...existingSlides, newSlide]
-    localStorage.setItem('slides', JSON.stringify(updatedSlidesStorage))
+    localStorage.setItem('slides', JSON.stringify([...existingSlides, newSlide]))
     
-    // Auto-select first slide if none selected
     if (!selectedSlideId) {
       setSelectedSlideId(newSlide.id)
     }
@@ -391,8 +539,6 @@ export default function AddCoursePage() {
 
   const handleRemoveSlide = (slideId: string) => {
     const updatedSlides = slides.filter(s => s.id !== slideId)
-    
-    // Reorder remaining slides
     const reorderedSlides = updatedSlides.map((slide, index) => ({
       ...slide,
       slideNumber: index + 1,
@@ -402,7 +548,6 @@ export default function AddCoursePage() {
     
     setSlides(reorderedSlides)
     
-    // Update localStorage
     const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
     const filteredSlides = existingSlides.filter((s: Slide) => s.id !== slideId)
     const updatedSlidesStorage = filteredSlides.map((slide: Slide, index: number) => ({
@@ -414,12 +559,10 @@ export default function AddCoursePage() {
     
     localStorage.setItem('slides', JSON.stringify(updatedSlidesStorage))
     
-    // Update selected slide
     if (selectedSlideId === slideId) {
       setSelectedSlideId(updatedSlidesStorage[0]?.id || '')
     }
     
-    // Remove associated content, quizzes, and assignments
     const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
     const filteredContents = existingContents.filter((c: SlideContent) => c.slideId !== slideId)
     localStorage.setItem('slideContent', JSON.stringify(filteredContents))
@@ -432,7 +575,6 @@ export default function AddCoursePage() {
     const filteredAssignments = existingAssignments.filter((a: Assignment) => a.slideId !== slideId)
     localStorage.setItem('assignments', JSON.stringify(filteredAssignments))
     
-    // Update state
     const newContents = { ...slideContents }
     delete newContents[slideId]
     setSlideContents(newContents)
@@ -450,7 +592,6 @@ export default function AddCoursePage() {
     )
     setSlides(updatedSlides)
     
-    // Update localStorage
     const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
     const updatedSlidesStorage = existingSlides.map((slide: Slide) => 
       slide.id === slideId ? { ...slide, title: newTitle, updatedAt: new Date().toISOString() } : slide
@@ -481,13 +622,11 @@ export default function AddCoursePage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         
-        // Create form data
         const formData = new FormData()
         formData.append('file', file)
         formData.append('slideId', slideId)
         formData.append('courseId', courseId)
         
-        // Upload to Cloudinary via API route
         const response = await fetch('/api/upload/cloudinary', {
           method: 'POST',
           body: formData,
@@ -513,20 +652,16 @@ export default function AddCoursePage() {
       }
       
       if (uploadedFiles.length > 0) {
-        // Save to localStorage
         const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-        
         const slideContent = existingContents.find((sc: SlideContent) => sc.slideId === slideId)
         
         if (slideContent) {
-          // Update existing
           slideContent.files = [...slideContent.files, ...uploadedFiles]
           const updatedContents = existingContents.map((sc: SlideContent) => 
             sc.slideId === slideId ? slideContent : sc
           )
           localStorage.setItem('slideContent', JSON.stringify(updatedContents))
         } else {
-          // Create new
           const newContent: SlideContent = {
             slideId: slideId,
             courseId: courseId,
@@ -535,7 +670,6 @@ export default function AddCoursePage() {
           localStorage.setItem('slideContent', JSON.stringify([...existingContents, newContent]))
         }
         
-        // Update state
         setSlideContents({
           ...slideContents,
           [slideId]: {
@@ -564,7 +698,6 @@ export default function AddCoursePage() {
     
     localStorage.setItem('slideContent', JSON.stringify(updatedContents))
     
-    // Update state
     if (slideContents[slideId]) {
       const updatedFiles = slideContents[slideId].files.filter(f => f.publicId !== filePublicId)
       if (updatedFiles.length > 0) {
@@ -581,12 +714,6 @@ export default function AddCoursePage() {
   }
 
   // Quiz Functions
-  const [currentQuizQuestion, setCurrentQuizQuestion] = useState({
-    question: '',
-    options: ['', '', '', ''],
-    correctAnswer: 0
-  })
-
   const handleAddQuestion = (slideId: string) => {
     if (!currentQuizQuestion.question.trim()) {
       alert('Please enter a question')
@@ -605,12 +732,10 @@ export default function AddCoursePage() {
       correctAnswer: currentQuizQuestion.correctAnswer
     }
     
-    // Get existing quizzes
     const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
     const quiz = existingQuizzes.find((q: Quiz) => q.slideId === slideId)
     
     if (quiz) {
-      // Update existing quiz
       quiz.questions = [...quiz.questions, newQuestion]
       const updatedQuizzes = existingQuizzes.map((q: Quiz) => 
         q.slideId === slideId ? quiz : q
@@ -622,7 +747,6 @@ export default function AddCoursePage() {
         [slideId]: quiz
       })
     } else {
-      // Create new quiz
       const newQuiz: Quiz = {
         slideId: slideId,
         courseId: courseId,
@@ -637,7 +761,6 @@ export default function AddCoursePage() {
       })
     }
     
-    // Reset form
     setCurrentQuizQuestion({
       question: '',
       options: ['', '', '', ''],
@@ -654,13 +777,11 @@ export default function AddCoursePage() {
       quiz.questions = quiz.questions.filter((q: any) => q.id !== questionId)
       
       if (quiz.questions.length === 0) {
-        // Remove quiz if no questions left
         existingQuizzes.splice(quizIndex, 1)
       }
       
       localStorage.setItem('quizzes', JSON.stringify(existingQuizzes))
       
-      // Update state
       if (quiz.questions.length > 0) {
         setSlideQuizzes({
           ...slideQuizzes,
@@ -769,26 +890,21 @@ export default function AddCoursePage() {
       updatedAt: new Date().toISOString()
     }
 
-    // Save to localStorage
     const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
     localStorage.setItem('assignments', JSON.stringify([...existingAssignments, newAssignment]))
 
-    // Update state
     setAssignments([...assignments, newAssignment])
 
-    // Reset form
     resetAssignmentForm()
   }
 
   const handleRemoveAssignment = (assignmentId: string) => {
     const updatedAssignments = assignments.filter(a => a.id !== assignmentId)
     
-    // Update localStorage
     const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
     const filteredAssignments = existingAssignments.filter((a: Assignment) => a.id !== assignmentId)
     localStorage.setItem('assignments', JSON.stringify(filteredAssignments))
 
-    // Update state
     setAssignments(updatedAssignments)
   }
 
@@ -815,18 +931,32 @@ export default function AddCoursePage() {
     setCurrentStep(4)
   }
 
-  const handleFinalSubmit = () => {
-    // Update course status if published
-    if (courseDetails.status === 'published') {
-      const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-      const updatedCourses = existingCourses.map((c: Course) => 
-        c.id === courseId ? { ...c, status: 'published' } : c
-      )
-      localStorage.setItem('courses', JSON.stringify(updatedCourses))
-    }
+  const handleFinalSubmit = async () => {
+    setSaving(true)
     
-    alert('Course created successfully!')
-    router.push('/lms/Instructor_Portal/courses')
+    try {
+      // Save all data to database
+      await saveSlidesToDB(courseId)
+      await saveFilesToDB(courseId)
+      await saveQuizzesToDB(courseId)
+      await saveAssignmentsToDB(courseId)
+      
+      // Update course status if published
+      if (courseDetails.status === 'published') {
+        const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
+        const updatedCourses = existingCourses.map((c: Course) => 
+          c.id === courseId ? { ...c, status: 'published' } : c
+        )
+        localStorage.setItem('courses', JSON.stringify(updatedCourses))
+      }
+      
+      alert('Course created successfully!')
+      router.push('/lms/Instructor_Portal/courses')
+    } catch (error: any) {
+      alert(error.message || 'Failed to save course data')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getFileIcon = (fileType: string) => {
@@ -905,7 +1035,6 @@ export default function AddCoursePage() {
                   Course Image
                 </label>
                 <div className="flex items-center gap-6">
-                  {/* Image Preview */}
                   <div className="relative">
                     <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-softGrey bg-lightGrey flex items-center justify-center">
                       {courseImagePreview || courseImage ? (
@@ -925,7 +1054,6 @@ export default function AddCoursePage() {
                     )}
                   </div>
 
-                  {/* Upload Controls */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <label className="relative cursor-pointer">
@@ -1155,7 +1283,8 @@ export default function AddCoursePage() {
                   <option value="">Select Category</option>
                   <option value="Technical Training">Technical Training</option>
                   <option value="Safety Training">Safety Training</option>
-                 
+                  <option value="Management">Management</option>
+                  <option value="Soft Skills">Soft Skills</option>
                 </select>
                 {step1Errors.category && (
                   <p className="text-xs text-deepRed mt-1 flex items-center gap-1">
@@ -1201,14 +1330,24 @@ export default function AddCoursePage() {
             <div className="mt-8 pt-6 border-t border-softGrey flex justify-end">
               <button
                 onClick={handleSaveStep1}
-                className="px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                 style={{ 
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white 
                 }}
               >
-                Save & Continue
-                <ChevronRight className="w-4 h-4" />
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Save & Continue
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1350,7 +1489,7 @@ export default function AddCoursePage() {
                       Educational Content
                     </h3>
                     
-                    {/* File Upload with Cloudinary */}
+                    {/* File Upload */}
                     <div className="mb-6">
                       <div className="border-2 border-dashed border-softGrey rounded-lg p-6 text-center">
                         <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: BRAND_COLORS.softGrey }} />
@@ -1479,12 +1618,11 @@ export default function AddCoursePage() {
                         </div>
 
                         <button
-  onClick={() => handleAddQuestion(selectedSlideId)}
-  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
->
-  Add Question
-</button>
-
+                          onClick={() => handleAddQuestion(selectedSlideId)}
+                          className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+                        >
+                          Add Question
+                        </button>
                       </div>
                     </div>
 
@@ -1975,14 +2113,24 @@ export default function AddCoursePage() {
               </button>
               <button
                 onClick={handleFinalSubmit}
-                className="px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                 style={{ 
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white 
                 }}
               >
-                <Check className="w-4 h-4" />
-                Complete Course Creation
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Complete Course Creation
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -12,7 +12,6 @@ import {
   Upload,
   BookOpen,
   ArrowLeft,
- 
   FileText,
   FileVideo,
   FileImage,
@@ -21,14 +20,13 @@ import {
   AlertCircle,
   HelpCircle,
   Loader2,
-  Eye,
-
   Lock,
   Calendar,
   Award,
-
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react'
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -56,63 +54,8 @@ interface Course {
   image?: string;
   duration?: string;
   level?: string;
-  price?: string;
+  price?: number;
 }
-
-// Published courses data - typed as Course[]
-const publishedCourses: Course[] = [
-  {
-    id: 'pipe-fitter',
-    title: 'Pipe Fitter',
-    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-    studentCapacity: 20,
-    category: 'Technical Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-    duration: '8 Weeks',
-    level: 'Beginner to Advanced',
-    price: 'PKR 25,000'
-  },
-  {
-    id: 'safety-inspector',
-    title: 'Safety Inspector',
-    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-    studentCapacity: 15,
-    category: 'Safety Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-    duration: '6 Weeks',
-    level: 'Intermediate',
-    price: 'PKR 30,000'
-  },
-  {
-    id: 'welding',
-    title: 'Professional Welding',
-    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-    studentCapacity: 12,
-    category: 'Technical Training',
-    status: 'published',
-    instructorId: 'system',
-    instructorName: 'System Instructor',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-    isPublished: true,
-    image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-    duration: '10 Weeks',
-    level: 'Beginner to Professional',
-    price: 'PKR 35,000'
-  }
-];
 
 interface Slide {
   id: string;
@@ -123,29 +66,25 @@ interface Slide {
   updatedAt: string;
 }
 
-interface SlideContent {
-  slideId: string;
-  courseId: string;
-  files: {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    publicId: string;
-    uploadedAt: string;
-  }[];
+interface SlideFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  publicId: string;
+  uploadedAt: string;
 }
 
-interface Quiz {
+interface QuizQuestion {
+  id: string;
   slideId: string;
   courseId: string;
-  questions: {
-    id: string;
-    question: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Assignment {
@@ -169,37 +108,57 @@ interface Assignment {
   createdAt: string;
   updatedAt: string;
 }
-/* eslint-disable */
+
+// Helper function for generating IDs client-side only
+const generateId = (prefix: string): string => {
+  if (typeof window === 'undefined') return `${prefix}_placeholder`;
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+};
 
 export default function EditCoursePage() {
-  const router = useRouter()
-  const params = useParams()
-  const courseId = params.id as string
+  const router = useRouter();
+  const params = useParams();
+  const courseId = params.id as string;
   
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'slides' | 'content' | 'assignments'>('details')
-  const [instructor, setInstructor] = useState<any>(null)
-  const [isPublishedCourse, setIsPublishedCourse] = useState(false)
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Slide states
+  const [addingSlide, setAddingSlide] = useState(false);
+  const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
+  const [updatingSlide, setUpdatingSlide] = useState<string | null>(null);
+  
+  const [activeTab, setActiveTab] = useState<'details' | 'slides' | 'content' | 'assignments'>('details');
+  const [instructor, setInstructor] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   
   // Course Details
-  const [courseDetails, setCourseDetails] = useState<Course | null>(null)
-  const [editedDetails, setEditedDetails] = useState<Partial<Course>>({})
+  const [courseDetails, setCourseDetails] = useState<Course | null>(null);
+  const [editedDetails, setEditedDetails] = useState<Partial<Course>>({});
   
   // Slides
-  const [slides, setSlides] = useState<Slide[]>([])
-  const [selectedSlideId, setSelectedSlideId] = useState<string>('')
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [selectedSlideId, setSelectedSlideId] = useState<string>('');
   
-  // Content
-  const [slideContents, setSlideContents] = useState<{[slideId: string]: SlideContent}>({})
-  const [slideQuizzes, setSlideQuizzes] = useState<{[slideId: string]: Quiz}>({})
-  const [uploading, setUploading] = useState<{[key: string]: boolean}>({})
+  // Content - Files
+  const [slideContents, setSlideContents] = useState<Record<string, SlideFile[]>>({});
   
-  // Assignments per slide
-  const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [showAssignmentForm, setShowAssignmentForm] = useState(false)
-  const [selectedAssignmentSlide, setSelectedAssignmentSlide] = useState<string>('')
-  const [editingAssignment, setEditingAssignment] = useState<string | null>(null)
+  // Quiz Questions - Per Slide
+  const [quizQuestions, setQuizQuestions] = useState<Record<string, QuizQuestion[]>>({});
+  
+  // Upload states
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  
+  // Assignments
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
+  const [selectedAssignmentSlide, setSelectedAssignmentSlide] = useState<string>('');
+  const [editingAssignment, setEditingAssignment] = useState<string | null>(null);
+  const [submittingAssignment, setSubmittingAssignment] = useState(false);
+  const [deletingAssignment, setDeletingAssignment] = useState<string | null>(null);
+  
   const [currentAssignment, setCurrentAssignment] = useState<Partial<Assignment>>({
     title: '',
     description: '',
@@ -207,7 +166,7 @@ export default function EditCoursePage() {
     totalMarks: 100,
     passingMarks: 70,
     status: 'draft'
-  })
+  });
   const [assignmentFile, setAssignmentFile] = useState<{
     name: string;
     type: string;
@@ -215,478 +174,544 @@ export default function EditCoursePage() {
     url: string;
     publicId: string;
     uploadedAt: string;
-  } | null>(null)
-  const [uploadingAssignment, setUploadingAssignment] = useState(false)
+  } | null>(null);
+  const [uploadingAssignment, setUploadingAssignment] = useState(false);
   
   // Quiz creation
   const [currentQuizQuestion, setCurrentQuizQuestion] = useState({
     question: '',
     options: ['', '', '', ''],
     correctAnswer: 0
-  })
+  });
 
+  // Mount effect for hydration
   useEffect(() => {
-    loadCourseData()
-  }, [courseId])
+    setIsMounted(true);
+  }, []);
 
-  const loadCourseData = () => {
+  // Load course data after mount
+  useEffect(() => {
+    if (isMounted) {
+      checkAuthAndLoadCourse();
+    }
+  }, [courseId, isMounted]);
+
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 3000);
+  };
+
+  const checkAuthAndLoadCourse = async () => {
     try {
-      // Get current instructor
-      const currentUserStr = localStorage.getItem('currentUser')
+      const currentUserStr = localStorage.getItem('currentUser');
       if (!currentUserStr) {
-        router.push('/lms/auth/login?type=instructor')
-        return
+        router.push('/lms/auth/login?type=instructor');
+        return;
       }
 
-      const currentUser = JSON.parse(currentUserStr)
+      const currentUser = JSON.parse(currentUserStr);
       if (currentUser.role !== 'instructor') {
-        router.push('/lms/auth/login?type=instructor')
-        return
+        router.push('/lms/auth/login?type=instructor');
+        return;
       }
 
-      setInstructor(currentUser)
-
-      // First check if it's a published course
-      const publishedCourse = publishedCourses.find((c: Course) => c.id === courseId)
-      
-      if (publishedCourse) {
-        setIsPublishedCourse(true)
-        setCourseDetails(publishedCourse)
-        setEditedDetails(publishedCourse)
-      } else {
-        // Load from localStorage courses
-        const courses = JSON.parse(localStorage.getItem('courses') || '[]')
-        const course = courses.find((c: Course) => c.id === courseId)
-        
-        if (!course) {
-          alert('Course not found')
-          router.push('/lms/Instructor_Portal/courses')
-          return
-        }
-        
-        // Check if instructor owns this course
-        if (course.instructorId !== currentUser.id && course.instructorName !== currentUser.name) {
-          alert('You do not have permission to edit this course')
-          router.push('/lms/Instructor_Portal/courses')
-          return
-        }
-        
-        setCourseDetails(course)
-        setEditedDetails(course)
-      }
-      
-      // Load slides for this course (works for both types)
-      const allSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-      const courseSlides = allSlides.filter((s: Slide) => s.courseId === courseId)
-      
-      // If no slides exist for published course, initialize them
-      if (courseSlides.length === 0 && publishedCourse) {
-        const defaultSlides = [
-          {
-            id: `${courseId}_slide_1`,
-            courseId: courseId,
-            slideNumber: 1,
-            title: 'Introduction',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: `${courseId}_slide_2`,
-            courseId: courseId,
-            slideNumber: 2,
-            title: 'Fundamentals',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          },
-          {
-            id: `${courseId}_slide_3`,
-            courseId: courseId,
-            slideNumber: 3,
-            title: 'Advanced Concepts',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ]
-        
-        const updatedSlides = [...allSlides, ...defaultSlides]
-        localStorage.setItem('slides', JSON.stringify(updatedSlides))
-        setSlides(defaultSlides)
-        setSelectedSlideId(defaultSlides[0].id)
-      } else {
-        setSlides(courseSlides)
-        if (courseSlides.length > 0) {
-          setSelectedSlideId(courseSlides[0].id)
-        }
-      }
-      
-      // Load slide contents
-      const allContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-      const contentsMap: {[slideId: string]: SlideContent} = {}
-      allContents.forEach((content: SlideContent) => {
-        if (content.courseId === courseId) {
-          contentsMap[content.slideId] = content
-        }
-      })
-      setSlideContents(contentsMap)
-      
-      // Load quizzes
-      const allQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-      const quizzesMap: {[slideId: string]: Quiz} = {}
-      allQuizzes.forEach((quiz: Quiz) => {
-        if (quiz.courseId === courseId) {
-          quizzesMap[quiz.slideId] = quiz
-        }
-      })
-      setSlideQuizzes(quizzesMap)
-
-      // Load assignments (now with slideId)
-      const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-      const courseAssignments = allAssignments.filter((a: Assignment) => a.courseId === courseId)
-      setAssignments(courseAssignments)
+      setInstructor(currentUser);
+      await fetchCourseFromAPI();
       
     } catch (error) {
-      console.error('Error loading course:', error)
+      console.error('Auth error:', error);
+      setError('Authentication failed');
+      setLoading(false);
+    }
+  };
+
+  // ============ API FUNCTIONS ============
+  const fetchCourseFromAPI = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔍 Fetching course from API:', courseId);
+
+      const response = await fetch(`/api/instructors/course/${courseId}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch course');
+      }
+
+      if (result.success) {
+        const courseData = result.data.course;
+        const slidesData = result.data.slides || [];
+        
+        setCourseDetails(courseData);
+        setEditedDetails({
+          title: courseData.title,
+          description: courseData.description,
+          studentCapacity: courseData.student_capacity || courseData.studentCapacity,
+          category: courseData.category,
+          status: courseData.status,
+          duration: courseData.duration,
+          level: courseData.level,
+          price: courseData.price
+        });
+        
+        setSlides(slidesData);
+        
+        // Load slide contents (files) and quiz questions
+        const contentsMap: Record<string, SlideFile[]> = {};
+        const quizMap: Record<string, QuizQuestion[]> = {};
+        const allAssignments: Assignment[] = [];
+        
+        slidesData.forEach((slide: any) => {
+          // Load files
+          if (slide.files && Array.isArray(slide.files)) {
+            contentsMap[slide.id] = slide.files.map((f: any) => ({
+              id: f.id,
+              name: f.file_name || f.name,
+              type: f.file_type || f.type,
+              size: f.file_size || f.size,
+              url: f.file_url || f.url,
+              publicId: f.public_id || f.publicId,
+              uploadedAt: f.uploaded_at || f.uploadedAt
+            }));
+          }
+          
+          // Load quiz questions
+          if (slide.quizQuestions && Array.isArray(slide.quizQuestions)) {
+            quizMap[slide.id] = slide.quizQuestions.map((q: any) => ({
+              id: q.id,
+              slideId: slide.id,
+              courseId: courseId,
+              question: q.question,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              createdAt: q.created_at || q.createdAt,
+              updatedAt: q.updated_at || q.updatedAt
+            }));
+          }
+          
+          // Load assignments
+          if (slide.assignments && Array.isArray(slide.assignments)) {
+            allAssignments.push(...slide.assignments.map((a: any) => ({
+              ...a,
+              slideId: a.slideId || slide.id
+            })));
+          }
+        });
+        
+        setSlideContents(contentsMap);
+        setQuizQuestions(quizMap);
+        setAssignments(allAssignments);
+        
+        if (slidesData.length > 0) {
+          setSelectedSlideId(slidesData[0].id);
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('Error fetching course:', error);
+      setError(error.message || 'Failed to load course');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // ============ COURSE DETAILS FUNCTIONS ============
-  const handleSaveDetails = () => {
-    if (!courseDetails || !editedDetails) return
-    
-    if (isPublishedCourse) {
-      alert('Published course details cannot be modified.')
-      return
-    }
-    
-    const updatedCourse = {
-      ...courseDetails,
-      ...editedDetails,
-      updatedAt: new Date().toISOString()
-    }
-    
-    // Update in localStorage
-    const courses = JSON.parse(localStorage.getItem('courses') || '[]')
-    const updatedCourses = courses.map((c: Course) => 
-      c.id === courseId ? updatedCourse : c
-    )
-    localStorage.setItem('courses', JSON.stringify(updatedCourses))
-    
-    setCourseDetails(updatedCourse)
-    alert('Course details updated successfully!')
-  }
+  // ============ FULL COURSE SAVE ============
+  const handleSaveAll = async () => {
+    setSaving(true);
+    setError(null);
 
-  // ============ SLIDE FUNCTIONS ============
-  const handleAddSlide = () => {
-    const newSlide: Slide = {
-      id: `slide_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      courseId: courseId,
-      slideNumber: slides.length + 1,
-      title: `Slide ${slides.length + 1}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    
-    const updatedSlides = [...slides, newSlide]
-    setSlides(updatedSlides)
-    
-    // Save to localStorage
-    const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const updatedSlidesStorage = [...existingSlides, newSlide]
-    localStorage.setItem('slides', JSON.stringify(updatedSlidesStorage))
-    
-    setSelectedSlideId(newSlide.id)
-  }
+    try {
+      // Validate all assignments have slideId
+      const invalidAssignments = assignments.filter(a => !a.slideId);
+      if (invalidAssignments.length > 0) {
+        console.error('❌ Assignments missing slideId:', invalidAssignments);
+        showError(`${invalidAssignments.length} assignment(s) are not attached to any slide. Please delete and recreate them.`);
+        setSaving(false);
+        return;
+      }
 
-  const handleRemoveSlide = (slideId: string) => {
-    if (!confirm('Are you sure you want to delete this slide? All content, quizzes, and assignments will be removed.')) {
-      return
-    }
-    
-    const updatedSlides = slides.filter(s => s.id !== slideId)
-    
-    // Reorder remaining slides
-    const reorderedSlides = updatedSlides.map((slide, index) => ({
-      ...slide,
-      slideNumber: index + 1,
-      title: `Slide ${index + 1}`,
-      updatedAt: new Date().toISOString()
-    }))
-    
-    setSlides(reorderedSlides)
-    
-    // Update localStorage
-    const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const filteredSlides = existingSlides.filter((s: Slide) => s.id !== slideId)
-    const updatedSlidesStorage = filteredSlides.map((slide: Slide, index: number) => ({
-      ...slide,
-      slideNumber: index + 1,
-      title: `Slide ${index + 1}`,
-      updatedAt: new Date().toISOString()
-    }))
-    
-    localStorage.setItem('slides', JSON.stringify(updatedSlidesStorage))
-    
-    // Remove associated content, quizzes, and assignments
-    const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-    const filteredContents = existingContents.filter((c: SlideContent) => c.slideId !== slideId)
-    localStorage.setItem('slideContent', JSON.stringify(filteredContents))
-    
-    const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-    const filteredQuizzes = existingQuizzes.filter((q: Quiz) => q.slideId !== slideId)
-    localStorage.setItem('quizzes', JSON.stringify(filteredQuizzes))
-    
-    const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-    const filteredAssignments = existingAssignments.filter((a: Assignment) => a.slideId !== slideId)
-    localStorage.setItem('assignments', JSON.stringify(filteredAssignments))
-    
-    // Update state
-    if (selectedSlideId === slideId) {
-      setSelectedSlideId(updatedSlidesStorage[0]?.id || '')
-    }
-    
-    const newContents = { ...slideContents }
-    delete newContents[slideId]
-    setSlideContents(newContents)
-    
-    const newQuizzes = { ...slideQuizzes }
-    delete newQuizzes[slideId]
-    setSlideQuizzes(newQuizzes)
-    
-    setAssignments(filteredAssignments)
-  }
+      // Prepare slides data with quiz questions
+      const slidesData = slides.map(slide => ({
+        id: slide.id,
+        slideNumber: slide.slideNumber,
+        title: slide.title,
+        files: slideContents[slide.id] || [],
+        quizQuestions: quizQuestions[slide.id] || []
+      }));
 
-  const handleEditSlideTitle = (slideId: string, newTitle: string) => {
+      // Prepare assignments data
+      const assignmentsData = assignments.map(a => ({
+        id: a.id,
+        slideId: a.slideId,
+        courseId: a.courseId,
+        title: a.title,
+        description: a.description,
+        dueDate: a.dueDate,
+        totalMarks: a.totalMarks,
+        passingMarks: a.passingMarks,
+        file: a.file,
+        status: a.status
+      }));
+
+      const updateData = {
+        course: {
+          title: editedDetails.title,
+          description: editedDetails.description,
+          studentCapacity: editedDetails.studentCapacity,
+          category: editedDetails.category,
+          status: editedDetails.status,
+          duration: editedDetails.duration,
+          level: editedDetails.level,
+          price: editedDetails.price
+        },
+        slides: slidesData,
+        assignments: assignmentsData
+      };
+
+      console.log('📤 Sending update data:', JSON.stringify(updateData, null, 2));
+
+      const response = await fetch(`/api/instructors/course/${courseId}/full-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save course');
+      }
+
+      if (result.success) {
+        showSuccess('✅ Course updated successfully!');
+        await fetchCourseFromAPI(); // Refresh data
+      }
+    } catch (error: any) {
+      console.error('Error saving course:', error);
+      showError(error.message || 'Failed to save course');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ============ ✅ UPDATED SLIDE FUNCTIONS WITH APIS ============
+  
+  // Add Slide with API
+  const handleAddSlide = async () => {
+    setAddingSlide(true);
+    setError(null);
+
+    try {
+      const newSlideNumber = slides.length + 1;
+      const newSlideTitle = `Slide ${newSlideNumber}`;
+
+      console.log('📤 Adding new slide:', { courseId, slideNumber: newSlideNumber, title: newSlideTitle });
+
+      const response = await fetch('/api/instructors/slides/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: courseId,
+          slideNumber: newSlideNumber,
+          title: newSlideTitle
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add slide');
+      }
+
+      if (result.success) {
+        // Add the slide from API response (which has proper DB-generated timestamps)
+        setSlides(prev => [...prev, result.data]);
+        setSelectedSlideId(result.data.id);
+        showSuccess('✅ Slide added successfully!');
+        
+        console.log('✅ Slide added:', result.data);
+      }
+    } catch (error: any) {
+      console.error('❌ Error adding slide:', error);
+      showError(error.message || 'Failed to add slide');
+    } finally {
+      setAddingSlide(false);
+    }
+  };
+
+  // Update Slide Title with API
+  const handleEditSlideTitle = async (slideId: string, newTitle: string) => {
+    if (!newTitle.trim()) {
+      showError('Slide title cannot be empty');
+      return;
+    }
+
+    // Optimistic update
+    const previousSlides = [...slides];
     const updatedSlides = slides.map(slide => 
       slide.id === slideId ? { ...slide, title: newTitle, updatedAt: new Date().toISOString() } : slide
-    )
-    setSlides(updatedSlides)
+    );
+    setSlides(updatedSlides);
+    setUpdatingSlide(slideId);
+
+    try {
+      console.log('📤 Updating slide title:', { slideId, title: newTitle });
+
+      const response = await fetch(`/api/instructors/slides/update/${slideId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update slide');
+      }
+
+      if (result.success) {
+        showSuccess('✅ Slide title updated!');
+        console.log('✅ Slide updated:', result.data);
+      }
+    } catch (error: any) {
+      // Revert on error
+      setSlides(previousSlides);
+      showError(error.message || 'Failed to update slide');
+      console.error('❌ Error updating slide:', error);
+    } finally {
+      setUpdatingSlide(null);
+    }
+  };
+
+  // Delete Slide with API
+  const handleRemoveSlide = async (slideId: string) => {
+    if (!confirm('Are you sure you want to delete this slide? All content, quizzes, and assignments will be permanently removed.')) {
+      return;
+    }
     
-    // Update localStorage
-    const existingSlides = JSON.parse(localStorage.getItem('slides') || '[]')
-    const updatedSlidesStorage = existingSlides.map((slide: Slide) => 
-      slide.id === slideId ? { ...slide, title: newTitle, updatedAt: new Date().toISOString() } : slide
-    )
-    localStorage.setItem('slides', JSON.stringify(updatedSlidesStorage))
-  }
+    setDeletingSlide(slideId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/instructors/course/${courseId}/slides/${slideId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete slide');
+      }
+
+      if (result.success) {
+        const updatedSlides = slides.filter(s => s.id !== slideId);
+        
+        // Reorder remaining slides
+        const reorderedSlides = updatedSlides.map((slide, index) => ({
+          ...slide,
+          slideNumber: index + 1,
+          title: `Slide ${index + 1}`,
+          updatedAt: new Date().toISOString()
+        }));
+        
+        setSlides(reorderedSlides);
+        
+        if (selectedSlideId === slideId) {
+          setSelectedSlideId(reorderedSlides[0]?.id || '');
+        }
+        
+        // Remove associated content from state
+        const newContents = { ...slideContents };
+        delete newContents[slideId];
+        setSlideContents(newContents);
+        
+        const newQuizQuestions = { ...quizQuestions };
+        delete newQuizQuestions[slideId];
+        setQuizQuestions(newQuizQuestions);
+        
+        setAssignments(assignments.filter(a => a.slideId !== slideId));
+        
+        showSuccess('✅ Slide deleted successfully!');
+      }
+    } catch (error: any) {
+      console.error('Error deleting slide:', error);
+      showError(error.message || 'Failed to delete slide');
+    } finally {
+      setDeletingSlide(null);
+    }
+  };
 
   // ============ FILE UPLOAD FUNCTIONS ============
   const handleFileUpload = async (slideId: string, files: FileList | null) => {
-    if (!files || !courseId) return
+    if (!files || !courseId) return;
     
-    setUploading(prev => ({ ...prev, [slideId]: true }))
+    setUploading(prev => ({ ...prev, [slideId]: true }));
     
     try {
-      const uploadedFiles = []
+      const uploadedFiles = [];
       
       for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+        const file = files[i];
         
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('slideId', slideId)
-        formData.append('courseId', courseId)
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('slideId', slideId);
+        formData.append('courseId', courseId);
         
         const response = await fetch('/api/upload/cloudinary', {
           method: 'POST',
           body: formData,
-        })
+        });
         
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`)
+          throw new Error(`Upload failed: ${response.statusText}`);
         }
         
-        const result = await response.json()
+        const result = await response.json();
         
         if (result.success) {
           uploadedFiles.push({
-            id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: generateId('file'),
             name: file.name,
             type: file.type,
             size: file.size,
             url: result.data.secure_url,
             publicId: result.data.public_id,
             uploadedAt: new Date().toISOString()
-          })
+          });
         }
       }
       
       if (uploadedFiles.length > 0) {
-        const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-        
-        let slideContent = existingContents.find((sc: SlideContent) => sc.slideId === slideId)
-        
-        if (slideContent) {
-          slideContent.files = [...slideContent.files, ...uploadedFiles]
-          const updatedContents = existingContents.map((sc: SlideContent) => 
-            sc.slideId === slideId ? slideContent : sc
-          )
-          localStorage.setItem('slideContent', JSON.stringify(updatedContents))
-        } else {
-          const newContent: SlideContent = {
-            slideId: slideId,
-            courseId: courseId,
-            files: uploadedFiles
-          }
-          localStorage.setItem('slideContent', JSON.stringify([...existingContents, newContent]))
-        }
+        const currentFiles = slideContents[slideId] || [];
+        const updatedFiles = [...currentFiles, ...uploadedFiles];
         
         setSlideContents({
           ...slideContents,
-          [slideId]: {
-            slideId,
-            courseId,
-            files: [...(slideContents[slideId]?.files || []), ...uploadedFiles]
-          }
-        })
+          [slideId]: updatedFiles
+        });
       }
     } catch (error) {
-      console.error('Upload error:', error)
-      alert('Failed to upload files. Please try again.')
+      console.error('Upload error:', error);
+      showError('Failed to upload files. Please try again.');
     } finally {
-      setUploading(prev => ({ ...prev, [slideId]: false }))
+      setUploading(prev => ({ ...prev, [slideId]: false }));
     }
-  }
+  };
 
   const handleRemoveFile = (slideId: string, filePublicId: string) => {
-    const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
-    const updatedContents = existingContents.map((sc: SlideContent) => {
-      if (sc.slideId === slideId) {
-        sc.files = sc.files.filter(f => f.publicId !== filePublicId)
-      }
-      return sc
-    }).filter((sc: SlideContent) => sc.files.length > 0)
+    const currentFiles = slideContents[slideId] || [];
+    const updatedFiles = currentFiles.filter(f => f.publicId !== filePublicId);
     
-    localStorage.setItem('slideContent', JSON.stringify(updatedContents))
-    
-    if (slideContents[slideId]) {
-      const updatedFiles = slideContents[slideId].files.filter(f => f.publicId !== filePublicId)
-      if (updatedFiles.length > 0) {
-        setSlideContents({
-          ...slideContents,
-          [slideId]: { ...slideContents[slideId], files: updatedFiles }
-        })
-      } else {
-        const newContents = { ...slideContents }
-        delete newContents[slideId]
-        setSlideContents(newContents)
-      }
+    if (updatedFiles.length > 0) {
+      setSlideContents({
+        ...slideContents,
+        [slideId]: updatedFiles
+      });
+    } else {
+      const newContents = { ...slideContents };
+      delete newContents[slideId];
+      setSlideContents(newContents);
     }
-  }
+  };
 
   // ============ QUIZ FUNCTIONS ============
   const handleAddQuestion = (slideId: string) => {
     if (!currentQuizQuestion.question.trim()) {
-      alert('Please enter a question')
-      return
+      showError('Please enter a question');
+      return;
     }
     
     if (currentQuizQuestion.options.some(opt => !opt.trim())) {
-      alert('Please fill all options')
-      return
+      showError('Please fill all options');
+      return;
     }
     
-    const newQuestion = {
-      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    const newQuestion: QuizQuestion = {
+      id: generateId('q'),
+      slideId: slideId,
+      courseId: courseId,
       question: currentQuizQuestion.question,
       options: [...currentQuizQuestion.options],
-      correctAnswer: currentQuizQuestion.correctAnswer
-    }
+      correctAnswer: currentQuizQuestion.correctAnswer,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     
-    const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-    let quiz = existingQuizzes.find((q: Quiz) => q.slideId === slideId)
+    const currentQuestions = quizQuestions[slideId] || [];
+    const updatedQuestions = [...currentQuestions, newQuestion];
     
-    if (quiz) {
-      quiz.questions = [...quiz.questions, newQuestion]
-      const updatedQuizzes = existingQuizzes.map((q: Quiz) => 
-        q.slideId === slideId ? quiz : q
-      )
-      localStorage.setItem('quizzes', JSON.stringify(updatedQuizzes))
-      
-      setSlideQuizzes({
-        ...slideQuizzes,
-        [slideId]: quiz
-      })
-    } else {
-      const newQuiz: Quiz = {
-        slideId: slideId,
-        courseId: courseId,
-        questions: [newQuestion]
-      }
-      
-      localStorage.setItem('quizzes', JSON.stringify([...existingQuizzes, newQuiz]))
-      
-      setSlideQuizzes({
-        ...slideQuizzes,
-        [slideId]: newQuiz
-      })
-    }
+    setQuizQuestions({
+      ...quizQuestions,
+      [slideId]: updatedQuestions
+    });
     
     setCurrentQuizQuestion({
       question: '',
       options: ['', '', '', ''],
       correctAnswer: 0
-    })
-  }
+    });
+    
+    showSuccess('Question added successfully!');
+  };
 
   const handleRemoveQuestion = (slideId: string, questionId: string) => {
-    const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]')
-    const quizIndex = existingQuizzes.findIndex((q: Quiz) => q.slideId === slideId)
+    const currentQuestions = quizQuestions[slideId] || [];
+    const updatedQuestions = currentQuestions.filter(q => q.id !== questionId);
     
-    if (quizIndex !== -1) {
-      const quiz = existingQuizzes[quizIndex]
-      quiz.questions = quiz.questions.filter((q: any) => q.id !== questionId)
-      
-      if (quiz.questions.length === 0) {
-        existingQuizzes.splice(quizIndex, 1)
-      }
-      
-      localStorage.setItem('quizzes', JSON.stringify(existingQuizzes))
-      
-      if (quiz.questions.length > 0) {
-        setSlideQuizzes({
-          ...slideQuizzes,
-          [slideId]: quiz
-        })
-      } else {
-        const newQuizzes = { ...slideQuizzes }
-        delete newQuizzes[slideId]
-        setSlideQuizzes(newQuizzes)
-      }
+    if (updatedQuestions.length > 0) {
+      setQuizQuestions({
+        ...quizQuestions,
+        [slideId]: updatedQuestions
+      });
+    } else {
+      const newQuestions = { ...quizQuestions };
+      delete newQuestions[slideId];
+      setQuizQuestions(newQuestions);
     }
-  }
+    
+    showSuccess('Question removed successfully!');
+  };
 
   const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...currentQuizQuestion.options]
-    newOptions[index] = value
+    const newOptions = [...currentQuizQuestion.options];
+    newOptions[index] = value;
     setCurrentQuizQuestion({
       ...currentQuizQuestion,
       options: newOptions
-    })
-  }
+    });
+  };
 
-  // ============ ASSIGNMENT FUNCTIONS PER SLIDE ============
+  // ============ ASSIGNMENT FUNCTIONS WITH APIS ============
+  
+  // Handle assignment file upload
   const handleAssignmentFileUpload = async (file: File) => {
-    if (!file) return
+    if (!file) return;
 
-    setUploadingAssignment(true)
+    setUploadingAssignment(true);
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('type', 'assignment')
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'assignment');
 
       const response = await fetch('/api/upload/cloudinary', {
         method: 'POST',
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`)
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         setAssignmentFile({
@@ -696,116 +721,123 @@ export default function EditCoursePage() {
           url: result.data.secure_url,
           publicId: result.data.public_id,
           uploadedAt: new Date().toISOString()
-        })
+        });
       }
     } catch (error) {
-      console.error('Assignment file upload error:', error)
-      alert('Failed to upload assignment file. Please try again.')
+      console.error('Assignment file upload error:', error);
+      showError('Failed to upload assignment file. Please try again.');
     } finally {
-      setUploadingAssignment(false)
+      setUploadingAssignment(false);
     }
-  }
+  };
 
-  const handleSaveAssignment = () => {
+  // Save assignment (Add or Update)
+  const handleSaveAssignment = async () => {
     if (!selectedAssignmentSlide && !editingAssignment) {
-      alert('Please select a slide first')
-      return
+      showError('Please select a slide first');
+      return;
     }
 
     if (!currentAssignment.title?.trim()) {
-      alert('Please enter assignment title')
-      return
+      showError('Please enter assignment title');
+      return;
     }
 
     if (!currentAssignment.description?.trim()) {
-      alert('Please enter assignment description')
-      return
+      showError('Please enter assignment description');
+      return;
     }
 
     if (!currentAssignment.dueDate) {
-      alert('Please select due date')
-      return
+      showError('Please select due date');
+      return;
     }
 
     if (!currentAssignment.totalMarks || currentAssignment.totalMarks <= 0) {
-      alert('Please enter valid total marks')
-      return
+      showError('Please enter valid total marks');
+      return;
     }
 
     if (!currentAssignment.passingMarks || currentAssignment.passingMarks <= 0) {
-      alert('Please enter valid passing marks')
-      return
+      showError('Please enter valid passing marks');
+      return;
     }
 
-    if (editingAssignment) {
-      // Update existing assignment
-      const updatedAssignments = assignments.map(a => 
-        a.id === editingAssignment 
-          ? {
-              ...a,
-              title: currentAssignment.title!,
-              description: currentAssignment.description!,
-              dueDate: currentAssignment.dueDate!,
-              totalMarks: currentAssignment.totalMarks!,
-              passingMarks: currentAssignment.passingMarks!,
-              file: assignmentFile || a.file,
-              status: currentAssignment.status as 'published' | 'draft',
-              updatedAt: new Date().toISOString()
-            }
-          : a
-      )
+    setSubmittingAssignment(true);
+    setError(null);
 
-      // Update localStorage
-      const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-      const updatedAllAssignments = allAssignments.map((a: Assignment) =>
-        a.id === editingAssignment
-          ? {
-              ...a,
-              title: currentAssignment.title!,
-              description: currentAssignment.description!,
-              dueDate: currentAssignment.dueDate!,
-              totalMarks: currentAssignment.totalMarks!,
-              passingMarks: currentAssignment.passingMarks!,
-              file: assignmentFile || a.file,
-              status: currentAssignment.status as 'published' | 'draft',
-              updatedAt: new Date().toISOString()
-            }
-          : a
-      )
-      localStorage.setItem('assignments', JSON.stringify(updatedAllAssignments))
-      setAssignments(updatedAssignments)
-    } else {
-      // Create new assignment
-      const newAssignment: Assignment = {
-        id: `assignment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    try {
+      const assignmentData = {
         slideId: selectedAssignmentSlide,
         courseId: courseId,
-        title: currentAssignment.title!,
-        description: currentAssignment.description!,
-        dueDate: currentAssignment.dueDate!,
-        totalMarks: currentAssignment.totalMarks!,
-        passingMarks: currentAssignment.passingMarks!,
-        file: assignmentFile || undefined,
-        status: currentAssignment.status as 'published' | 'draft',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        title: currentAssignment.title.trim(),
+        description: currentAssignment.description.trim(),
+        dueDate: currentAssignment.dueDate,
+        totalMarks: currentAssignment.totalMarks,
+        passingMarks: currentAssignment.passingMarks,
+        file: assignmentFile || null,
+        status: currentAssignment.status
+      };
+
+      let response;
+      let result: { error: any; success: any; data: Assignment };
+
+      if (editingAssignment) {
+        // Update existing assignment
+        response = await fetch(`/api/instructors/assignment/update/${editingAssignment}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assignmentData)
+        });
+        result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update assignment');
+        }
+
+        if (result.success) {
+          // Update local state
+          const updatedAssignments = assignments.map(a => 
+            a.id === editingAssignment ? result.data : a
+          );
+          setAssignments(updatedAssignments);
+          showSuccess('✅ Assignment updated successfully!');
+        }
+      } else {
+        // Add new assignment
+        response = await fetch('/api/instructors/assignment/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assignmentData)
+        });
+        result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to add assignment');
+        }
+
+        if (result.success) {
+          // Add to local state
+          setAssignments([...assignments, result.data]);
+          showSuccess('✅ Assignment added successfully!');
+        }
       }
 
-      // Save to localStorage
-      const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-      localStorage.setItem('assignments', JSON.stringify([...existingAssignments, newAssignment]))
-
-      // Update state
-      setAssignments([...assignments, newAssignment])
+      // Reset form
+      resetAssignmentForm();
+      
+    } catch (error: any) {
+      console.error('Error saving assignment:', error);
+      showError(error.message || 'Failed to save assignment');
+    } finally {
+      setSubmittingAssignment(false);
     }
+  };
 
-    // Reset form
-    resetAssignmentForm()
-  }
-
+  // Edit assignment
   const handleEditAssignment = (assignment: Assignment) => {
-    setEditingAssignment(assignment.id)
-    setSelectedAssignmentSlide(assignment.slideId)
+    setEditingAssignment(assignment.id);
+    setSelectedAssignmentSlide(assignment.slideId);
     setCurrentAssignment({
       title: assignment.title,
       description: assignment.description,
@@ -813,32 +845,49 @@ export default function EditCoursePage() {
       totalMarks: assignment.totalMarks,
       passingMarks: assignment.passingMarks,
       status: assignment.status
-    })
+    });
     if (assignment.file) {
-      setAssignmentFile(assignment.file)
+      setAssignmentFile(assignment.file);
     }
-    setShowAssignmentForm(true)
-  }
+    setShowAssignmentForm(true);
+  };
 
-  const handleRemoveAssignment = (assignmentId: string) => {
+  // Delete assignment
+  const handleRemoveAssignment = async (assignmentId: string) => {
     if (!confirm('Are you sure you want to delete this assignment?')) {
-      return
+      return;
     }
 
-    const updatedAssignments = assignments.filter(a => a.id !== assignmentId)
-    
-    // Update localStorage
-    const existingAssignments = JSON.parse(localStorage.getItem('assignments') || '[]')
-    const filteredAssignments = existingAssignments.filter((a: Assignment) => a.id !== assignmentId)
-    localStorage.setItem('assignments', JSON.stringify(filteredAssignments))
+    setDeletingAssignment(assignmentId);
+    setError(null);
 
-    // Update state
-    setAssignments(updatedAssignments)
-  }
+    try {
+      const response = await fetch(`/api/instructors/assignment/delete/${assignmentId}`, {
+        method: 'DELETE',
+      });
 
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete assignment');
+      }
+
+      if (result.success) {
+        setAssignments(assignments.filter(a => a.id !== assignmentId));
+        showSuccess('✅ Assignment deleted successfully!');
+      }
+    } catch (error: any) {
+      console.error('Error deleting assignment:', error);
+      showError(error.message || 'Failed to delete assignment');
+    } finally {
+      setDeletingAssignment(null);
+    }
+  };
+
+  // Open assignment form for a slide
   const openAssignmentFormForSlide = (slideId: string) => {
-    setSelectedAssignmentSlide(slideId)
-    setEditingAssignment(null)
+    setSelectedAssignmentSlide(slideId);
+    setEditingAssignment(null);
     setCurrentAssignment({
       title: '',
       description: '',
@@ -846,11 +895,12 @@ export default function EditCoursePage() {
       totalMarks: 100,
       passingMarks: 70,
       status: 'draft'
-    })
-    setAssignmentFile(null)
-    setShowAssignmentForm(true)
-  }
+    });
+    setAssignmentFile(null);
+    setShowAssignmentForm(true);
+  };
 
+  // Reset assignment form
   const resetAssignmentForm = () => {
     setCurrentAssignment({
       title: '',
@@ -859,32 +909,34 @@ export default function EditCoursePage() {
       totalMarks: 100,
       passingMarks: 70,
       status: 'draft'
-    })
-    setAssignmentFile(null)
-    setShowAssignmentForm(false)
-    setSelectedAssignmentSlide('')
-    setEditingAssignment(null)
-  }
+    });
+    setAssignmentFile(null);
+    setShowAssignmentForm(false);
+    setSelectedAssignmentSlide('');
+    setEditingAssignment(null);
+  };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.includes('video')) return <FileVideo className="w-5 h-5 text-blue-500" />
-    if (fileType.includes('image')) return <FileImage className="w-5 h-5 text-green-500" />
-    if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
-    if (fileType.includes('word') || fileType.includes('document')) return <FileText className="w-5 h-5 text-blue-700" />
-    return <File className="w-5 h-5 text-gray-500" />
-  }
+    if (fileType.includes('video')) return <FileVideo className="w-5 h-5 text-blue-500" />;
+    if (fileType.includes('image')) return <FileImage className="w-5 h-5 text-green-500" />;
+    if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+    if (fileType.includes('word') || fileType.includes('document')) return <FileText className="w-5 h-5 text-blue-700" />;
+    return <File className="w-5 h-5 text-gray-500" />;
+  };
 
-  if (loading) {
+  if (!isMounted || loading) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-10 w-48 bg-gray-200 rounded mb-6"></div>
-            <div className="h-64 bg-gray-100 rounded-lg"></div>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+              <p className="text-sm text-darkGrey">Loading course data...</p>
+            </div>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!courseDetails) {
@@ -893,49 +945,60 @@ export default function EditCoursePage() {
         <div className="text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
           <h3 className="text-lg font-medium mb-2">Course Not Found</h3>
-          <Link
-            href="/lms/Instructor_Portal/courses"
-            className="text-darkRoyalBlue hover:underline cursor-pointer"
-          >
+          <Link href="/lms/Instructor_Portal/courses" className="text-darkRoyalBlue hover:underline">
             Back to Courses
           </Link>
         </div>
       </div>
-    )
+    );
   }
+
+  const isSystemCourse = courseDetails.instructorId === 'system';
 
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-slideIn">
+          <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <p className="text-sm font-medium text-green-800">{successMessage}</p>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="fixed top-4 right-4 z-50 animate-slideIn">
+          <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <p className="text-sm font-medium text-red-800">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="bg-lightGrey rounded-xl p-4 sm:p-6 border border-softGrey">
           <div className="flex items-center gap-4 mb-4">
-            <Link
-              href="/lms/Instructor_Portal/courses"
-              className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors cursor-pointer"
-            >
+            <Link href="/lms/Instructor_Portal/courses" className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold" style={{ color: BRAND_COLORS.darkRoyalBlue }}>
-                {isPublishedCourse ? 'Published Course' : 'Edit Course'}
+                {isSystemCourse ? 'View Course' : 'Edit Course'}
               </h1>
               <p className="text-darkGrey text-sm mt-1">{courseDetails.title}</p>
             </div>
             <div className="flex items-center gap-2">
-              {isPublishedCourse && (
+              <button onClick={fetchCourseFromAPI} className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors" title="Refresh">
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              {isSystemCourse && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
                   System Course
                 </span>
               )}
-              <Link
-                href={`/lms/Instructor_Portal/courses/preview/${courseId}`}
-                className="p-2 text-darkGrey hover:text-darkRoyalBlue hover:bg-white rounded-lg transition-colors cursor-pointer"
-                title="Preview Course"
-              >
-                <Eye className="w-5 h-5" />
-              </Link>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                 courseDetails.status === 'published' 
                   ? 'bg-green-100 text-green-700' 
@@ -948,60 +1011,58 @@ export default function EditCoursePage() {
           
           {/* Tabs */}
           <div className="flex border-b border-softGrey overflow-x-auto pb-1">
-            <button
-              onClick={() => setActiveTab('details')}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative cursor-pointer whitespace-nowrap ${
-                activeTab === 'details' 
-                  ? 'text-deepRed' 
-                  : 'text-darkGrey/60 hover:text-darkGrey'
-              }`}
-            >
+            <button onClick={() => setActiveTab('details')} className={`px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'details' ? 'text-deepRed' : 'text-darkGrey/60 hover:text-darkGrey'
+            }`}>
               Course Details
-              {activeTab === 'details' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed"></div>
-              )}
+              {activeTab === 'details' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed" />}
             </button>
-            <button
-              onClick={() => setActiveTab('slides')}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative cursor-pointer whitespace-nowrap ${
-                activeTab === 'slides' 
-                  ? 'text-deepRed' 
-                  : 'text-darkGrey/60 hover:text-darkGrey'
-              }`}
-            >
+            <button onClick={() => setActiveTab('slides')} className={`px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'slides' ? 'text-deepRed' : 'text-darkGrey/60 hover:text-darkGrey'
+            }`}>
               Slides ({slides.length})
-              {activeTab === 'slides' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed"></div>
-              )}
+              {activeTab === 'slides' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed" />}
             </button>
-            <button
-              onClick={() => setActiveTab('content')}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative cursor-pointer whitespace-nowrap ${
-                activeTab === 'content' 
-                  ? 'text-deepRed' 
-                  : 'text-darkGrey/60 hover:text-darkGrey'
-              } ${slides.length === 0 ? 'opacity-50 pointer-events-none' : ''}`}
+            <button 
+              onClick={() => setActiveTab('content')} 
+              className={`px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+                activeTab === 'content' ? 'text-deepRed' : 'text-darkGrey/60 hover:text-darkGrey'
+              } ${slides.length === 0 ? 'opacity-50 pointer-events-none' : ''}`} 
               disabled={slides.length === 0}
             >
               Content & Quizzes
-              {activeTab === 'content' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed"></div>
-              )}
+              {activeTab === 'content' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed" />}
             </button>
-            <button
-              onClick={() => setActiveTab('assignments')}
-              className={`px-4 py-2 text-sm font-medium transition-colors relative cursor-pointer whitespace-nowrap ${
-                activeTab === 'assignments' 
-                  ? 'text-deepRed' 
-                  : 'text-darkGrey/60 hover:text-darkGrey'
-              }`}
-            >
+            <button onClick={() => setActiveTab('assignments')} className={`px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+              activeTab === 'assignments' ? 'text-deepRed' : 'text-darkGrey/60 hover:text-darkGrey'
+            }`}>
               Assignments ({assignments.length})
-              {activeTab === 'assignments' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed"></div>
-              )}
+              {activeTab === 'assignments' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-deepRed" />}
             </button>
           </div>
+
+          {/* Global Save Button */}
+          {!isSystemCourse && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving All Changes...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save All Changes
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1014,7 +1075,7 @@ export default function EditCoursePage() {
               Course Details
             </h2>
             
-            {isPublishedCourse ? (
+            {isSystemCourse ? (
               <div className="space-y-5 max-w-3xl">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-start gap-3">
@@ -1022,7 +1083,7 @@ export default function EditCoursePage() {
                     <div>
                       <h4 className="font-medium text-blue-800">System Course - Read Only</h4>
                       <p className="text-sm text-blue-600 mt-1">
-                        This is a system course provided by the platform. You can add slides, upload materials, create quizzes, and manage assignments, but the core course details cannot be modified.
+                        This is a system course. You can add slides, upload materials, create quizzes, and manage assignments.
                       </p>
                     </div>
                   </div>
@@ -1055,129 +1116,153 @@ export default function EditCoursePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">Price</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.price || 'N/A'}</p>
+                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">
+                      {courseDetails.price ? `PKR ${courseDetails.price.toLocaleString()}` : 'N/A'}
+                    </p>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-5 max-w-3xl">
                 <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">
-                    Course Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editedDetails.title || ''}
-                    onChange={(e) => setEditedDetails({ ...editedDetails, title: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+                  <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
+                  <input 
+                    type="text" 
+                    value={editedDetails.title || ''} 
+                    onChange={(e) => setEditedDetails({ ...editedDetails, title: e.target.value })} 
+                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
+                    placeholder="Enter course name" 
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={editedDetails.description || ''}
-                    onChange={(e) => setEditedDetails({ ...editedDetails, description: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+                  <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
+                  <textarea 
+                    value={editedDetails.description || ''} 
+                    onChange={(e) => setEditedDetails({ ...editedDetails, description: e.target.value })} 
+                    rows={4} 
+                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
+                    placeholder="Enter course description" 
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">
-                      Student Capacity
-                    </label>
-                    <input
-                      type="number"
-                      value={editedDetails.studentCapacity || 0}
-                      onChange={(e) => setEditedDetails({ ...editedDetails, studentCapacity: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+                    <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
+                    <input 
+                      type="text" 
+                      value={editedDetails.duration || ''} 
+                      onChange={(e) => setEditedDetails({ ...editedDetails, duration: e.target.value })} 
+                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
+                      placeholder="e.g., 8 Weeks" 
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">
-                      Category
-                    </label>
-                    <select
-                      value={editedDetails.category || ''}
-                      onChange={(e) => setEditedDetails({ ...editedDetails, category: e.target.value })}
+                    <label className="block text-sm font-medium text-darkGrey mb-2">Level</label>
+                    <select 
+                      value={editedDetails.level || ''} 
+                      onChange={(e) => setEditedDetails({ ...editedDetails, level: e.target.value })} 
                       className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
                     >
-                      <option value="Technical Training">Technical Training</option>
-                      <option value="Safety Training">Safety Training</option>
-                      <option value="Web Development">Web Development</option>
-                      <option value="Mobile Development">Mobile Development</option>
-                      <option value="Data Science">Data Science</option>
-                      <option value="Design">Design</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Business">Business</option>
+                      <option value="">Select Level</option>
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                      <option value="All Levels">All Levels</option>
                     </select>
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-darkGrey mb-2">Price (PKR)</label>
+                    <input 
+                      type="number" 
+                      value={editedDetails.price || ''} 
+                      onChange={(e) => setEditedDetails({ ...editedDetails, price: parseFloat(e.target.value) })} 
+                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
+                      placeholder="e.g., 25000" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-darkGrey mb-2">Student Capacity</label>
+                    <input 
+                      type="number" 
+                      value={editedDetails.studentCapacity || 30} 
+                      onChange={(e) => setEditedDetails({ ...editedDetails, studentCapacity: parseInt(e.target.value) })} 
+                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">
-                    Status
-                  </label>
+                  <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
+                  <select 
+                    value={editedDetails.category || ''} 
+                    onChange={(e) => setEditedDetails({ ...editedDetails, category: e.target.value })} 
+                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Technical Training">Technical Training</option>
+                    <option value="Safety Training">Safety Training</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Mobile Development">Mobile Development</option>
+                    <option value="Data Science">Data Science</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        checked={editedDetails.status === 'draft'}
-                        onChange={() => setEditedDetails({ ...editedDetails, status: 'draft' })}
-                        className="w-4 h-4 text-deepRed cursor-pointer"
+                      <input 
+                        type="radio" 
+                        name="status" 
+                        checked={editedDetails.status === 'draft'} 
+                        onChange={() => setEditedDetails({ ...editedDetails, status: 'draft' })} 
+                        className="w-4 h-4 text-deepRed" 
                       />
                       <span className="text-sm">Draft</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        checked={editedDetails.status === 'published'}
-                        onChange={() => setEditedDetails({ ...editedDetails, status: 'published' })}
-                        className="w-4 h-4 text-deepRed cursor-pointer"
+                      <input 
+                        type="radio" 
+                        name="status" 
+                        checked={editedDetails.status === 'published'} 
+                        onChange={() => setEditedDetails({ ...editedDetails, status: 'published' })} 
+                        className="w-4 h-4 text-deepRed" 
                       />
                       <span className="text-sm">Published</span>
                     </label>
                   </div>
-                </div>
-
-                <div className="pt-4">
-                  <button
-                    onClick={handleSaveDetails}
-                    className="px-6 py-2.5 bg-red-700 text-white rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap min-w-fit"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 2: Slides Management */}
-        {activeTab === 'slides' && (
+        {/* Tab 2: Slides Management - UPDATED WITH LOADING STATES */}
+        {activeTab === 'slides' && !isSystemCourse && (
           <div className="bg-white rounded-lg border border-softGrey p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                Manage Slides
-              </h2>
-              <button
-                onClick={handleAddSlide}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap min-w-fit"
-                style={{ 
-                  backgroundColor: BRAND_COLORS.darkRoyalBlue,
-                  color: BRAND_COLORS.white 
-                }}
+              <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Manage Slides</h2>
+              <button 
+                onClick={handleAddSlide} 
+                disabled={addingSlide}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue, color: BRAND_COLORS.white }}
               >
-                <Plus className="w-4 h-4" />
-                Add New Slide
+                {addingSlide ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Add New Slide
+                  </>
+                )}
               </button>
             </div>
 
@@ -1185,44 +1270,66 @@ export default function EditCoursePage() {
               <div className="text-center py-12 border-2 border-dashed border-softGrey rounded-lg">
                 <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
                 <h3 className="text-base font-medium mb-2">No Slides Yet</h3>
-                <p className="text-darkGrey/70 mb-4 text-sm">
-                  Start by adding your first slide
-                </p>
-                <button
-                  onClick={handleAddSlide}
-                  className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium inline-flex items-center gap-2 cursor-pointer"
+                <p className="text-darkGrey/70 mb-4 text-sm">Start by adding your first slide</p>
+                <button 
+                  onClick={handleAddSlide} 
+                  disabled={addingSlide}
+                  className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Plus className="w-4 h-4" />
-                  Create First Slide
+                  {addingSlide ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Create First Slide
+                    </>
+                  )}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 {slides.map((slide) => {
                   const slideAssignmentCount = assignments.filter(a => a.slideId === slide.id).length;
+                  const slideQuizCount = quizQuestions[slide.id]?.length || 0;
+                  const isUpdating = updatingSlide === slide.id;
+                  
                   return (
                     <div key={slide.id} className="flex items-center gap-3 p-3 border border-softGrey rounded-lg">
                       <div className="w-8 h-8 rounded-full bg-lightGrey flex items-center justify-center text-sm font-medium">
                         {slide.slideNumber}
                       </div>
                       <div className="flex-1">
-                        <input
-                          type="text"
-                          value={slide.title}
-                          onChange={(e) => handleEditSlideTitle(slide.id, e.target.value)}
-                          className="font-medium text-darkGrey bg-transparent border-b border-transparent hover:border-softGrey focus:border-darkRoyalBlue focus:outline-none px-1 py-0.5 w-full"
+                        <input 
+                          type="text" 
+                          value={slide.title} 
+                          onChange={(e) => handleEditSlideTitle(slide.id, e.target.value)} 
+                          disabled={isUpdating}
+                          className={`font-medium text-darkGrey bg-transparent border-b border-transparent hover:border-softGrey focus:border-darkRoyalBlue focus:outline-none px-1 py-0.5 w-full disabled:opacity-50 ${
+                            isUpdating ? 'animate-pulse' : ''
+                          }`} 
                         />
+                        {isUpdating && (
+                          <span className="text-xs text-blue-600 ml-2">Updating...</span>
+                        )}
                         <p className="text-xs text-darkGrey/60 mt-1">
-                          {slideContents[slide.id]?.files?.length || 0} files • 
-                          {slideQuizzes[slide.id]?.questions?.length || 0} questions •
+                          {slideContents[slide.id]?.length || 0} files • 
+                          {slideQuizCount} questions • 
                           {slideAssignmentCount} assignments
                         </p>
                       </div>
-                      <button
+                      <button 
                         onClick={() => handleRemoveSlide(slide.id)}
-                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg cursor-pointer"
+                        disabled={deletingSlide === slide.id || isUpdating}
+                        className="p-2 text-brightRed hover:bg-brightRed/5 rounded-lg disabled:opacity-50"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deletingSlide === slide.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   );
@@ -1233,7 +1340,7 @@ export default function EditCoursePage() {
         )}
 
         {/* Tab 3: Content & Quizzes */}
-        {activeTab === 'content' && (
+        {activeTab === 'content' && !isSystemCourse && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Slide List */}
             <div className="lg:col-span-1">
@@ -1242,21 +1349,21 @@ export default function EditCoursePage() {
                 <div className="space-y-2">
                   {slides.map((slide) => {
                     const slideAssignmentCount = assignments.filter(a => a.slideId === slide.id).length;
+                    const slideQuizCount = quizQuestions[slide.id]?.length || 0;
+                    
                     return (
-                      <button
-                        key={slide.id}
-                        onClick={() => setSelectedSlideId(slide.id)}
-                        className={`w-full text-left p-3 rounded-lg transition-colors cursor-pointer ${
-                          selectedSlideId === slide.id 
-                            ? 'bg-lightGrey border-l-4' 
-                            : 'hover:bg-lightGrey/50'
-                        }`}
+                      <button 
+                        key={slide.id} 
+                        onClick={() => setSelectedSlideId(slide.id)} 
+                        className={`w-full text-left p-3 rounded-lg transition-colors ${
+                          selectedSlideId === slide.id ? 'bg-lightGrey border-l-4' : 'hover:bg-lightGrey/50'
+                        }`} 
                         style={{ borderLeftColor: selectedSlideId === slide.id ? BRAND_COLORS.deepRed : 'transparent' }}
                       >
                         <p className="font-medium text-sm text-darkGrey">{slide.title}</p>
                         <p className="text-xs text-darkGrey/60 mt-1">
-                          {slideContents[slide.id]?.files?.length || 0} files • 
-                          {slideQuizzes[slide.id]?.questions?.length || 0} questions •
+                          {slideContents[slide.id]?.length || 0} files • 
+                          {slideQuizCount} questions • 
                           {slideAssignmentCount} assignments
                         </p>
                       </button>
@@ -1272,28 +1379,20 @@ export default function EditCoursePage() {
                 <div className="space-y-6">
                   {/* Educational Content */}
                   <div className="bg-white rounded-lg border border-softGrey p-6">
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Educational Content
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>Educational Content</h3>
                     
                     <div className="mb-6">
                       <div className="border-2 border-dashed border-softGrey rounded-lg p-6 text-center">
                         <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: BRAND_COLORS.softGrey }} />
-                        <p className="text-sm text-darkGrey/70 mb-2">
-                          Upload files to this slide
-                        </p>
-                        <label
-                          htmlFor={`file-upload-${selectedSlideId}`}
-                          className="inline-block cursor-pointer"
-                        >
-                          <input
-                            id={`file-upload-${selectedSlideId}`}
-                            type="file"
-                            multiple
-                            accept=".pdf,.doc,.docx,.mp4,.mov,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileUpload(selectedSlideId, e.target.files)}
-                            className="hidden"
-                            disabled={uploading[selectedSlideId]}
+                        <p className="text-sm text-darkGrey/70 mb-2">Upload files to this slide</p>
+                        <label className="inline-block cursor-pointer">
+                          <input 
+                            type="file" 
+                            multiple 
+                            accept=".pdf,.doc,.docx,.mp4,.mov,.jpg,.jpeg,.png" 
+                            onChange={(e) => handleFileUpload(selectedSlideId, e.target.files)} 
+                            className="hidden" 
+                            disabled={uploading[selectedSlideId]} 
                           />
                           <span
                             className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 ${
@@ -1314,24 +1413,22 @@ export default function EditCoursePage() {
                       </div>
                     </div>
 
-                    {slideContents[selectedSlideId]?.files?.length > 0 && (
+                    {slideContents[selectedSlideId]?.length > 0 && (
                       <div>
                         <h4 className="font-medium text-darkGrey mb-3">Uploaded Files</h4>
                         <div className="space-y-2">
-                          {slideContents[selectedSlideId].files.map((file) => (
+                          {slideContents[selectedSlideId].map((file) => (
                             <div key={file.id} className="flex items-center justify-between p-3 bg-lightGrey rounded-lg">
                               <div className="flex items-center gap-3">
                                 {getFileIcon(file.type)}
                                 <div>
                                   <p className="text-sm font-medium text-darkGrey">{file.name}</p>
-                                  <p className="text-xs text-darkGrey/60">
-                                    {(file.size / 1024).toFixed(2)} KB
-                                  </p>
+                                  <p className="text-xs text-darkGrey/60">{(file.size / 1024).toFixed(2)} KB</p>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => handleRemoveFile(selectedSlideId, file.publicId)}
-                                className="p-1 text-brightRed hover:bg-brightRed/5 rounded cursor-pointer"
+                              <button 
+                                onClick={() => handleRemoveFile(selectedSlideId, file.publicId)} 
+                                className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1344,9 +1441,7 @@ export default function EditCoursePage() {
 
                   {/* Quiz Content */}
                   <div className="bg-white rounded-lg border border-softGrey p-6">
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Quiz Questions
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>Quiz Questions</h3>
 
                     {/* Add Question Form */}
                     <div className="bg-lightGrey rounded-lg p-4 mb-6">
@@ -1354,53 +1449,43 @@ export default function EditCoursePage() {
                       
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">
-                            Question
-                          </label>
-                          <input
-                            type="text"
-                            value={currentQuizQuestion.question}
-                            onChange={(e) => setCurrentQuizQuestion({
-                              ...currentQuizQuestion,
-                              question: e.target.value
-                            })}
-                            className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
-                            placeholder="Enter your question"
+                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question</label>
+                          <input 
+                            type="text" 
+                            value={currentQuizQuestion.question} 
+                            onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, question: e.target.value })} 
+                            className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm" 
+                            placeholder="Enter your question" 
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">
-                            Options
-                          </label>
+                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Options</label>
                           <div className="space-y-2">
                             {currentQuizQuestion.options.map((option, index) => (
                               <div key={index} className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name="correctAnswer"
-                                  checked={currentQuizQuestion.correctAnswer === index}
-                                  onChange={() => setCurrentQuizQuestion({
-                                    ...currentQuizQuestion,
-                                    correctAnswer: index
-                                  })}
-                                  className="w-4 h-4 text-deepRed cursor-pointer"
+                                <input 
+                                  type="radio" 
+                                  name="correctAnswer" 
+                                  checked={currentQuizQuestion.correctAnswer === index} 
+                                  onChange={() => setCurrentQuizQuestion({ ...currentQuizQuestion, correctAnswer: index })} 
+                                  className="w-4 h-4 text-deepRed" 
                                 />
-                                <input
-                                  type="text"
-                                  value={option}
-                                  onChange={(e) => handleOptionChange(index, e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
-                                  placeholder={`Option ${index + 1}`}
+                                <input 
+                                  type="text" 
+                                  value={option} 
+                                  onChange={(e) => handleOptionChange(index, e.target.value)} 
+                                  className="flex-1 px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm" 
+                                  placeholder={`Option ${index + 1}`} 
                                 />
                               </div>
                             ))}
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleAddQuestion(selectedSlideId)}
-                          className="px-4 py-2 bg-blue-800 text-white rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap min-w-fit hover:bg-blue-700 transition-colors"
+                        <button 
+                          onClick={() => handleAddQuestion(selectedSlideId)} 
+                          className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium hover:bg-darkRoyalBlue/90 transition-colors"
                         >
                           Add Question
                         </button>
@@ -1408,21 +1493,19 @@ export default function EditCoursePage() {
                     </div>
 
                     {/* Questions List */}
-                    {slideQuizzes[selectedSlideId]?.questions?.length > 0 && (
+                    {quizQuestions[selectedSlideId] && quizQuestions[selectedSlideId].length > 0 && (
                       <div>
                         <h4 className="font-medium text-darkGrey mb-3">
-                          Questions ({slideQuizzes[selectedSlideId].questions.length})
+                          Questions ({quizQuestions[selectedSlideId].length})
                         </h4>
                         <div className="space-y-3">
-                          {slideQuizzes[selectedSlideId].questions.map((q, qIndex) => (
+                          {quizQuestions[selectedSlideId].map((q, qIndex) => (
                             <div key={q.id} className="border border-softGrey rounded-lg p-3">
                               <div className="flex items-start justify-between mb-2">
-                                <p className="font-medium text-sm text-darkGrey">
-                                  Q{qIndex + 1}: {q.question}
-                                </p>
-                                <button
-                                  onClick={() => handleRemoveQuestion(selectedSlideId, q.id)}
-                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded cursor-pointer"
+                                <p className="font-medium text-sm text-darkGrey">Q{qIndex + 1}: {q.question}</p>
+                                <button 
+                                  onClick={() => handleRemoveQuestion(selectedSlideId, q.id)} 
+                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1431,9 +1514,7 @@ export default function EditCoursePage() {
                                 {q.options.map((opt, optIndex) => (
                                   <div key={optIndex} className="flex items-center gap-2">
                                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                                      optIndex === q.correctAnswer 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-gray-100 text-gray-600'
+                                      optIndex === q.correctAnswer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                                     }`}>
                                       {String.fromCharCode(65 + optIndex)}
                                     </span>
@@ -1451,108 +1532,93 @@ export default function EditCoursePage() {
                   {/* Assignments for this Slide */}
                   <div className="bg-white rounded-lg border border-softGrey p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                        Assignments for this Slide
-                      </h3>
-                      <button
-                        onClick={() => openAssignmentFormForSlide(selectedSlideId)}
+                      <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Assignments for this Slide</h3>
+                      <button 
+                        onClick={() => openAssignmentFormForSlide(selectedSlideId)} 
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                        style={{ 
-                          backgroundColor: BRAND_COLORS.darkRoyalBlue,
-                          color: BRAND_COLORS.white 
-                        }}
+                        style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue, color: BRAND_COLORS.white }}
                       >
                         <Plus className="w-4 h-4" />
                         Add Assignment
                       </button>
                     </div>
 
-                    {/* Assignment Form for this Slide */}
+                    {/* Assignment Form */}
                     {showAssignmentForm && selectedAssignmentSlide === selectedSlideId && (
                       <div className="bg-lightGrey rounded-lg p-4 mb-6">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium text-darkGrey">
-                            {editingAssignment ? 'Edit Assignment' : 'New Assignment for this Slide'}
-                          </h4>
-                          <button
-                            onClick={resetAssignmentForm}
-                            className="p-1 text-darkGrey/60 hover:text-darkGrey"
-                          >
+                          <h4 className="font-medium text-darkGrey">{editingAssignment ? 'Edit Assignment' : 'New Assignment'}</h4>
+                          <button onClick={resetAssignmentForm} className="p-1 text-darkGrey/60 hover:text-darkGrey">
                             <X className="w-5 h-5" />
                           </button>
                         </div>
 
                         <div className="space-y-4">
-                          {/* Assignment Title */}
                           <div>
                             <label className="block text-sm font-medium text-darkGrey mb-2">
                               Assignment Title <span className="text-deepRed">*</span>
                             </label>
-                            <input
-                              type="text"
-                              value={currentAssignment.title}
-                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, title: e.target.value })}
-                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
-                              placeholder="e.g., Final Project Submission"
+                            <input 
+                              type="text" 
+                              value={currentAssignment.title} 
+                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, title: e.target.value })} 
+                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white" 
+                              placeholder="e.g., Final Project Submission" 
                             />
                           </div>
 
-                          {/* Assignment Description */}
                           <div>
                             <label className="block text-sm font-medium text-darkGrey mb-2">
                               Description <span className="text-deepRed">*</span>
                             </label>
-                            <textarea
-                              value={currentAssignment.description}
-                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, description: e.target.value })}
-                              rows={4}
-                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
-                              placeholder="Describe the assignment requirements..."
+                            <textarea 
+                              value={currentAssignment.description} 
+                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, description: e.target.value })} 
+                              rows={4} 
+                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white" 
+                              placeholder="Describe the assignment requirements..." 
                             />
                           </div>
 
-                          {/* Due Date */}
                           <div>
                             <label className="block text-sm font-medium text-darkGrey mb-2">
                               Due Date <span className="text-deepRed">*</span>
                             </label>
-                            <input
-                              type="datetime-local"
-                              value={currentAssignment.dueDate}
-                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, dueDate: e.target.value })}
-                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+                            <input 
+                              type="datetime-local" 
+                              value={currentAssignment.dueDate} 
+                              onChange={(e) => setCurrentAssignment({ ...currentAssignment, dueDate: e.target.value })} 
+                              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white" 
                             />
                           </div>
 
-                          {/* Marks */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-darkGrey mb-2">
                                 Total Marks <span className="text-deepRed">*</span>
                               </label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={currentAssignment.totalMarks}
-                                onChange={(e) => setCurrentAssignment({ ...currentAssignment, totalMarks: parseInt(e.target.value) })}
-                                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+                              <input 
+                                type="number" 
+                                min="1" 
+                                value={currentAssignment.totalMarks} 
+                                onChange={(e) => setCurrentAssignment({ ...currentAssignment, totalMarks: parseInt(e.target.value) })} 
+                                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white" 
                               />
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-darkGrey mb-2">
                                 Passing Marks <span className="text-deepRed">*</span>
                               </label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={currentAssignment.passingMarks}
-                                onChange={(e) => setCurrentAssignment({ ...currentAssignment, passingMarks: parseInt(e.target.value) })}
-                                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+                              <input 
+                                type="number" 
+                                min="1" 
+                                value={currentAssignment.passingMarks} 
+                                onChange={(e) => setCurrentAssignment({ ...currentAssignment, passingMarks: parseInt(e.target.value) })} 
+                                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white" 
                               />
                             </div>
                           </div>
 
-                          {/* Assignment File Upload */}
                           <div>
                             <label className="block text-sm font-medium text-darkGrey mb-2">
                               Assignment File (Optional)
@@ -1564,42 +1630,31 @@ export default function EditCoursePage() {
                                     {getFileIcon(assignmentFile.type)}
                                     <div className="text-left">
                                       <p className="text-sm font-medium text-darkGrey">{assignmentFile.name}</p>
-                                      <p className="text-xs text-darkGrey/60">
-                                        {(assignmentFile.size / 1024).toFixed(2)} KB
-                                      </p>
+                                      <p className="text-xs text-darkGrey/60">{(assignmentFile.size / 1024).toFixed(2)} KB</p>
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={() => setAssignmentFile(null)}
-                                    className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
-                                  >
+                                  <button onClick={() => setAssignmentFile(null)} className="p-1 text-brightRed hover:bg-brightRed/5 rounded">
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                               ) : (
                                 <>
                                   <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: BRAND_COLORS.softGrey }} />
-                                  <p className="text-sm text-darkGrey/70 mb-2">
-                                    Upload assignment instructions or template
-                                  </p>
+                                  <p className="text-sm text-darkGrey/70 mb-2">Upload assignment instructions or template</p>
                                   <label className="inline-block relative">
-                                    <input
-                                      type="file"
-                                      accept=".pdf,.doc,.docx,.txt"
-                                      onChange={(e) => {
-                                        if (e.target.files && e.target.files[0]) {
-                                          handleAssignmentFileUpload(e.target.files[0])
-                                        }
-                                      }}
-                                      className="hidden"
-                                      disabled={uploadingAssignment}
+                                    <input 
+                                      type="file" 
+                                      accept=".pdf,.doc,.docx,.txt" 
+                                      onChange={(e) => { if (e.target.files && e.target.files[0]) { handleAssignmentFileUpload(e.target.files[0]); } }} 
+                                      className="hidden" 
+                                      disabled={uploadingAssignment} 
                                     />
-                                    <span className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors inline-flex items-center gap-2
-                                      ${uploadingAssignment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                      style={{ 
-                                        backgroundColor: BRAND_COLORS.darkRoyalBlue,
-                                        color: BRAND_COLORS.white 
-                                      }}>
+                                    <span 
+                                      className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors inline-flex items-center gap-2 ${
+                                        uploadingAssignment ? 'opacity-50 cursor-not-allowed' : ''
+                                      }`}
+                                      style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue, color: BRAND_COLORS.white }}
+                                    >
                                       {uploadingAssignment ? (
                                         <>
                                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -1615,56 +1670,57 @@ export default function EditCoursePage() {
                             </div>
                           </div>
 
-                          {/* Status */}
                           <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">
-                              Status
-                            </label>
+                            <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
                             <div className="flex gap-4">
                               <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name="assignmentStatus"
-                                  checked={currentAssignment.status === 'draft'}
-                                  onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'draft' })}
-                                  className="w-4 h-4 text-deepRed"
+                                <input 
+                                  type="radio" 
+                                  name="assignmentStatus" 
+                                  checked={currentAssignment.status === 'draft'} 
+                                  onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'draft' })} 
+                                  className="w-4 h-4 text-deepRed" 
                                 />
                                 <span className="text-sm text-darkGrey">Draft</span>
                               </label>
                               <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name="assignmentStatus"
-                                  checked={currentAssignment.status === 'published'}
-                                  onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'published' })}
-                                  className="w-4 h-4 text-deepRed"
+                                <input 
+                                  type="radio" 
+                                  name="assignmentStatus" 
+                                  checked={currentAssignment.status === 'published'} 
+                                  onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'published' })} 
+                                  className="w-4 h-4 text-deepRed" 
                                 />
                                 <span className="text-sm text-darkGrey">Published</span>
                               </label>
                             </div>
                           </div>
 
-                          {/* Form Actions */}
                           <div className="flex justify-end gap-3 pt-4">
-                            <button
-                              onClick={resetAssignmentForm}
-                              className="px-4 py-2 border border-softGrey text-darkGrey rounded-lg text-sm font-medium hover:bg-lightGrey transition-colors"
-                            >
+                            <button onClick={resetAssignmentForm} className="px-4 py-2 border border-softGrey text-darkGrey rounded-lg text-sm font-medium hover:bg-lightGrey transition-colors">
                               Cancel
                             </button>
-                            <button
-                              onClick={handleSaveAssignment}
-                              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                            <button 
+                              onClick={handleSaveAssignment} 
+                              disabled={submittingAssignment}
+                              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                               style={{ backgroundColor: BRAND_COLORS.deepRed }}
                             >
-                              {editingAssignment ? 'Update Assignment' : 'Save Assignment'}
+                              {submittingAssignment ? (
+                                <span className="flex items-center gap-2">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  {editingAssignment ? 'Updating...' : 'Saving...'}
+                                </span>
+                              ) : (
+                                editingAssignment ? 'Update Assignment' : 'Save Assignment'
+                              )}
                             </button>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Assignments List for this Slide */}
+                    {/* Assignments List */}
                     {assignments.filter(a => a.slideId === selectedSlideId).length > 0 ? (
                       <div className="space-y-3">
                         {assignments.filter(a => a.slideId === selectedSlideId).map((assignment) => (
@@ -1675,17 +1731,24 @@ export default function EditCoursePage() {
                                 <p className="text-sm text-darkGrey/70 mt-1">{assignment.description}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleEditAssignment(assignment)}
+                                <button 
+                                  onClick={() => handleEditAssignment(assignment)} 
                                   className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded"
+                                  title="Edit Assignment"
                                 >
                                   <Edit3 className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => handleRemoveAssignment(assignment.id)}
-                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
+                                <button 
+                                  onClick={() => handleRemoveAssignment(assignment.id)} 
+                                  disabled={deletingAssignment === assignment.id}
+                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded disabled:opacity-50"
+                                  title="Delete Assignment"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  {deletingAssignment === assignment.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -1701,9 +1764,7 @@ export default function EditCoursePage() {
                               </div>
                               <div className="flex items-center gap-2 text-xs">
                                 <span className={`px-2 py-1 rounded-full ${
-                                  assignment.status === 'published' 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-yellow-100 text-yellow-700'
+                                  assignment.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                 }`}>
                                   {assignment.status}
                                 </span>
@@ -1713,12 +1774,7 @@ export default function EditCoursePage() {
                             {assignment.file && (
                               <div className="mt-3 flex items-center gap-2 text-sm">
                                 <FileText className="w-4 h-4 text-darkRoyalBlue" />
-                                <a 
-                                  href={assignment.file.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-darkRoyalBlue hover:underline"
-                                >
+                                <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="text-darkRoyalBlue hover:underline">
                                   {assignment.file.name}
                                 </a>
                               </div>
@@ -1730,9 +1786,7 @@ export default function EditCoursePage() {
                       !showAssignmentForm && (
                         <div className="text-center py-8 border-2 border-dashed border-softGrey rounded-lg">
                           <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
-                          <p className="text-darkGrey/70 text-sm">
-                            No assignments for this slide yet
-                          </p>
+                          <p className="text-darkGrey/70 text-sm">No assignments for this slide yet</p>
                         </div>
                       )
                     )}
@@ -1742,9 +1796,7 @@ export default function EditCoursePage() {
                 <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
                   <HelpCircle className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
                   <h3 className="text-base font-medium mb-2">Select a Slide</h3>
-                  <p className="text-darkGrey/70 text-sm">
-                    Choose a slide from the left to add content, quizzes, and assignments
-                  </p>
+                  <p className="text-darkGrey/70 text-sm">Choose a slide from the left to add content, quizzes, and assignments</p>
                 </div>
               )}
             </div>
@@ -1752,12 +1804,10 @@ export default function EditCoursePage() {
         )}
 
         {/* Tab 4: Assignments Overview */}
-        {activeTab === 'assignments' && (
+        {activeTab === 'assignments' && !isSystemCourse && (
           <div className="bg-white rounded-lg border border-softGrey p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>
-                All Assignments
-              </h2>
+              <h2 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>All Assignments</h2>
             </div>
 
             {/* Summary Stats */}
@@ -1768,19 +1818,15 @@ export default function EditCoursePage() {
               </div>
               <div className="bg-lightGrey rounded-lg p-4 text-center">
                 <p className="text-xs text-darkGrey/60">Published</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {assignments.filter(a => a.status === 'published').length}
-                </p>
+                <p className="text-2xl font-bold text-green-600">{assignments.filter(a => a.status === 'published').length}</p>
               </div>
               <div className="bg-lightGrey rounded-lg p-4 text-center">
                 <p className="text-xs text-darkGrey/60">Drafts</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {assignments.filter(a => a.status === 'draft').length}
-                </p>
+                <p className="text-2xl font-bold text-yellow-600">{assignments.filter(a => a.status === 'draft').length}</p>
               </div>
             </div>
 
-            {/* Assignments List Grouped by Slide */}
+            {/* Assignments List */}
             {slides.length > 0 ? (
               <div className="space-y-6">
                 {slides.map(slide => {
@@ -1790,9 +1836,7 @@ export default function EditCoursePage() {
                   return (
                     <div key={slide.id} className="border border-softGrey rounded-lg overflow-hidden">
                       <div className="bg-lightGrey px-4 py-3 border-b border-softGrey">
-                        <h3 className="font-medium text-darkGrey">
-                          Slide {slide.slideNumber}: {slide.title}
-                        </h3>
+                        <h3 className="font-medium text-darkGrey">Slide {slide.slideNumber}: {slide.title}</h3>
                       </div>
                       <div className="p-4 space-y-3">
                         {slideAssignments.map((assignment) => (
@@ -1803,16 +1847,16 @@ export default function EditCoursePage() {
                                 <p className="text-sm text-darkGrey/70 mt-1">{assignment.description}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    setActiveTab('content');
-                                    setSelectedSlideId(slide.id);
-                                    setTimeout(() => {
-                                      openAssignmentFormForSlide(slide.id);
-                                      handleEditAssignment(assignment);
-                                    }, 100);
-                                  }}
-                                  className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded"
+                                <button 
+                                  onClick={() => { 
+                                    setActiveTab('content'); 
+                                    setSelectedSlideId(slide.id); 
+                                    setTimeout(() => { 
+                                      openAssignmentFormForSlide(slide.id); 
+                                      handleEditAssignment(assignment); 
+                                    }, 100); 
+                                  }} 
+                                  className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded" 
                                   title="Edit Assignment"
                                 >
                                   <Edit3 className="w-4 h-4" />
@@ -1831,9 +1875,7 @@ export default function EditCoursePage() {
                               </div>
                               <div className="flex items-center gap-2 text-xs">
                                 <span className={`px-2 py-1 rounded-full ${
-                                  assignment.status === 'published' 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-yellow-100 text-yellow-700'
+                                  assignment.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                 }`}>
                                   {assignment.status}
                                 </span>
@@ -1843,12 +1885,7 @@ export default function EditCoursePage() {
                             {assignment.file && (
                               <div className="mt-3 flex items-center gap-2 text-sm">
                                 <FileText className="w-4 h-4 text-darkRoyalBlue" />
-                                <a 
-                                  href={assignment.file.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-darkRoyalBlue hover:underline"
-                                >
+                                <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="text-darkRoyalBlue hover:underline">
                                   {assignment.file.name}
                                 </a>
                               </div>
@@ -1860,14 +1897,11 @@ export default function EditCoursePage() {
                   );
                 })}
 
-                {/* If no assignments at all */}
                 {assignments.length === 0 && (
                   <div className="text-center py-12 border-2 border-dashed border-softGrey rounded-lg">
                     <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
                     <h3 className="text-base font-medium mb-2">No Assignments Created</h3>
-                    <p className="text-darkGrey/70 text-sm">
-                      Go to the Content tab to add assignments to your slides
-                    </p>
+                    <p className="text-darkGrey/70 text-sm">Go to the Content tab to add assignments to your slides</p>
                   </div>
                 )}
               </div>
@@ -1875,14 +1909,21 @@ export default function EditCoursePage() {
               <div className="text-center py-12 border-2 border-dashed border-softGrey rounded-lg">
                 <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} />
                 <h3 className="text-base font-medium mb-2">No Slides Created</h3>
-                <p className="text-darkGrey/70 text-sm">
-                  Please create slides first before adding assignments
-                </p>
+                <p className="text-darkGrey/70 text-sm">Please create slides first before adding assignments</p>
               </div>
             )}
           </div>
         )}
+
+        {/* System Course View (Read-only) */}
+        {isSystemCourse && activeTab !== 'details' && (
+          <div className="bg-white rounded-lg border border-softGrey p-12 text-center">
+            <Lock className="w-12 h-12 mx-auto mb-3 text-blue-600" />
+            <h3 className="text-base font-medium mb-2">System Course - Read Only</h3>
+            <p className="text-darkGrey/70 text-sm">This is a system course. You can view the content but cannot modify it.</p>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

@@ -13,12 +13,9 @@ import {
   HiOutlineFire as HiWrench,
   HiFire,
   HiStar,
-
   HiSearch,
   HiX,
-
   HiClock as HiRecent,
-  
   HiBadgeCheck,
   HiCog,
   HiBriefcase
@@ -42,7 +39,7 @@ const BRAND_COLORS = {
   teal: '#14B8A6'
 };
 
-// Interface for consistent course structure
+// Interface for course structure
 interface Course {
   id: string;
   title: string;
@@ -53,235 +50,37 @@ interface Course {
   level: string;
   highlights: string[];
   price: string;
-  originalPrice?: string;
-  savings?: string;
+  originalPrice?: string | null;
+  savings?: string | null;
   icon: any;
-  color: string;
+  color: string | null;
   image: string | null;
   courseImage?: string | null;
   featured: boolean;
   rating: number;
   reviews: number;
   isPublished: boolean;
+  instructorId: string;
+  instructorName: string;
+  createdAt: string;
 }
 
-// Hard-coded published courses data
-const publishedCourses: Course[] = [
-  {
-    id: 'pipe-fitter',
-    title: 'Pipe Fitter',
-    category: 'Technical Training',
-    description: 'Master industrial pipe fitting techniques with hands-on training on cutting, threading, and installation following international standards.',
-    duration: '8 Weeks',
-    students: 'Max 20 per batch',
-    level: 'Beginner to Advanced',
-    highlights: [
-      'Learn pipe cutting, threading, and installation',
-      'Blueprint reading and interpretation',
-      'Pipe system design and layout',
-      'Safety protocols and standards',
-      'Hands-on workshop training',
-      'Industry certification preparation'
-    ],
-    price: 'PKR 25,000',
-    originalPrice: 'PKR 30,000',
-    savings: 'Save PKR 5,000',
-    icon: HiWrench,
-    color: BRAND_COLORS.teal,
-    image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
-    featured: true,
-    rating: 4.8,
-    reviews: 124,
-    isPublished: true
-  },
-  {
-    id: 'safety-inspector',
-    title: 'Safety Inspector',
-    category: 'Safety Training',
-    description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
-    duration: '6 Weeks',
-    students: 'Max 15 per batch',
-    level: 'Intermediate',
-    highlights: [
-      'OSHA standards and regulations',
-      'Site inspection methodologies',
-      'Risk assessment techniques',
-      'Safety documentation',
-      'Emergency response planning',
-      'Certification exam preparation'
-    ],
-    price: 'PKR 30,000',
-    originalPrice: 'PKR 35,000',
-    savings: 'Save PKR 5,000',
-    icon: HiShieldCheck,
-    color: BRAND_COLORS.darkRoyalBlue,
-    image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
-    featured: true,
-    rating: 4.9,
-    reviews: 89,
-    isPublished: true
-  },
-  {
-    id: 'welding',
-    title: 'Professional Welding',
-    category: 'Technical Training',
-    description: 'Comprehensive welding training covering MIG, TIG, and Arc welding techniques for industrial applications.',
-    duration: '10 Weeks',
-    students: 'Max 12 per batch',
-    level: 'Beginner to Professional',
-    highlights: [
-      'MIG, TIG, and Arc welding techniques',
-      'Metal identification and preparation',
-      'Weld quality inspection',
-      'Safety equipment usage',
-      'Industry-standard certification',
-      'Portfolio development'
-    ],
-    price: 'PKR 35,000',
-    originalPrice: 'PKR 40,000',
-    savings: 'Save PKR 5,000',
-    icon: HiFire,
-    color: BRAND_COLORS.deepRed,
-    image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
-    featured: true,
-    rating: 4.7,
-    reviews: 156,
-    isPublished: true
-  }
-];
-
-// Function to extract numeric price from string
-const extractNumericPrice = (priceStr: string): number => {
-  if (!priceStr) return 0;
-  const numericMatch = priceStr.match(/\d+/g);
-  if (numericMatch) {
-    return parseInt(numericMatch.join(''), 10);
-  }
-  return 0;
-};
-
-// Function to map instructor courses to the same format as published courses
-const mapInstructorCourse = (course: any): Course => {
-  // Check for image in different possible fields
-  const courseImage = course.courseImage || course.image || course.instructorImage || null;
-  
-  // Format price consistently
-  let formattedPrice = course.price;
-  if (formattedPrice && !formattedPrice.includes('PKR')) {
-    const numPrice = parseInt(formattedPrice.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(numPrice)) {
-      formattedPrice = `PKR ${numPrice.toLocaleString()}`;
-    }
-  }
-  
-  // Format original price if exists
-  let formattedOriginalPrice = course.originalPrice;
-  if (formattedOriginalPrice && !formattedOriginalPrice.includes('PKR')) {
-    const numPrice = parseInt(formattedOriginalPrice.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(numPrice)) {
-      formattedOriginalPrice = `PKR ${numPrice.toLocaleString()}`;
-    }
-  }
-  
-  // Calculate savings if both prices exist
-  let savings = course.savings;
-  if (!savings && formattedPrice && formattedOriginalPrice) {
-    const currentNum = extractNumericPrice(formattedPrice);
-    const originalNum = extractNumericPrice(formattedOriginalPrice);
-    if (originalNum > currentNum) {
-      const savingAmount = originalNum - currentNum;
-      savings = `Save PKR ${savingAmount.toLocaleString()}`;
-    }
-  }
-  
-  // Format level consistently
-  let level = course.level || 'All Levels';
-  if (level === 'Beginner') level = 'Beginner';
-  else if (level === 'Intermediate') level = 'Intermediate';
-  else if (level === 'Advanced') level = 'Advanced';
-  else if (level === 'All Levels') level = 'All Levels';
-  else level = 'All Levels';
-  
-  // Format duration
-  const duration = course.duration || 'Flexible';
-  
-  // Format students capacity
-  const students = `Max ${course.studentCapacity || 20} per batch`;
-  
-  // Determine category
-  let category = course.category || 'General Training';
-  const validCategories = ['Technical Training', 'Safety Training', 'Web Development', 'Mobile Development', 'Data Science', 'Design', 'Marketing', 'Business'];
-  if (!validCategories.includes(category)) {
-    if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('engineering')) {
-      category = 'Technical Training';
-    } else if (category.toLowerCase().includes('safety') || category.toLowerCase().includes('security')) {
-      category = 'Safety Training';
-    } else {
-      category = 'General Training';
-    }
-  }
-  
-  return {
-    id: course.id,
-    title: course.title,
-    category: category,
-    description: course.description,
-    duration: duration,
-    students: students,
-    level: level,
-    highlights: course.highlights || [
-      'Comprehensive training program',
-      'Hands-on practical sessions',
-      'Industry-relevant curriculum',
-      'Expert instructor guidance',
-      'Certificate upon completion',
-      'Career support'
-    ],
-    price: formattedPrice || 'PKR 25,000',
-    originalPrice: formattedOriginalPrice || undefined,
-    savings: savings || undefined,
-    icon: HiBookOpen,
-    color: BRAND_COLORS.teal,
-    image: courseImage,
-    featured: false,
-    rating: 4.5,
-    reviews: 0,
-    isPublished: course.status === 'published' || course.isPublished === true
+// Map icon strings to actual icon components
+const getIconComponent = (iconName: string | null) => {
+  const iconMap: { [key: string]: any } = {
+    'HiWrench': HiWrench,
+    'HiShieldCheck': HiShieldCheck,
+    'HiFire': HiFire,
+    'HiBookOpen': HiBookOpen,
+    'HiAcademicCap': HiAcademicCap,
+    'HiClock': HiClock,
+    'HiUserGroup': HiUserGroup,
+    'HiBadgeCheck': HiBadgeCheck,
+    'HiCog': HiCog,
+    'HiBriefcase': HiBriefcase,
   };
-};
-
-// Function to load slide content images
-const loadSlideContentImages = (courseId: string): string | null => {
-  try {
-    const slideContent = JSON.parse(localStorage.getItem('slideContent') || '[]');
-    const slides = JSON.parse(localStorage.getItem('slides') || '[]');
-    
-    // Find slides for this course
-    const courseSlides = slides.filter((s: any) => s.courseId === courseId);
-    const slideIds = courseSlides.map((s: any) => s.id);
-    
-    // Find content for these slides
-    const courseContent = slideContent.filter((sc: any) => 
-      slideIds.includes(sc.slideId)
-    );
-    
-    // Extract image files
-    const images: string[] = [];
-    courseContent.forEach((content: any) => {
-      if (content.files && Array.isArray(content.files)) {
-        content.files.forEach((file: any) => {
-          if (file.type?.startsWith('image/') && file.url) {
-            images.push(file.url);
-          }
-        });
-      }
-    });
-    
-    return images.length > 0 ? images[0] : null;
-  } catch (error) {
-    console.error('Error loading slide images:', error);
-    return null;
-  }
+  
+  return iconMap[iconName || ''] || HiBookOpen;
 };
 
 // Feature item interface
@@ -296,7 +95,7 @@ interface FeatureItem {
   bullets: string[];
 }
 
-// Animation variants for optimized performance
+// Animation variants
 const fadeInUpVariants = {
   initial: { y: 30, opacity: 0 },
   animate: { y: 0, opacity: 1 },
@@ -330,11 +129,12 @@ const staggerContainerVariants = {
   }
 };
 
-// Optimized transition settings for smooth animations
-const smoothTransition = {
+// Transition settings
+const getTransition = (delay: number = 0) => ({
   duration: 0.5,
-  ease: [0.4, 0, 0.2, 1] as Easing // Cast as Easing type
-};
+  ease: [0.4, 0, 0.2, 1] as Easing,
+  delay
+});
 
 const springTransition = {
   type: "spring" as const,
@@ -343,18 +143,12 @@ const springTransition = {
   mass: 1
 };
 
-// Individual transition objects without spreading issues
-const getTransition = (delay: number = 0) => ({
-  duration: 0.5,
-  ease: [0.4, 0, 0.2, 1] as Easing,
-  delay
-});
-
 export default function CoursesPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({});
   const [showFeatures, setShowFeatures] = useState(false);
   const [openFeature, setOpenFeature] = useState<string | null>(null);
@@ -367,7 +161,7 @@ export default function CoursesPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Feature items with detailed descriptions
+  // Feature items
   const features: FeatureItem[] = [
     {
       id: 'standards',
@@ -417,60 +211,68 @@ export default function CoursesPage() {
   ];
 
   useEffect(() => {
-    // Load all courses from localStorage and merge with published courses
-    const loadCourses = async () => {
-      try {
-        // Get courses from localStorage (added by instructors)
-        const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all courses from instructor_course table
+      const response = await fetch('/api/instructors/course');
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch courses');
+      }
+      
+      if (result.success && result.data) {
+        // Map icons to components and format for display
+        const coursesWithIcons = result.data.map((course: any) => ({
+          id: course.id,
+          title: course.title,
+          category: course.category || 'Technical Training',
+          description: course.description || '',
+          duration: course.duration || 'Flexible',
+          students: `${course.student_capacity || 0}+ seats`,
+          level: course.level || 'Beginner',
+          highlights: [],
+          price: course.price ? `PKR ${course.price.toLocaleString()}` : 'Contact for price',
+          originalPrice: course.original_price ? `PKR ${course.original_price.toLocaleString()}` : null,
+          savings: course.original_price && course.price ? `Save ${Math.round((1 - course.price/course.original_price) * 100)}%` : null,
+          icon: getIconComponent(course.icon),
+          color: course.color || BRAND_COLORS.teal,
+          image: course.image,
+          courseImage: course.image,
+          featured: false,
+          rating: 4.5,
+          reviews: 0,
+          isPublished: course.status === 'published',
+          instructorId: course.instructor_id,
+          instructorName: course.instructor_name,
+          createdAt: course.created_at
+        }));
         
-        // Filter only published courses from instructor-added courses
-        const publishedInstructorCourses = storedCourses.filter((c: any) => 
-          c.status === 'published' || c.isPublished === true
-        );
+        // Filter to show only published courses
+        const publishedCourses = coursesWithIcons.filter((course: Course) => course.isPublished);
         
-        // Map instructor courses to the required format
-        const mappedInstructorCourses = publishedInstructorCourses.map((course: any) => {
-          // Try to find an image from slide content if course doesn't have one
-          if (!course.courseImage && !course.image && !course.instructorImage) {
-            const slideImage = loadSlideContentImages(course.id);
-            if (slideImage) {
-              return {
-                ...mapInstructorCourse(course),
-                image: slideImage,
-                courseImage: slideImage
-              };
-            }
-          }
-          return mapInstructorCourse(course);
-        });
-        
-        // Combine with hard-coded published courses
-        const combinedCourses = [...publishedCourses, ...mappedInstructorCourses];
-        
-        // Sort courses: featured first, then by rating
-        const sortedCourses = combinedCourses.sort((a, b) => {
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return b.rating - a.rating;
-        });
-        
-        setAllCourses(sortedCourses);
-        setFilteredCourses(sortedCourses);
-        
-        // Show features after courses load
-        setTimeout(() => setShowFeatures(true), 500);
-      } catch (error) {
-        console.error('Error loading courses:', error);
         setAllCourses(publishedCourses);
         setFilteredCourses(publishedCourses);
-        setTimeout(() => setShowFeatures(true), 500);
-      } finally {
-        setLoading(false);
+      } else {
+        throw new Error('Invalid response format');
       }
-    };
-
-    loadCourses();
-  }, []);
+      
+      // Show features after courses load
+      setTimeout(() => setShowFeatures(true), 500);
+      
+    } catch (err) {
+      console.error('Error loading courses:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load courses');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle click outside search
   useEffect(() => {
@@ -520,7 +322,6 @@ export default function CoursesPage() {
     setSearchQuery(suggestion);
     setIsSearchFocused(false);
     
-    // Add to recent searches
     if (!recentSearches.includes(suggestion)) {
       setRecentSearches(prev => [suggestion, ...prev.slice(0, 4)]);
     }
@@ -536,8 +337,11 @@ export default function CoursesPage() {
   };
 
   const toggleFeature = (featureId: string) => {
-    // Only toggle the clicked feature, close others
     setOpenFeature(openFeature === featureId ? null : featureId);
+  };
+
+  const retryFetch = () => {
+    fetchCourses();
   };
 
   if (loading) {
@@ -563,18 +367,36 @@ export default function CoursesPage() {
             transition={{ delay: 0.3 }}
             className="mt-4 text-gray-600"
           >
-            Loading courses...
+            Loading instructor courses...
           </motion.p>
         </motion.div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Courses</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={retryFetch}
+            className="px-6 py-2 bg-[#B11217] text-white rounded-lg hover:bg-[#8f0e12] transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section with Background - Fixed heading visibility */}
+      {/* Hero Section */}
       <div className="relative min-h-[650px] flex items-start justify-center pt-32 pb-20 overflow-hidden">
-        {/* Background Image with Overlay - Same overlay for Why Choose section */}
+        {/* Background Image with Overlay */}
         <div className="absolute inset-0">
           <img
             src="https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg"
@@ -602,23 +424,23 @@ export default function CoursesPage() {
             >
               <HiStar className="w-4 h-4 mr-2 text-yellow-400" />
               <span className="text-sm font-medium text-white">
-                Mansol Hab School of Skills Development
+                Instructor-Led Training Programs
               </span>
             </motion.div>
 
-            {/* Heading - Fixed visibility with proper spacing */}
-            <motion.h1 
-              variants={fadeInUpVariants}
-              initial="initial"
-              animate="animate"
-              transition={getTransition(0.4)}
-              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight"
-            >
-              Discover Your Perfect
-              <span className="block mt-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
-                Training Program
-              </span>
-            </motion.h1>
+            {/* Heading */}
+           <motion.h1 
+  variants={fadeInUpVariants}
+  initial="initial"
+  animate="animate"
+  transition={getTransition(0.4)}
+  className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight"
+>
+  Explore Our
+  <span className="block mt-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+    Expert-Led Courses
+  </span>
+</motion.h1>
 
             {/* Description */}
             <motion.p 
@@ -628,8 +450,7 @@ export default function CoursesPage() {
               transition={getTransition(0.5)}
               className="text-lg md:text-xl max-w-3xl mx-auto mb-10 px-4 text-gray-300"
             >
-              Explore our comprehensive range of technical and safety training programs 
-              designed to launch your career in high-demand industries.
+              Browse through our collection of professional courses created by expert instructors
             </motion.p>
 
             {/* Search Section */}
@@ -753,6 +574,15 @@ export default function CoursesPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Instructor Badge */}
+        <div className="mb-8 flex items-center justify-center">
+          <div className="px-4 py-2 bg-[#1E3A8A]/10 rounded-full">
+            <p className="text-sm text-[#1E3A8A] font-medium">
+              {allCourses.length} Instructor-Led Courses Available
+            </p>
+          </div>
+        </div>
+
         {/* Search Results Info */}
         <AnimatePresence mode="wait">
           {searchQuery && (
@@ -789,20 +619,18 @@ export default function CoursesPage() {
                 onMouseLeave={() => setHoveredCard(null)}
                 className="relative group"
               >
-                {/* Featured Badge */}
-                {course.featured && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3 + index * 0.05, ...springTransition }}
-                    className="absolute -top-2 -left-2 z-10"
-                  >
-                    <div className="px-3 py-1 rounded-full bg-[#B11217] text-white text-xs font-semibold shadow-lg flex items-center">
-                      <HiStar className="w-3 h-3 mr-1" />
-                      Featured
-                    </div>
-                  </motion.div>
-                )}
+                {/* Instructor Badge */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3 + index * 0.05, ...springTransition }}
+                  className="absolute -top-2 -left-2 z-10"
+                >
+                  <div className="px-3 py-1 rounded-full bg-[#1E3A8A] text-white text-xs font-semibold shadow-lg flex items-center">
+                    <HiAcademicCap className="w-3 h-3 mr-1" />
+                    Instructor Led
+                  </div>
+                </motion.div>
 
                 {/* Course Card */}
                 <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-shadow duration-300 hover:shadow-2xl">
@@ -825,7 +653,7 @@ export default function CoursesPage() {
                     {/* Category Badge */}
                     <div className="absolute top-3 right-3">
                       <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                        <span className="text-xs font-medium" style={{ color: course.color }}>
+                        <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
                           {course.category}
                         </span>
                       </div>
@@ -834,13 +662,18 @@ export default function CoursesPage() {
 
                   {/* Content */}
                   <div className="p-5">
-                    {/* Title and Rating */}
+                    {/* Title and Icon */}
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-1">
                         {course.title}
                       </h3>
-                      <course.icon className="w-5 h-5 flex-shrink-0 ml-2" style={{ color: course.color }} />
+                      <course.icon className="w-5 h-5 flex-shrink-0 ml-2" style={{ color: course.color || BRAND_COLORS.teal }} />
                     </div>
+
+                    {/* Instructor Name */}
+                    <p className="text-xs text-gray-500 mb-2">
+                      by {course.instructorName || 'Instructor'}
+                    </p>
 
                     {/* Rating */}
                     <div className="flex items-center mb-3">
@@ -900,6 +733,9 @@ export default function CoursesPage() {
                               </span>
                             )}
                           </div>
+                          {course.savings && (
+                            <p className="text-xs text-green-600 mt-1">{course.savings}</p>
+                          )}
                         </div>
                       </div>
 
@@ -939,14 +775,14 @@ export default function CoursesPage() {
           )}
         </motion.div>
 
-        {/* Why Choose Us Section - With same overlay as hero */}
+        {/* Why Choose Us Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={showFeatures ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.3, ease: [0.4, 0, 0.2, 1] as Easing }}
           className="mt-20 relative rounded-3xl overflow-hidden"
         >
-          {/* Same overlay background as hero */}
+          {/* Background overlay */}
           <div className="absolute inset-0">
             <img
               src="https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg"
@@ -959,7 +795,7 @@ export default function CoursesPage() {
           {/* Content */}
           <div className="relative z-10 py-16 px-8">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">
-              Why Choose Us?
+              Why Choose Our Instructor-Led Programs?
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
@@ -971,16 +807,13 @@ export default function CoursesPage() {
                   transition={{ delay: 0.4 + index * 0.1, duration: 0.5, ease: [0.4, 0, 0.2, 1] as Easing }}
                   className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20 hover:bg-white/15 transition-all duration-300"
                 >
-                  {/* Feature Header - Clickable with dropdown icon */}
+                  {/* Feature Header */}
                   <button
                     onClick={() => toggleFeature(feature.id)}
                     className="w-full p-6 text-left transition-colors group"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        
-                        
-                        {/* Title and Short Description */}
                         <div>
                           <h3 className="text-lg font-semibold text-white mb-1">
                             {feature.title}
@@ -991,7 +824,7 @@ export default function CoursesPage() {
                         </div>
                       </div>
                       
-                      {/* Dropdown Arrow Icon */}
+                      {/* Dropdown Arrow */}
                       <motion.div
                         animate={{ rotate: openFeature === feature.id ? 180 : 0 }}
                         transition={{ duration: 0.3 }}
@@ -1014,12 +847,10 @@ export default function CoursesPage() {
                         className="overflow-hidden"
                       >
                         <div className="p-6 bg-white/20 backdrop-blur-md border-t border-white/20">
-                          {/* Long Description */}
                           <p className="text-sm text-white leading-relaxed mb-4">
                             {feature.longDescription}
                           </p>
                           
-                          {/* Bullet Points */}
                           <div className="space-y-2">
                             {feature.bullets.map((bullet, idx) => (
                               <div key={idx} className="flex items-center text-xs text-gray-200">
@@ -1039,7 +870,7 @@ export default function CoursesPage() {
         </motion.div>
       </div>
 
-      {/* CoursesTab Component - At the very bottom */}
+      {/* CoursesTab Component */}
       <div className="mt-16">
         <CoursesTab />
       </div>

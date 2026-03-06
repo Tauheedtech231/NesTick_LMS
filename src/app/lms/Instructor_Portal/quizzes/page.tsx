@@ -19,7 +19,9 @@ import {
   MoreVertical,
   XCircle,
   PlayCircle,
-  PauseCircle
+  PauseCircle,
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 /* eslint-disable */
 
@@ -60,67 +62,223 @@ export default function QuizzesPage() {
   const [instructor, setInstructor] = useState<any>(null)
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'closed'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const loadData = () => {
-      try {
-        const currentUserStr = localStorage.getItem('currentUser')
-        if (!currentUserStr) {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
+    checkAuthAndFetchQuizzes()
+  }, [router])
 
-        const currentUser = JSON.parse(currentUserStr)
-        if (currentUser.role !== 'instructor') {
-          router.push('/lms/auth/login?type=instructor')
-          return
-        }
+  useEffect(() => {
+    // Reset to first page when filter changes
+    setCurrentPage(1)
+  }, [filter, searchTerm])
 
-        setInstructor(currentUser)
+  const checkAuthAndFetchQuizzes = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        // Load quizzes for this instructor's course
-        const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-        const myQuizzes = allQuizzes.filter((q: Quiz) => 
-          q.instructorId === currentUser.id && q.courseId === currentUser.courseId
-        )
-
-        // Load student quiz results to calculate attempt counts and average scores
-        const allResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]')
-
-        // Enhance quizzes with actual attempt data
-        const enhancedQuizzes = myQuizzes.map((quiz: any) => {
-          // Count attempts for this quiz
-          const quizResults = allResults.filter((result: any) => result.quizId === quiz.id)
-          const attemptCount = quizResults.length
-          
-          // Calculate average score from actual attempts
-          const averageScore = attemptCount > 0 
-            ? Math.round(quizResults.reduce((sum: number, result: any) => sum + result.score, 0) / attemptCount)
-            : 0
-
-          return {
-            ...quiz,
-            attempts: attemptCount,
-            averageScore: averageScore
-          }
-        })
-        
-        setQuizzes(enhancedQuizzes)
-      } catch (error) {
-        console.error('Error loading quizzes:', error)
-      } finally {
-        setLoading(false)
+      const currentUserStr = localStorage.getItem('currentUser')
+      if (!currentUserStr) {
+        router.push('/lms/auth/login?type=instructor')
+        return
       }
+
+      const currentUser = JSON.parse(currentUserStr)
+      if (currentUser.role !== 'instructor') {
+        router.push('/lms/auth/login?type=instructor')
+        return
+      }
+
+      setInstructor(currentUser)
+      await fetchQuizzes(currentUser.id)
+      
+    } catch (error) {
+      console.error('Auth error:', error)
+      setError('Authentication failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchQuizzes = async (instructorId: string, showRefreshing = false) => {
+    try {
+      if (showRefreshing) {
+        setRefreshing(true)
+      }
+      setError(null)
+
+      // Build URL with filters
+      let url = `/api/instructors/quizzes?instructorId=${instructorId}`
+      if (filter !== 'all') {
+        url += `&status=${filter}`
+      }
+
+      console.log('🔍 Fetching quizzes:', url)
+
+      const response = await fetch(url)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch quizzes')
+      }
+
+      if (result.success) {
+        setQuizzes(result.data)
+        setTotalPages(Math.ceil(result.pagination.total / itemsPerPage))
+        console.log('✅ Quizzes fetched:', result.data.length)
+      }
+    } catch (error: any) {
+      console.error('Error fetching quizzes:', error)
+      setError(error.message || 'Failed to load quizzes')
+      
+      // Fallback to localStorage if API fails
+      loadFromLocalStorage(instructorId)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const loadFromLocalStorage = (instructorId: string) => {
+    try {
+      console.log('📁 Falling back to localStorage')
+      const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
+      const myQuizzes = allQuizzes.filter((q: Quiz) => q.instructorId === instructorId)
+
+      const allResults = JSON.parse(localStorage.getItem('student_quiz_results') || '[]')
+
+      const enhancedQuizzes = myQuizzes.map((quiz: any) => {
+        const quizResults = allResults.filter((result: any) => result.quizId === quiz.id)
+        const attemptCount = quizResults.length
+        const averageScore = attemptCount > 0 
+          ? Math.round(quizResults.reduce((sum: number, result: any) => sum + result.score, 0) / attemptCount)
+          : 0
+
+        return {
+          ...quiz,
+          attempts: attemptCount,
+          averageScore
+        }
+      })
+      
+      setQuizzes(enhancedQuizzes)
+    } catch (error) {
+      console.error('Error loading from localStorage:', error)
+    }
+  }
+
+  const handleRefresh = () => {
+    if (instructor) {
+      fetchQuizzes(instructor.id, true)
+    }
+  }
+
+  const handleDeleteQuiz = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+      return
     }
 
-    loadData()
-  }, [router])
+    try {
+      const response = await fetch(`/api/instructors/quizzes/${id}/full-update`, {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete quiz')
+      }
+
+      // Update local state
+      setQuizzes(quizzes.filter(q => q.id !== id))
+      alert('✅ Quiz deleted successfully!')
+      setOpenMenuId(null)
+      
+    } catch (error: any) {
+      console.error('Error deleting quiz:', error)
+      alert(`❌ ${error.message || 'Failed to delete quiz'}`)
+    }
+  }
+
+  const handlePublishQuiz = async (id: string) => {
+    try {
+      const quiz = quizzes.find(q => q.id === id)
+      if (!quiz) return
+
+      const response = await fetch(`/api/instructors/quizzes/${id}/full-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...quiz,
+          status: 'published'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to publish quiz')
+      }
+
+      // Update local state
+      setQuizzes(quizzes.map(q => 
+        q.id === id ? { ...q, status: 'published' } : q
+      ))
+      
+      alert('✅ Quiz published successfully! Students can now take it.')
+      setOpenMenuId(null)
+      
+    } catch (error: any) {
+      console.error('Error publishing quiz:', error)
+      alert(`❌ ${error.message || 'Failed to publish quiz'}`)
+    }
+  }
+
+  const handleCloseQuiz = async (id: string) => {
+    try {
+      const quiz = quizzes.find(q => q.id === id)
+      if (!quiz) return
+
+      const response = await fetch(`/api/instructors/quizzes/${id}/full-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...quiz,
+          status: 'closed'
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to close quiz')
+      }
+
+      // Update local state
+      setQuizzes(quizzes.map(q => 
+        q.id === id ? { ...q, status: 'closed' } : q
+      ))
+      
+      alert('✅ Quiz closed successfully! Students can no longer take it.')
+      setOpenMenuId(null)
+      
+    } catch (error: any) {
+      console.error('Error closing quiz:', error)
+      alert(`❌ ${error.message || 'Failed to close quiz'}`)
+    }
+  }
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id)
+  }
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -131,76 +289,21 @@ export default function QuizzesPage() {
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleDeleteQuiz = (id: string) => {
-    if (confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
-      const updatedQuizzes = quizzes.filter(q => q.id !== id)
-      setQuizzes(updatedQuizzes)
-      
-      // Update localStorage
-      const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-      const filtered = allQuizzes.filter((q: Quiz) => q.id !== id)
-      localStorage.setItem('instructor_quizzes', JSON.stringify(filtered))
-      
-      alert('Quiz deleted successfully!')
-      setOpenMenuId(null)
-    }
-  }
-
-  const handlePublishQuiz = (id: string) => {
-    const updatedQuizzes = quizzes.map(q => 
-      q.id === id ? { ...q, status: 'published' as const } : q
-    )
-    setQuizzes(updatedQuizzes)
-    
-    // Update localStorage
-    const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-    const updatedAllQuizzes = allQuizzes.map((q: Quiz) => 
-      q.id === id ? { ...q, status: 'published' } : q
-    )
-    localStorage.setItem('instructor_quizzes', JSON.stringify(updatedAllQuizzes))
-    
-    alert('Quiz published successfully! Students can now take it.')
-    setOpenMenuId(null)
-  }
-
-  const handleCloseQuiz = (id: string) => {
-    const updatedQuizzes = quizzes.map(q => 
-      q.id === id ? { ...q, status: 'closed' as const } : q
-    )
-    setQuizzes(updatedQuizzes)
-    
-    // Update localStorage
-    const allQuizzes = JSON.parse(localStorage.getItem('instructor_quizzes') || '[]')
-    const updatedAllQuizzes = allQuizzes.map((q: Quiz) => 
-      q.id === id ? { ...q, status: 'closed' } : q
-    )
-    localStorage.setItem('instructor_quizzes', JSON.stringify(updatedAllQuizzes))
-    
-    alert('Quiz closed successfully! Students can no longer take it.')
-    setOpenMenuId(null)
-  }
-
-  const toggleMenu = (id: string) => {
-    setOpenMenuId(openMenuId === id ? null : id)
-  }
-
+  // Filter quizzes locally (in addition to API filter)
   const filteredQuizzes = quizzes.filter(quiz => {
     const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          quiz.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filter === 'all' || quiz.status === filter
-    return matchesSearch && matchesFilter
+    return matchesSearch
   })
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredQuizzes.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(filteredQuizzes.length / itemsPerPage)
+  const totalFilteredPages = Math.ceil(filteredQuizzes.length / itemsPerPage)
 
   const getStatusBadge = (status: Quiz['status']) => {
     switch (status) {
@@ -218,14 +321,30 @@ export default function QuizzesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6">
-        <div className="animate-pulse">
-          <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-          <div className="h-32 bg-gray-100 rounded-lg mb-8"></div>
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-16 bg-gray-100 rounded-lg"></div>
-            ))}
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
+            <p className="text-sm text-darkGrey">Loading quizzes from database...</p>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6">
+        <div className="max-w-md mx-auto text-center py-12">
+          <XCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold mb-2">Error Loading Quizzes</h3>
+          <p className="text-darkGrey/70 mb-6">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg inline-flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
         </div>
       </div>
     )
@@ -242,20 +361,30 @@ export default function QuizzesPage() {
                 Quizzes
               </h1>
               <p className="text-darkGrey text-sm sm:text-base mt-1">
-                Create and manage quizzes for your students
+                {quizzes.length} quizzes found • Last updated: {new Date().toLocaleDateString()}
               </p>
             </div>
-            <Link
-              href="/lms/Instructor_Portal/quizzes/create"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
-              style={{ 
-                backgroundColor: BRAND_COLORS.deepRed,
-                color: BRAND_COLORS.white 
-              }}
-            >
-              <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Create Quiz</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 rounded-lg border border-darkGrey/30 hover:bg-lightGrey transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <Link
+                href="/lms/Instructor_Portal/quizzes/create"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                style={{ 
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white 
+                }}
+              >
+                <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Create Quiz</span>
+              </Link>
+            </div>
           </div>
           <div className="h-1 w-12 rounded-full mt-4" style={{ backgroundColor: BRAND_COLORS.deepRed }}></div>
         </div>
@@ -325,7 +454,10 @@ export default function QuizzesPage() {
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
             <button
-              onClick={() => setFilter('all')}
+              onClick={() => {
+                setFilter('all')
+                fetchQuizzes(instructor?.id)
+              }}
               className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'all' 
                   ? 'bg-darkRoyalBlue text-white' 
@@ -335,7 +467,10 @@ export default function QuizzesPage() {
               All
             </button>
             <button
-              onClick={() => setFilter('published')}
+              onClick={() => {
+                setFilter('published')
+                fetchQuizzes(instructor?.id)
+              }}
               className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'published' 
                   ? 'bg-green-600 text-white' 
@@ -345,7 +480,10 @@ export default function QuizzesPage() {
               Published
             </button>
             <button
-              onClick={() => setFilter('draft')}
+              onClick={() => {
+                setFilter('draft')
+                fetchQuizzes(instructor?.id)
+              }}
               className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'draft' 
                   ? 'bg-gray-600 text-white' 
@@ -355,7 +493,10 @@ export default function QuizzesPage() {
               Drafts
             </button>
             <button
-              onClick={() => setFilter('closed')}
+              onClick={() => {
+                setFilter('closed')
+                fetchQuizzes(instructor?.id)
+              }}
               className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-colors ${
                 filter === 'closed' 
                   ? 'bg-red-600 text-white' 
@@ -368,7 +509,7 @@ export default function QuizzesPage() {
         </div>
       </div>
 
-      {/* Quizzes Table - Responsive Design */}
+      {/* Quizzes Table */}
       <div className="bg-white rounded-lg border border-softGrey overflow-hidden mb-6">
         {/* Desktop Table Header */}
         <div className="hidden md:grid grid-cols-12 gap-2 p-4 text-white text-sm font-medium" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
@@ -436,7 +577,7 @@ export default function QuizzesPage() {
 
                 {/* Dropdown Menu */}
                 {openMenuId === quiz.id && (
-                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1 text-xs">
+                  <div ref={menuRef} className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1 text-xs">
                     <Link
                       href={`/lms/Instructor_Portal/quizzes/submissions/${quiz.id}`}
                       className="flex items-center gap-2 px-3 py-2 text-darkGrey hover:bg-lightGrey transition-colors"
@@ -543,7 +684,7 @@ export default function QuizzesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-2 text-right relative" ref={menuRef}>
+                <div className="col-span-2 text-right relative">
                   <button
                     onClick={() => toggleMenu(quiz.id)}
                     className="p-2 text-darkGrey hover:bg-lightGrey rounded-lg transition-colors"
@@ -554,7 +695,7 @@ export default function QuizzesPage() {
 
                   {/* Dropdown Menu */}
                   {openMenuId === quiz.id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1.5 text-sm">
+                    <div ref={menuRef} className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-softGrey z-10 py-1.5 text-sm">
                       <Link
                         href={`/lms/Instructor_Portal/quizzes/submissions/${quiz.id}`}
                         className="flex items-center gap-2 px-4 py-2.5 text-darkGrey hover:bg-lightGrey transition-colors"
@@ -634,11 +775,11 @@ export default function QuizzesPage() {
                 <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <span className="px-2 sm:px-3 py-1.5 sm:py-2 bg-white rounded-lg border border-softGrey text-xs sm:text-sm">
-                {currentPage}/{totalPages}
+                {currentPage}/{totalFilteredPages}
               </span>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalFilteredPages))}
+                disabled={currentPage === totalFilteredPages}
                 className="p-1.5 sm:p-2 rounded-lg border border-softGrey hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -649,7 +790,7 @@ export default function QuizzesPage() {
       </div>
 
       {/* Empty State */}
-      {filteredQuizzes.length === 0 && (
+      {filteredQuizzes.length === 0 && !loading && (
         <div className="text-center py-12 bg-white rounded-lg border border-softGrey">
           <ClipboardCheck className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4" style={{ color: BRAND_COLORS.softGrey }} />
           <h3 className="text-base sm:text-lg font-medium mb-2" style={{ color: BRAND_COLORS.darkGrey }}>

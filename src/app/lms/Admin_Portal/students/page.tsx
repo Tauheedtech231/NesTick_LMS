@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { 
   HiSearch, HiFilter, HiDocumentDownload, HiAcademicCap, 
-  HiClock, HiCheckCircle, HiXCircle, HiTrendingUp, 
-  HiTrash, HiPencil, HiEye, HiPlus
+  
+  HiTrash, HiPencil, HiEye,
 } from 'react-icons/hi'
 import { 
   User, Mail, Phone, Calendar, GraduationCap, 

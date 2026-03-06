@@ -9,9 +9,15 @@ import {
   HiOutlineCash,
   HiOutlineShieldCheck,
   HiOutlineFire as HiOutlineWrench,
+  HiClock,
+  HiUserGroup,
+  HiAcademicCap,
+  HiLocationMarker,
+
 } from "react-icons/hi";
 import Link from "next/link";
 import { IoMdArrowDropright } from "react-icons/io";
+import { MdLanguage } from "react-icons/md";
 /* eslint-disable */
 
 // Brand Colors
@@ -40,6 +46,7 @@ const publishedCoursesData = {
     level: 'Beginner to Advanced',
     schedule: 'Monday to Friday, 9 AM - 1 PM',
     location: 'Main Campus, Karachi',
+    language: 'English & Urdu',
     startDate: '15th March 2024',
     highlights: [
       'Learn pipe cutting, threading, and installation',
@@ -70,7 +77,9 @@ const publishedCoursesData = {
     featured: true,
     rating: 4.8,
     reviews: 124,
-    studentsTrained: 500
+    studentsTrained: 500,
+    trainingType: 'Hands-on training',
+    deliveryMode: 'On-Campus'
   },
   'safety-inspector': {
     id: 'safety-inspector',
@@ -83,6 +92,7 @@ const publishedCoursesData = {
     level: 'Intermediate',
     schedule: 'Tuesday to Saturday, 2 PM - 6 PM',
     location: 'Safety Training Center, Lahore',
+    language: 'English & Urdu',
     startDate: '20th March 2024',
     highlights: [
       'OSHA standards and regulations',
@@ -114,7 +124,9 @@ const publishedCoursesData = {
     featured: true,
     rating: 4.9,
     reviews: 89,
-    studentsTrained: 320
+    studentsTrained: 320,
+    trainingType: 'Theory & Practical',
+    deliveryMode: 'On-Campus'
   },
   'welding': {
     id: 'welding',
@@ -127,6 +139,7 @@ const publishedCoursesData = {
     level: 'Beginner to Professional',
     schedule: 'Monday to Thursday, 10 AM - 4 PM',
     location: 'Welding Workshop, Islamabad',
+    language: 'English & Urdu',
     startDate: '25th March 2024',
     highlights: [
       'MIG, TIG, and Arc welding techniques',
@@ -158,8 +171,130 @@ const publishedCoursesData = {
     featured: true,
     rating: 4.7,
     reviews: 156,
-    studentsTrained: 450
+    studentsTrained: 450,
+    trainingType: 'Hands-on workshop',
+    deliveryMode: 'On-Campus'
   }
+};
+
+// Default content for instructor-created courses
+const getDefaultContent = (course: any) => {
+  const category = course.category || 'General';
+  const level = course.level || 'All Levels';
+  
+  // Generate dynamic content based on course properties
+  return {
+    schedule: course.schedule || 'Flexible Schedule (Self-paced)',
+    location: course.location || 'Online',
+    language: course.language || 'English',
+    trainingType: course.trainingType || getTrainingTypeByCategory(category),
+    deliveryMode: course.deliveryMode || getDeliveryModeByCategory(category),
+    highlights: course.highlights || getDefaultHighlights(category, level),
+    curriculum: course.curriculum || getDefaultCurriculum(course.title, course.duration),
+    requirements: course.requirements || getDefaultRequirements(level)
+  };
+};
+
+// Helper functions to generate dynamic content based on course category
+const getTrainingTypeByCategory = (category: string): string => {
+  const types: { [key: string]: string } = {
+    'Technical Training': 'Hands-on workshop training',
+    'Safety Training': 'Theory & practical demonstrations',
+    'Web Development': 'Project-based learning',
+    'Mobile Development': 'Hands-on coding sessions',
+    'Data Science': 'Practical data analysis',
+    'Design': 'Creative workshop sessions',
+    'Marketing': 'Case study based learning',
+    'Business': 'Interactive business simulations',
+    'Management': 'Real-world management scenarios',
+    'Soft Skills': 'Interactive role-playing sessions'
+  };
+  return types[category] || 'Interactive learning sessions';
+};
+
+const getDeliveryModeByCategory = (category: string): string => {
+  const modes: { [key: string]: string } = {
+    'Technical Training': 'On-Campus',
+    'Safety Training': 'On-Campus',
+    'Web Development': 'Online',
+    'Mobile Development': 'Online',
+    'Data Science': 'Hybrid',
+    'Design': 'Online',
+    'Marketing': 'Online',
+    'Business': 'Hybrid',
+    'Management': 'Hybrid',
+    'Soft Skills': 'Online'
+  };
+  return modes[category] || 'Online';
+};
+
+const getDefaultHighlights = (category: string, level: string): string[] => {
+  const baseHighlights = [
+    'Comprehensive curriculum',
+    'Expert instructors',
+    'Hands-on projects',
+    'Industry certification'
+  ];
+
+  const categoryHighlights: { [key: string]: string[] } = {
+    'Technical Training': [
+      'Practical workshop sessions',
+      'Industry-standard equipment',
+      'Real-world projects',
+      'Job-ready skills'
+    ],
+    'Safety Training': [
+      'OSHA standards compliance',
+      'Site inspection training',
+      'Emergency protocols',
+      'Safety certification'
+    ],
+    'Web Development': [
+      'Build real websites',
+      'Modern frameworks',
+      'Portfolio projects',
+      'Industry best practices'
+    ],
+    'Mobile Development': [
+      'iOS & Android apps',
+      'App store deployment',
+      'UI/UX principles',
+      'Cross-platform development'
+    ]
+  };
+
+  return categoryHighlights[category] || baseHighlights;
+};
+
+const getDefaultCurriculum = (title: string, duration: string): string[] => {
+  const weeks = parseInt(duration) || 8;
+  const curriculum: string[] = [];
+  
+  for (let i = 1; i <= weeks; i++) {
+    if (i === 1) {
+      curriculum.push(`Week ${i}: Introduction to ${title}`);
+    } else if (i === weeks) {
+      curriculum.push(`Week ${i}: Final Project & Certification`);
+    } else {
+      curriculum.push(`Week ${i}: Core Concepts & Practice`);
+    }
+  }
+  
+  return curriculum;
+};
+
+const getDefaultRequirements = (level: string): string[] => {
+  const base = ['Basic computer skills', 'Internet access'];
+  
+  if (level === 'Beginner') {
+    return ['No prior experience required', ...base];
+  } else if (level === 'Intermediate') {
+    return ['Basic knowledge of the field', 'Some practical experience', ...base];
+  } else if (level === 'Advanced') {
+    return ['Strong foundation in the field', 'Professional experience preferred', ...base];
+  }
+  
+  return ['No prior experience required', ...base];
 };
 
 interface Course {
@@ -170,8 +305,11 @@ interface Course {
   duration: string;
   students: string;
   level: string;
-  schedule?: string;
-  location?: string;
+  schedule: string;
+  location: string;
+  language: string;
+  trainingType: string;
+  deliveryMode: string;
   startDate?: string;
   highlights: string[];
   curriculum: string[];
@@ -181,12 +319,13 @@ interface Course {
   savings?: string;
   icon?: any;
   color?: string;
-  image?: string;          // from published courses
-  courseImage?: string;    // from instructor courses (localStorage)
+  image?: string;
+  courseImage?: string;
   featured?: boolean;
   rating?: number;
   reviews?: number;
   studentsTrained?: number;
+  category?: string;
 }
 
 export default function CourseDetailPage() {
@@ -201,64 +340,106 @@ export default function CourseDetailPage() {
     loadCourse();
   }, [courseId]);
 
-  const loadCourse = () => {
+  const loadCourse = async () => {
     try {
-      // First, check localStorage for instructor-created courses
-      const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-      const localCourse = allCourses.find((c: any) => c.id === courseId);
+      setLoading(true);
+      
+      // First try to fetch from API (instructor-created courses)
+      const response = await fetch(`/api/instructors/course/${courseId}`);
+      const result = await response.json();
 
-      if (localCourse) {
-        // Map localStorage course to expected structure
+      if (response.ok && result.success) {
+        const courseData = result.data.course;
+        
+        // Get dynamic content based on course properties
+        const dynamicContent = getDefaultContent(courseData);
+        
+        // Map API course to expected structure
         const mappedCourse: Course = {
-          id: localCourse.id,
-          title: localCourse.title,
-          description: localCourse.description,
-          longDescription: localCourse.longDescription || localCourse.description,
-          duration: localCourse.duration || 'TBD',
-          students: localCourse.studentCapacity ? `Max ${localCourse.studentCapacity} per batch` : 'Limited seats',
-          level: localCourse.level || 'All Levels',
-          schedule: localCourse.schedule || 'Flexible',
-          location: localCourse.location || 'Online',
-          startDate: localCourse.startDate || 'Enroll now',
-          highlights: localCourse.highlights || [
-            'Comprehensive curriculum',
-            'Hands-on training',
-            'Expert instructors',
-            'Certification included'
-          ],
-          curriculum: localCourse.curriculum || [
-            'Introduction to the course',
-            'Core concepts',
-            'Practical applications',
-            'Final project'
-          ],
-          requirements: localCourse.requirements || [
-            'No prior experience required',
-            'Basic computer skills',
-            'Access to internet'
-          ],
-          price: localCourse.price || 'Contact for pricing',
-          originalPrice: localCourse.originalPrice,
-          savings: localCourse.savings,
-          courseImage: localCourse.courseImage || localCourse.image, // prefer courseImage
-          featured: localCourse.featured || false,
-          rating: localCourse.rating || 4.5,
-          reviews: localCourse.reviews || 0,
-          studentsTrained: localCourse.studentsTrained || 0
+          id: courseData.id,
+          title: courseData.title,
+          description: courseData.description,
+          longDescription: courseData.longDescription || courseData.description,
+          duration: courseData.duration || 'Flexible',
+          students: courseData.studentCapacity ? `Max ${courseData.studentCapacity} per batch` : 'Limited seats',
+          level: courseData.level || 'All Levels',
+          schedule: dynamicContent.schedule,
+          location: dynamicContent.location,
+          language: dynamicContent.language,
+          trainingType: dynamicContent.trainingType,
+          deliveryMode: dynamicContent.deliveryMode,
+          startDate: 'Enroll now',
+          highlights: dynamicContent.highlights,
+          curriculum: dynamicContent.curriculum,
+          requirements: dynamicContent.requirements,
+          price: courseData.price ? `PKR ${courseData.price.toLocaleString()}` : 'Contact for pricing',
+          originalPrice: courseData.original_price ? `PKR ${courseData.original_price.toLocaleString()}` : undefined,
+          savings: courseData.original_price && courseData.price 
+            ? `Save ${Math.round((1 - courseData.price/courseData.original_price) * 100)}%` 
+            : undefined,
+          courseImage: courseData.image,
+          featured: false,
+          rating: 4.5,
+          reviews: 0,
+          studentsTrained: 0,
+          category: courseData.category
         };
         setCourse(mappedCourse);
       } else {
         // Fallback to published courses
         const publishedCourse = publishedCoursesData[courseId as keyof typeof publishedCoursesData];
         if (publishedCourse) {
-          setCourse(publishedCourse);
+          setCourse(publishedCourse as Course);
         } else {
           setCourse(null);
         }
       }
     } catch (error) {
       console.error('Error loading course:', error);
-      setCourse(null);
+      
+      // Try localStorage as last resort
+      try {
+        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+        const localCourse = allCourses.find((c: any) => c.id === courseId);
+
+        if (localCourse) {
+          const dynamicContent = getDefaultContent(localCourse);
+          
+          const mappedCourse: Course = {
+            id: localCourse.id,
+            title: localCourse.title,
+            description: localCourse.description,
+            longDescription: localCourse.longDescription || localCourse.description,
+            duration: localCourse.duration || 'Flexible',
+            students: localCourse.studentCapacity ? `Max ${localCourse.studentCapacity} per batch` : 'Limited seats',
+            level: localCourse.level || 'All Levels',
+            schedule: dynamicContent.schedule,
+            location: dynamicContent.location,
+            language: dynamicContent.language,
+            trainingType: dynamicContent.trainingType,
+            deliveryMode: dynamicContent.deliveryMode,
+            startDate: 'Enroll now',
+            highlights: dynamicContent.highlights,
+            curriculum: dynamicContent.curriculum,
+            requirements: dynamicContent.requirements,
+            price: localCourse.price || 'Contact for pricing',
+            originalPrice: localCourse.originalPrice,
+            savings: localCourse.savings,
+            courseImage: localCourse.courseImage || localCourse.image,
+            featured: localCourse.featured || false,
+            rating: localCourse.rating || 4.5,
+            reviews: localCourse.reviews || 0,
+            studentsTrained: localCourse.studentsTrained || 0,
+            category: localCourse.category
+          };
+          setCourse(mappedCourse);
+        } else {
+          setCourse(null);
+        }
+      } catch (localError) {
+        console.error('Error loading from localStorage:', localError);
+        setCourse(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -292,7 +473,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  // Determine image source: use courseImage if available (from localStorage), else image (from published)
+  // Determine image source
   const courseImageUrl = course.courseImage || course.image || '/placeholder-course.jpg';
 
   return (
@@ -433,7 +614,7 @@ export default function CourseDetailPage() {
               </div>
             </motion.div>
 
-            {/* Highlights */}
+            {/* What You'll Learn */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -468,23 +649,40 @@ export default function CourseDetailPage() {
               <h3 className="text-xl font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
                 Course Details
               </h3>
-              <ul className="space-y-3 text-gray-700 text-base">
-                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+              <ul className="space-y-4 text-gray-700 text-base">
+                <li className="flex items-start gap-3">
+                  <HiClock className="w-5 h-5 text-blue-900 mt-1 flex-shrink-0" />
                   <div>
                     <div className="font-medium">{course.schedule}</div>
-                    <div className="text-gray-500">Schedule</div>
+                    <div className="text-gray-500 text-sm">Schedule</div>
                   </div>
                 </li>
-                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+                <li className="flex items-start gap-3">
+                  <HiLocationMarker className="w-5 h-5 text-blue-900 mt-1 flex-shrink-0" />
                   <div>
                     <div className="font-medium">{course.location}</div>
-                    <div className="text-gray-500">Location</div>
+                    <div className="text-gray-500 text-sm">Location</div>
                   </div>
                 </li>
-                <li className="flex items-start gap-3 before:content-['•'] before:text-blue-900 before:text-xl before:mt-1 before:font-bold">
+                <li className="flex items-start gap-3">
+                  <MdLanguage className="w-5 h-5 text-blue-900 mt-1 flex-shrink-0" />
                   <div>
-                    <div className="font-medium">English & Urdu</div>
-                    <div className="text-gray-500">Language</div>
+                    <div className="font-medium">{course.language}</div>
+                    <div className="text-gray-500 text-sm">Language</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <HiAcademicCap className="w-5 h-5 text-blue-900 mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">{course.trainingType}</div>
+                    <div className="text-gray-500 text-sm">Training Type</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <HiUserGroup className="w-5 h-5 text-blue-900 mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium">{course.deliveryMode}</div>
+                    <div className="text-gray-500 text-sm">Delivery Mode</div>
                   </div>
                 </li>
               </ul>

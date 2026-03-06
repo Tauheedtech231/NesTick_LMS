@@ -1,13 +1,14 @@
 'use client'
 
-import { RefreshCw } from 'lucide-react'
+
 import { useState, useEffect } from 'react'
 import { 
-  HiSearch, HiFilter, HiDocumentDownload,
+  HiSearch,  HiDocumentDownload,
   HiCheckCircle, HiClock, HiXCircle, HiX,
-  HiCurrencyDollar, HiBookOpen, HiEye, HiEyeOff,
+  HiCurrencyDollar,  HiEye, HiEyeOff,
   HiPhotograph, HiDownload, HiExternalLink,
-  HiUserCircle, HiCalendar, HiCreditCard
+  HiCreditCard,
+  HiOutlineRefresh
 } from 'react-icons/hi'
 /* eslint-disable */
 
@@ -26,21 +27,30 @@ const BRAND_COLORS = {
 
 interface RealPayment {
   id: string
+  enrollmentId: string
+  studentId: string
   studentName: string
   email: string
   phone: string
+  cnic: string
+  address: string
+  education: string
+  experience: string
   course: string
-  amount: string
-  amountNumber: number
-  enrollmentId: string
-  voucherNumber: string
+  courseId: string
+  amount: number
+  amountFormatted: string
   paymentDate: string
   paymentMethod: string
   transactionId: string
   status: 'pending' | 'verified' | 'rejected'
-  screenshotUrl?: string
+  screenshotUrl: string
   uploadedAt: string
-  formData?: any
+  cnicFrontUrl: string
+  cnicBackUrl: string
+  educationalDocUrl: string
+  voucherGenerated: boolean
+  slipUploaded: boolean
 }
 
 interface PaymentStats {
@@ -65,216 +75,172 @@ export default function PaymentsList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<'basic' | 'detailed'>('basic')
   const [expandedPayments, setExpandedPayments] = useState<string[]>([])
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<RealPayment | null>(null)
   const [showScreenshotModal, setShowScreenshotModal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadRealPaymentsData()
-    // Refresh data every 30 seconds
-    const interval = setInterval(loadRealPaymentsData, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadRealPaymentsData = () => {
-    setLoading(true)
+  // Load real data from API
+  const loadRealPaymentsData = async (showRefreshing = false) => {
+    if (showRefreshing) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
     
     try {
-      // Prefer canonical `payments` if available
-      const paymentsCanonicalRaw = localStorage.getItem('payments')
-      if (paymentsCanonicalRaw) {
-        try {
-          const paymentsCanonical = JSON.parse(paymentsCanonicalRaw)
-          if (paymentsCanonical && paymentsCanonical.length > 0) {
-            const mapped: RealPayment[] = paymentsCanonical.map((p: any) => ({
-              id: p.id || p.paymentId || `pay-${Math.random().toString(36).slice(2,9)}`,
-              studentName: p.name || p.studentName || 'Unknown Student',
-              email: p.email || p.studentEmail || 'unknown@example.com',
-              phone: p.phone || p.contact || 'Not available',
-              course: p.course || p.courseName || 'Unknown Course',
-              amount: p.amount ? (String(p.amount).startsWith('PKR') ? String(p.amount) : `PKR ${Number(p.amount).toLocaleString()}`) : 'PKR 25,000',
-              amountNumber: p.amountNumber || (p.amount ? Number(String(p.amount).replace(/[^0-9.-]+/g, '')) : 25000),
-              enrollmentId: p.enrollmentId || p.enrollmentId || `ENR-${Math.random().toString(36).slice(2,6)}`,
-              voucherNumber: p.voucherNumber || p.voucher || `VCH-${Math.random().toString(36).slice(2,6)}`,
-              paymentDate: p.paymentDate || p.uploadedAt || new Date().toISOString(),
-              paymentMethod: p.paymentMethod || p.method || 'JazzCash',
-              transactionId: p.transactionId || p.txn || p.paymentRef || `TXN-${Math.random().toString(36).substr(2,8).toUpperCase()}`,
-              status: (p.status || p.paymentStatus || '').toString().toLowerCase().includes('paid') || (p.status || p.paymentStatus || '').toString().toLowerCase().includes('verif') ? 'verified' : (p.status || '').toString().toLowerCase().includes('reject') || (p.status || '').toString().toLowerCase().includes('fail') ? 'rejected' : 'pending',
-              screenshotUrl: p.screenshotUrl || p.thumbnail || null,
-              uploadedAt: p.uploadedAt || p.uploadDate || new Date().toISOString(),
-              formData: p.formData || null
-            }))
-
-            setPayments(mapped)
-
-            const totalPayments = mapped.length
-            const verifiedPayments = mapped.filter(p => p.status === 'verified').length
-            const pendingPayments = mapped.filter(p => p.status === 'pending').length
-            const rejectedPayments = mapped.filter(p => p.status === 'rejected').length
-            const totalRevenue = mapped.reduce((sum, p) => sum + (p.amountNumber || 0), 0)
-            const recentPayments = mapped.filter(p => new Date(p.uploadedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length
-
-            setStats({ totalPayments, verifiedPayments, pendingPayments, rejectedPayments, totalRevenue, recentPayments })
-            setLoading(false)
-            return
-          }
-        } catch (err) {
-          console.error('Error parsing canonical payments:', err)
-        }
+      // STEP 1: Fetch revenue data first
+      const revenueResponse = await fetch('/api/admin/revenue')
+      const revenueData = await revenueResponse.json()
+      
+      // STEP 2: Fetch enrollments from API
+      const response = await fetch('/api/admin/enrollments')
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch enrollments')
       }
-      // Load enrollment data from localStorage
-      const storedEnrollmentData = JSON.parse(localStorage.getItem('enrollmentData') || 'null')
-      
-      // Load payment submission data from localStorage
-      const storedPaymentSubmission = JSON.parse(localStorage.getItem('paymentSubmission') || 'null')
-      
-      // Load uploaded files from localStorage
-      const storedUploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]')
-      
-      console.log("Loading real payments data:", {
-        storedEnrollmentData,
-        storedPaymentSubmission,
-        storedUploadedFiles
-      })
 
-      const realPayments: RealPayment[] = []
-      
-      // Process real data from localStorage
-      if (storedEnrollmentData && storedEnrollmentData.fullName) {
-        const enrollmentDate = new Date(storedEnrollmentData.enrollmentDate || Date.now())
-        const uploadedAt = storedPaymentSubmission?.uploadedAt || enrollmentDate.toISOString()
-        
-        // Get screenshot if available
-        let screenshotUrl = null
-        if (storedUploadedFiles && storedUploadedFiles.length > 0) {
-          const latestFile = storedUploadedFiles[0]
-          if (latestFile.dataUrl) {
-            screenshotUrl = latestFile.dataUrl
-          }
-        }
-        
-        const amountStr = storedEnrollmentData.price || 'PKR 25,000'
-        const amountNumber = parseFloat(amountStr.replace('PKR ', '').replace(/,/g, '')) || 25000
-        
-        realPayments.push({
-          id: storedEnrollmentData.enrollmentId || `REAL-${Date.now()}`,
-          studentName: storedEnrollmentData.fullName,
-          email: storedEnrollmentData.email,
-          phone: storedEnrollmentData.phone,
-          course: storedEnrollmentData.course,
-          amount: amountStr,
-          amountNumber: amountNumber,
-          enrollmentId: storedEnrollmentData.enrollmentId || `ENR-${Date.now()}`,
-          voucherNumber: `VCH-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          paymentDate: storedPaymentSubmission?.paymentDate || new Date().toISOString().split('T')[0],
-          paymentMethod: storedPaymentSubmission?.paymentMethod || 'JazzCash',
-          transactionId: storedPaymentSubmission?.transactionId || `TXN-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-          status: 'pending',
-          screenshotUrl: screenshotUrl,
-          uploadedAt: uploadedAt,
-          formData: storedEnrollmentData
+      if (data.success && data.data) {
+        // Map API data to payment format
+        const mappedPayments: RealPayment[] = data.data.map((item: any) => ({
+          id: item.id,
+          enrollmentId: item.id,
+          studentId: item.student_id,
+          studentName: item.student_name,
+          email: item.student_email,
+          phone: item.student_phone || 'Not provided',
+          cnic: item.student_cnic || '',
+          address: item.student_address || '',
+          education: item.student_education || '',
+          experience: item.student_experience || '',
+          course: item.course_title,
+          courseId: item.course_id,
+          amount: item.payment_amount || 0,
+          amountFormatted: item.payment_amount ? `PKR ${Number(item.payment_amount).toLocaleString()}` : 'PKR 0',
+          paymentDate: item.payment_date || item.enrollment_date,
+          paymentMethod: item.payment_method || 'Bank Transfer',
+          transactionId: item.transaction_id || `TXN-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+          status: item.payment_status || 'pending',
+          screenshotUrl: item.slip_url || '',
+          uploadedAt: item.enrollment_date,
+          cnicFrontUrl: item.cnic_front_url || '',
+          cnicBackUrl: item.cnic_back_url || '',
+          educationalDocUrl: item.educational_doc_url || '',
+          voucherGenerated: item.voucher_generated || false,
+          slipUploaded: item.slip_uploaded || false
+        }))
+
+        setPayments(mappedPayments)
+
+        // Calculate statistics (all except totalRevenue which comes from revenue API)
+        const totalPayments = mappedPayments.length
+        const verifiedPayments = mappedPayments.filter(p => p.status === 'verified').length
+        const pendingPayments = mappedPayments.filter(p => p.status === 'pending').length
+        const rejectedPayments = mappedPayments.filter(p => p.status === 'rejected').length
+        const recentPayments = mappedPayments.filter(p => {
+          const paymentDate = new Date(p.uploadedAt)
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          return paymentDate > thirtyDaysAgo
+        }).length
+
+        // STEP 3: Update stats - ONLY totalRevenue comes from revenue API
+        setStats({
+          totalPayments,
+          verifiedPayments,
+          pendingPayments,
+          rejectedPayments,
+          totalRevenue: revenueData.success ? revenueData.data.totalRevenue : 0, // ONLY THIS LINE CHANGED
+          recentPayments
         })
       }
-
-      // Add sample real data for demonstration
-      const sampleScreenshots = [
-        'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-        'https://images.unsplash.com/photo-1554224154-26032ffc0d07?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
-      ]
-      
-      const sampleCourses = ['Pipe Fitter', 'Safety Inspector', 'Professional Welding']
-      const sampleAmounts = ['PKR 25,000', 'PKR 30,000', 'PKR 35,000']
-      const sampleAmountNumbers = [25000, 30000, 35000]
-      const sampleMethods = ['JazzCash', 'EasyPaisa', 'Bank Transfer']
-      const sampleStatuses: Array<'pending' | 'verified' | 'rejected'> = ['pending', 'verified', 'pending']
-      
-      for (let i = 0; i < 3; i++) {
-        realPayments.push({
-          id: `sample-${i + 1}`,
-          studentName: i === 0 ? storedEnrollmentData?.fullName || 'Ali Raza' : 
-                      i === 1 ? 'Ayesha Khan' : 'Muhammad Shahid',
-          email: i === 0 ? storedEnrollmentData?.email || 'ali.raza@example.com' :
-                 i === 1 ? 'ayesha.khan@example.com' : 'm.shahid@example.com',
-          phone: i === 0 ? storedEnrollmentData?.phone || '+92 300 1234567' :
-                 i === 1 ? '+92 310 2345678' : '+92 320 3456789',
-          course: sampleCourses[i],
-          amount: sampleAmounts[i],
-          amountNumber: sampleAmountNumbers[i],
-          enrollmentId: `ENR-2024-00${i + 1}`,
-          voucherNumber: `VCH-2024-00${i + 1}`,
-          paymentDate: `2024-01-${15 + i}`,
-          paymentMethod: sampleMethods[i],
-          transactionId: `${sampleMethods[i].substring(0, 2)}${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-          status: sampleStatuses[i],
-          screenshotUrl: sampleScreenshots[i],
-          uploadedAt: new Date(Date.now() - (i * 86400000)).toISOString(),
-          formData: i === 0 ? storedEnrollmentData : null
-        })
-      }
-
-      setPayments(realPayments)
-      
-      // Calculate statistics
-      const totalPayments = realPayments.length
-      const verifiedPayments = realPayments.filter(p => p.status === 'verified').length
-      const pendingPayments = realPayments.filter(p => p.status === 'pending').length
-      const rejectedPayments = realPayments.filter(p => p.status === 'rejected').length
-      const totalRevenue = realPayments.reduce((sum, p) => sum + p.amountNumber, 0)
-      const recentPayments = realPayments.filter(p => {
-        const paymentDate = new Date(p.uploadedAt)
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-        return paymentDate > thirtyDaysAgo
-      }).length
-
-      setStats({
-        totalPayments,
-        verifiedPayments,
-        pendingPayments,
-        rejectedPayments,
-        totalRevenue,
-        recentPayments
-      })
-
-    } catch (error) {
-      console.error("Error loading real payments:", error)
-      // Fallback to sample data
-      const samplePayments: RealPayment[] = [
-        {
-          id: 'fallback-1',
-          studentName: 'Test Student',
-          email: 'test@example.com',
-          phone: '+92 300 0000000',
-          course: 'Pipe Fitter',
-          amount: 'PKR 25,000',
-          amountNumber: 25000,
-          enrollmentId: 'ENR-TEST-001',
-          voucherNumber: 'VCH-TEST-001',
-          paymentDate: new Date().toISOString().split('T')[0],
-          paymentMethod: 'JazzCash',
-          transactionId: 'JZTEST001',
-          status: 'pending',
-          screenshotUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-          uploadedAt: new Date().toISOString()
-        }
-      ]
-      
-      setPayments(samplePayments)
-      setStats({
-        totalPayments: 1,
-        verifiedPayments: 0,
-        pendingPayments: 1,
-        rejectedPayments: 0,
-        totalRevenue: 25000,
-        recentPayments: 1
-      })
+    } catch (error: any) {
+      console.error('Error loading payments:', error)
+      setError(error.message || 'Failed to load payments')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
+  useEffect(() => {
+    loadRealPaymentsData()
+    
+    // Refresh data every 30 seconds
+    const interval = setInterval(() => loadRealPaymentsData(true), 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Handle verify payment
+  const handleVerifyPayment = async (enrollmentId: string) => {
+    try {
+      const response = await fetch('/api/admin/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          enrollmentId, 
+          status: 'verified' 
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update local state
+        setPayments(prev => prev.map(p => 
+          p.enrollmentId === enrollmentId ? { ...p, status: 'verified' } : p
+        ))
+        
+        // Refresh data
+        await loadRealPaymentsData(true)
+        
+        alert('Payment verified successfully!')
+        setShowScreenshotModal(false)
+      } else {
+        throw new Error(data.error || 'Verification failed')
+      }
+    } catch (error: any) {
+      console.error('Error verifying payment:', error)
+      alert(`❌ Failed to verify payment: ${error.message}`)
+    }
+  }
+
+  // Handle reject payment
+  const handleRejectPayment = async (enrollmentId: string) => {
+    if (!confirm('Are you sure you want to reject this payment?')) return
+
+    try {
+      const response = await fetch('/api/admin/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          enrollmentId, 
+          status: 'rejected' 
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setPayments(prev => prev.map(p => 
+          p.enrollmentId === enrollmentId ? { ...p, status: 'rejected' } : p
+        ))
+        alert('Payment rejected!')
+        setShowScreenshotModal(false)
+      } else {
+        throw new Error(data.error || 'Rejection failed')
+      }
+    } catch (error: any) {
+      console.error('Error rejecting payment:', error)
+      alert(`❌ Failed to reject payment: ${error.message}`)
+    }
+  }
+
+  // Filter payments
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = 
       payment.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -284,10 +250,7 @@ export default function PaymentsList() {
       payment.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = 
-      statusFilter === 'ALL' || 
-      (statusFilter === 'verified' && payment.status === 'verified') ||
-      (statusFilter === 'pending' && payment.status === 'pending') ||
-      (statusFilter === 'rejected' && payment.status === 'rejected')
+      statusFilter === 'ALL' || payment.status === statusFilter
     
     return matchesSearch && matchesStatus
   })
@@ -375,23 +338,8 @@ export default function PaymentsList() {
     }
   }
 
-  const handleVerifyPayment = (paymentId: string) => {
-    setPayments(prev => prev.map(payment => 
-      payment.id === paymentId ? { ...payment, status: 'verified' as const } : payment
-    ))
-    alert('Payment verified successfully!')
-  }
-
-  const handleRejectPayment = (paymentId: string) => {
-    setPayments(prev => prev.map(payment => 
-      payment.id === paymentId ? { ...payment, status: 'rejected' as const } : payment
-    ))
-    alert('Payment rejected.')
-  }
-
   const refreshData = () => {
-    loadRealPaymentsData()
-    alert('Data refreshed from localStorage')
+    loadRealPaymentsData(true)
   }
 
   return (
@@ -402,17 +350,18 @@ export default function PaymentsList() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold" style={{ color: BRAND_COLORS.darkNavy }}>
-                Real Payments
+                Payment Management
               </h1>
-              <p className="text-darkGrey/70 mt-2">Real payment data from student submissions</p>
+              <p className="text-darkGrey/70 mt-2">Real-time payment data from database</p>
             </div>
             <button
               onClick={refreshData}
-              className="px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 text-sm transition-colors"
+              disabled={refreshing}
+              className="px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2 text-sm transition-colors disabled:opacity-50"
               style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
-              <RefreshCw className="w-4 h-4" />
-              Refresh Data
+              <HiOutlineRefresh className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh Data'}
             </button>
           </div>
 
@@ -444,7 +393,7 @@ export default function PaymentsList() {
                 </div>
               </div>
               <div className="mt-2 text-xs text-darkGrey/50">
-                {Math.round((stats.verifiedPayments / Math.max(stats.totalPayments, 1)) * 100)}% success rate
+                {stats.totalPayments > 0 ? Math.round((stats.verifiedPayments / stats.totalPayments) * 100) : 0}% success rate
               </div>
             </div>
 
@@ -476,7 +425,7 @@ export default function PaymentsList() {
                 </div>
               </div>
               <div className="mt-2 text-xs text-darkGrey/50">
-                From all payments
+                From verified payments only
               </div>
             </div>
           </div>
@@ -556,8 +505,11 @@ export default function PaymentsList() {
           {/* Results Count */}
           <div className="mb-6">
             <p className="text-sm text-darkGrey/70">
-              Showing {filteredPayments.length} of {payments.length} real payments
+              Showing {filteredPayments.length} of {payments.length} payments
               {searchTerm && ` matching "${searchTerm}"`}
+              {error && (
+                <span className="ml-2 text-red-600">Error: {error}</span>
+              )}
             </p>
           </div>
         </div>
@@ -629,7 +581,7 @@ export default function PaymentsList() {
                         </div>
                         <div>
                           <p className="text-xs text-darkGrey/70">Amount</p>
-                          <p className="font-medium text-green-600">{selectedPayment.amount}</p>
+                          <p className="font-medium text-green-600">{selectedPayment.amountFormatted}</p>
                         </div>
                         <div>
                           <p className="text-xs text-darkGrey/70">Payment Method</p>
@@ -651,26 +603,22 @@ export default function PaymentsList() {
                         </div>
                       </div>
                       
-                      <div className="mt-6 space-y-3">
-                        <button
-                          onClick={() => {
-                            handleVerifyPayment(selectedPayment.id)
-                            setShowScreenshotModal(false)
-                          }}
-                          className="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                        >
-                          ✓ Verify Payment
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleRejectPayment(selectedPayment.id)
-                            setShowScreenshotModal(false)
-                          }}
-                          className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                        >
-                          ✗ Reject Payment
-                        </button>
-                      </div>
+                      {selectedPayment.status === 'pending' && (
+                        <div className="mt-6 space-y-3">
+                          <button
+                            onClick={() => handleVerifyPayment(selectedPayment.enrollmentId)}
+                            className="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                          >
+                            ✓ Verify Payment
+                          </button>
+                          <button
+                            onClick={() => handleRejectPayment(selectedPayment.enrollmentId)}
+                            className="w-full py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                          >
+                            ✗ Reject Payment
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -700,7 +648,7 @@ export default function PaymentsList() {
             <HiCurrencyDollar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">No payments found</h3>
             <p className="text-gray-600 mb-6">
-              {searchTerm ? 'No payments match your search criteria' : 'No payment records found in localStorage'}
+              {searchTerm ? 'No payments match your search criteria' : 'No payment records found in database'}
             </p>
             <button
               onClick={refreshData}
@@ -739,11 +687,6 @@ export default function PaymentsList() {
                               {payment.email} • {payment.course}
                             </div>
                           </div>
-                          {payment.formData && (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap">
-                              Real Data
-                            </span>
-                          )}
                         </div>
                       </div>
 
@@ -751,7 +694,7 @@ export default function PaymentsList() {
                       <div className="space-y-1">
                         <div className="text-sm text-gray-600">Amount</div>
                         <div className="font-bold text-gray-900 text-lg">
-                          {payment.amount}
+                          {payment.amountFormatted}
                         </div>
                       </div>
 
@@ -815,36 +758,86 @@ export default function PaymentsList() {
                     {showDetails && (
                       <div className="mt-6 pt-6 border-t border-softGrey">
                         <div className="bg-lightGrey rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">Payment Details</h4>
+                          <h4 className="font-medium text-gray-900 mb-3">Complete Payment Details</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm text-gray-600 mb-1">Student Information</div>
                               <div className="font-medium text-gray-900">{payment.studentName}</div>
                               <div className="text-sm text-gray-600">{payment.email}</div>
                               <div className="text-sm text-gray-600">{payment.phone}</div>
+                              <div className="text-sm text-gray-600">CNIC: {payment.cnic || 'Not provided'}</div>
+                              <div className="text-sm text-gray-600">Education: {payment.education || 'Not provided'}</div>
                             </div>
                             <div>
                               <div className="text-sm text-gray-600 mb-1">Course Information</div>
                               <div className="font-medium text-gray-900">{payment.course}</div>
+                              <div className="text-sm text-gray-600">Course ID: {payment.courseId}</div>
                               <div className="text-sm text-gray-600">Enrollment ID: {payment.enrollmentId}</div>
-                              <div className="text-sm text-gray-600">Voucher: {payment.voucherNumber}</div>
                             </div>
                             <div>
                               <div className="text-sm text-gray-600 mb-1">Payment Breakdown</div>
                               <div className="font-medium text-gray-900">
-                                {payment.amount}
+                                {payment.amountFormatted}
                               </div>
                               <div className="text-sm text-gray-600">
                                 Paid via {payment.paymentMethod}
                               </div>
+                              <div className="text-sm text-gray-600">
+                                Voucher Generated: {payment.voucherGenerated ? 'Yes' : 'No'}
+                              </div>
                             </div>
                             <div>
                               <div className="text-sm text-gray-600 mb-1">Transaction Details</div>
-                              <div className="font-medium text-gray-900">{payment.paymentMethod}</div>
                               <div className="text-sm text-gray-600">ID: {payment.transactionId}</div>
                               <div className="text-sm text-gray-600">Date: {formatDate(payment.paymentDate)}</div>
+                              <div className="text-sm text-gray-600">
+                                Slip Uploaded: {payment.slipUploaded ? 'Yes' : 'No'}
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Document Links */}
+                          {(payment.cnicFrontUrl || payment.cnicBackUrl || payment.educationalDocUrl) && (
+                            <div className="mt-4 pt-4 border-t border-softGrey">
+                              <div className="text-sm text-gray-600 mb-2">Student Documents</div>
+                              <div className="flex flex-wrap gap-3">
+                                {payment.cnicFrontUrl && (
+                                  <a 
+                                    href={payment.cnicFrontUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-xs flex items-center"
+                                  >
+                                    <HiExternalLink className="w-3 h-3 mr-1" />
+                                    CNIC Front
+                                  </a>
+                                )}
+                                {payment.cnicBackUrl && (
+                                  <a 
+                                    href={payment.cnicBackUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-xs flex items-center"
+                                  >
+                                    <HiExternalLink className="w-3 h-3 mr-1" />
+                                    CNIC Back
+                                  </a>
+                                )}
+                                {payment.educationalDocUrl && (
+                                  <a 
+                                    href={payment.educationalDocUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-xs flex items-center"
+                                  >
+                                    <HiExternalLink className="w-3 h-3 mr-1" />
+                                    Educational Doc
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="mt-4 pt-4 border-t border-softGrey flex flex-wrap gap-3">
                             {payment.screenshotUrl && (
                               <>
@@ -867,13 +860,13 @@ export default function PaymentsList() {
                             {payment.status === 'pending' && (
                               <>
                                 <button
-                                  onClick={() => handleVerifyPayment(payment.id)}
+                                  onClick={() => handleVerifyPayment(payment.enrollmentId)}
                                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors"
                                 >
                                   ✓ Verify Payment
                                 </button>
                                 <button
-                                  onClick={() => handleRejectPayment(payment.id)}
+                                  onClick={() => handleRejectPayment(payment.enrollmentId)}
                                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition-colors"
                                 >
                                   ✗ Reject Payment
@@ -901,26 +894,20 @@ export default function PaymentsList() {
             <div className="text-sm text-darkGrey/70">
               <div className="flex items-center">
                 <HiCurrencyDollar className="w-4 h-4 mr-2" />
-                Real payment data loaded from localStorage
+                Real payment data from database
               </div>
               <div className="mt-1 text-xs text-darkGrey/50">
-                {payments.filter(p => p.formData).length} real submissions • Last updated: {new Date().toLocaleTimeString()}
+                {payments.length} total records • Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={refreshData}
-                className="px-4 py-2 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey text-sm flex items-center transition-colors"
+                disabled={refreshing}
+                className="px-4 py-2 border border-softGrey rounded-lg hover:bg-lightGrey text-darkGrey text-sm flex items-center transition-colors disabled:opacity-50"
               >
-                <span className="mr-2">🔄</span>
-                Refresh Data
-              </button>
-              <button 
-                className="px-4 py-2 rounded-lg text-white font-medium text-sm flex items-center transition-colors"
-                style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
-              >
-                <HiFilter className="w-4 h-4 mr-2" />
-                Export All Data
+                <HiOutlineRefresh className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh Data'}
               </button>
             </div>
           </div>
