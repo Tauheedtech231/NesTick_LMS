@@ -420,118 +420,121 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Enrollments */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100 hover:shadow-xl transition-all hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Enrollments</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalEnrollments}</p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-md">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">All time enrollments</div>
-          </div>
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {/* Total Enrollments */}
+  <div className="bg-white rounded-xl shadow p-6 border border-indigo-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">Students Enrolled</p>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalEnrollments}</p>
+      </div>
+      <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow">
+        <Users className="w-6 h-6 text-white" />
+      </div>
+    </div>
+    <div className="mt-3 text-xs text-gray-500">Total number of enrollments so far</div>
+  </div>
 
-          {/* Pending Verification */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Verification</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pendingPayments}</p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow-md">
-                <AlertCircle className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-amber-600">Awaiting review</div>
-          </div>
+  {/* Pending Verification */}
+  <div className="bg-white rounded-xl shadow p-6 border border-amber-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
+        <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pendingPayments}</p>
+      </div>
+      <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow">
+        <AlertCircle className="w-6 h-6 text-white" />
+      </div>
+    </div>
+    <div className="mt-3 text-xs text-amber-600">Payments waiting for confirmation</div>
+  </div>
 
-          {/* Verified Payments */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Verified Payments</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.verifiedPayments}</p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-md">
-                <CheckCircle className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-emerald-600">Successfully verified</div>
-          </div>
+  {/* Verified Payments */}
+  <div className="bg-white rounded-xl shadow p-6 border border-emerald-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">Confirmed Payments</p>
+        <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.verifiedPayments}</p>
+      </div>
+      <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow">
+        <CheckCircle className="w-6 h-6 text-white" />
+      </div>
+    </div>
+    <div className="mt-3 text-xs text-emerald-600">Payments successfully verified</div>
+  </div>
 
-          {/* Total Revenue */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">
-                  PKR {totalVerifiedRevenue.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Avg: PKR {averageRevenuePerStudent.toLocaleString()}/student
-                </p>
-              </div>
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md">
-                <Wallet className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
+  {/* Total Revenue */}
+  <div className="bg-white rounded-xl shadow p-6 border border-purple-100 hover:shadow-lg transition-all hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">Revenue</p>
+        <p className="text-2xl font-bold text-purple-600 mt-1">
+          PKR {totalVerifiedRevenue.toLocaleString()}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Average per student: PKR {averageRevenuePerStudent.toLocaleString()}
+        </p>
+      </div>
+      <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow">
+        <Wallet className="w-6 h-6 text-white" />
+      </div>
+    </div>
+    
+  </div>
+</div>
 
         {/* Revenue Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Verified Revenue */}
-          <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-700">Verified Revenue</p>
-                <p className="text-2xl font-bold text-emerald-600">PKR {totalVerifiedRevenue.toLocaleString()}</p>
-                <p className="text-xs text-emerald-600 mt-1">
-                  <ArrowUpRight className="w-3 h-3 inline" /> From {revenueStats.payingStudents} students
-                </p>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-lg">
-                <DollarSign className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
-          </div>
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  {/* Verified Revenue */}
+  <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-emerald-700">Verified Revenue</p>
+        <p className="text-2xl font-bold text-emerald-600 mt-1">PKR {totalVerifiedRevenue.toLocaleString()}</p>
+        <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+          <ArrowUpRight className="w-3 h-3 inline text-emerald-600" /> From {revenueStats.payingStudents} students
+        </p>
+      </div>
+      <div className="p-3 bg-emerald-100 rounded-lg shadow">
+        <DollarSign className="w-6 h-6 text-emerald-600" />
+      </div>
+    </div>
+  </div>
 
-          {/* Pending Revenue */}
-          <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-700">Pending Revenue</p>
-                <p className="text-2xl font-bold text-amber-600">PKR {pendingRevenue.toLocaleString()}</p>
-                <p className="text-xs text-amber-600 mt-1">
-                  <ArrowDownRight className="w-3 h-3 inline" /> Awaiting verification
-                </p>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-lg">
-                <AlertCircle className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
-          </div>
+  {/* Pending Revenue */}
+  <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-amber-700">Pending Revenue</p>
+        <p className="text-2xl font-bold text-amber-600 mt-1">PKR {Number(pendingRevenue).toLocaleString()}</p>
+        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+          <ArrowDownRight className="w-3 h-3 inline text-amber-600" /> Awaiting verification
+        </p>
+      </div>
+      <div className="p-3 bg-amber-100 rounded-lg shadow">
+        <AlertCircle className="w-6 h-6 text-amber-600" />
+      </div>
+    </div>
+  </div>
 
-          {/* Projected Total */}
-          <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">Projected Total</p>
-                <p className="text-2xl font-bold text-purple-600">PKR {(totalVerifiedRevenue + pendingRevenue).toLocaleString()}</p>
-                <p className="text-xs text-purple-600 mt-1">
-                  If all pending verified
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+  {/* Projected Total */}
+  <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-purple-700">Projected Total</p>
+        <p className="text-2xl font-bold text-purple-600 mt-1">
+          PKR {(Number(totalVerifiedRevenue) + Number(pendingRevenue)).toLocaleString()}
+        </p>
+        <p className="text-xs text-purple-600 mt-2">
+          If all pending are verified
+        </p>
+      </div>
+      <div className="p-3 bg-purple-100 rounded-lg shadow">
+        <TrendingUp className="w-6 h-6 text-purple-600" />
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Credentials Status */}
         <div className="mb-8">
@@ -708,7 +711,7 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Student</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Amount</th>
+       
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Verified Date</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-white">Status</th>
                   </tr>
@@ -724,11 +727,7 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">{cred.course}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm font-bold text-emerald-600">
-                            PKR {cred.amount?.toLocaleString() || '0'}
-                          </span>
-                        </td>
+                        
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {cred.verifiedDate ? new Date(cred.verifiedDate).toLocaleDateString() : 'N/A'}
                         </td>
@@ -755,112 +754,96 @@ export default function AdminDashboard() {
           )}
 
           {/* Revenue Details Tab */}
-          {activeTab === 'revenue' && (
-            <div className="p-6 bg-white">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Revenue Summary */}
-                <div className="bg-gradient-to-br from-indigo-50 to-white rounded-xl p-6 border border-indigo-100">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
-                      <span className="text-gray-600">Verified Revenue:</span>
-                      <span className="font-bold text-lg text-emerald-600">
-                        PKR {totalVerifiedRevenue.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
-                      <span className="text-gray-600">Pending Revenue:</span>
-                      <span className="font-bold text-lg text-amber-600">
-                        PKR {pendingRevenue.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pb-3 border-b border-indigo-100">
-                      <span className="text-gray-600">Paying Students:</span>
-                      <span className="font-bold text-lg text-indigo-600">
-                        {revenueStats.payingStudents}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Average per Student:</span>
-                      <span className="font-bold text-lg text-purple-600">
-                        PKR {averageRevenuePerStudent.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+         {activeTab === 'revenue' && (
+  <div className="p-6 bg-gray-50 rounded-xl space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {/* Course-wise Revenue */}
-                <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-6 border border-purple-100">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
-                  <div className="space-y-3">
-                    {paymentStudents
-                      .filter(s => s.status === 'verified')
-                      .reduce((acc: any[], student) => {
-                        const existing = acc.find(c => c.course === student.course)
-                        if (existing) {
-                          existing.revenue += student.amount
-                          existing.count++
-                        } else {
-                          acc.push({
-                            course: student.course,
-                            revenue: student.amount,
-                            count: 1
-                          })
-                        }
-                        return acc
-                      }, [])
-                      .sort((a, b) => b.revenue - a.revenue)
-                      .slice(0, 5)
-                      .map((course, idx) => (
-                        <div key={idx} className="flex justify-between items-center py-2 border-b border-purple-100 last:border-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{course.course}</p>
-                            <p className="text-xs text-gray-500">{course.count} student{course.count > 1 ? 's' : ''}</p>
-                          </div>
-                          <span className="font-bold text-purple-600">
-                            PKR {course.revenue.toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+      {/* Revenue Summary */}
+      <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow hover:shadow-md transition-all">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+            <span className="text-gray-600">Verified Revenue</span>
+            <span className="font-bold text-lg text-emerald-600">PKR {totalVerifiedRevenue.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+            <span className="text-gray-600">Pending Revenue</span>
+            <span className="font-bold text-lg text-amber-600">PKR {Number(pendingRevenue).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+            <span className="text-gray-600">Paying Students</span>
+            <span className="font-bold text-lg text-indigo-600">{revenueStats.payingStudents}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Average per Student</span>
+            <span className="font-bold text-lg text-purple-600">PKR {averageRevenuePerStudent.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
 
-                {/* Recent Verified Payments */}
-                <div className="md:col-span-2 bg-gradient-to-br from-emerald-50 to-white rounded-xl p-6 border border-emerald-100">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-emerald-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Student</th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Course</th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Amount</th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-emerald-100">
-                        {paymentStudents
-                          .filter(s => s.status === 'verified')
-                          .slice(0, 5)
-                          .map((student, idx) => (
-                            <tr key={student.enrollmentId} className="hover:bg-emerald-50">
-                              <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{student.course}</td>
-                              <td className="px-4 py-3 text-sm font-bold text-emerald-600">
-                                PKR {student.amount.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-500">
-                                {new Date(student.paymentDate).toLocaleDateString()}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
+      {/* Course-wise Revenue */}
+      <div className="bg-white rounded-xl p-6 border border-purple-100 shadow hover:shadow-md transition-all">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
+        <div className="space-y-3">
+          {paymentStudents
+            .filter(s => s.status === 'verified')
+            .reduce((acc: any[], student) => {
+              const existing = acc.find(c => c.course === student.course)
+              if (existing) {
+                existing.revenue += student.amount
+                existing.count++
+              } else {
+                acc.push({ course: student.course, revenue: student.amount, count: 1 })
+              }
+              return acc
+            }, [])
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5)
+            .map((course, idx) => (
+              <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0 border-purple-100">
+                <div>
+                  <p className="font-medium text-gray-900">{course.course}</p>
+                  <p className="text-xs text-gray-500">{course.count} student{course.count > 1 ? 's' : ''}</p>
                 </div>
+                <span className="font-bold text-purple-600">PKR {course.revenue.toLocaleString()}</span>
               </div>
-            </div>
-          )}
+            ))}
+        </div>
+      </div>
+
+      {/* Recent Verified Payments */}
+      <div className="md:col-span-2 bg-white rounded-xl p-6 border border-emerald-100 shadow hover:shadow-md transition-all">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto border-collapse">
+            <thead className="bg-emerald-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Student</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Course</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-emerald-100">
+              {paymentStudents
+                .filter(s => s.status === 'verified')
+                .slice(0, 5)
+                .map(student => (
+                  <tr key={student.enrollmentId} className="hover:bg-emerald-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{student.course}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-emerald-600">PKR {student.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{new Date(student.paymentDate).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
         </div>
 
         {/* Screenshot Modal */}

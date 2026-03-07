@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { 
   HiHome, HiAcademicCap, HiLogout, 
   HiMenu, HiX, HiSearch, 
-  HiCreditCard, HiChartBar
+  HiCreditCard, HiUserCircle
 } from 'react-icons/hi'
 /* eslint-disable */
 
@@ -43,7 +43,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     brightRed: '#D32F2F'
   }
 
-  // Main Navigation - Only Instructor and Dashboard
+  // Main Navigation - Only Dashboard, Instructors, Payments, Profile
   const navCategories = [
     {
       title: 'Management',
@@ -155,6 +155,13 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     return pathname?.startsWith(href);
   };
 
+  // Navigate to profile
+  const goToProfile = () => {
+    router.push('/lms/Admin_Portal/profile')
+    setIsUserDropdownOpen(false)
+    setIsMobileMenuOpen(false)
+  }
+
   return (
     <>
       {/* Desktop Sidebar (fixed, visible on md and up) */}
@@ -176,25 +183,37 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
 
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
+            {/* Dashboard */}
             <li>
               <Link href="/lms/Admin_Portal/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/dashboard') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiHome className="w-5 h-5 text-white/90" />
                 <span className="text-base text-white">Dashboard</span>
               </Link>
             </li>
+
+            {/* Instructors */}
             <li>
               <Link href="/lms/Admin_Portal/instructors" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/instructors') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiAcademicCap className="w-5 h-5 text-white/90" />
                 <span className="text-base text-white">Instructors</span>
               </Link>
             </li>
+
+            {/* Payments */}
             <li>
               <Link href="/lms/Admin_Portal/payments" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/payments') ? 'bg-white/10 font-medium' : ''}`}>
                 <HiCreditCard className="w-5 h-5 text-white/90" />
                 <span className="text-base text-white">Payments</span>
               </Link>
             </li>
-         
+
+            {/* Profile - NEW */}
+            <li>
+              <Link href="/lms/Admin_Portal/profile" className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${isActive('/lms/Admin_Portal/profile') ? 'bg-white/10 font-medium' : ''}`}>
+                <HiUserCircle className="w-5 h-5 text-white/90" />
+                <span className="text-base text-white">Profile</span>
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -209,8 +228,18 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
             </div>
           </div>
 
-          <div className="mt-3">
-            <button onClick={handleLogout} className="w-full text-base py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors">
+          <div className="mt-3 flex gap-2">
+            <Link
+              href="/lms/Admin_Portal/profile"
+              className="flex-1 text-center text-base py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors"
+            >
+              Profile
+            </Link>
+            <button 
+              onClick={handleLogout} 
+              className="flex-1 text-base py-2 rounded-lg bg-white text-deepRed hover:bg-white/90 transition-colors"
+              style={{ color: BRAND_COLORS.deepRed }}
+            >
               Logout
             </button>
           </div>
@@ -344,37 +373,47 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 </Link>
               </div>
 
-              {/* Reports Link */}
+              {/* Profile Link - NEW */}
               <div className="mb-4">
                 <Link
-                  href="/lms/Admin_Portal/reports"
+                  href="/lms/Admin_Portal/profile"
                   onClick={toggleMobileMenu}
                   className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/reports') 
+                    isActive('/lms/Admin_Portal/profile') 
                       ? 'bg-white/10' 
                       : 'hover:bg-white/5'
                   }`}
                 >
-                  <HiChartBar className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Reports</span>
+                  <HiUserCircle className="w-5 h-5 text-white/80" />
+                  <span className="font-medium text-white text-base">Profile</span>
                 </Link>
               </div>
             </div>
 
             {/* Mobile Logout Button */}
             <div className="p-4 border-t" style={{ borderColor: `${BRAND_COLORS.softGrey}30` }}>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base"
-                style={{
-                  backgroundColor: BRAND_COLORS.white,
-                  color: BRAND_COLORS.brightRed,
-                  border: `1px solid ${BRAND_COLORS.brightRed}30`
-                }}
-              >
-                <HiLogout className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </button>
+              <div className="flex gap-2">
+                <Link
+                  href="/lms/Admin_Portal/profile"
+                  onClick={toggleMobileMenu}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base border border-white/30 text-white hover:bg-white/10"
+                >
+                  <HiUserCircle className="w-5 h-5" />
+                  <span className="font-medium">Profile</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base"
+                  style={{
+                    backgroundColor: BRAND_COLORS.white,
+                    color: BRAND_COLORS.brightRed,
+                    border: `1px solid ${BRAND_COLORS.brightRed}30`
+                  }}
+                >
+                  <HiLogout className="w-5 h-5" />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -5,21 +5,21 @@ import { useState, useEffect } from 'react';
 import { 
   HiBookOpen, 
   HiCheckCircle, 
-  HiClock, 
+ 
   HiArrowRight,
   HiClipboardCheck,
-  HiDocumentText,
+  
   HiStar,
   HiLightningBolt,
   HiPlay,
-  HiTrendingUp,
+  
   HiAcademicCap,
   HiOutlineRefresh,
   HiXCircle
 } from 'react-icons/hi';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
