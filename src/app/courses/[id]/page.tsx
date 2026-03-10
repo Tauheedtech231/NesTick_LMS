@@ -16,8 +16,13 @@ import {
   HiShoppingCart,
   HiCheck,
   HiTrash,
-  HiX
+  HiX,
+  HiMail,
+  HiExclamation,
+  HiShoppingBag,
+  HiStar
 } from "react-icons/hi";
+import { FaCartPlus } from "react-icons/fa";
 import { IoMdArrowDropright } from "react-icons/io";
 import { MdLanguage } from "react-icons/md";
 import { Loader2 } from "lucide-react";
@@ -35,6 +40,180 @@ const BRAND_COLORS = {
   darkGrey: '#1F2933',
   charcoal: '#111111',
   teal: '#1FB6CB'
+};
+
+// Email Popup Component
+interface EmailPopupProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (email: string) => void;
+  courseTitle: string;
+}
+
+const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle }: EmailPopupProps) => {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [isValid, setIsValid] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+      setEmail('');
+      setError('');
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    
+    if (value && !validateEmail(value)) {
+      setError('Please enter a valid email address');
+      setIsValid(false);
+    } else if (!value) {
+      setError('');
+      setIsValid(false);
+    } else {
+      setError('');
+      setIsValid(true);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateEmail(email)) {
+      onConfirm(email);
+    } else {
+      setError('Please enter a valid email address');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+    >
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Popup */}
+      <motion.div
+        initial={{ scale: 0.9, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.9, y: 20, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+      >
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6 text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm"
+          >
+            <HiMail className="w-8 h-8 text-white" />
+          </motion.div>
+          <h3 className="text-xl font-bold text-white mb-2">
+            Enter Your Email
+          </h3>
+          <p className="text-sm text-blue-100">
+            To add <span className="font-semibold">"{courseTitle}"</span> to cart
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={handleEmailChange}
+                placeholder="your@email.com"
+                className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 outline-none
+                  ${error 
+                    ? 'border-red-300 bg-red-50 focus:border-red-500' 
+                    : isValid 
+                      ? 'border-green-300 bg-green-50 focus:border-green-500'
+                      : 'border-gray-200 focus:border-[#B11217]'
+                  }`}
+                autoFocus
+              />
+              {isValid && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <HiCheck className="w-5 h-5 text-green-500" />
+                </motion.div>
+              )}
+            </div>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm text-red-500 mt-2 flex items-center"
+              >
+                <HiExclamation className="w-4 h-4 mr-1" />
+                {error}
+              </motion.p>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-all duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!isValid}
+              className={`flex-1 px-4 py-3 rounded-xl font-medium text-white transition-all duration-300
+                ${isValid 
+                  ? 'bg-gradient-to-r from-[#B11217] to-[#8f0e12] hover:shadow-lg hover:scale-105' 
+                  : 'bg-gray-300 cursor-not-allowed'
+                }`}
+            >
+              Confirm
+            </button>
+          </div>
+
+          {/* Privacy note */}
+          <p className="text-xs text-gray-400 text-center mt-4">
+            We'll use this email to manage your cart. No spam, ever.
+          </p>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 // Published Courses Data (fallback)
@@ -348,17 +527,27 @@ interface CartItem {
   created_at: string;
 }
 
+// Animation variants
+const slideInRightVariants = {
+  initial: { x: 300, opacity: 0 },
+  animate: { x: 0, opacity: 1 },
+  exit: { x: 300, opacity: 0 }
+};
+
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [inCart, setInCart] = useState(false);
   const [cartMessage, setCartMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   
-  // New state for cart items
+  // Email popup state
+  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  
+  // Cart states
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartLoading, setCartLoading] = useState(false);
   const [showCartSidebar, setShowCartSidebar] = useState(false);
@@ -366,26 +555,25 @@ export default function CourseDetailPage() {
 
   const courseId = params.id as string;
 
-  // Load user from localStorage
+  // Load saved email from localStorage
   useEffect(() => {
-    const userStr = localStorage.getItem('currentUser');
-    if (userStr) {
-      const userData = JSON.parse(userStr);
-      setUser(userData);
+    const savedEmail = localStorage.getItem('userEmail');
+    if (savedEmail) {
+      setUserEmail(savedEmail);
     }
   }, []);
 
-  // Check if course is already in cart when user and course are loaded
+  // Check if course is already in cart when email and course are loaded
   useEffect(() => {
-    if (user?.email && course) {
+    if (userEmail && course) {
       checkCartStatus();
-      loadCartItems(); // Load all cart items
+      loadCartItems();
     }
-  }, [user, course]);
+  }, [userEmail, course]);
 
   const checkCartStatus = async () => {
     try {
-      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(user.email)}`);
+      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(userEmail)}`);
       const result = await response.json();
       if (result.success) {
         const inCart = result.data.items.some((item: any) => item.course_id === courseId);
@@ -398,11 +586,11 @@ export default function CourseDetailPage() {
 
   // Load all cart items
   const loadCartItems = async () => {
-    if (!user?.email) return;
+    if (!userEmail) return;
     
     setCartLoading(true);
     try {
-      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(user.email)}`);
+      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(userEmail)}`);
       const result = await response.json();
       if (result.success) {
         setCartItems(result.data.items || []);
@@ -415,13 +603,13 @@ export default function CourseDetailPage() {
   };
 
   // Remove item from cart
-  const handleRemoveFromCart = async (cartId: string) => {
-    if (!user) return;
+  const handleRemoveFromCart = async (cartId: string, courseId: string) => {
+    if (!userEmail) return;
 
     setRemovingFromCart(cartId);
     try {
       const response = await fetch(
-        `/api/student/cart/remove?id=${cartId}&email=${encodeURIComponent(user.email)}`,
+        `/api/student/cart/remove?id=${cartId}&email=${encodeURIComponent(userEmail)}`,
         { method: 'DELETE' }
       );
 
@@ -432,8 +620,7 @@ export default function CourseDetailPage() {
         setCartItems(prev => prev.filter(item => item.id !== cartId));
         
         // If this was the current course, update inCart status
-        const removedItem = cartItems.find(item => item.id === cartId);
-        if (removedItem?.course_id === courseId) {
+        if (courseId === course?.id) {
           setInCart(false);
         }
 
@@ -518,63 +705,36 @@ export default function CourseDetailPage() {
       }
     } catch (error) {
       console.error('Error loading course:', error);
-      
-      // Try localStorage as last resort
-      try {
-        const allCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-        const localCourse = allCourses.find((c: any) => c.id === courseId);
-
-        if (localCourse) {
-          const dynamicContent = getDefaultContent(localCourse);
-          
-          const mappedCourse: Course = {
-            id: localCourse.id,
-            title: localCourse.title,
-            description: localCourse.description,
-            longDescription: localCourse.longDescription || localCourse.description,
-            duration: localCourse.duration || 'Flexible',
-            students: localCourse.studentCapacity ? `Max ${localCourse.studentCapacity} per batch` : 'Limited seats',
-            level: localCourse.level || 'All Levels',
-            schedule: dynamicContent.schedule,
-            location: dynamicContent.location,
-            language: dynamicContent.language,
-            trainingType: dynamicContent.trainingType,
-            deliveryMode: dynamicContent.deliveryMode,
-            startDate: 'Enroll now',
-            highlights: dynamicContent.highlights,
-            curriculum: dynamicContent.curriculum,
-            requirements: dynamicContent.requirements,
-            price: localCourse.price || 0,
-            priceFormatted: localCourse.priceFormatted || 'Contact for pricing',
-            originalPrice: localCourse.originalPrice,
-            originalPriceFormatted: localCourse.originalPriceFormatted,
-            savings: localCourse.savings,
-            courseImage: localCourse.courseImage || localCourse.image,
-            featured: localCourse.featured || false,
-            rating: localCourse.rating || 4.5,
-            reviews: localCourse.reviews || 0,
-            studentsTrained: localCourse.studentsTrained || 0,
-            category: localCourse.category
-          };
-          setCourse(mappedCourse);
-        } else {
-          setCourse(null);
-        }
-      } catch (localError) {
-        console.error('Error loading from localStorage:', localError);
-        setCourse(null);
-      }
+      setCourse(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddToCart = async () => {
-    if (!user) {
-      router.push('/lms/auth/login?type=student');
-      return;
+  const handleAddToCartClick = () => {
+    if (!course) return;
+    
+    if (userEmail) {
+      // Email already exists, directly add to cart
+      addToCart(userEmail);
+    } else {
+      // Open email popup
+      setIsEmailPopupOpen(true);
     }
+  };
 
+  const handleEmailConfirm = async (email: string) => {
+    setIsEmailPopupOpen(false);
+    
+    // Save email for future use
+    setUserEmail(email);
+    localStorage.setItem('userEmail', email);
+    
+    // Add to cart
+    await addToCart(email);
+  };
+
+  const addToCart = async (email: string) => {
     if (!course) return;
 
     setAddingToCart(true);
@@ -585,7 +745,7 @@ export default function CourseDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentEmail: user.email,
+          studentEmail: email,
           courseId: course.id,
           courseTitle: course.title,
           coursePrice: course.price || 0
@@ -632,7 +792,6 @@ export default function CourseDetailPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    // Fix NaN issue by ensuring amount is a number
     const validAmount = Number(amount) || 0;
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
@@ -640,6 +799,34 @@ export default function CourseDetailPage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(validAmount).replace('PKR', 'Rs');
+  };
+
+  // Format date properly
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Recently added';
+      }
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Recently added';
+    }
+  };
+
+  // Calculate cart total
+  const cartTotal = cartItems.reduce((sum, item) => sum + (Number(item.course_price) || 0), 0);
+
+  // FIXED: Handle cart bucket click - make sure it opens the sidebar
+  const handleCartBucketClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Cart bucket clicked'); // Debug log
+    setShowCartSidebar(true);
   };
 
   if (loading) {
@@ -669,40 +856,237 @@ export default function CourseDetailPage() {
   // Determine image source
   const courseImageUrl = course.courseImage || course.image || '/placeholder-course.jpg';
 
-  // Calculate cart total - FIXED NaN ISSUE
-  const cartTotal = cartItems.reduce((sum, item) => {
-    const price = Number(item.course_price) || 0;
-    return sum + price;
-  }, 0);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cart Message Alert */}
-        <AnimatePresence>
-          {cartMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
-                cartMessage.type === 'success' 
-                  ? 'bg-green-50 border border-green-200 text-green-700' 
-                  : 'bg-red-50 border border-red-200 text-red-700'
-              }`}
-            >
-              {cartMessage.type === 'success' ? (
-                <HiCheck className="w-5 h-5" />
-              ) : (
-                <HiCheckCircle className="w-5 h-5" />
-              )}
-              <p>{cartMessage.text}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Email Popup */}
+      <AnimatePresence mode="wait">
+        {isEmailPopupOpen && course && (
+          <EmailPopup
+            isOpen={isEmailPopupOpen}
+            onClose={() => setIsEmailPopupOpen(false)}
+            onConfirm={handleEmailConfirm}
+            courseTitle={course.title}
+          />
+        )}
+      </AnimatePresence>
 
-        {/* Back Button and Cart Icon */}
-        <div className="mb-8 flex items-center justify-between">
+      {/* Cart Message Alert */}
+      <AnimatePresence>
+        {cartMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[70] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 ${
+              cartMessage.type === 'success' 
+                ? 'bg-green-50 text-green-800 border border-green-200' 
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            {cartMessage.type === 'success' ? (
+              <HiCheckCircle className="w-5 h-5 text-green-500" />
+            ) : (
+              <HiExclamation className="w-5 h-5 text-red-500" />
+            )}
+            <span className="font-medium">{cartMessage.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cart Bucket - Right Side - FIXED: Added proper click handler and z-index */}
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[80]">
+        <motion.button
+          onClick={handleCartBucketClick}
+          className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 group cursor-pointer"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Open shopping cart"
+        >
+          <FaCartPlus className="w-6 h-6" />
+          
+          {/* Cart Count Badge */}
+          {cartItems.length > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-white text-[#B11217] text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg border-2 border-[#B11217]"
+            >
+              {cartItems.length > 99 ? '99+' : cartItems.length}
+            </motion.span>
+          )}
+        </motion.button>
+      </div>
+
+      {/* Cart Sidebar - FIXED: Increased z-index to be above everything */}
+      <AnimatePresence>
+        {showCartSidebar && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCartSidebar(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[85]"
+            />
+            
+            {/* Cart Sidebar */}
+            <motion.div
+              variants={slideInRightVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[90] overflow-y-auto"
+            >
+              {/* Sidebar Header */}
+              <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/10 rounded-lg">
+                      <HiShoppingBag className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">
+                        Your Cart
+                      </h2>
+                      <p className="text-sm text-white/80">
+                        {cartItems.length} {cartItems.length === 1 ? 'Course' : 'Courses'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCartSidebar(false)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <HiX className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cart Items */}
+              <div className="p-6">
+                {cartLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND_COLORS.deepRed }} />
+                  </div>
+                ) : cartItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <FaCartPlus className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Your cart is empty
+                    </h3>
+                    <p className="text-gray-500 mb-6">
+                      Start adding courses to get started
+                    </p>
+                    <button
+                      onClick={() => setShowCartSidebar(false)}
+                      className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
+                    >
+                      Continue Shopping
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4 mb-6">
+                      {cartItems.map((item) => {
+                        const isCurrentCourse = item.course_id === courseId;
+                        
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className={`bg-gray-50 rounded-xl p-4 border ${
+                              isCurrentCourse ? 'border-[#B11217] border-2' : 'border-gray-200'
+                            } hover:shadow-md transition-all`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">
+                                    {item.course_title}
+                                  </h3>
+                                  {isCurrentCourse && (
+                                    <span className="px-2 py-0.5 bg-[#B11217] text-white text-xs rounded-full">
+                                      Current
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 mb-2">
+                                  Added {formatDate(item.created_at)}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-[#B11217] text-sm">
+                                    {formatCurrency(item.course_price)}
+                                  </span>
+                                  <button
+                                    onClick={() => handleRemoveFromCart(item.id, item.course_id)}
+                                    disabled={removingFromCart === item.id}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    {removingFromCart === item.id ? (
+                                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <HiTrash className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Cart Summary */}
+                    <div className="border-t border-gray-200 pt-6">
+                      <div className="space-y-3 mb-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Subtotal</span>
+                          <span className="font-semibold text-gray-900">
+                            {formatCurrency(cartTotal)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Total Items</span>
+                          <span className="font-semibold text-gray-900">{cartItems.length}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => {
+                            setShowCartSidebar(false);
+                            router.push('/checkout');
+                          }}
+                          className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
+                        >
+                          Proceed to Checkout
+                        </button>
+                        <button
+                          onClick={() => setShowCartSidebar(false)}
+                          className="w-full py-3 rounded-lg font-medium transition-all border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
+                        >
+                          Continue Shopping
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <div className="mb-8">
           <Link
             href="/courses"
             className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
@@ -710,178 +1094,7 @@ export default function CourseDetailPage() {
             <HiArrowLeft className="w-5 h-5 mr-2" />
             Back to Courses
           </Link>
-
-          {/* Cart Icon with Count */}
-          {user && (
-            <button
-              onClick={() => setShowCartSidebar(true)}
-              className="relative p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all group"
-            >
-              <HiShoppingCart className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#B11217] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartItems.length}
-                </span>
-              )}
-            </button>
-          )}
         </div>
-
-        {/* Cart Sidebar - Slide from top with single close button */}
-        <AnimatePresence>
-          {showCartSidebar && user && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowCartSidebar(false)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              />
-              
-              {/* Sidebar - Slides from top */}
-              <motion.div
-                initial={{ opacity: 0, y: -100 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -100 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed top-0 left-0 right-0 bg-white shadow-2xl z-50 overflow-y-auto"
-                style={{ maxHeight: '80vh', margin: '0 auto', width: '90%', maxWidth: '600px', borderRadius: '0 0 20px 20px' }}
-              >
-                {/* Sidebar Header with Theme Colors and Single Close Button */}
-                <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6 rounded-t-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/10 rounded-lg">
-                        <HiShoppingCart className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-white">
-                          Your Cart
-                        </h2>
-                        <p className="text-sm text-white/80">
-                          {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowCartSidebar(false)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors group"
-                    >
-                      <HiX className="w-5 h-5 text-white/80 group-hover:text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Cart Items */}
-                <div className="p-6">
-                  {cartLoading ? (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND_COLORS.deepRed }} />
-                    </div>
-                  ) : cartItems.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <HiShoppingCart className="w-12 h-12" style={{ color: BRAND_COLORS.darkNavy }} />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
-                        Your cart is empty
-                      </h3>
-                      <p className="text-gray-500 mb-6">Start adding courses to get started</p>
-                      <button
-                        onClick={() => setShowCartSidebar(false)}
-                        className="px-6 py-2 rounded-lg text-white font-medium transition-all hover:scale-105"
-                        style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                      >
-                        Continue Shopping
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="space-y-4 mb-6">
-                        {cartItems.map((item) => (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-all"
-                          >
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                                {item.course_title}
-                              </h3>
-                              <p className="text-lg font-bold" style={{ color: BRAND_COLORS.deepRed }}>
-                                {formatCurrency(item.course_price)}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Added {new Date(item.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveFromCart(item.id)}
-                              disabled={removingFromCart === item.id}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove from cart"
-                            >
-                              {removingFromCart === item.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <HiTrash className="w-4 h-4" />
-                              )}
-                            </button>
-                          </motion.div>
-                        ))}
-                      </div>
-
-                      {/* Cart Summary */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <div className="space-y-3 mb-4">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600">Subtotal</span>
-                            <span className="font-semibold text-gray-900">
-                              {formatCurrency(cartTotal)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600">Total Items</span>
-                            <span className="font-semibold text-gray-900">{cartItems.length}</span>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="space-y-3">
-                          <button
-                            onClick={() => {
-                              setShowCartSidebar(false);
-                              router.push('/checkout');
-                            }}
-                            className="w-full py-3 rounded-lg text-white font-medium transition-all hover:scale-105 hover:shadow-lg"
-                            style={{ backgroundColor: BRAND_COLORS.deepRed }}
-                          >
-                            Proceed to Checkout
-                          </button>
-                          <button
-                            onClick={() => setShowCartSidebar(false)}
-                            className="w-full py-3 rounded-lg font-medium transition-all border-2"
-                            style={{ 
-                              borderColor: BRAND_COLORS.darkRoyalBlue,
-                              color: BRAND_COLORS.darkRoyalBlue,
-                              backgroundColor: 'white'
-                            }}
-                          >
-                            Continue Shopping
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
 
         {/* Course Hero Section */}
         <motion.section
@@ -898,6 +1111,14 @@ export default function CourseDetailPage() {
                 alt={course.title}
                 className="w-full h-64 md:h-full object-cover"
               />
+              {course.featured && (
+                <div className="absolute top-4 left-4">
+                  <div className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-semibold shadow-lg flex items-center">
+                    <HiStar className="w-3 h-3 mr-1" />
+                    Featured
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Course Info */}
@@ -981,7 +1202,7 @@ export default function CourseDetailPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={handleAddToCart}
+                        onClick={handleAddToCartClick}
                         disabled={addingToCart}
                         className="flex-1 md:flex-none px-6 py-3 rounded-lg font-bold text-base shadow-md transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50"
                         style={{
