@@ -50,7 +50,7 @@ export default function HeroSection() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null); // Add this line
 
   useEffect(() => {
     if (isAutoPlaying && !isHovered) {
@@ -75,119 +75,42 @@ export default function HeroSection() {
     setCurrentSlide(index);
   };
 
-  // Optimized animation variants
-  const slideVariants: Variants = {
+  // Simplified animation variants - lighter and more performant
+  const slideVariants:Variants = {
     enter: (direction: number) => ({
-      scale: 1.1,
       opacity: 0,
     }),
     center: {
-      scale: 1,
       opacity: 1,
       transition: {
-        duration: 1.2,
-        ease: [0.25, 0.1, 0.25, 1],
+        duration: 0.6,
+        ease: "easeInOut",
       },
     },
     exit: (direction: number) => ({
-      scale: 1.1,
       opacity: 0,
       transition: {
-        duration: 1,
-        ease: [0.25, 0.1, 0.25, 1],
+        duration: 0.5,
+        ease: "easeInOut",
       },
     }),
   };
 
   const textVariants: Variants = {
-    hidden: { 
-      y: 30, 
-      opacity: 0,
-      filter: "blur(10px)"
-    },
+    hidden: { y: 20, opacity: 0 },
     visible: (delay: number) => ({
       y: 0,
       opacity: 1,
-      filter: "blur(0px)",
       transition: {
-        duration: 0.8,
-        delay: delay * 0.15,
-        ease: [0.25, 0.1, 0.25, 1],
+        duration: 0.5,
+        delay: delay * 0.1,
+        ease: "easeOut",
       },
     }),
     exit: {
-      y: -20,
       opacity: 0,
-      filter: "blur(10px)",
-      transition: {
-        duration: 0.5,
-        ease: [0.25, 0.1, 0.25, 1],
-      },
-    },
-  };
-
-  const buttonVariants: Variants = {
-    hidden: { 
-      scale: 0.8, 
-      opacity: 0,
-      y: 20
-    },
-    visible: (delay: number) => ({
-      scale: 1,
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15,
-        delay: delay * 0.1,
-      },
-    }),
-    hover: {
-      scale: 1.05,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10,
-      },
-    },
-    tap: {
-      scale: 0.95,
-    },
-  };
-
-  const overlayVariants: Variants = {
-    initial: { opacity: 0.4 },
-    animate: { 
-      opacity: [0.4, 0.45, 0.4],
-      transition: {
-        duration: 5,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  };
-
-  const dotVariants: Variants = {
-    initial: { scale: 1 },
-    active: {
-      scale: [1, 1.3, 1],
       transition: {
         duration: 0.3,
-        ease: "easeInOut",
-      },
-    },
-  };
-
-  const pulseVariants: Variants = {
-    initial: { scale: 1, opacity: 0.5 },
-    animate: {
-      scale: [1, 2, 2.5],
-      opacity: [0.5, 0.3, 0],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeOut",
       },
     },
   };
@@ -196,15 +119,6 @@ export default function HeroSection() {
     <section 
       ref={sectionRef}
       className="relative w-full h-screen overflow-hidden"
-      style={{
-        margin: 0,
-        padding: 0,
-        width: '100%',
-        maxWidth: '100%',
-        position: 'relative',
-        left: 0,
-        right: 0,
-      }}
       onMouseEnter={() => {
         pauseAutoPlay();
         setIsHovered(true);
@@ -214,7 +128,7 @@ export default function HeroSection() {
         setIsHovered(false);
       }}
     >
-      {/* Background Images with Ken Burns Effect */}
+      {/* Background Images with simple fade */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={currentSlide}
@@ -234,229 +148,125 @@ export default function HeroSection() {
             sizes="100vw"
           />
           
-          {/* Enhanced gradient overlay for better text readability */}
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50"
-            variants={overlayVariants}
-            initial="initial"
-            animate="animate"
-          />
+          {/* Simple gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
         </motion.div>
       </AnimatePresence>
 
-      {/* Subtle particle effect */}
-      <motion.div 
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        animate={{
-          backgroundPosition: ['0% 0%', '100% 100%'],
-        }}
-        transition={{
-          duration: 40,
-          repeat: Infinity,
-          repeatType: 'reverse',
-          ease: 'linear',
-        }}
-        style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0)',
-          backgroundSize: '80px 80px',
-        }}
-      />
-
-      {/* Main Content Container - Centered */}
-      <div className="relative mt-10 w-full h-full flex items-center justify-center">
-        <div className="w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-center min-h-[600px]">
-              {/* Text Content - Centered */}
-              <div className="text-white w-full max-w-4xl mx-auto text-center">
-                <AnimatePresence mode="wait">
+      {/* Main Content - Centered */}
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[80vh]">
+            <div className="text-white w-full max-w-4xl mx-auto text-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Subtitle */}
                   <motion.div
-                    key={currentSlide}
-                    className="w-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
+                    custom={0}
+                    variants={textVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="flex items-center justify-center gap-2 mb-4"
                   >
-                    {/* Subtitle with centered icon */}
-                    <motion.div
-                      custom={0}
-                      variants={textVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="flex items-center justify-center gap-2 mb-4 md:mb-5"
-                    >
-                      <motion.div 
-                        className="w-1 h-6 bg-[#B11217] rounded-full"
-                        animate={{ 
-                          height: [20, 24, 20],
-                          opacity: [0.8, 1, 0.8]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      />
-                      <p className="text-xs sm:text-sm md:text-base font-medium text-[#B11217] uppercase tracking-[0.2em]">
-                        {slides[currentSlide].subtitle}
-                      </p>
-                      <motion.div 
-                        className="w-1 h-6 bg-[#B11217] rounded-full"
-                        animate={{ 
-                          height: [20, 24, 20],
-                          opacity: [0.8, 1, 0.8]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                          delay: 0.5
-                        }}
-                      />
-                    </motion.div>
-
-                    {/* Title */}
-                    <motion.h1
-                      custom={1}
-                      variants={textVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight text-center"
-                    >
-                      {slides[currentSlide].title}
-                    </motion.h1>
-
-                    {/* Description */}
-                    <motion.p
-                      custom={2}
-                      variants={textVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="text-base sm:text-lg md:text-xl text-gray-200 mb-8 md:mb-10 leading-relaxed max-w-3xl mx-auto"
-                    >
-                      {slides[currentSlide].description}
-                    </motion.p>
-
-                    {/* CTA Buttons - Centered with smooth animations */}
-                    <motion.div
-                      custom={3}
-                      variants={textVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      className="flex flex-wrap gap-4 md:gap-6 justify-center"
-                    >
-                      <motion.div
-                        variants={buttonVariants}
-                        initial="hidden"
-                        animate="visible"
-                        whileHover="hover"
-                        whileTap="tap"
-                        custom={3}
-                      >
-                        <Link
-                          href={slides[currentSlide].ctaLink}
-                          className="group relative px-6 py-3 md:px-8 md:py-4 bg-[#B11217] text-white font-semibold rounded-lg overflow-hidden shadow-lg hover:shadow-xl text-sm md:text-base block"
-                        >
-                          <span className="relative z-10">{slides[currentSlide].cta}</span>
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-[#8e0e13] to-[#B11217]"
-                            initial={{ x: '-100%' }}
-                            whileHover={{ x: 0 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
-                          />
-                        </Link>
-                      </motion.div>
-
-                      <motion.div
-                        variants={buttonVariants}
-                        initial="hidden"
-                        animate="visible"
-                        whileHover="hover"
-                        whileTap="tap"
-                        custom={4}
-                      >
-                        <Link
-                          href="/about"
-                          className="px-6 py-3 md:px-8 md:py-4 bg-white/10 backdrop-blur-md hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-all duration-300 shadow-lg hover:shadow-xl text-sm md:text-base block"
-                        >
-                          Learn More
-                        </Link>
-                      </motion.div>
-                    </motion.div>
+                    <div className="w-1 h-5 bg-[#B11217] rounded-full" />
+                    <p className="text-xs sm:text-sm font-medium text-[#B11217] uppercase tracking-wider">
+                      {slides[currentSlide].subtitle}
+                    </p>
+                    <div className="w-1 h-5 bg-[#B11217] rounded-full" />
                   </motion.div>
-                </AnimatePresence>
-              </div>
+
+                  {/* Title */}
+                  <motion.h1
+                    custom={1}
+                    variants={textVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight text-center"
+                  >
+                    {slides[currentSlide].title}
+                  </motion.h1>
+
+                  {/* Description */}
+                  <motion.p
+                    custom={2}
+                    variants={textVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="text-sm sm:text-base md:text-lg text-gray-200 mb-6 leading-relaxed max-w-2xl mx-auto"
+                  >
+                    {slides[currentSlide].description}
+                  </motion.p>
+
+                  {/* CTA Buttons */}
+                  <motion.div
+                    custom={3}
+                    variants={textVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="flex flex-wrap gap-3 justify-center"
+                  >
+                    <Link
+                      href={slides[currentSlide].ctaLink}
+                      className="px-5 py-2.5 md:px-6 md:py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-colors duration-300 text-sm md:text-base shadow-lg"
+                    >
+                      {slides[currentSlide].cta}
+                    </Link>
+
+                    <Link
+                      href="/about"
+                      className="px-5 py-2.5 md:px-6 md:py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-colors duration-300 text-sm md:text-base"
+                    >
+                      Learn More
+                    </Link>
+                  </motion.div>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Dots - Centered with smooth animations */}
-      <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex gap-4 md:gap-5">
-        {slides.map((_, index) => (
-          <motion.button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className="group relative py-2"
-            aria-label={`Go to slide ${index + 1}`}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <motion.div
-              variants={dotVariants}
-              initial="initial"
-              animate={currentSlide === index ? "active" : "initial"}
-              className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
-                currentSlide === index 
-                  ? 'bg-[#B11217]' 
-                  : 'bg-white/50 group-hover:bg-white/80'
-              }`}
-            />
-            {currentSlide === index && (
-              <motion.div
-                variants={pulseVariants}
-                initial="initial"
-                animate="animate"
-                className="absolute inset-0 rounded-full border border-[#B11217]"
+      {/* Navigation Dots - Simplified */}
+      <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center">
+        <div className="flex gap-2 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className="relative p-1"
+              aria-label={`Go to slide ${index + 1}`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  currentSlide === index 
+                    ? 'bg-[#B11217] w-4' 
+                    : 'bg-white/50 hover:bg-white/80'
+                }`}
               />
-            )}
-          </motion.button>
-        ))}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Scroll Indicator - Right side */}
+      {/* Scroll Indicator - Simplified */}
       <motion.div
-        className="absolute bottom-8 right-8 z-20 hidden lg:block"
-        animate={{
-          y: [0, 10, 0],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
+        className="absolute bottom-6 right-6 z-20 hidden lg:block"
+        animate={{ y: [0, 5, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
       >
-        <div className="flex flex-col items-center gap-2 text-white/60">
-          <motion.span 
-            className="text-xs uppercase tracking-wider"
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Scroll
-          </motion.span>
-          <motion.div 
-            className="w-0.5 h-8 bg-gradient-to-b from-white/60 to-transparent"
-            animate={{ 
-              height: [20, 32, 20],
-              opacity: [0.6, 1, 0.6]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+        <div className="flex flex-col items-center gap-1 text-white/60">
+          <span className="text-[10px] uppercase tracking-wider">Scroll</span>
+          <div className="w-0.5 h-6 bg-gradient-to-b from-white to-transparent" />
         </div>
       </motion.div>
     </section>
