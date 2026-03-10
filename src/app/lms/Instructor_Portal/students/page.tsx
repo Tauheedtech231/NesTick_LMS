@@ -3,29 +3,29 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+
 import {
   HiUserGroup,
-  HiAcademicCap,
+ 
   HiCheckCircle,
-  HiClock,
+
   HiRefresh,
   HiSearch,
-  HiFilter,
+
   HiChevronDown,
   HiChevronUp,
-  HiDownload,
+
   HiMail,
   HiPhone,
-  HiCalendar,
+  
   HiBookOpen,
   HiStar,
   HiChartBar,
   HiXCircle,
-  HiEye
+  
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -247,28 +247,37 @@ export default function InstructorStudentsProgressPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <HiUserGroup className="w-8 h-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold mb-2">Students Progress</h1>
-                <p className="text-indigo-100">Track your students' learning journey</p>
-              </div>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
-            >
-              <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+     <div className="mb-6">
+  <div 
+    className="rounded-xl p-6 text-white"
+    style={{ 
+      background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue} 0%, ${BRAND_COLORS.darkNavy} 100%)`
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div 
+          className="p-3 rounded-xl"
+          style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+        >
+          <HiUserGroup className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Students Progress</h1>
+          <p style={{ color: `${BRAND_COLORS.white}CC` }}>Track your students' learning journey</p>
         </div>
       </div>
+      <button
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+        style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+      >
+        <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Summary Stats Cards */}
       {summary && (

@@ -1,8 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, getConnection } from '@/lib/db';
-import { hashPassword, generateRandomPassword } from '@/lib/password';
+import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-/* eslint-disable */
+import nodemailer from 'nodemailer';
+
+// Email transporter setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'tauheeddeveloper13@gmail.com',
+    pass: process.env.EMAIL_PASS || 'ramo reiv jlsy ogsg'
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Generate random password (BACKEND SIRF)
+function generateRandomPassword(length: number = 10): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+// Send email function
+async function sendCredentialsEmail(instructorData: any, plainPassword: string) {
+  const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/lms/auth/login?type=instructor`;
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'tauheeddeveloper13@gmail.com',
+    to: instructorData.email,
+    subject: 'Welcome to LMS - Your Instructor Login Credentials',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #1E3A8A; color: white; padding: 20px; text-align: center; }
+          .content { padding: 30px; background-color: #f9f9f9; }
+          .credentials { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .password-box { background-color: #f0f0f0; padding: 15px; font-family: monospace; font-size: 18px; text-align: center; }
+          .footer { text-align: center; padding: 20px; color: #666; }
+          .button { background-color: #1E3A8A; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to LMS Platform</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${instructorData.name},</h2>
+            <p>You have been registered as an instructor on our LMS platform. Below are your login credentials:</p>
+            
+            <div class="credentials">
+              <p><strong>Email:</strong> ${instructorData.email}</p>
+              <div class="password-box">
+                <strong>Password:</strong> ${plainPassword}
+              </div>
+              <p><small>Please change your password after first login.</small></p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginUrl}" class="button">Login to Your Account</a>
+            </div>
+
+            <h3>Course Assignment:</h3>
+            <p><strong>Course:</strong> ${instructorData.courseDetails?.title || 'Not Assigned'}</p>
+            
+            <hr style="margin: 30px 0;">
+            
+            <p><strong>Important Security Notes:</strong></p>
+            <ul>
+              <li>Keep your password secure and don't share it with anyone</li>
+              <li>Use a strong password for better security</li>
+              <li>Contact admin if you face any issues</li>
+            </ul>
+          </div>
+          <div class="footer">
+            <p>© 2024 LMS Platform. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  return await transporter.sendMail(mailOptions);
+}
+
 export async function POST(request: NextRequest) {
   const connection = await getConnection();
   
@@ -12,6 +103,10 @@ export async function POST(request: NextRequest) {
       name, email, phone, specialization, experience, 
       qualification, bio, status, rating, courseId 
     } = body;
+
+    console.log("\n========== ADD INSTRUCTOR ==========");
+    console.log("Name:", name);
+    console.log("Email:", email);
 
     // Validation
     if (!name || !email) {
@@ -40,8 +135,12 @@ export async function POST(request: NextRequest) {
     // Generate IDs
     const instructorId = uuidv4();
     const credentialsId = uuidv4();
-    const password = generateRandomPassword();
-    const passwordHash = await hashPassword(password);
+    
+    // ✅ BACKEND GENERATES PASSWORD (SIRF YAHAN)
+    const plainPassword = generateRandomPassword(10);
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    console.log("✅ Password generated (backend):", plainPassword);
 
     // Get course details if courseId provided
     let courseDetails = null;
@@ -72,38 +171,61 @@ export async function POST(request: NextRequest) {
       `INSERT INTO instructor_credentials (
         id, instructor_id, email, password_hash, role, status
       ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [credentialsId, instructorId, email, passwordHash, 'instructor', 'active']
+      [credentialsId, instructorId, email, hashedPassword, 'instructor', 'active']
     );
 
     // Commit transaction
     await connection.commit();
 
-    // Return success with instructor data and plain password (for email sending)
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: instructorId,
-        name,
-        email,
-        phone,
-        specialization,
-        experience,
-        qualification,
-        bio,
-        status,
-        rating,
-        courseId,
-        courseDetails,
-        password, // Send plain password for email
-        credentialsId
-      },
-      message: 'Instructor added successfully'
-    });
+    // Prepare instructor data for email
+    const instructorData = {
+      id: instructorId,
+      name,
+      email,
+      phone,
+      specialization,
+      experience,
+      qualification,
+      bio,
+      status,
+      rating,
+      courseId,
+      courseDetails
+    };
+
+    // Send email with credentials
+    try {
+      await sendCredentialsEmail(instructorData, plainPassword);
+      console.log("✅ Credentials email sent successfully");
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          ...instructorData,
+          password: plainPassword // Send to frontend for display
+        },
+        message: 'Instructor added successfully and email sent'
+      });
+    } catch (emailError) {
+      console.error("❌ Email sending failed:", emailError);
+      
+      // Email failed but instructor added
+      return NextResponse.json({
+        success: true,
+        data: {
+          ...instructorData,
+          password: plainPassword,
+          emailSent: false
+        },
+        message: 'Instructor added but email delivery failed',
+        warning: 'Email could not be sent. Please save password manually.'
+      });
+    }
 
   } catch (error: any) {
     // Rollback transaction on error
     await connection.rollback();
-    console.error('Error adding instructor:', error);
+    console.error('❌ Error adding instructor:', error);
     
     return NextResponse.json(
       { 

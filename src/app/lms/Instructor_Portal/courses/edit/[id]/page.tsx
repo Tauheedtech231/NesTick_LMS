@@ -1,4 +1,4 @@
-// lms/Instructor_Portal/courses/edit/[id]/page.tsx
+// app/lms/Instructor_Portal/courses/edit/[id]/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -27,6 +27,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 /* eslint-disable */
+
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -39,11 +40,17 @@ const BRAND_COLORS = {
   brightRed: '#D32F2F'
 }
 
+// ============ QUIZ TYPES ============
+enum QuestionType {
+  MCQ = 'mcq',
+  TEXT = 'text'
+}
+
 interface Course {
   id: string;
   title: string;
   description: string;
-  studentCapacity: number;
+ 
   category: string;
   status: 'draft' | 'published';
   instructorId: string;
@@ -83,6 +90,7 @@ interface QuizQuestion {
   question: string;
   options: string[];
   correctAnswer: number;
+  questionType: QuestionType;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -128,6 +136,10 @@ export default function EditCoursePage() {
   const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
   const [updatingSlide, setUpdatingSlide] = useState<string | null>(null);
   
+  // Edit slide states
+  const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
+  const [editingSlideTitle, setEditingSlideTitle] = useState('');
+  
   const [activeTab, setActiveTab] = useState<'details' | 'slides' | 'content' | 'assignments'>('details');
   const [instructor, setInstructor] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +157,7 @@ export default function EditCoursePage() {
   // Content - Files
   const [slideContents, setSlideContents] = useState<Record<string, SlideFile[]>>({});
   
-  // Quiz Questions - Per Slide
+  // Quiz Questions - Per Slide (UPDATED with questionType)
   const [quizQuestions, setQuizQuestions] = useState<Record<string, QuizQuestion[]>>({});
   
   // Upload states
@@ -177,11 +189,12 @@ export default function EditCoursePage() {
   } | null>(null);
   const [uploadingAssignment, setUploadingAssignment] = useState(false);
   
-  // Quiz creation
+  // Quiz creation (UPDATED with questionType)
   const [currentQuizQuestion, setCurrentQuizQuestion] = useState({
     question: '',
     options: ['', '', '', ''],
-    correctAnswer: 0
+    correctAnswer: 0,
+    questionType: QuestionType.MCQ
   });
 
   // Mount effect for hydration
@@ -253,7 +266,7 @@ export default function EditCoursePage() {
         setEditedDetails({
           title: courseData.title,
           description: courseData.description,
-          studentCapacity: courseData.student_capacity || courseData.studentCapacity,
+          
           category: courseData.category,
           status: courseData.status,
           duration: courseData.duration,
@@ -282,15 +295,16 @@ export default function EditCoursePage() {
             }));
           }
           
-          // Load quiz questions
+          // Load quiz questions (UPDATED with questionType)
           if (slide.quizQuestions && Array.isArray(slide.quizQuestions)) {
             quizMap[slide.id] = slide.quizQuestions.map((q: any) => ({
               id: q.id,
               slideId: slide.id,
               courseId: courseId,
               question: q.question,
-              options: q.options,
-              correctAnswer: q.correctAnswer,
+              options: q.options || [],
+              correctAnswer: q.correctAnswer ?? (q.options?.length > 0 ? 0 : -1),
+              questionType: q.questionType || (q.options?.length > 0 ? QuestionType.MCQ : QuestionType.TEXT),
               createdAt: q.created_at || q.createdAt,
               updatedAt: q.updated_at || q.updatedAt
             }));
@@ -337,13 +351,19 @@ export default function EditCoursePage() {
         return;
       }
 
-      // Prepare slides data with quiz questions
+      // Prepare slides data with quiz questions (UPDATED with questionType)
       const slidesData = slides.map(slide => ({
         id: slide.id,
         slideNumber: slide.slideNumber,
         title: slide.title,
         files: slideContents[slide.id] || [],
-        quizQuestions: quizQuestions[slide.id] || []
+        quizQuestions: (quizQuestions[slide.id] || []).map(q => ({
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          questionType: q.questionType
+        }))
       }));
 
       // Prepare assignments data
@@ -364,7 +384,7 @@ export default function EditCoursePage() {
         course: {
           title: editedDetails.title,
           description: editedDetails.description,
-          studentCapacity: editedDetails.studentCapacity,
+
           category: editedDetails.category,
           status: editedDetails.status,
           duration: editedDetails.duration,
@@ -401,9 +421,8 @@ export default function EditCoursePage() {
     }
   };
 
-  // ============ ✅ UPDATED SLIDE FUNCTIONS WITH APIS ============
+  // ============ SLIDE FUNCTIONS ============
   
-  // Add Slide with API
   const handleAddSlide = async () => {
     setAddingSlide(true);
     setError(null);
@@ -431,12 +450,9 @@ export default function EditCoursePage() {
       }
 
       if (result.success) {
-        // Add the slide from API response (which has proper DB-generated timestamps)
         setSlides(prev => [...prev, result.data]);
         setSelectedSlideId(result.data.id);
         showSuccess('✅ Slide added successfully!');
-        
-        console.log('✅ Slide added:', result.data);
       }
     } catch (error: any) {
       console.error('❌ Error adding slide:', error);
@@ -446,14 +462,12 @@ export default function EditCoursePage() {
     }
   };
 
-  // Update Slide Title with API
   const handleEditSlideTitle = async (slideId: string, newTitle: string) => {
     if (!newTitle.trim()) {
       showError('Slide title cannot be empty');
       return;
     }
 
-    // Optimistic update
     const previousSlides = [...slides];
     const updatedSlides = slides.map(slide => 
       slide.id === slideId ? { ...slide, title: newTitle, updatedAt: new Date().toISOString() } : slide
@@ -462,8 +476,6 @@ export default function EditCoursePage() {
     setUpdatingSlide(slideId);
 
     try {
-      console.log('📤 Updating slide title:', { slideId, title: newTitle });
-
       const response = await fetch(`/api/instructors/slides/update/${slideId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -478,19 +490,17 @@ export default function EditCoursePage() {
 
       if (result.success) {
         showSuccess('✅ Slide title updated!');
-        console.log('✅ Slide updated:', result.data);
       }
     } catch (error: any) {
-      // Revert on error
       setSlides(previousSlides);
       showError(error.message || 'Failed to update slide');
-      console.error('❌ Error updating slide:', error);
     } finally {
       setUpdatingSlide(null);
+      setEditingSlideId(null);
+      setEditingSlideTitle('');
     }
   };
 
-  // Delete Slide with API
   const handleRemoveSlide = async (slideId: string) => {
     if (!confirm('Are you sure you want to delete this slide? All content, quizzes, and assignments will be permanently removed.')) {
       return;
@@ -513,7 +523,6 @@ export default function EditCoursePage() {
       if (result.success) {
         const updatedSlides = slides.filter(s => s.id !== slideId);
         
-        // Reorder remaining slides
         const reorderedSlides = updatedSlides.map((slide, index) => ({
           ...slide,
           slideNumber: index + 1,
@@ -527,7 +536,7 @@ export default function EditCoursePage() {
           setSelectedSlideId(reorderedSlides[0]?.id || '');
         }
         
-        // Remove associated content from state
+        // Remove associated content
         const newContents = { ...slideContents };
         delete newContents[slideId];
         setSlideContents(newContents);
@@ -546,6 +555,16 @@ export default function EditCoursePage() {
     } finally {
       setDeletingSlide(null);
     }
+  };
+
+  const handleStartEditSlide = (slideId: string, currentTitle: string) => {
+    setEditingSlideId(slideId);
+    setEditingSlideTitle(currentTitle);
+  };
+
+  const handleCancelEditSlide = () => {
+    setEditingSlideId(null);
+    setEditingSlideTitle('');
   };
 
   // ============ FILE UPLOAD FUNCTIONS ============
@@ -622,16 +641,30 @@ export default function EditCoursePage() {
     }
   };
 
-  // ============ QUIZ FUNCTIONS ============
+  // ============ UPDATED QUIZ FUNCTIONS with MCQ & TEXT support ============
+  
+  // Handle question type change
+  const handleQuestionTypeChange = (type: QuestionType) => {
+    setCurrentQuizQuestion({
+      question: currentQuizQuestion.question,
+      options: type === QuestionType.MCQ ? ['', '', '', ''] : [],
+      correctAnswer: type === QuestionType.MCQ ? 0 : -1,
+      questionType: type
+    });
+  };
+
   const handleAddQuestion = (slideId: string) => {
     if (!currentQuizQuestion.question.trim()) {
       showError('Please enter a question');
       return;
     }
-    
-    if (currentQuizQuestion.options.some(opt => !opt.trim())) {
-      showError('Please fill all options');
-      return;
+
+    // Validate based on question type
+    if (currentQuizQuestion.questionType === QuestionType.MCQ) {
+      if (currentQuizQuestion.options.some(opt => !opt.trim())) {
+        showError('Please fill all options for MCQ');
+        return;
+      }
     }
     
     const newQuestion: QuizQuestion = {
@@ -639,8 +672,13 @@ export default function EditCoursePage() {
       slideId: slideId,
       courseId: courseId,
       question: currentQuizQuestion.question,
-      options: [...currentQuizQuestion.options],
-      correctAnswer: currentQuizQuestion.correctAnswer,
+      options: currentQuizQuestion.questionType === QuestionType.MCQ 
+        ? [...currentQuizQuestion.options] 
+        : [],
+      correctAnswer: currentQuizQuestion.questionType === QuestionType.MCQ 
+        ? currentQuizQuestion.correctAnswer 
+        : -1,
+      questionType: currentQuizQuestion.questionType,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -653,10 +691,12 @@ export default function EditCoursePage() {
       [slideId]: updatedQuestions
     });
     
+    // Reset form
     setCurrentQuizQuestion({
       question: '',
       options: ['', '', '', ''],
-      correctAnswer: 0
+      correctAnswer: 0,
+      questionType: QuestionType.MCQ
     });
     
     showSuccess('Question added successfully!');
@@ -689,9 +729,8 @@ export default function EditCoursePage() {
     });
   };
 
-  // ============ ASSIGNMENT FUNCTIONS WITH APIS ============
+  // ============ ASSIGNMENT FUNCTIONS ============
   
-  // Handle assignment file upload
   const handleAssignmentFileUpload = async (file: File) => {
     if (!file) return;
 
@@ -731,7 +770,6 @@ export default function EditCoursePage() {
     }
   };
 
-  // Save assignment (Add or Update)
   const handleSaveAssignment = async () => {
     if (!selectedAssignmentSlide && !editingAssignment) {
       showError('Please select a slide first');
@@ -783,7 +821,6 @@ export default function EditCoursePage() {
       let result: { error: any; success: any; data: Assignment };
 
       if (editingAssignment) {
-        // Update existing assignment
         response = await fetch(`/api/instructors/assignment/update/${editingAssignment}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -796,7 +833,6 @@ export default function EditCoursePage() {
         }
 
         if (result.success) {
-          // Update local state
           const updatedAssignments = assignments.map(a => 
             a.id === editingAssignment ? result.data : a
           );
@@ -804,7 +840,6 @@ export default function EditCoursePage() {
           showSuccess('✅ Assignment updated successfully!');
         }
       } else {
-        // Add new assignment
         response = await fetch('/api/instructors/assignment/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -817,13 +852,11 @@ export default function EditCoursePage() {
         }
 
         if (result.success) {
-          // Add to local state
           setAssignments([...assignments, result.data]);
           showSuccess('✅ Assignment added successfully!');
         }
       }
 
-      // Reset form
       resetAssignmentForm();
       
     } catch (error: any) {
@@ -834,7 +867,6 @@ export default function EditCoursePage() {
     }
   };
 
-  // Edit assignment
   const handleEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment.id);
     setSelectedAssignmentSlide(assignment.slideId);
@@ -852,7 +884,6 @@ export default function EditCoursePage() {
     setShowAssignmentForm(true);
   };
 
-  // Delete assignment
   const handleRemoveAssignment = async (assignmentId: string) => {
     if (!confirm('Are you sure you want to delete this assignment?')) {
       return;
@@ -884,7 +915,6 @@ export default function EditCoursePage() {
     }
   };
 
-  // Open assignment form for a slide
   const openAssignmentFormForSlide = (slideId: string) => {
     setSelectedAssignmentSlide(slideId);
     setEditingAssignment(null);
@@ -900,7 +930,6 @@ export default function EditCoursePage() {
     setShowAssignmentForm(true);
   };
 
-  // Reset assignment form
   const resetAssignmentForm = () => {
     setCurrentAssignment({
       title: '',
@@ -1069,179 +1098,183 @@ export default function EditCoursePage() {
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto">
         {/* Tab 1: Course Details */}
-        {activeTab === 'details' && (
-          <div className="bg-white rounded-lg border border-softGrey p-6">
-            <h2 className="text-lg font-semibold mb-6" style={{ color: BRAND_COLORS.darkNavy }}>
-              Course Details
-            </h2>
-            
-            {isSystemCourse ? (
-              <div className="space-y-5 max-w-3xl">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-blue-800">System Course - Read Only</h4>
-                      <p className="text-sm text-blue-600 mt-1">
-                        This is a system course. You can add slides, upload materials, create quizzes, and manage assignments.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.title}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.category}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
-                  <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.description}</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.duration || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Level</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.level || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Price</label>
-                    <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">
-                      {courseDetails.price ? `PKR ${courseDetails.price.toLocaleString()}` : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-5 max-w-3xl">
-                <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
-                  <input 
-                    type="text" 
-                    value={editedDetails.title || ''} 
-                    onChange={(e) => setEditedDetails({ ...editedDetails, title: e.target.value })} 
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
-                    placeholder="Enter course name" 
-                  />
-                </div>
+      {activeTab === 'details' && (
+  <div className="bg-white rounded-lg border border-softGrey p-6">
+    <h2 className="text-lg font-semibold mb-6" style={{ color: BRAND_COLORS.darkNavy }}>
+      Course Details
+    </h2>
 
-                <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
-                  <textarea 
-                    value={editedDetails.description || ''} 
-                    onChange={(e) => setEditedDetails({ ...editedDetails, description: e.target.value })} 
-                    rows={4} 
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
-                    placeholder="Enter course description" 
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
-                    <input 
-                      type="text" 
-                      value={editedDetails.duration || ''} 
-                      onChange={(e) => setEditedDetails({ ...editedDetails, duration: e.target.value })} 
-                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
-                      placeholder="e.g., 8 Weeks" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Level</label>
-                    <select 
-                      value={editedDetails.level || ''} 
-                      onChange={(e) => setEditedDetails({ ...editedDetails, level: e.target.value })} 
-                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
-                    >
-                      <option value="">Select Level</option>
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                      <option value="All Levels">All Levels</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Price (PKR)</label>
-                    <input 
-                      type="number" 
-                      value={editedDetails.price || ''} 
-                      onChange={(e) => setEditedDetails({ ...editedDetails, price: parseFloat(e.target.value) })} 
-                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
-                      placeholder="e.g., 25000" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-darkGrey mb-2">Student Capacity</label>
-                    <input 
-                      type="number" 
-                      value={editedDetails.studentCapacity || 30} 
-                      onChange={(e) => setEditedDetails({ ...editedDetails, studentCapacity: parseInt(e.target.value) })} 
-                      className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
-                  <select 
-                    value={editedDetails.category || ''} 
-                    onChange={(e) => setEditedDetails({ ...editedDetails, category: e.target.value })} 
-                    className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
-                  >
-                    <option value="">Select Category</option>
-                    <option value="Technical Training">Technical Training</option>
-                    <option value="Safety Training">Safety Training</option>
-                    <option value="Web Development">Web Development</option>
-                    <option value="Mobile Development">Mobile Development</option>
-                    <option value="Data Science">Data Science</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="status" 
-                        checked={editedDetails.status === 'draft'} 
-                        onChange={() => setEditedDetails({ ...editedDetails, status: 'draft' })} 
-                        className="w-4 h-4 text-deepRed" 
-                      />
-                      <span className="text-sm">Draft</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="status" 
-                        checked={editedDetails.status === 'published'} 
-                        onChange={() => setEditedDetails({ ...editedDetails, status: 'published' })} 
-                        className="w-4 h-4 text-deepRed" 
-                      />
-                      <span className="text-sm">Published</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
+    {isSystemCourse ? (
+      <div className="space-y-5 max-w-3xl">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-blue-800">System Course - Read Only</h4>
+              <p className="text-sm text-blue-600 mt-1">
+                This is a system course. You can add slides, upload materials, create quizzes, and manage assignments.
+              </p>
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Tab 2: Slides Management - UPDATED WITH LOADING STATES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
+            <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.title}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
+            <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.category}</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
+          <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">{courseDetails.description}</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
+            <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">
+              {courseDetails.duration || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Level</label>
+            <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">
+              {courseDetails.level || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Price</label>
+            <p className="px-4 py-2.5 bg-lightGrey rounded-lg text-darkGrey">
+              {courseDetails.price ? `PKR ${courseDetails.price.toLocaleString()}` : 'N/A'}
+            </p>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="space-y-5 max-w-3xl">
+        <div>
+          <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
+          <input
+            type="text"
+            value={editedDetails.title || ''}
+            onChange={(e) => setEditedDetails({ ...editedDetails, title: e.target.value })}
+            className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+            placeholder="Enter course name"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
+          <textarea
+            value={editedDetails.description || ''}
+            onChange={(e) =>
+              setEditedDetails({ ...editedDetails, description: e.target.value })
+            }
+            rows={4}
+            className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+            placeholder="Enter course description"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
+            <input
+              type="text"
+              value={editedDetails.duration || ''}
+              onChange={(e) =>
+                setEditedDetails({ ...editedDetails, duration: e.target.value })
+              }
+              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+              placeholder="e.g., 8 Weeks"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Level</label>
+            <select
+              value={editedDetails.level || ''}
+              onChange={(e) => setEditedDetails({ ...editedDetails, level: e.target.value })}
+              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+            >
+              <option value="">Select Level</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+              <option value="All Levels">All Levels</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Price Section (Student Capacity Removed) */}
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-darkGrey mb-2">Price (PKR)</label>
+            <input
+              type="number"
+              value={editedDetails.price || ''}
+              onChange={(e) =>
+                setEditedDetails({ ...editedDetails, price: parseFloat(e.target.value) })
+              }
+              className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue"
+              placeholder="e.g., 25000"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
+          <select
+            value={editedDetails.category || ''}
+            onChange={(e) => setEditedDetails({ ...editedDetails, category: e.target.value })}
+            className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white"
+          >
+            <option value="">Select Category</option>
+            <option value="Technical Training">Technical Training</option>
+            <option value="Safety Training">Safety Training</option>
+            <option value="Web Development">Web Development</option>
+            <option value="Mobile Development">Mobile Development</option>
+            <option value="Data Science">Data Science</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                checked={editedDetails.status === 'draft'}
+                onChange={() => setEditedDetails({ ...editedDetails, status: 'draft' })}
+                className="w-4 h-4 text-deepRed"
+              />
+              <span className="text-sm">Draft</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                checked={editedDetails.status === 'published'}
+                onChange={() => setEditedDetails({ ...editedDetails, status: 'published' })}
+                className="w-4 h-4 text-deepRed"
+              />
+              <span className="text-sm">Published</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+        {/* Tab 2: Slides Management */}
         {activeTab === 'slides' && !isSystemCourse && (
           <div className="bg-white rounded-lg border border-softGrey p-6">
             <div className="flex items-center justify-between mb-6">
@@ -1295,6 +1328,7 @@ export default function EditCoursePage() {
                   const slideAssignmentCount = assignments.filter(a => a.slideId === slide.id).length;
                   const slideQuizCount = quizQuestions[slide.id]?.length || 0;
                   const isUpdating = updatingSlide === slide.id;
+                  const isEditing = editingSlideId === slide.id;
                   
                   return (
                     <div key={slide.id} className="flex items-center gap-3 p-3 border border-softGrey rounded-lg">
@@ -1302,18 +1336,46 @@ export default function EditCoursePage() {
                         {slide.slideNumber}
                       </div>
                       <div className="flex-1">
-                        <input 
-                          type="text" 
-                          value={slide.title} 
-                          onChange={(e) => handleEditSlideTitle(slide.id, e.target.value)} 
-                          disabled={isUpdating}
-                          className={`font-medium text-darkGrey bg-transparent border-b border-transparent hover:border-softGrey focus:border-darkRoyalBlue focus:outline-none px-1 py-0.5 w-full disabled:opacity-50 ${
-                            isUpdating ? 'animate-pulse' : ''
-                          }`} 
-                        />
-                        {isUpdating && (
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              value={editingSlideTitle} 
+                              onChange={(e) => setEditingSlideTitle(e.target.value)}
+                              className="font-medium text-darkGrey border border-darkRoyalBlue rounded-lg px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-darkRoyalBlue/20" 
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleEditSlideTitle(slide.id, editingSlideTitle)}
+                              className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+                              disabled={isUpdating}
+                            >
+                              {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
+                            </button>
+                            <button
+                              onClick={handleCancelEditSlide}
+                              className="px-3 py-1 bg-gray-500 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-darkGrey">{slide.title}</span>
+                            <button
+                              onClick={() => handleStartEditSlide(slide.id, slide.title)}
+                              className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded-lg transition-colors"
+                              title="Edit slide title"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {isUpdating && !isEditing && (
                           <span className="text-xs text-blue-600 ml-2">Updating...</span>
                         )}
+                        
                         <p className="text-xs text-darkGrey/60 mt-1">
                           {slideContents[slide.id]?.length || 0} files • 
                           {slideQuizCount} questions • 
@@ -1339,7 +1401,7 @@ export default function EditCoursePage() {
           </div>
         )}
 
-        {/* Tab 3: Content & Quizzes */}
+        {/* Tab 3: Content & Quizzes (UPDATED with MCQ & TEXT support) */}
         {activeTab === 'content' && !isSystemCourse && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Slide List */}
@@ -1439,60 +1501,114 @@ export default function EditCoursePage() {
                     )}
                   </div>
 
-                  {/* Quiz Content */}
+                  {/* Quiz Content - UPDATED with MCQ & TEXT support */}
                   <div className="bg-white rounded-lg border border-softGrey p-6">
                     <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>Quiz Questions</h3>
 
-                    {/* Add Question Form */}
+                    {/* Add Question Form - UPDATED with Question Type Selector */}
                     <div className="bg-lightGrey rounded-lg p-4 mb-6">
                       <h4 className="font-medium text-darkGrey mb-3">Add New Question</h4>
                       
                       <div className="space-y-4">
+                        {/* Question Type Selector - NEW */}
                         <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question</label>
-                          <input 
-                            type="text" 
-                            value={currentQuizQuestion.question} 
-                            onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, question: e.target.value })} 
-                            className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm" 
-                            placeholder="Enter your question" 
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Options</label>
-                          <div className="space-y-2">
-                            {currentQuizQuestion.options.map((option, index) => (
-                              <div key={index} className="flex items-center gap-2">
-                                <input 
-                                  type="radio" 
-                                  name="correctAnswer" 
-                                  checked={currentQuizQuestion.correctAnswer === index} 
-                                  onChange={() => setCurrentQuizQuestion({ ...currentQuizQuestion, correctAnswer: index })} 
-                                  className="w-4 h-4 text-deepRed" 
-                                />
-                                <input 
-                                  type="text" 
-                                  value={option} 
-                                  onChange={(e) => handleOptionChange(index, e.target.value)} 
-                                  className="flex-1 px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm" 
-                                  placeholder={`Option ${index + 1}`} 
-                                />
-                              </div>
-                            ))}
+                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question Type</label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="questionType" 
+                                checked={currentQuizQuestion.questionType === QuestionType.MCQ} 
+                                onChange={() => handleQuestionTypeChange(QuestionType.MCQ)}
+                                className="w-4 h-4 text-darkRoyalBlue" 
+                              />
+                              <span className="text-sm text-darkGrey">Multiple Choice</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="questionType" 
+                                checked={currentQuizQuestion.questionType === QuestionType.TEXT} 
+                                onChange={() => handleQuestionTypeChange(QuestionType.TEXT)}
+                                className="w-4 h-4 text-darkRoyalBlue" 
+                              />
+                              <span className="text-sm text-darkGrey">Text Answer</span>
+                            </label>
                           </div>
                         </div>
 
+                        {/* Question Input */}
+                        <div>
+                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question</label>
+                          <textarea
+                            value={currentQuizQuestion.question}
+                            onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, question: e.target.value })}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm"
+                            placeholder="Enter your question here..."
+                          />
+                        </div>
+
+                        {/* MCQ Options - Show only for MCQ type */}
+                        {currentQuizQuestion.questionType === QuestionType.MCQ && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-darkGrey/70 mb-1">Options</label>
+                              <div className="space-y-2">
+                                {currentQuizQuestion.options.map((option, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <span className="w-6 text-sm font-medium text-darkGrey/70">
+                                      {String.fromCharCode(65 + index)}.
+                                    </span>
+                                    <input 
+                                      type="text" 
+                                      value={option} 
+                                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                                      className="flex-1 px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm" 
+                                      placeholder={`Option ${index + 1}`} 
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-darkGrey/70 mb-1">Correct Answer</label>
+                              <select
+                                value={currentQuizQuestion.correctAnswer}
+                                onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, correctAnswer: parseInt(e.target.value) })}
+                                className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white"
+                              >
+                                {currentQuizQuestion.options.map((_, index) => (
+                                  <option key={index} value={index}>
+                                    Option {String.fromCharCode(65 + index)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Text Answer Info - Show only for TEXT type */}
+                        {currentQuizQuestion.questionType === QuestionType.TEXT && (
+                          <div className="p-3 bg-blue-50 rounded-lg">
+                            <p className="text-xs text-blue-700">
+                              <span className="font-medium">Text Answer Question:</span> Students will write their answer in a text box. No options needed.
+                            </p>
+                          </div>
+                        )}
+
                         <button 
                           onClick={() => handleAddQuestion(selectedSlideId)} 
-                          className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium hover:bg-darkRoyalBlue/90 transition-colors"
+                          className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+                          style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
                         >
                           Add Question
                         </button>
                       </div>
                     </div>
 
-                    {/* Questions List */}
+                    {/* Questions List - UPDATED to show question type badges */}
                     {quizQuestions[selectedSlideId] && quizQuestions[selectedSlideId].length > 0 && (
                       <div>
                         <h4 className="font-medium text-darkGrey mb-3">
@@ -1502,26 +1618,44 @@ export default function EditCoursePage() {
                           {quizQuestions[selectedSlideId].map((q, qIndex) => (
                             <div key={q.id} className="border border-softGrey rounded-lg p-3">
                               <div className="flex items-start justify-between mb-2">
-                                <p className="font-medium text-sm text-darkGrey">Q{qIndex + 1}: {q.question}</p>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      q.questionType === QuestionType.MCQ 
+                                        ? 'bg-blue-100 text-blue-700' 
+                                        : 'bg-green-100 text-green-700'
+                                    }`}>
+                                      {q.questionType === QuestionType.MCQ ? 'MCQ' : 'Text Answer'}
+                                    </span>
+                                    <p className="font-medium text-sm text-darkGrey">Q{qIndex + 1}: {q.question}</p>
+                                  </div>
+                                </div>
                                 <button 
                                   onClick={() => handleRemoveQuestion(selectedSlideId, q.id)} 
-                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
+                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded ml-2"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                {q.options.map((opt, optIndex) => (
-                                  <div key={optIndex} className="flex items-center gap-2">
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                                      optIndex === q.correctAnswer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                      {String.fromCharCode(65 + optIndex)}
-                                    </span>
-                                    <span className="text-xs text-darkGrey/70">{opt}</span>
-                                  </div>
-                                ))}
-                              </div>
+                              
+                              {q.questionType === QuestionType.MCQ ? (
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                  {q.options.map((opt, optIndex) => (
+                                    <div key={optIndex} className="flex items-center gap-2">
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                        optIndex === q.correctAnswer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                      }`}>
+                                        {String.fromCharCode(65 + optIndex)}
+                                      </span>
+                                      <span className="text-xs text-darkGrey/70">{opt}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="mt-2 p-2 bg-lightGrey rounded-lg">
+                                  <p className="text-xs text-darkGrey/70">Text answer question - students will write response</p>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

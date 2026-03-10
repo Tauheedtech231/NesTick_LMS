@@ -1,9 +1,10 @@
 // components/Sidebar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   HiHome,
   HiBookOpen,
@@ -23,10 +24,18 @@ import { FolderIcon } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [activePage, setActivePage] = useState(
     pathname.split('/').pop() || 'dashboard'
   );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  // Set active page based on pathname
+  useEffect(() => {
+    const path = pathname.split('/').pop() || 'dashboard';
+    setActivePage(path);
+  }, [pathname]);
 
   const navItems = [
     {
@@ -72,6 +81,11 @@ export default function Sidebar() {
     setIsMobileMenuOpen(false);
   };
 
+  const handleLogoClick = () => {
+    router.push('/'); // Navigate to home page
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       {/* Mobile toggle button */}
@@ -95,20 +109,68 @@ export default function Sidebar() {
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Brand (desktop only) */}
+        {/* Brand with newlogo.jpg - Desktop */}
         <div className="hidden lg:flex items-center justify-center gap-3 p-6 border-b border-white/10">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center">
-            <HiAcademicCap className="w-6 h-6" />
-          </div>
-          <h1 className="text-lg font-semibold tracking-wide">
-            Student Portal
-          </h1>
+          <button 
+            onClick={handleLogoClick}
+            className="flex items-center gap-3 focus:outline-none hover:opacity-80 transition-opacity"
+            aria-label="Go to home"
+          >
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              {!logoError ? (
+                <Image
+                  src="/newlogo.jpg"
+                  alt="Mansol Hub School Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                  priority
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                // Fallback if image fails to load
+                <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">MH</span>
+                </div>
+              )}
+            </div>
+            <h1 className="text-lg font-semibold tracking-wide">
+              Student Portal
+            </h1>
+          </button>
+        </div>
+
+        {/* Mobile logo - when menu is open */}
+        <div className="lg:hidden flex items-center justify-center p-4 border-b border-white/10">
+          <button 
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity"
+            aria-label="Go to home"
+          >
+            <div className="relative w-8 h-8 flex items-center justify-center">
+              {!logoError ? (
+                <Image
+                  src="/newlogo.jpg"
+                  alt="Mansol Hub School Logo"
+                  width={32}
+                  height={32}
+                  className="object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">MH</span>
+                </div>
+              )}
+            </div>
+            <span className="text-sm font-medium">Mansol Hub</span>
+          </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = activePage === item.id;
+            const isActive = activePage === item.id || pathname === item.path;
 
             return (
               <Link

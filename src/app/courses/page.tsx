@@ -18,7 +18,8 @@ import {
   HiClock as HiRecent,
   HiBadgeCheck,
   HiCog,
-  HiBriefcase
+  HiBriefcase,
+  HiShoppingCart
 } from "react-icons/hi";
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import Link from "next/link";
@@ -161,6 +162,11 @@ export default function CoursesPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Cart states
+  const [cartCount, setCartCount] = useState(0);
+  const [user, setUser] = useState<any>(null);
+  const [cartLoading, setCartLoading] = useState(false);
+
   // Feature items
   const features: FeatureItem[] = [
     {
@@ -209,6 +215,37 @@ export default function CoursesPage() {
       ]
     }
   ];
+
+  // Load user from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+    }
+  }, []);
+
+  // Fetch cart count when user is available
+  useEffect(() => {
+    if (user?.email) {
+      fetchCartCount();
+    }
+  }, [user]);
+
+  const fetchCartCount = async () => {
+    setCartLoading(true);
+    try {
+      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(user.email)}`);
+      const result = await response.json();
+      if (result.success) {
+        setCartCount(result.data.count);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    } finally {
+      setCartLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCourses();
@@ -394,6 +431,35 @@ export default function CoursesPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Header with Cart Icon */}
+      <div className="fixed top-0 right-0 z-50 p-4 md:p-6">
+        <Link
+          href="/lms/Student_Portal/cart"
+          className="relative inline-flex items-center justify-center p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
+          style={{ 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            border: '1px solid rgba(177,18,23,0.1)'
+          }}
+        >
+          <HiShoppingCart className="w-6 h-6 text-[#B11217] group-hover:scale-110 transition-transform duration-300" />
+          
+          {/* Cart Count Badge */}
+          {cartCount > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-[#B11217] text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg"
+            >
+              {cartLoading ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                cartCount > 99 ? '99+' : cartCount
+              )}
+            </motion.span>
+          )}
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <div className="relative min-h-[650px] flex items-start justify-center pt-32 pb-20 overflow-hidden">
         {/* Background Image with Overlay */}
@@ -429,18 +495,18 @@ export default function CoursesPage() {
             </motion.div>
 
             {/* Heading */}
-           <motion.h1 
-  variants={fadeInUpVariants}
-  initial="initial"
-  animate="animate"
-  transition={getTransition(0.4)}
-  className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight"
->
-  Explore Our
-  <span className="block mt-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
-    Expert-Led Courses
-  </span>
-</motion.h1>
+            <motion.h1 
+              variants={fadeInUpVariants}
+              initial="initial"
+              animate="animate"
+              transition={getTransition(0.4)}
+              className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-white leading-tight"
+            >
+              Explore Our
+              <span className="block mt-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+                Expert-Led Courses
+              </span>
+            </motion.h1>
 
             {/* Description */}
             <motion.p 

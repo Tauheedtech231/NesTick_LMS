@@ -47,7 +47,7 @@ interface Course {
   id: string;
   title: string;
   description: string;
-  studentCapacity: number;
+ 
   category: string;
   status: 'draft' | 'published';
   instructorId: string;
@@ -135,7 +135,7 @@ export default function AddCoursePage() {
   const [courseDetails, setCourseDetails] = useState({
     title: '',
     description: '',
-    studentCapacity: 30,
+   
     category: '',
     status: 'draft' as 'draft' | 'published',
     price: '',
@@ -243,7 +243,7 @@ export default function AddCoursePage() {
         body: JSON.stringify({
           title: courseDetails.title,
           description: courseDetails.description,
-          studentCapacity: courseDetails.studentCapacity,
+          
           category: courseDetails.category,
           status: courseDetails.status,
           instructorId: instructor.id,
@@ -487,7 +487,7 @@ export default function AddCoursePage() {
           id: newCourseId,
           title: courseDetails.title,
           description: courseDetails.description,
-          studentCapacity: courseDetails.studentCapacity,
+          
           category: courseDetails.category,
           status: courseDetails.status,
           instructorId: instructor.id,
@@ -1179,20 +1179,8 @@ export default function AddCoursePage() {
                 )}
               </div>
 
-              {/* Student Capacity */}
-              <div>
-                <label className="block text-sm font-medium text-darkGrey mb-2">
-                  Student Capacity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={courseDetails.studentCapacity}
-                  onChange={(e) => setCourseDetails({ ...courseDetails, studentCapacity: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue focus:ring-1 focus:ring-darkRoyalBlue/20"
-                  placeholder="e.g., 30"
-                />
-              </div>
+              
+            
 
               {/* Course Price Section */}
               <div className="border-t border-softGrey pt-4 mt-2">
@@ -1617,12 +1605,13 @@ export default function AddCoursePage() {
                           </p>
                         </div>
 
-                        <button
-                          onClick={() => handleAddQuestion(selectedSlideId)}
-                          className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
-                        >
-                          Add Question
-                        </button>
+                       <button
+  onClick={() => handleAddQuestion(selectedSlideId)}
+  className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+  style={{ backgroundColor: '#1E3A8A' }} // darkRoyalBlue color
+>
+  Add Question
+</button>
                       </div>
                     </div>
 

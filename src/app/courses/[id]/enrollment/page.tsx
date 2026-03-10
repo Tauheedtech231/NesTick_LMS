@@ -17,7 +17,9 @@ import {
   HiCurrencyRupee,
   HiIdentification,
   HiDocumentText,
-  HiPhotograph
+  HiPhotograph,
+  HiEye,
+  HiEyeOff
 } from "react-icons/hi";
 import Link from "next/link";
 import { IoIosArrowDroprightCircle } from "react-icons/io";
@@ -51,26 +53,33 @@ interface Course {
   status: string;
 }
 
+// ✅ Dynamic Form Field Interface
+interface FormField {
+  id: string;
+  label: string;
+  name: string;
+  type: 'text' | 'email' | 'number' | 'file' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date';
+  placeholder: string;
+  required: boolean;
+  order: number;
+  options: string[] | null;
+  status: 'active' | 'inactive';
+}
+
 interface FormData {
-  fullName: string;
-  email: string;
-  phone: string;
-  cnic: string;
-  address: string;
-  education: string;
-  experience: string;
+  [key: string]: string | File | null;
+}
+
+interface FormErrors {
+  [key: string]: string | undefined;
 }
 
 interface DocumentUpload {
-  cnicFront: File | null;
-  cnicBack: File | null;
-  educationalDoc: File | null;
+  [key: string]: File | null;
 }
 
 interface UploadedUrls {
-  cnicFront?: string;
-  cnicBack?: string;
-  educationalDoc?: string;
+  [key: string]: string;
 }
 
 export default function EnrollmentPage() {
@@ -84,41 +93,65 @@ export default function EnrollmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enrollmentId, setEnrollmentId] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
 
-  // Form state
-  const [formData, setFormData] = useState<FormData>({
-    fullName: '',
-    email: '',
-    phone: '',
-    cnic: '',
-    address: '',
-    education: '',
-    experience: ''
-  });
+  // ✅ Dynamic Form Fields State
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [formData, setFormData] = useState<FormData>({});
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  // Document upload state
-  const [documents, setDocuments] = useState<DocumentUpload>({
-    cnicFront: null,
-    cnicBack: null,
-    educationalDoc: null
-  });
-
+  // File upload states
   const [uploadedUrls, setUploadedUrls] = useState<UploadedUrls>({});
   const [uploading, setUploading] = useState(false);
-  const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
 
   const courseId = params.id as string;
 
+  // Load user from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+    }
+  }, []);
+
+  // Load course and form fields
   useEffect(() => {
     loadCourse();
+    loadFormFields();
   }, [courseId]);
+
+  // ✅ Fetch dynamic form fields from API
+  const loadFormFields = async () => {
+    try {
+      const response = await fetch('/api/student-form-fields');
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Filter active fields and sort by order
+        const activeFields = result.data
+          .filter((field: FormField) => field.status === 'active')
+          .sort((a: FormField, b: FormField) => a.order - b.order);
+        
+        setFormFields(activeFields);
+        
+        // Initialize form data with empty values
+        const initialData: FormData = {};
+        activeFields.forEach((field: FormField) => {
+          initialData[field.name] = '';
+        });
+        setFormData(initialData);
+      }
+    } catch (error) {
+      console.error('Error loading form fields:', error);
+    }
+  };
 
   const loadCourse = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch from API
       const response = await fetch(`/api/instructors/course/${courseId}`);
       const result = await response.json();
 
@@ -149,7 +182,7 @@ export default function EnrollmentPage() {
     }
   };
 
-  // Format CNIC as 12345-1234567-1
+  // Format CNIC helper
   const formatCNIC = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 5) return numbers;
@@ -157,49 +190,73 @@ export default function EnrollmentPage() {
     return `${numbers.slice(0, 5)}-${numbers.slice(5, 12)}-${numbers.slice(12, 13)}`;
   };
 
-  const handleCNICChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCNIC(e.target.value);
-    setFormData({ ...formData, cnic: formatted });
+  // Handle input change
+  const handleInputChange = (field: FormField, value: string) => {
+    // Special formatting for CNIC field
+    if (field.name === 'cnic') {
+      value = formatCNIC(value);
+    }
+
+    setFormData({ ...formData, [field.name]: value });
     
-    // Clear error if valid
-    if (formatted.replace(/\D/g, '').length === 13) {
-      setFormErrors({ ...formErrors, cnic: undefined });
+    // Clear error for this field
+    if (formErrors[field.name]) {
+      setFormErrors({ ...formErrors, [field.name]: undefined });
     }
   };
 
+  // Handle file change
+  const handleFileChange = (field: FormField, file: File | null) => {
+    setFormData({ ...formData, [field.name]: file });
+    
+    if (formErrors[field.name]) {
+      setFormErrors({ ...formErrors, [field.name]: undefined });
+    }
+  };
+
+  // Validate form based on field definitions
   const validateForm = (): boolean => {
-    const errors: Partial<FormData> = {};
+    const errors: FormErrors = {};
     
-    if (!formData.fullName.trim()) errors.fullName = 'Full name is required';
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
-    }
-    if (!formData.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!/^[0-9+\-\s]{10,15}$/.test(formData.phone)) {
-      errors.phone = 'Invalid phone number';
-    }
-    
-    const cnicNumbers = formData.cnic.replace(/\D/g, '');
-    if (!formData.cnic.trim()) {
-      errors.cnic = 'CNIC is required';
-    } else if (cnicNumbers.length !== 13) {
-      errors.cnic = 'CNIC must be 13 digits';
-    }
-    
-    if (!formData.address.trim()) errors.address = 'Address is required';
-    if (!formData.education.trim()) errors.education = 'Education is required';
-    
+    formFields.forEach(field => {
+      if (!field.required) return;
+      
+      const value = formData[field.name];
+      
+      if (!value) {
+        errors[field.name] = `${field.label} is required`;
+        return;
+      }
+
+      // Email validation
+      if (field.type === 'email' && typeof value === 'string') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+          errors[field.name] = 'Invalid email format';
+        }
+      }
+
+      // File validation
+      if (field.type === 'file' && value instanceof File) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+        if (!allowedTypes.includes(value.type)) {
+          errors[field.name] = 'Please upload a valid image or PDF file';
+        }
+        if (value.size > 5 * 1024 * 1024) { // 5MB limit
+          errors[field.name] = 'File size should be less than 5MB';
+        }
+      }
+    });
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const uploadToCloudinary = async (file: File, type: string): Promise<string> => {
+  // Upload file to Cloudinary
+  const uploadToCloudinary = async (file: File, fieldName: string): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('type', `enrollment_${type}`);
+    formData.append('type', `enrollment_${fieldName}`);
 
     const response = await fetch('/api/upload/cloudinary', {
       method: 'POST',
@@ -209,25 +266,26 @@ export default function EnrollmentPage() {
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-      throw new Error(result.error || `Failed to upload ${type}`);
+      throw new Error(result.error || `Failed to upload ${fieldName}`);
     }
 
     return result.data.secure_url;
   };
 
-  const uploadDocuments = async (): Promise<UploadedUrls> => {
+  // Upload all files
+  const uploadFiles = async (): Promise<UploadedUrls> => {
     setUploading(true);
     const urls: UploadedUrls = {};
 
     try {
-      if (documents.cnicFront) {
-        urls.cnicFront = await uploadToCloudinary(documents.cnicFront, 'cnic_front');
-      }
-      if (documents.cnicBack) {
-        urls.cnicBack = await uploadToCloudinary(documents.cnicBack, 'cnic_back');
-      }
-      if (documents.educationalDoc) {
-        urls.educationalDoc = await uploadToCloudinary(documents.educationalDoc, 'education');
+      // Find all file fields
+      const fileFields = formFields.filter(f => f.type === 'file');
+      
+      for (const field of fileFields) {
+        const file = formData[field.name];
+        if (file instanceof File) {
+          urls[field.name] = await uploadToCloudinary(file, field.name);
+        }
       }
       
       setUploadedUrls(urls);
@@ -248,7 +306,11 @@ export default function EnrollmentPage() {
       return;
     }
 
-    if (!documents.cnicFront || !documents.cnicBack || !documents.educationalDoc) {
+    // Check if all required files are uploaded
+    const fileFields = formFields.filter(f => f.type === 'file' && f.required);
+    const missingFiles = fileFields.some(f => !(formData[f.name] instanceof File));
+    
+    if (missingFiles) {
       setError('Please upload all required documents');
       return;
     }
@@ -257,29 +319,31 @@ export default function EnrollmentPage() {
     setError(null);
 
     try {
-      // First upload documents
-      const uploadedDocUrls = await uploadDocuments();
+      // Upload files first
+      const uploadedDocUrls = await uploadFiles();
 
-      // Then create enrollment
+      // Prepare data for enrollment
+      const enrollmentPayload: any = {
+        courseId: courseId,
+        courseTitle: course?.title,
+        coursePrice: course?.price,
+        enrollmentDate: new Date().toISOString()
+      };
+
+      // Add all form fields to payload
+      formFields.forEach(field => {
+        if (field.type === 'file') {
+          enrollmentPayload[`${field.name}Url`] = uploadedDocUrls[field.name];
+        } else {
+          enrollmentPayload[field.name] = formData[field.name];
+        }
+      });
+
+      // Create enrollment
       const response = await fetch('/api/enrollments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName: formData.fullName,
-          studentEmail: formData.email,
-          studentPhone: formData.phone,
-          studentCnic: formData.cnic,
-          studentAddress: formData.address,
-          studentEducation: formData.education,
-          studentExperience: formData.experience,
-          cnicFrontUrl: uploadedDocUrls.cnicFront,
-          cnicBackUrl: uploadedDocUrls.cnicBack,
-          educationalDocUrl: uploadedDocUrls.educationalDoc,
-          courseId: courseId,
-          courseTitle: course?.title,
-          coursePrice: course?.price,
-          enrollmentDate: new Date().toISOString()
-        })
+        body: JSON.stringify(enrollmentPayload)
       });
 
       const result = await response.json();
@@ -290,7 +354,6 @@ export default function EnrollmentPage() {
 
       setEnrollmentId(result.data.enrollmentId);
       
-      // Move to voucher step
       setEnrollmentData({
         ...formData,
         course: course?.title,
@@ -309,6 +372,124 @@ export default function EnrollmentPage() {
     }
   };
 
+  // ✅ Dynamic Field Renderer
+  const renderField = (field: FormField) => {
+    const value = formData[field.name] || '';
+    const error = formErrors[field.name];
+    const isFile = field.type === 'file';
+
+    return (
+      <div key={field.id} className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {field.label} {field.required && <span className="text-red-500">*</span>}
+        </label>
+
+        {field.type === 'textarea' ? (
+          <textarea
+            value={value as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            placeholder={field.placeholder}
+            rows={3}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
+              error ? 'border-red-500' : 'border-gray-200'
+            }`}
+          />
+        ) : field.type === 'select' && field.options ? (
+          <select
+            value={value as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
+              error ? 'border-red-500' : 'border-gray-200'
+            }`}
+          >
+            <option value="">Select {field.label}</option>
+            {field.options.map((opt, idx) => (
+              <option key={idx} value={opt}>{opt}</option>
+            ))}
+          </select>
+        ) : field.type === 'radio' && field.options ? (
+          <div className="space-y-2">
+            {field.options.map((opt, idx) => (
+              <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name={field.name}
+                  value={opt}
+                  checked={value === opt}
+                  onChange={(e) => handleInputChange(field, e.target.value)}
+                  className="w-4 h-4 text-deepRed"
+                />
+                <span className="text-sm text-gray-700">{opt}</span>
+              </label>
+            ))}
+          </div>
+        ) : field.type === 'checkbox' && field.options ? (
+          <div className="space-y-2">
+            {field.options.map((opt, idx) => (
+              <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name={field.name}
+                  value={opt}
+                  checked={(value as string)?.includes(opt)}
+                  onChange={(e) => {
+                    const currentValues = (value as string || '').split(',').filter(Boolean);
+                    if (e.target.checked) {
+                      currentValues.push(opt);
+                    } else {
+                      const index = currentValues.indexOf(opt);
+                      if (index > -1) currentValues.splice(index, 1);
+                    }
+                    handleInputChange(field, currentValues.join(','));
+                  }}
+                  className="w-4 h-4 text-deepRed rounded"
+                />
+                <span className="text-sm text-gray-700">{opt}</span>
+              </label>
+            ))}
+          </div>
+        ) : field.type === 'file' ? (
+          <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+              className="w-full"
+            />
+            {value instanceof File && (
+              <p className="text-xs text-green-600 mt-2">
+                Selected: {value.name}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              {field.placeholder}
+            </p>
+          </div>
+        ) : (
+          <input
+            type={field.type}
+            value={value as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            placeholder={field.placeholder}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
+              error ? 'border-red-500' : 'border-gray-200'
+            }`}
+          />
+        )}
+
+        {error && (
+          <p className="mt-1 text-xs text-red-500">{error}</p>
+        )}
+      </div>
+    );
+  };
+
+  const steps = [
+    { id: 'form', title: 'Personal Details', icon: HiUser },
+    { id: 'voucher', title: 'Payment Voucher', icon: HiCreditCard },
+    { id: 'upload', title: 'Upload Slip', icon: HiUpload }
+  ];
+
   const handleVoucherGenerated = () => {
     setStep('upload');
   };
@@ -319,12 +500,6 @@ export default function EnrollmentPage() {
       router.push('/courses');
     }, 3000);
   };
-
-  const steps = [
-    { id: 'form', title: 'Personal Details', icon: HiUser },
-    { id: 'voucher', title: 'Payment Voucher', icon: HiCreditCard },
-    { id: 'upload', title: 'Upload Slip', icon: HiUpload }
-  ];
 
   if (loading) {
     return (
@@ -439,228 +614,15 @@ export default function EnrollmentPage() {
                   Personal Information
                 </h2>
 
-                <form onSubmit={handleFormSubmit} className="space-y-6">
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.fullName}
-                      onChange={(e) => {
-                        setFormData({ ...formData, fullName: e.target.value });
-                        setFormErrors({ ...formErrors, fullName: undefined });
-                      }}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                        formErrors.fullName ? 'border-red-500' : 'border-gray-200'
-                      }`}
-                      placeholder="Enter your full name"
-                    />
-                    {formErrors.fullName && (
-                      <p className="mt-1 text-xs text-red-500">{formErrors.fullName}</p>
-                    )}
-                  </div>
-
-                  {/* Email & Phone */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address *
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => {
-                          setFormData({ ...formData, email: e.target.value });
-                          setFormErrors({ ...formErrors, email: undefined });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                          formErrors.email ? 'border-red-500' : 'border-gray-200'
-                        }`}
-                        placeholder="your@email.com"
-                      />
-                      {formErrors.email && (
-                        <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => {
-                          setFormData({ ...formData, phone: e.target.value });
-                          setFormErrors({ ...formErrors, phone: undefined });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                          formErrors.phone ? 'border-red-500' : 'border-gray-200'
-                        }`}
-                        placeholder="+92 300 1234567"
-                      />
-                      {formErrors.phone && (
-                        <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* CNIC */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CNIC Number * (12345-1234567-1)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.cnic}
-                      onChange={handleCNICChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                        formErrors.cnic ? 'border-red-500' : 'border-gray-200'
-                      }`}
-                      placeholder="12345-1234567-1"
-                      maxLength={15}
-                    />
-                    {formErrors.cnic && (
-                      <p className="mt-1 text-xs text-red-500">{formErrors.cnic}</p>
-                    )}
-                  </div>
-
-                  {/* Address */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address *
-                    </label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => {
-                        setFormData({ ...formData, address: e.target.value });
-                        setFormErrors({ ...formErrors, address: undefined });
-                      }}
-                      rows={3}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                        formErrors.address ? 'border-red-500' : 'border-gray-200'
-                      }`}
-                      placeholder="Your complete address"
-                    />
-                    {formErrors.address && (
-                      <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>
-                    )}
-                  </div>
-
-                  {/* Education & Experience */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Education *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.education}
-                        onChange={(e) => {
-                          setFormData({ ...formData, education: e.target.value });
-                          setFormErrors({ ...formErrors, education: undefined });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20 ${
-                          formErrors.education ? 'border-red-500' : 'border-gray-200'
-                        }`}
-                        placeholder="e.g., Bachelor's in Computer Science"
-                      />
-                      {formErrors.education && (
-                        <p className="mt-1 text-xs text-red-500">{formErrors.education}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Experience
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.experience}
-                        onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepRed/20"
-                        placeholder="e.g., 2 years in construction"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Document Uploads */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg" style={{ color: BRAND_COLORS.darkNavy }}>
-                      Required Documents
-                    </h3>
-
-                    {/* CNIC Front */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CNIC Front Image *
-                      </label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setDocuments({ 
-                            ...documents, 
-                            cnicFront: e.target.files?.[0] || null 
-                          })}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Upload clear image of your CNIC front side
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* CNIC Back */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CNIC Back Image *
-                      </label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setDocuments({ 
-                            ...documents, 
-                            cnicBack: e.target.files?.[0] || null 
-                          })}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Upload clear image of your CNIC back side
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Educational Document */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Educational Certificate/Degree *
-                      </label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => setDocuments({ 
-                            ...documents, 
-                            educationalDoc: e.target.files?.[0] || null 
-                          })}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Upload your educational certificate (PDF or Image)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  {/* ✅ Dynamically render all form fields */}
+                  {formFields.map(field => renderField(field))}
 
                   {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={submitting || uploading}
-                    className="w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-300 disabled:opacity-50"
+                    className="w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-300 disabled:opacity-50 mt-6"
                     style={{ backgroundColor: BRAND_COLORS.deepRed }}
                   >
                     {submitting || uploading ? (
@@ -696,7 +658,7 @@ export default function EnrollmentPage() {
 
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">Student Name</p>
-                    <p className="font-semibold">{enrollmentData.fullName}</p>
+                    <p className="font-semibold">{enrollmentData.full_name}</p>
                   </div>
 
                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -790,45 +752,6 @@ export default function EnrollmentPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Course Summary */}
-            <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-              <h3 className="text-lg font-bold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>
-                Course Summary
-              </h3>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                  <img 
-                    src={course?.image} 
-                    alt={course?.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{course?.title}</p>
-                  <p className="text-sm text-gray-600">{course?.duration}</p>
-                  <p className="text-xs text-gray-500 mt-1">by {course?.instructorName}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <HiAcademicCap className="w-4 h-4" />
-                  <span>Level: {course?.level}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <HiClock className="w-4 h-4" />
-                  <span>Category: {course?.category}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                <span className="text-gray-600">Total Amount:</span>
-                <span className="text-xl font-bold" style={{ color: BRAND_COLORS.deepRed }}>
-                  PKR {course?.price.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
             {/* Security Section */}
             <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
               <div className="flex items-center mb-4">

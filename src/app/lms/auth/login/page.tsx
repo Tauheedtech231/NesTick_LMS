@@ -550,17 +550,15 @@ function LoginContent() {
 
           {/* Footer */}
           <div className="text-center">
-            <p className="text-xs text-gray-500">
-              By signing in, you agree to our{' '}
-              <Link href="#" className="text-red-600 hover:underline">
-                Terms
-              </Link>{' '}
-              and{' '}
-              <Link href="#" className="text-red-600 hover:underline">
-                Privacy
-              </Link>
-            </p>
-          </div>
+ 
+
+  <p className="text-xs text-gray-500 mt-2">
+    Don’t have an account?{' '}
+    <Link href="/lms/auth/sign_up" className="text-red-600 font-semibold hover:underline">
+      Sign Up
+    </Link>
+  </p>
+</div>
         </div>
       </div>
 

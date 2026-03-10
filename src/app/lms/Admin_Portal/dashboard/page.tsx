@@ -178,7 +178,7 @@ export default function AdminDashboard() {
           experience: item.student_experience || '',
           course: item.course_title,
           courseId: item.course_id,
-          amount: item.course_price || 0,
+          amount: Number(item.course_price) || 0,
           paymentDate: item.payment_date || item.enrollment_date,
           paymentMethod: item.payment_method || 'Bank Transfer',
           transactionId: item.transaction_id || `TXN-${Math.random().toString(36).substr(2, 8)}`,
@@ -349,14 +349,40 @@ export default function AdminDashboard() {
     cred.studentEmail.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Calculate revenue statistics
-  const totalVerifiedRevenue = revenueStats.totalRevenue
+  // Calculate revenue statistics - FIXED NaN ISSUES
+  const totalVerifiedRevenue = revenueStats?.totalRevenue || 0
+  
+  // Fix: Properly calculate pending revenue with number conversion
   const pendingRevenue = paymentStudents
     .filter(s => s.status === 'pending')
-    .reduce((sum, s) => sum + s.amount, 0)
-  const averageRevenuePerStudent = revenueStats.payingStudents > 0 
-    ? Math.round(revenueStats.totalRevenue / revenueStats.payingStudents) 
+    .reduce((sum, s) => {
+      const amount = Number(s.amount) || 0
+      return sum + amount
+    }, 0)
+  
+  // Fix: Calculate average with proper number handling
+  const averageRevenuePerStudent = (revenueStats?.payingStudents || 0) > 0 
+    ? Math.round((revenueStats?.totalRevenue || 0) / (revenueStats?.payingStudents || 1)) 
     : 0
+
+  // Fix: Calculate projected total safely
+  const projectedTotal = (Number(totalVerifiedRevenue) || 0) + (Number(pendingRevenue) || 0)
+
+  // Calculate stats from paymentStudents if API stats are not available
+  const calculatedStats = {
+    totalEnrollments: paymentStudents?.length || 0,
+    pendingPayments: paymentStudents?.filter(s => s.status === 'pending')?.length || 0,
+    verifiedPayments: paymentStudents?.filter(s => s.status === 'verified')?.length || 0,
+    rejectedPayments: paymentStudents?.filter(s => s.status === 'rejected')?.length || 0,
+    totalRevenue: totalVerifiedRevenue,
+    sentCredentials: studentCredentials?.filter(c => c.credentialsSent)?.length || 0,
+    failedCredentials: 0,
+    monthlyRevenue: stats?.monthlyRevenue || [],
+    topCourses: stats?.topCourses || []
+  }
+
+  // Use API stats if available, otherwise use calculated stats
+  const displayStats = stats?.totalEnrollments ? stats : calculatedStats
 
   if (isLoading) {
     return (
@@ -420,121 +446,121 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-  {/* Total Enrollments */}
-  <div className="bg-white rounded-xl shadow p-6 border border-indigo-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">Students Enrolled</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalEnrollments}</p>
-      </div>
-      <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow">
-        <Users className="w-6 h-6 text-white" />
-      </div>
-    </div>
-    <div className="mt-3 text-xs text-gray-500">Total number of enrollments so far</div>
-  </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Enrollments */}
+          <div className="bg-white rounded-xl shadow p-6 border border-indigo-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Students Enrolled</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{displayStats.totalEnrollments || 0}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg shadow">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-gray-500">Total number of enrollments so far</div>
+          </div>
 
-  {/* Pending Verification */}
-  <div className="bg-white rounded-xl shadow p-6 border border-amber-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
-        <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pendingPayments}</p>
-      </div>
-      <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow">
-        <AlertCircle className="w-6 h-6 text-white" />
-      </div>
-    </div>
-    <div className="mt-3 text-xs text-amber-600">Payments waiting for confirmation</div>
-  </div>
+          {/* Pending Verification */}
+          <div className="bg-white rounded-xl shadow p-6 border border-amber-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{displayStats.pendingPayments || 0}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow">
+                <AlertCircle className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-amber-600">Payments waiting for confirmation</div>
+          </div>
 
-  {/* Verified Payments */}
-  <div className="bg-white rounded-xl shadow p-6 border border-emerald-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">Confirmed Payments</p>
-        <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.verifiedPayments}</p>
-      </div>
-      <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow">
-        <CheckCircle className="w-6 h-6 text-white" />
-      </div>
-    </div>
-    <div className="mt-3 text-xs text-emerald-600">Payments successfully verified</div>
-  </div>
+          {/* Verified Payments */}
+          <div className="bg-white rounded-xl shadow p-6 border border-emerald-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Confirmed Payments</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">{displayStats.verifiedPayments || 0}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-emerald-600">Payments successfully verified</div>
+          </div>
 
-  {/* Total Revenue */}
-  <div className="bg-white rounded-xl shadow p-6 border border-purple-100 hover:shadow-lg transition-all hover:-translate-y-1">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">Revenue</p>
-        <p className="text-2xl font-bold text-purple-600 mt-1">
-          PKR {totalVerifiedRevenue.toLocaleString()}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Average per student: PKR {averageRevenuePerStudent.toLocaleString()}
-        </p>
-      </div>
-      <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow">
-        <Wallet className="w-6 h-6 text-white" />
-      </div>
-    </div>
-    
-  </div>
-</div>
+          {/* Total Revenue */}
+          <div className="bg-white rounded-xl shadow p-6 border border-purple-100 hover:shadow-lg transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Revenue</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">
+                  PKR {(totalVerifiedRevenue || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Average per student: PKR {(averageRevenuePerStudent || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow">
+                <Wallet className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            
+          </div>
+        </div>
 
         {/* Revenue Stats Row */}
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-  {/* Verified Revenue */}
-  <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-semibold text-emerald-700">Verified Revenue</p>
-        <p className="text-2xl font-bold text-emerald-600 mt-1">PKR {totalVerifiedRevenue.toLocaleString()}</p>
-        <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
-          <ArrowUpRight className="w-3 h-3 inline text-emerald-600" /> From {revenueStats.payingStudents} students
-        </p>
-      </div>
-      <div className="p-3 bg-emerald-100 rounded-lg shadow">
-        <DollarSign className="w-6 h-6 text-emerald-600" />
-      </div>
-    </div>
-  </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Verified Revenue */}
+          <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-700">Verified Revenue</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">PKR {(totalVerifiedRevenue || 0).toLocaleString()}</p>
+                <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3 inline text-emerald-600" /> From {(revenueStats?.payingStudents || 0)} students
+                </p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-lg shadow">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
 
-  {/* Pending Revenue */}
-  <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-semibold text-amber-700">Pending Revenue</p>
-        <p className="text-2xl font-bold text-amber-600 mt-1">PKR {Number(pendingRevenue).toLocaleString()}</p>
-        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-          <ArrowDownRight className="w-3 h-3 inline text-amber-600" /> Awaiting verification
-        </p>
-      </div>
-      <div className="p-3 bg-amber-100 rounded-lg shadow">
-        <AlertCircle className="w-6 h-6 text-amber-600" />
-      </div>
-    </div>
-  </div>
+          {/* Pending Revenue */}
+          <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-amber-700">Pending Revenue</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">PKR {(pendingRevenue || 0).toLocaleString()}</p>
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <ArrowDownRight className="w-3 h-3 inline text-amber-600" /> Awaiting verification
+                </p>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-lg shadow">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
 
-  {/* Projected Total */}
-  <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-semibold text-purple-700">Projected Total</p>
-        <p className="text-2xl font-bold text-purple-600 mt-1">
-          PKR {(Number(totalVerifiedRevenue) + Number(pendingRevenue)).toLocaleString()}
-        </p>
-        <p className="text-xs text-purple-600 mt-2">
-          If all pending are verified
-        </p>
-      </div>
-      <div className="p-3 bg-purple-100 rounded-lg shadow">
-        <TrendingUp className="w-6 h-6 text-purple-600" />
-      </div>
-    </div>
-  </div>
-</div>
+          {/* Projected Total */}
+          <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-purple-700">Projected Total</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">
+                  PKR {(projectedTotal || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-purple-600 mt-2">
+                  If all pending are verified
+                </p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-lg shadow">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Credentials Status */}
         <div className="mb-8">
@@ -544,14 +570,14 @@ export default function AdminDashboard() {
                 <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Sent Credentials</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.sentCredentials}</p>
+                  <p className="text-xl font-bold text-gray-900">{displayStats.sentCredentials || 0}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Rejected Payments</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.rejectedPayments}</p>
+                  <p className="text-xl font-bold text-gray-900">{displayStats.rejectedPayments || 0}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -559,7 +585,7 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Avg Revenue/Student</p>
                   <p className="text-xl font-bold text-indigo-600">
-                    PKR {averageRevenuePerStudent.toLocaleString()}
+                    PKR {(averageRevenuePerStudent || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -567,7 +593,7 @@ export default function AdminDashboard() {
                 <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Paying Students</p>
-                  <p className="text-xl font-bold text-gray-900">{revenueStats.payingStudents}</p>
+                  <p className="text-xl font-bold text-gray-900">{revenueStats?.payingStudents || 0}</p>
                 </div>
               </div>
             </div>
@@ -658,7 +684,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 text-sm text-gray-700">{student.course}</td>
                         <td className="px-6 py-4">
                           <span className="text-sm font-bold text-indigo-600">
-                            PKR {student.amount.toLocaleString()}
+                            PKR {(Number(student.amount) || 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -711,7 +737,6 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Student</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
-       
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Verified Date</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-white">Status</th>
                   </tr>
@@ -754,96 +779,97 @@ export default function AdminDashboard() {
           )}
 
           {/* Revenue Details Tab */}
-         {activeTab === 'revenue' && (
-  <div className="p-6 bg-gray-50 rounded-xl space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {activeTab === 'revenue' && (
+            <div className="p-6 bg-gray-50 rounded-xl space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      {/* Revenue Summary */}
-      <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow hover:shadow-md transition-all">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
-            <span className="text-gray-600">Verified Revenue</span>
-            <span className="font-bold text-lg text-emerald-600">PKR {totalVerifiedRevenue.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
-            <span className="text-gray-600">Pending Revenue</span>
-            <span className="font-bold text-lg text-amber-600">PKR {Number(pendingRevenue).toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
-            <span className="text-gray-600">Paying Students</span>
-            <span className="font-bold text-lg text-indigo-600">{revenueStats.payingStudents}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Average per Student</span>
-            <span className="font-bold text-lg text-purple-600">PKR {averageRevenuePerStudent.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Course-wise Revenue */}
-      <div className="bg-white rounded-xl p-6 border border-purple-100 shadow hover:shadow-md transition-all">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
-        <div className="space-y-3">
-          {paymentStudents
-            .filter(s => s.status === 'verified')
-            .reduce((acc: any[], student) => {
-              const existing = acc.find(c => c.course === student.course)
-              if (existing) {
-                existing.revenue += student.amount
-                existing.count++
-              } else {
-                acc.push({ course: student.course, revenue: student.amount, count: 1 })
-              }
-              return acc
-            }, [])
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 5)
-            .map((course, idx) => (
-              <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0 border-purple-100">
-                <div>
-                  <p className="font-medium text-gray-900">{course.course}</p>
-                  <p className="text-xs text-gray-500">{course.count} student{course.count > 1 ? 's' : ''}</p>
+                {/* Revenue Summary */}
+                <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow hover:shadow-md transition-all">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+                      <span className="text-gray-600">Verified Revenue</span>
+                      <span className="font-bold text-lg text-emerald-600">PKR {(totalVerifiedRevenue || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+                      <span className="text-gray-600">Pending Revenue</span>
+                      <span className="font-bold text-lg text-amber-600">PKR {(pendingRevenue || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-indigo-100 pb-2">
+                      <span className="text-gray-600">Paying Students</span>
+                      <span className="font-bold text-lg text-indigo-600">{(revenueStats?.payingStudents || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Average per Student</span>
+                      <span className="font-bold text-lg text-purple-600">PKR {(averageRevenuePerStudent || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-bold text-purple-600">PKR {course.revenue.toLocaleString()}</span>
+
+                {/* Course-wise Revenue */}
+                <div className="bg-white rounded-xl p-6 border border-purple-100 shadow hover:shadow-md transition-all">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
+                  <div className="space-y-3">
+                    {paymentStudents
+                      .filter(s => s.status === 'verified')
+                      .reduce((acc: any[], student) => {
+                        const existing = acc.find(c => c.course === student.course)
+                        const amount = Number(student.amount) || 0
+                        if (existing) {
+                          existing.revenue += amount
+                          existing.count++
+                        } else {
+                          acc.push({ course: student.course, revenue: amount, count: 1 })
+                        }
+                        return acc
+                      }, [])
+                      .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+                      .slice(0, 5)
+                      .map((course, idx) => (
+                        <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0 border-purple-100">
+                          <div>
+                            <p className="font-medium text-gray-900">{course.course}</p>
+                            <p className="text-xs text-gray-500">{course.count} student{course.count > 1 ? 's' : ''}</p>
+                          </div>
+                          <span className="font-bold text-purple-600">PKR {(course.revenue || 0).toLocaleString()}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Recent Verified Payments */}
+                <div className="md:col-span-2 bg-white rounded-xl p-6 border border-emerald-100 shadow hover:shadow-md transition-all">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-auto border-collapse">
+                      <thead className="bg-emerald-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Student</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Course</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Amount</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100">
+                        {paymentStudents
+                          .filter(s => s.status === 'verified')
+                          .slice(0, 5)
+                          .map(student => (
+                            <tr key={student.enrollmentId} className="hover:bg-emerald-50 transition-colors">
+                              <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{student.course}</td>
+                              <td className="px-4 py-3 text-sm font-bold text-emerald-600">PKR {(student.amount || 0).toLocaleString()}</td>
+                              <td className="px-4 py-3 text-sm text-gray-500">{student.paymentDate ? new Date(student.paymentDate).toLocaleDateString() : 'N/A'}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
-            ))}
-        </div>
-      </div>
-
-      {/* Recent Verified Payments */}
-      <div className="md:col-span-2 bg-white rounded-xl p-6 border border-emerald-100 shadow hover:shadow-md transition-all">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto border-collapse">
-            <thead className="bg-emerald-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Student</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Course</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-emerald-100">
-              {paymentStudents
-                .filter(s => s.status === 'verified')
-                .slice(0, 5)
-                .map(student => (
-                  <tr key={student.enrollmentId} className="hover:bg-emerald-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{student.course}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-emerald-600">PKR {student.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{new Date(student.paymentDate).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-  </div>
-)}
+            </div>
+          )}
         </div>
 
         {/* Screenshot Modal */}
@@ -889,7 +915,7 @@ export default function AdminDashboard() {
                       </h4>
                       <div className="space-y-3">
                         <p className="flex"><span className="text-sm text-gray-500 w-24">Course:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.course}</span></p>
-                        <p className="flex"><span className="text-sm text-gray-500 w-24">Amount:</span> <span className="font-bold text-indigo-600">PKR {selectedStudentDetails.amount.toLocaleString()}</span></p>
+                        <p className="flex"><span className="text-sm text-gray-500 w-24">Amount:</span> <span className="font-bold text-indigo-600">PKR {(selectedStudentDetails.amount || 0).toLocaleString()}</span></p>
                         <p className="flex"><span className="text-sm text-gray-500 w-24">Method:</span> <span className="font-medium text-gray-900">{selectedStudentDetails.paymentMethod}</span></p>
                         <p className="flex"><span className="text-sm text-gray-500 w-24">Transaction:</span> <span className="font-mono text-sm text-gray-700">{selectedStudentDetails.transactionId}</span></p>
                         <p className="flex"><span className="text-sm text-gray-500 w-24">Status:</span> 
@@ -991,7 +1017,7 @@ export default function AdminDashboard() {
                         <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-600" />
                         <p className="text-emerald-800 font-medium">Payment Verified</p>
                         <p className="text-sm text-emerald-600 mt-2">
-                          Amount: PKR {selectedStudentDetails.amount.toLocaleString()} added to revenue
+                          Amount: PKR {(selectedStudentDetails.amount || 0).toLocaleString()} added to revenue
                         </p>
                         {selectedStudentDetails.credentialsSent && (
                           <p className="text-xs text-emerald-600 mt-2 bg-emerald-100 p-2 rounded-lg">

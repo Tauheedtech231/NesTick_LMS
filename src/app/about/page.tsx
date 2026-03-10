@@ -247,7 +247,7 @@ export default function AboutSection() {
     ref={headingAboutRef}
     className="text-4xl md:text-5xl lg:text-6xl font-bold text-white inline-block relative mt-8 md:mt-0"
   >
-    About Mansol
+    About Mansol Hab
     <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
   </h2>
 

@@ -4,18 +4,23 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   HiHome, HiBookOpen, 
- HiUser, HiClipboardList, 
+  HiUser, HiClipboardList, 
   HiQuestionMarkCircle, HiLogout, HiChevronLeft,
-  HiChevronRight, HiMenu, HiX, HiCollection,
-  HiAcademicCap,  HiBell, HiSearch
+  HiChevronRight, HiMenu, HiX, 
+  HiAcademicCap,  HiBell, HiSearch,
+  HiDocumentReport  // Add this for Quiz Submissions
 } from 'react-icons/hi';
 
+// ✅ UPDATED navItems with Quiz Submissions
 const navItems = [
   { href: '/lms/Instructor_Portal/dashboard', icon: HiHome, label: 'Dashboard' },
   { href: '/lms/Instructor_Portal/courses', icon: HiBookOpen, label: 'Courses' },
   { href: '/lms/Instructor_Portal/quizzes', icon: HiQuestionMarkCircle, label: 'Mock Quizzes' },
+  // ✅ NEW: Quiz Submissions Tab
+
   { href: '/lms/Instructor_Portal/students', icon: HiClipboardList, label: 'Students' },
   { href: '/lms/Instructor_Portal/profile', icon: HiUser, label: 'Profile' },
 ];
@@ -23,7 +28,6 @@ const navItems = [
 /* eslint-disable */
 
 export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -77,8 +81,6 @@ export default function Sidebar() {
   const toggleSidebar = () => {
     if (isMobile) {
       setMobileOpen(!mobileOpen);
-    } else {
-      setCollapsed(!collapsed);
     }
   };
 
@@ -92,6 +94,14 @@ export default function Sidebar() {
     localStorage.removeItem('currentUser');
     closeMobileSidebar();
     router.push('/lms/auth/login?type=instructor');
+  };
+
+  // ✅ NEW: Handle logo click - navigate to profile
+  const handleLogoClick = () => {
+    router.push('/lms/Instructor_Portal/profile');
+    if (isMobile) {
+      setMobileOpen(false);
+    }
   };
 
   // Get user initials
@@ -130,10 +140,28 @@ export default function Sidebar() {
             <HiMenu className="w-6 h-6 text-white" />
           )}
         </button>
-        <div>
-          <h1 className="text-lg font-bold text-white">Instructor Portal</h1>
+        
+        {/* ✅ Mobile Logo - Clickable to Profile */}
+        <div 
+          onClick={handleLogoClick}
+          className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <div className="relative w-12 h-12">
+            <Image
+              src="/newlogo.jpg"
+              alt="Mansol Hab"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Mansol Hab</h1>
+            <p className="text-xs text-white/60">Instructor Portal</p>
+          </div>
         </div>
       </div>
+      
       <div className="flex items-center space-x-2">
         <button className="p-2 hover:bg-white/10 rounded-full transition-all duration-200">
           <HiSearch className="w-5 h-5 text-white/80" />
@@ -148,54 +176,38 @@ export default function Sidebar() {
 
   const SidebarContent = () => (
     <>
-      {/* Logo Section */}
+      {/* Logo Section - Clickable to Profile */}
       <div 
-        className="p-4 md:p-6 border-b"
+        className="p-4 md:p-6 border-b cursor-pointer hover:bg-white/5 transition-colors"
         style={{ borderBottomColor: `${BRAND_COLORS.softGrey}30` }}
+        onClick={handleLogoClick}
       >
         <div className="flex items-center justify-between">
-          {!collapsed && !isMobile && (
-            <div className="flex items-center space-x-3">
-              <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: BRAND_COLORS.deepBlue }}
-              >
-                <HiAcademicCap className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">Instructor</h1>
-                <p className="text-xs text-white/60">Portal</p>
-              </div>
+          <div className="flex items-center space-x-3">
+            {/* Logo Image */}
+            <div className="relative w-14 h-14">
+              <Image
+                src="/newlogo.jpg"
+                alt="Mansol Hab"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-          )}
-          {(collapsed || isMobile) && !isMobile && (
-            <div 
-              className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto"
-              style={{ backgroundColor: BRAND_COLORS.deepBlue }}
-            >
-              <HiAcademicCap className="w-6 h-6 text-white" />
+            <div>
+              <h1 className="text-2xl font-bold text-white">Mansol Hab</h1>
+              <p className="text-xs text-white/60">Instructor Portal</p>
             </div>
-          )}
-          {!isMobile && (
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded-lg transition-all duration-200 hover:bg-white/10"
-            >
-              {collapsed ? (
-                <HiChevronRight className="w-5 h-5 text-white/80" />
-              ) : (
-                <HiChevronLeft className="w-5 h-5 text-white/80" />
-              )}
-            </button>
-          )}
+          </div>
         </div>
       </div>
 
       {/* User Profile - Desktop Only */}
-      {!isMobile && currentUser && !collapsed && (
+      {!isMobile && currentUser && (
         <div 
-          className="px-4 py-3 border-b"
+          className="px-4 py-3 border-b cursor-pointer hover:bg-white/5 transition-colors"
           style={{ borderBottomColor: `${BRAND_COLORS.softGrey}30` }}
+          onClick={() => router.push('/lms/Instructor_Portal/profile')}
         >
           <div className="flex items-center space-x-3">
             <div 
@@ -227,20 +239,15 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={closeMobileSidebar}
-              className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
-                isActive
-                  ? 'text-white'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'
-              }`}
+              className="flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-white/10"
               style={{ 
                 backgroundColor: isActive ? BRAND_COLORS.deepBlue + '40' : 'transparent',
+                color: isActive ? BRAND_COLORS.white : `${BRAND_COLORS.white}CC`,
                 borderLeft: isActive ? `3px solid ${BRAND_COLORS.deepBlue}` : 'none'
               }}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {(!collapsed || isMobile) && (
-                <span className="font-medium truncate">{item.label}</span>
-              )}
+              <span className="font-medium truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -253,10 +260,10 @@ export default function Sidebar() {
       >
         <button
           onClick={handleLogout}
-          className={`flex items-center ${collapsed && !isMobile ? 'justify-center' : 'space-x-3'} w-full p-3 rounded-lg transition-all duration-200 hover:bg-white/10 text-white`}
+          className="flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 hover:bg-white/10 text-white"
         >
           <HiLogout className="w-5 h-5 flex-shrink-0" />
-          {(!collapsed || isMobile) && <span className="font-medium">Logout</span>}
+          <span className="font-medium">Logout</span>
         </button>
       </div>
     </>
@@ -283,10 +290,9 @@ export default function Sidebar() {
             ? `fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out ${
                 mobileOpen ? 'translate-x-0' : '-translate-x-full'
               }`
-            : 'relative'
+            : 'relative w-64'
           } 
-          flex flex-col h-screen transition-all duration-300 
-          ${collapsed && !isMobile ? 'w-20' : 'w-64'}
+          flex flex-col h-screen
         `}
         style={{ backgroundColor: BRAND_COLORS.darkNavy }}
       >

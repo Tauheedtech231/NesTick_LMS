@@ -292,7 +292,7 @@ export default function InstructorDashboard() {
                 </p>
               </div>
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-white/20">
-                {instructor.name.charAt(0)}
+               {instructor?.name?.charAt(0)}
               </div>
             </div>
           </div>

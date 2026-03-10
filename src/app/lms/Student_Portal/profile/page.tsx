@@ -1,32 +1,26 @@
-// lms/Student_Portal/profile/page.tsx
+// app/lms/Student_Portal/profile/page.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+/* eslint-disable */
 import Link from 'next/link';
 import {
   HiUser,
-  HiMail,
-  HiPhone,
-  HiCalendar,
+ 
   HiAcademicCap,
-  HiClock,
+  
   HiCheckCircle,
   HiBookOpen,
   HiOutlineAcademicCap as HiAward,
-  HiCog,
+ 
   HiPencil,
   HiCamera,
-  HiLockClosed,
+ 
   HiRefresh,
   HiChartBar,
-  HiTrendingUp,
-  HiStar,
-  HiDocumentText,
-  HiIdentification,
-  HiLocationMarker,
-  HiBriefcase,
+ 
+  
   HiSave,
   HiX,
   HiEye,
@@ -306,7 +300,7 @@ export default function StudentProfilePage() {
   const maskCNIC = (cnic: string) => {
     if (!cnic) return '';
     if (showCnic) return cnic;
-    return cnic.replace(/(\d{5})(\d{7})(\d{1})/, '$1-*******-$3');
+    return cnic.replace(/(\d{5})(\d{7})(\d{1})/, '$1-*******-$2');
   };
 
   if (!isMounted || loading) {
@@ -329,7 +323,8 @@ export default function StudentProfilePage() {
           <p className="text-gray-600 mb-6">Unable to load your profile information.</p>
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 bg-deepRed text-white rounded-lg hover:bg-brightRed transition-colors"
+            className="px-4 py-2 text-white rounded-lg hover:bg-red-700 transition-colors"
+            style={{ backgroundColor: BRAND_COLORS.deepRed }}
           >
             Try Again
           </button>
@@ -359,23 +354,32 @@ export default function StudentProfilePage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Updated with Brand Colors */}
       <div className="mb-6">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
+        <div 
+          className="rounded-xl p-6 text-white"
+          style={{ 
+            background: `linear-gradient(135deg, ${BRAND_COLORS.deepRed} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)`
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
+              <div 
+                className="p-3 rounded-xl"
+                style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+              >
                 <HiUser className="w-8 h-8" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold mb-2">My Profile</h1>
-                <p className="text-indigo-100">Manage your personal information</p>
+                <p style={{ color: `${BRAND_COLORS.white}CC` }}>Manage your personal information</p>
               </div>
             </div>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+              style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
             >
               <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
@@ -389,7 +393,12 @@ export default function StudentProfilePage() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             {/* Profile Image */}
-            <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+            <div 
+              className="h-32 relative"
+              style={{ 
+                background: `linear-gradient(135deg, ${BRAND_COLORS.deepRed} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)`
+              }}
+            >
               <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-white">
@@ -408,7 +417,8 @@ export default function StudentProfilePage() {
                   <button
                     onClick={handleImageClick}
                     disabled={uploading}
-                    className="absolute bottom-0 right-0 p-1.5 bg-deepRed text-white rounded-full hover:bg-brightRed transition-colors disabled:opacity-50"
+                    className="absolute bottom-0 right-0 p-1.5 text-white rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: BRAND_COLORS.deepRed }}
                   >
                     {uploading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -433,10 +443,22 @@ export default function StudentProfilePage() {
               <p className="text-sm text-gray-500 mb-4">{profile.email}</p>
 
               <div className="flex justify-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                <span 
+                  className="px-3 py-1 text-xs font-medium rounded-full"
+                  style={{ 
+                    backgroundColor: `${BRAND_COLORS.darkRoyalBlue}20`,
+                    color: BRAND_COLORS.darkRoyalBlue
+                  }}
+                >
                   Student
                 </span>
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                <span 
+                  className="px-3 py-1 text-xs font-medium rounded-full"
+                  style={{ 
+                    backgroundColor: `${BRAND_COLORS.teal}20`,
+                    color: BRAND_COLORS.teal
+                  }}
+                >
                   Active
                 </span>
               </div>
@@ -462,20 +484,20 @@ export default function StudentProfilePage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - Updated with Brand Colors */}
           <div className="grid grid-cols-3 gap-3 mt-6">
             <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-              <HiBookOpen className="w-5 h-5 mx-auto mb-1 text-indigo-600" />
+              <HiBookOpen className="w-5 h-5 mx-auto mb-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
               <p className="text-lg font-bold text-gray-900">{profile.stats.totalEnrollments}</p>
               <p className="text-xs text-gray-500">Enrolled</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-              <HiAcademicCap className="w-5 h-5 mx-auto mb-1 text-green-600" />
+              <HiAcademicCap className="w-5 h-5 mx-auto mb-1" style={{ color: BRAND_COLORS.teal }} />
               <p className="text-lg font-bold text-gray-900">{profile.stats.activeEnrollments}</p>
               <p className="text-xs text-gray-500">Active</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
-              <HiAward className="w-5 h-5 mx-auto mb-1 text-amber-600" />
+              <HiAward className="w-5 h-5 mx-auto mb-1" style={{ color: BRAND_COLORS.deepRed }} />
               <p className="text-lg font-bold text-gray-900">{profile.stats.certificatesEarned}</p>
               <p className="text-xs text-gray-500">Certificates</p>
             </div>
@@ -493,8 +515,9 @@ export default function StudentProfilePage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   editMode
                     ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'text-white hover:opacity-90'
                 }`}
+                style={!editMode ? { backgroundColor: BRAND_COLORS.darkRoyalBlue } : {}}
               >
                 {editMode ? (
                   <>
@@ -520,12 +543,12 @@ export default function StudentProfilePage() {
                       Full Name
                     </label>
                     <input
-                      type="text"
-                      name="name"
-                      value={editForm.name || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+  type="text"
+  name="name"
+  value={editForm.name || ''}
+  onChange={handleInputChange}
+  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
+/>
                   </div>
 
                   <div>
@@ -533,12 +556,12 @@ export default function StudentProfilePage() {
                       Phone Number
                     </label>
                     <input
-                      type="tel"
-                      name="phone"
-                      value={editForm.phone || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+  type="tel"
+  name="phone"
+  value={editForm.phone || ''}
+  onChange={handleInputChange}
+  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
+/>
                   </div>
 
                   <div>
@@ -546,12 +569,13 @@ export default function StudentProfilePage() {
                       Address
                     </label>
                     <input
-                      type="text"
-                      name="address"
-                      value={editForm.address || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+  type="text"
+  name="address"
+  value={editForm.address || ''}
+  onChange={handleInputChange}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+  style={{ boxShadow: `0 0 0 2px ${BRAND_COLORS.darkRoyalBlue}` }}
+/>
                   </div>
 
                   <div>
@@ -562,7 +586,7 @@ export default function StudentProfilePage() {
                       name="education"
                       value={editForm.education || ''}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
                     >
                       <option value="">Select Education</option>
                       <option value="Matric">Matric</option>
@@ -578,13 +602,14 @@ export default function StudentProfilePage() {
                       Experience
                     </label>
                     <input
-                      type="text"
-                      name="experience"
-                      value={editForm.experience || ''}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="e.g., 2 years in construction"
-                    />
+  type="text"
+  name="experience"
+  value={editForm.experience || ''}
+  onChange={handleInputChange}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+  style={{ boxShadow: `0 0 0 2px ${BRAND_COLORS.darkRoyalBlue}` }}
+  placeholder="e.g., 2 years in construction"
+/>
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4">
@@ -597,7 +622,8 @@ export default function StudentProfilePage() {
                     <button
                       onClick={handleSaveProfile}
                       disabled={saving}
-                      className="px-4 py-2 bg-deepRed text-white rounded-lg hover:bg-brightRed transition-colors flex items-center gap-2 disabled:opacity-50"
+                      className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      style={{ backgroundColor: BRAND_COLORS.deepRed }}
                     >
                       {saving ? (
                         <>
@@ -641,9 +667,9 @@ export default function StudentProfilePage() {
                             className="p-1 hover:bg-gray-100 rounded"
                           >
                             {showCnic ? (
-                              <HiEyeOff className="w-4 h-4 text-gray-500" />
+                              <HiEyeOff className="w-4 h-4" style={{ color: BRAND_COLORS.darkGrey }} />
                             ) : (
-                              <HiEye className="w-4 h-4 text-gray-500" />
+                              <HiEye className="w-4 h-4" style={{ color: BRAND_COLORS.darkGrey }} />
                             )}
                           </button>
                         )}
@@ -677,13 +703,13 @@ export default function StudentProfilePage() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links - Updated with Brand Colors */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
             <Link
               href="/lms/Student_Portal/my-courses"
               className="bg-white rounded-xl border border-gray-200 p-4 text-center hover:shadow-md transition-shadow"
             >
-              <HiBookOpen className="w-6 h-6 mx-auto mb-2 text-indigo-600" />
+              <HiBookOpen className="w-6 h-6 mx-auto mb-2" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
               <p className="text-sm font-medium text-gray-900">My Courses</p>
               <p className="text-xs text-gray-500 mt-1">{profile.stats.activeEnrollments} Active</p>
             </Link>
@@ -691,7 +717,7 @@ export default function StudentProfilePage() {
               href="/lms/Student_Portal/certificates"
               className="bg-white rounded-xl border border-gray-200 p-4 text-center hover:shadow-md transition-shadow"
             >
-              <HiAward className="w-6 h-6 mx-auto mb-2 text-amber-600" />
+              <HiAward className="w-6 h-6 mx-auto mb-2" style={{ color: BRAND_COLORS.deepRed }} />
               <p className="text-sm font-medium text-gray-900">Certificates</p>
               <p className="text-xs text-gray-500 mt-1">{profile.stats.certificatesEarned} Earned</p>
             </Link>
@@ -699,7 +725,7 @@ export default function StudentProfilePage() {
               href="/lms/Student_Portal/progress"
               className="bg-white rounded-xl border border-gray-200 p-4 text-center hover:shadow-md transition-shadow"
             >
-              <HiChartBar className="w-6 h-6 mx-auto mb-2 text-green-600" />
+              <HiChartBar className="w-6 h-6 mx-auto mb-2" style={{ color: BRAND_COLORS.teal }} />
               <p className="text-sm font-medium text-gray-900">Progress</p>
               <p className="text-xs text-gray-500 mt-1">Track Learning</p>
             </Link>

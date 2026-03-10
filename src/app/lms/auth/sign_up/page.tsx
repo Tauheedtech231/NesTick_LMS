@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { HiUser, HiMail, HiClock, HiArrowLeft, HiEye, HiEyeOff } from 'react-icons/hi'
+import { HiUser, HiMail, HiClock, HiArrowLeft, HiEye, HiEyeOff, HiPhone, HiLocationMarker, HiAcademicCap } from 'react-icons/hi'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -13,7 +13,10 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student'
+    role: 'student',
+    phone: '',
+    address: '',
+    education: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -35,6 +38,11 @@ export default function SignupPage() {
       return
     }
 
+    if (formData.role === 'student' && !formData.phone) {
+      setError('Phone number is required for students')
+      return
+    }
+
     setIsLoading(true)
 
     // Get existing users from local storage
@@ -48,31 +56,52 @@ export default function SignupPage() {
       return
     }
 
-    // Create new user object
+    // Create new user object with all fields
     const newUser = {
       id: Date.now().toString(),
       name: formData.name,
       email: formData.email,
       password: formData.password,
       role: formData.role,
-      createdAt: new Date().toISOString()
+      phone: formData.phone || '',
+      address: formData.address || '',
+      education: formData.education || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
 
     // Add new user to users array
     const updatedUsers = [...existingUsers, newUser]
     localStorage.setItem('users', JSON.stringify(updatedUsers))
 
-    // Also save as current user
-    localStorage.setItem('currentUser', JSON.stringify(newUser))
+    // Save as current user (without password for security)
+    const { password, ...userWithoutPassword } = newUser
+    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword))
+
+    // Also save student email separately for cart operations
+    if (formData.role === 'student') {
+      localStorage.setItem('studentEmail', formData.email)
+      localStorage.setItem('studentName', formData.name)
+      localStorage.setItem('studentPhone', formData.phone || '')
+    }
 
     setTimeout(() => {
       setIsLoading(false)
-      alert('Account created successfully!')
-      router.push('/dashboard')
+      
+      // Redirect based on role
+      if (formData.role === 'student') {
+        router.push('/courses')
+      } else if (formData.role === 'instructor') {
+        router.push('/lms/Instructor_Portal/dashboard')
+      } else if (formData.role === 'admin') {
+        router.push('/lms/Admin_Portal/dashboard')
+      } else {
+        router.push('/dashboard')
+      }
     }, 1500)
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -111,7 +140,7 @@ export default function SignupPage() {
           </div>
 
           {/* Form Section */}
-          <div className="p-8">
+          <div className="p-8 max-h-[600px] overflow-y-auto">
             {/* Error Message */}
             {error && (
               <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -124,7 +153,7 @@ export default function SignupPage() {
               {/* Name Input */}
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -146,7 +175,7 @@ export default function SignupPage() {
               {/* Email Input */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -169,7 +198,7 @@ export default function SignupPage() {
               {/* Role Selection */}
               <div>
                 <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                  Account Type
+                  Account Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="role"
@@ -184,10 +213,79 @@ export default function SignupPage() {
                 </select>
               </div>
 
+              {/* Student Specific Fields */}
+              {formData.role === 'student' && (
+                <>
+                  {/* Phone Number */}
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <HiPhone className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required={formData.role === 'student'}
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
+                        placeholder="03XX-XXXXXXX"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                      Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute top-3 left-3 flex items-start pointer-events-none">
+                        <HiLocationMarker className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <textarea
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
+                        placeholder="Your address"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Education */}
+                  <div>
+                    <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-1">
+                      Education
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <HiAcademicCap className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        id="education"
+                        name="education"
+                        type="text"
+                        value={formData.education}
+                        onChange={handleInputChange}
+                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-gray-400"
+                        placeholder="e.g., Bachelor's in Computer Science"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Password Input */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -220,7 +318,7 @@ export default function SignupPage() {
               {/* Confirm Password Input */}
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
+                  Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

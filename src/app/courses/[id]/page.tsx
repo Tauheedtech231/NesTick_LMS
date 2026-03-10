@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   HiCheckCircle,
   HiArrowLeft,
@@ -13,11 +13,15 @@ import {
   HiUserGroup,
   HiAcademicCap,
   HiLocationMarker,
-
+  HiShoppingCart,
+  HiCheck,
+  HiTrash,
+  HiX
 } from "react-icons/hi";
-import Link from "next/link";
 import { IoMdArrowDropright } from "react-icons/io";
 import { MdLanguage } from "react-icons/md";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 /* eslint-disable */
 
 // Brand Colors
@@ -68,8 +72,10 @@ const publishedCoursesData = {
       'Physical fitness for workshop activities',
       'Safety gear will be provided'
     ],
-    price: 'PKR 25,000',
-    originalPrice: 'PKR 30,000',
+    price: 25000,
+    priceFormatted: 'PKR 25,000',
+    originalPrice: 30000,
+    originalPriceFormatted: 'PKR 30,000',
     savings: 'Save PKR 5,000',
     icon: HiOutlineWrench,
     color: BRAND_COLORS.teal,
@@ -115,8 +121,10 @@ const publishedCoursesData = {
       'Background in construction or industry',
       'Basic computer skills'
     ],
-    price: 'PKR 30,000',
-    originalPrice: 'PKR 35,000',
+    price: 30000,
+    priceFormatted: 'PKR 30,000',
+    originalPrice: 35000,
+    originalPriceFormatted: 'PKR 35,000',
     savings: 'Save PKR 5,000',
     icon: HiOutlineShieldCheck,
     color: BRAND_COLORS.darkRoyalBlue,
@@ -162,8 +170,10 @@ const publishedCoursesData = {
       'Protective gear will be provided',
       'Good hand-eye coordination'
     ],
-    price: 'PKR 35,000',
-    originalPrice: 'PKR 40,000',
+    price: 35000,
+    priceFormatted: 'PKR 35,000',
+    originalPrice: 40000,
+    originalPriceFormatted: 'PKR 40,000',
     savings: 'Save PKR 5,000',
     icon: HiOutlineCash,
     color: BRAND_COLORS.deepRed,
@@ -314,8 +324,10 @@ interface Course {
   highlights: string[];
   curriculum: string[];
   requirements: string[];
-  price: string;
-  originalPrice?: string;
+  price: number;
+  priceFormatted: string;
+  originalPrice?: number;
+  originalPriceFormatted?: string;
   savings?: string;
   icon?: any;
   color?: string;
@@ -328,13 +340,121 @@ interface Course {
   category?: string;
 }
 
+interface CartItem {
+  id: string;
+  course_id: string;
+  course_title: string;
+  course_price: number;
+  created_at: string;
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [inCart, setInCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  
+  // New state for cart items
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [showCartSidebar, setShowCartSidebar] = useState(false);
+  const [removingFromCart, setRemovingFromCart] = useState<string | null>(null);
 
   const courseId = params.id as string;
+
+  // Load user from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUser(userData);
+    }
+  }, []);
+
+  // Check if course is already in cart when user and course are loaded
+  useEffect(() => {
+    if (user?.email && course) {
+      checkCartStatus();
+      loadCartItems(); // Load all cart items
+    }
+  }, [user, course]);
+
+  const checkCartStatus = async () => {
+    try {
+      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(user.email)}`);
+      const result = await response.json();
+      if (result.success) {
+        const inCart = result.data.items.some((item: any) => item.course_id === courseId);
+        setInCart(inCart);
+      }
+    } catch (error) {
+      console.error('Error checking cart:', error);
+    }
+  };
+
+  // Load all cart items
+  const loadCartItems = async () => {
+    if (!user?.email) return;
+    
+    setCartLoading(true);
+    try {
+      const response = await fetch(`/api/student/cart?email=${encodeURIComponent(user.email)}`);
+      const result = await response.json();
+      if (result.success) {
+        setCartItems(result.data.items || []);
+      }
+    } catch (error) {
+      console.error('Error loading cart items:', error);
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
+  // Remove item from cart
+  const handleRemoveFromCart = async (cartId: string) => {
+    if (!user) return;
+
+    setRemovingFromCart(cartId);
+    try {
+      const response = await fetch(
+        `/api/student/cart/remove?id=${cartId}&email=${encodeURIComponent(user.email)}`,
+        { method: 'DELETE' }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update cart items
+        setCartItems(prev => prev.filter(item => item.id !== cartId));
+        
+        // If this was the current course, update inCart status
+        const removedItem = cartItems.find(item => item.id === cartId);
+        if (removedItem?.course_id === courseId) {
+          setInCart(false);
+        }
+
+        setCartMessage({
+          type: 'success',
+          text: 'Item removed from cart'
+        });
+        setTimeout(() => setCartMessage(null), 3000);
+      } else {
+        throw new Error(result.error || 'Failed to remove item');
+      }
+    } catch (error: any) {
+      console.error('Error removing item:', error);
+      setCartMessage({
+        type: 'error',
+        text: error.message || 'Failed to remove item'
+      });
+    } finally {
+      setRemovingFromCart(null);
+    }
+  };
 
   useEffect(() => {
     loadCourse();
@@ -372,8 +492,10 @@ export default function CourseDetailPage() {
           highlights: dynamicContent.highlights,
           curriculum: dynamicContent.curriculum,
           requirements: dynamicContent.requirements,
-          price: courseData.price ? `PKR ${courseData.price.toLocaleString()}` : 'Contact for pricing',
-          originalPrice: courseData.original_price ? `PKR ${courseData.original_price.toLocaleString()}` : undefined,
+          price: courseData.price || 0,
+          priceFormatted: courseData.price ? `PKR ${courseData.price.toLocaleString()}` : 'Contact for pricing',
+          originalPrice: courseData.original_price,
+          originalPriceFormatted: courseData.original_price ? `PKR ${courseData.original_price.toLocaleString()}` : undefined,
           savings: courseData.original_price && courseData.price 
             ? `Save ${Math.round((1 - courseData.price/courseData.original_price) * 100)}%` 
             : undefined,
@@ -422,8 +544,10 @@ export default function CourseDetailPage() {
             highlights: dynamicContent.highlights,
             curriculum: dynamicContent.curriculum,
             requirements: dynamicContent.requirements,
-            price: localCourse.price || 'Contact for pricing',
+            price: localCourse.price || 0,
+            priceFormatted: localCourse.priceFormatted || 'Contact for pricing',
             originalPrice: localCourse.originalPrice,
+            originalPriceFormatted: localCourse.originalPriceFormatted,
             savings: localCourse.savings,
             courseImage: localCourse.courseImage || localCourse.image,
             featured: localCourse.featured || false,
@@ -445,8 +569,77 @@ export default function CourseDetailPage() {
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!user) {
+      router.push('/lms/auth/login?type=student');
+      return;
+    }
+
+    if (!course) return;
+
+    setAddingToCart(true);
+    setCartMessage(null);
+
+    try {
+      const response = await fetch('/api/student/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentEmail: user.email,
+          courseId: course.id,
+          courseTitle: course.title,
+          coursePrice: course.price || 0
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setInCart(true);
+        // Reload cart items
+        await loadCartItems();
+        setCartMessage({
+          type: 'success',
+          text: 'Course added to cart successfully!'
+        });
+        
+        // Clear message after 3 seconds
+        setTimeout(() => setCartMessage(null), 3000);
+      } else {
+        if (result.error === 'Course already in cart') {
+          setInCart(true);
+          setCartMessage({
+            type: 'error',
+            text: 'Course is already in your cart'
+          });
+        } else {
+          throw new Error(result.error || 'Failed to add to cart');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error adding to cart:', error);
+      setCartMessage({
+        type: 'error',
+        text: error.message || 'Failed to add to cart'
+      });
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   const handleEnrollNow = () => {
     router.push(`/courses/${courseId}/enrollment`);
+  };
+
+  const formatCurrency = (amount: number) => {
+    // Fix NaN issue by ensuring amount is a number
+    const validAmount = Number(amount) || 0;
+    return new Intl.NumberFormat('en-PK', {
+      style: 'currency',
+      currency: 'PKR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(validAmount).replace('PKR', 'Rs');
   };
 
   if (loading) {
@@ -476,11 +669,40 @@ export default function CourseDetailPage() {
   // Determine image source
   const courseImageUrl = course.courseImage || course.image || '/placeholder-course.jpg';
 
+  // Calculate cart total - FIXED NaN ISSUE
+  const cartTotal = cartItems.reduce((sum, item) => {
+    const price = Number(item.course_price) || 0;
+    return sum + price;
+  }, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <div className="mb-8">
+        {/* Cart Message Alert */}
+        <AnimatePresence>
+          {cartMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
+                cartMessage.type === 'success' 
+                  ? 'bg-green-50 border border-green-200 text-green-700' 
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
+              {cartMessage.type === 'success' ? (
+                <HiCheck className="w-5 h-5" />
+              ) : (
+                <HiCheckCircle className="w-5 h-5" />
+              )}
+              <p>{cartMessage.text}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Back Button and Cart Icon */}
+        <div className="mb-8 flex items-center justify-between">
           <Link
             href="/courses"
             className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
@@ -488,7 +710,178 @@ export default function CourseDetailPage() {
             <HiArrowLeft className="w-5 h-5 mr-2" />
             Back to Courses
           </Link>
+
+          {/* Cart Icon with Count */}
+          {user && (
+            <button
+              onClick={() => setShowCartSidebar(true)}
+              className="relative p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-all group"
+            >
+              <HiShoppingCart className="w-6 h-6" style={{ color: BRAND_COLORS.deepRed }} />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#B11217] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
+
+        {/* Cart Sidebar - Slide from top with single close button */}
+        <AnimatePresence>
+          {showCartSidebar && user && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowCartSidebar(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              />
+              
+              {/* Sidebar - Slides from top */}
+              <motion.div
+                initial={{ opacity: 0, y: -100 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -100 }}
+                transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+                className="fixed top-0 left-0 right-0 bg-white shadow-2xl z-50 overflow-y-auto"
+                style={{ maxHeight: '80vh', margin: '0 auto', width: '90%', maxWidth: '600px', borderRadius: '0 0 20px 20px' }}
+              >
+                {/* Sidebar Header with Theme Colors and Single Close Button */}
+                <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6 rounded-t-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/10 rounded-lg">
+                        <HiShoppingCart className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">
+                          Your Cart
+                        </h2>
+                        <p className="text-sm text-white/80">
+                          {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowCartSidebar(false)}
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors group"
+                    >
+                      <HiX className="w-5 h-5 text-white/80 group-hover:text-white" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cart Items */}
+                <div className="p-6">
+                  {cartLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND_COLORS.deepRed }} />
+                    </div>
+                  ) : cartItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <HiShoppingCart className="w-12 h-12" style={{ color: BRAND_COLORS.darkNavy }} />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                        Your cart is empty
+                      </h3>
+                      <p className="text-gray-500 mb-6">Start adding courses to get started</p>
+                      <button
+                        onClick={() => setShowCartSidebar(false)}
+                        className="px-6 py-2 rounded-lg text-white font-medium transition-all hover:scale-105"
+                        style={{ backgroundColor: BRAND_COLORS.deepRed }}
+                      >
+                        Continue Shopping
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-4 mb-6">
+                        {cartItems.map((item) => (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-all"
+                          >
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                                {item.course_title}
+                              </h3>
+                              <p className="text-lg font-bold" style={{ color: BRAND_COLORS.deepRed }}>
+                                {formatCurrency(item.course_price)}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Added {new Date(item.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveFromCart(item.id)}
+                              disabled={removingFromCart === item.id}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Remove from cart"
+                            >
+                              {removingFromCart === item.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <HiTrash className="w-4 h-4" />
+                              )}
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Cart Summary */}
+                      <div className="border-t border-gray-200 pt-6">
+                        <div className="space-y-3 mb-4">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Subtotal</span>
+                            <span className="font-semibold text-gray-900">
+                              {formatCurrency(cartTotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Total Items</span>
+                            <span className="font-semibold text-gray-900">{cartItems.length}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => {
+                              setShowCartSidebar(false);
+                              router.push('/checkout');
+                            }}
+                            className="w-full py-3 rounded-lg text-white font-medium transition-all hover:scale-105 hover:shadow-lg"
+                            style={{ backgroundColor: BRAND_COLORS.deepRed }}
+                          >
+                            Proceed to Checkout
+                          </button>
+                          <button
+                            onClick={() => setShowCartSidebar(false)}
+                            className="w-full py-3 rounded-lg font-medium transition-all border-2"
+                            style={{ 
+                              borderColor: BRAND_COLORS.darkRoyalBlue,
+                              color: BRAND_COLORS.darkRoyalBlue,
+                              backgroundColor: 'white'
+                            }}
+                          >
+                            Continue Shopping
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Course Hero Section */}
         <motion.section
@@ -538,49 +931,86 @@ export default function CourseDetailPage() {
                 </ul>
               </div>
 
-              {/* Price & CTA */}
-              <div className="pt-4 border-t border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span
-                      className="text-2xl font-bold"
-                      style={{ color: BRAND_COLORS.deepRed }}
-                    >
-                      {course.price}
-                    </span>
-                    {course.originalPrice && (
-                      <span className="text-sm text-gray-500 line-through">
-                        {course.originalPrice}
+              {/* Price & CTAs */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-3">
+                  <div>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span
+                        className="text-2xl font-bold"
+                        style={{ color: BRAND_COLORS.deepRed }}
+                      >
+                        {course.priceFormatted}
                       </span>
-                    )}
+                      {course.originalPriceFormatted && (
+                        <span className="text-sm text-gray-500 line-through">
+                          {course.originalPriceFormatted}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-gray-600">
+                      {course.savings && (
+                        <span
+                          className="px-2 py-0.5 rounded-full font-semibold"
+                          style={{
+                            backgroundColor: `${BRAND_COLORS.deepRed}15`,
+                            color: BRAND_COLORS.deepRed,
+                          }}
+                        >
+                          {course.savings}
+                        </span>
+                      )}
+                      <span>{course.studentsTrained?.toLocaleString() || 0} students trained</span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1 text-xs text-gray-600">
-                    {course.savings && (
-                      <span
-                        className="px-2 py-0.5 rounded-full font-semibold"
+                  <div className="flex gap-3 w-full md:w-auto">
+                    {/* Add to Cart Button */}
+                    {inCart ? (
+                      <button
+                        onClick={() => setShowCartSidebar(true)}
+                        className="flex-1 md:flex-none px-6 py-3 rounded-lg font-bold text-base shadow-md transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
                         style={{
-                          backgroundColor: `${BRAND_COLORS.deepRed}15`,
-                          color: BRAND_COLORS.deepRed,
+                          backgroundColor: '#10B981',
+                          color: BRAND_COLORS.white,
                         }}
                       >
-                        {course.savings}
-                      </span>
+                        <HiCheck className="w-5 h-5" />
+                        View in Cart
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleAddToCart}
+                        disabled={addingToCart}
+                        className="flex-1 md:flex-none px-6 py-3 rounded-lg font-bold text-base shadow-md transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50"
+                        style={{
+                          backgroundColor: BRAND_COLORS.darkRoyalBlue,
+                          color: BRAND_COLORS.white,
+                        }}
+                      >
+                        {addingToCart ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <HiShoppingCart className="w-5 h-5" />
+                        )}
+                        {addingToCart ? 'Adding...' : 'Add to Cart'}
+                      </button>
                     )}
-                    <span>{course.studentsTrained?.toLocaleString() || 0} students trained</span>
+
+                    {/* Enroll Now Button */}
+                    <button
+                      onClick={handleEnrollNow}
+                      className="flex-1 md:flex-none px-6 py-3 rounded-lg font-bold text-base shadow-md transition-all duration-200 hover:scale-105 active:scale-95"
+                      style={{
+                        backgroundColor: BRAND_COLORS.deepRed,
+                        color: BRAND_COLORS.white,
+                      }}
+                    >
+                      Enroll Now
+                    </button>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleEnrollNow}
-                  className="px-6 py-3 rounded-lg font-bold text-base shadow transition-transform duration-200 transform hover:scale-105 active:scale-95"
-                  style={{
-                    backgroundColor: BRAND_COLORS.deepRed,
-                    color: BRAND_COLORS.white,
-                  }}
-                >
-                  Enroll Now
-                </button>
               </div>
             </div>
           </div>

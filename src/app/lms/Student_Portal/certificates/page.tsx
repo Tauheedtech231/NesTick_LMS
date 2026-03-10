@@ -3,22 +3,22 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+
 import {
   HiAcademicCap,
   HiDownload,
   HiEye,
   HiRefresh,
   HiCheckCircle,
-  HiClock,
+
   HiXCircle,
   HiCalendar,
   HiUser,
   HiBookOpen,
-  HiStar
+
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
-
+/* eslint-disable */
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -414,27 +414,36 @@ export default function CertificatesPage() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <HiAcademicCap className="w-8 h-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold mb-2">My Certificates</h1>
-                <p className="text-amber-100">View and download your course certificates</p>
-              </div>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
-            >
-              <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+  <div 
+    className="rounded-xl p-6 text-white"
+    style={{ 
+      background: `linear-gradient(135deg, ${BRAND_COLORS.deepRed} 0%, ${BRAND_COLORS.darkRoyalBlue} 100%)`
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div 
+          className="p-3 rounded-xl"
+          style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+        >
+          <HiAcademicCap className="w-8 h-8" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold mb-2">My Certificates</h1>
+          <p style={{ color: `${BRAND_COLORS.white}CC` }}>View and download your course certificates</p>
         </div>
       </div>
+      <button
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+        style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+      >
+        <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

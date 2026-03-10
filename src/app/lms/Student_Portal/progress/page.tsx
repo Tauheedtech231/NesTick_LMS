@@ -3,21 +3,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+/* eslint-disable */
 import {
   HiChartBar,
   HiClock,
   HiCheckCircle,
-  HiDocumentText,
+ 
   HiPlay,
-  HiAcademicCap,
+
   HiTrendingUp,
-  HiTrendingDown,
+  
   HiCalendar,
-  HiEye,
+ 
   HiRefresh,
-  HiChevronRight,
-  HiChartPie,
+
   HiBookOpen,
   HiStar
 } from 'react-icons/hi';
@@ -289,23 +288,29 @@ export default function StudentProgressPage() {
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">My Learning Progress</h1>
-              <p className="text-indigo-100">Track your course completion and performance</p>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
-            >
-              <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
+     <div className="mb-6">
+  <div 
+    className="rounded-xl p-6 text-white"
+    style={{ 
+      background: 'linear-gradient(135deg, #B11217 0%, #1E3A8A 100%)'
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold mb-2">My Learning Progress</h1>
+        <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Track your course completion and performance</p>
       </div>
+      <button
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+        style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+      >
+        <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Course Selector */}
       {enrollments.length > 0 && (

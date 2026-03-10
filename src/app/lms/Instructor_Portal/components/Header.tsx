@@ -5,7 +5,6 @@ import { Bell, HelpCircle, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 /* eslint-disable */
 
 export default function Header() {
@@ -13,147 +12,44 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [userDetails, setUserDetails] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Fetch current logged-in user from localStorage
-    const fetchCurrentUser = () => {
-      try {
-        const userData = localStorage.getItem('currentUser');
-        const instructorUsers = JSON.parse(localStorage.getItem('instructorUsers') || '[]');
-        const allInstructors = JSON.parse(localStorage.getItem('instructors') || '[]');
-        const instructorProfiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
+    fetchCurrentUser();
+  }, []);
 
-        if (userData) {
-          const user = JSON.parse(userData);
-          
-          // If it's a demo instructor account
-          if (user.email === 'instructor@gmail.com') {
-            setCurrentUser({
-              name: 'Demo Instructor',
-              email: 'instructor@gmail.com',
-              role: 'instructor',
-              isDemoAccount: true,
-              initials: 'DI'
-            });
-            // Check for demo profile picture
-            const demoProfile = instructorProfiles.find((p: any) => p.email === 'instructor@gmail.com');
-            if (demoProfile?.profilePicture) {
-              setProfilePicture(demoProfile.profilePicture);
-            }
-          }
-          // If it's a real instructor from instructorUsers
-          else if (user.role === 'instructor') {
-            // Try to find more details from instructorUsers
-            const instructorUser = instructorUsers.find((instr: any) => 
-              instr.email === user.email || instr.id === user.instructorId
-            );
-            
-            // Try to find from all instructors list
-            const instructorDetails = allInstructors.find((instr: any) => 
-              instr.id === user.instructorId || 
-              instr.email === user.email ||
-              (instructorUser && instr.id === instructorUser.id)
-            );
-            
-            // Find profile picture from instructor_profiles
-            const instructorProfile = instructorProfiles.find((p: any) => 
-              p.email === user.email || p.userId === user.id || p.userId === user.instructorId
-            );
-            
-            if (instructorProfile?.profilePicture) {
-              setProfilePicture(instructorProfile.profilePicture);
-            }
-            
-            // Determine name and initials
-            let name = user.name || 'Instructor';
-            let initials = 'I';
-            
-            if (instructorDetails?.name) {
-              name = instructorDetails.name;
-              initials = instructorDetails.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-            } else if (instructorUser?.name) {
-              name = instructorUser.name;
-              initials = instructorUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-            } else if (user.name) {
-              name = user.name;
-              initials = user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-            } else {
-              // Get initials from email
-              initials = user.email.substring(0, 2).toUpperCase();
-            }
-            
-            setCurrentUser({
-              name,
-              email: user.email,
-              role: 'instructor',
-              isDemoAccount: false,
-              instructorId: user.instructorId,
-              instructorDetails,
-              initials,
-              profile: instructorProfile
-            });
-          }
+  const fetchCurrentUser = async () => {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      
+      if (!userData) {
+        // Try last instructor login
+        const lastInstructorLogin = localStorage.getItem('lastInstructorLogin');
+        if (lastInstructorLogin) {
+          const lastLogin = JSON.parse(lastInstructorLogin);
+          handleUserLogin(lastLogin);
         } else {
-          // Check for last instructor login as fallback
-          const lastInstructorLogin = localStorage.getItem('lastInstructorLogin');
-          if (lastInstructorLogin) {
-            const lastLogin = JSON.parse(lastInstructorLogin);
-            
-            // If last login was instructor@gmail.com (demo)
-            if (lastLogin.email === 'instructor@gmail.com') {
-              setCurrentUser({
-                name: 'Demo Instructor',
-                email: 'instructor@gmail.com',
-                role: 'instructor',
-                isDemoAccount: true,
-                initials: 'DI'
-              });
-              // Check for demo profile picture
-              const demoProfile = instructorProfiles.find((p: any) => p.email === 'instructor@gmail.com');
-              if (demoProfile?.profilePicture) {
-                setProfilePicture(demoProfile.profilePicture);
-              }
-            } else {
-              // Try to find real instructor
-              const instructorUser = instructorUsers.find((instr: any) => 
-                instr.email === lastLogin.email
-              );
-              
-              if (instructorUser) {
-                const instructorDetails = allInstructors.find((instr: any) => 
-                  instr.id === instructorUser.id
-                );
-                
-                // Find profile picture
-                const instructorProfile = instructorProfiles.find((p: any) => 
-                  p.email === lastLogin.email || p.userId === instructorUser.id
-                );
-                
-                if (instructorProfile?.profilePicture) {
-                  setProfilePicture(instructorProfile.profilePicture);
-                }
-                
-                const name = instructorDetails?.name || instructorUser.name || lastLogin.email.split('@')[0];
-                const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-                
-                setCurrentUser({
-                  name,
-                  email: lastLogin.email,
-                  role: 'instructor',
-                  isDemoAccount: false,
-                  instructorId: instructorUser.id,
-                  instructorDetails,
-                  initials,
-                  profile: instructorProfile
-                });
-              }
-            }
-          }
+          setCurrentUser(null);
         }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        // Set default demo instructor
+        setLoading(false);
+        return;
+      }
+
+      const user = JSON.parse(userData);
+      await handleUserLogin(user);
+      
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setCurrentUser(null);
+      setLoading(false);
+    }
+  };
+
+  const handleUserLogin = async (user: any) => {
+    try {
+      // Handle demo instructor
+      if (user.email === 'instructor@gmail.com' || user.isDemoAccount) {
         setCurrentUser({
           name: 'Demo Instructor',
           email: 'instructor@gmail.com',
@@ -161,31 +57,91 @@ export default function Header() {
           isDemoAccount: true,
           initials: 'DI'
         });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCurrentUser();
-
-    // Listen for storage changes (in case user updates profile picture)
-    const handleStorageChange = () => {
-      fetchCurrentUser();
-      // Also check for updated profile picture
-      const instructorProfiles = JSON.parse(localStorage.getItem('instructor_profiles') || '[]');
-      if (currentUser?.email) {
-        const updatedProfile = instructorProfiles.find((p: any) => p.email === currentUser.email);
-        if (updatedProfile?.profilePicture) {
-          setProfilePicture(updatedProfile.profilePicture);
+        
+        // Try to get demo profile from API
+        try {
+          const demoInstructorId = user.id || user.instructorId || 'demo-instructor';
+          const response = await fetch(`/api/instructor/profile?instructorId=${demoInstructorId}`);
+          const result = await response.json();
+          
+          if (result.success && result.data.profile?.profilePicture) {
+            setProfilePicture(result.data.profile.profilePicture);
+            setUserDetails(result.data);
+          }
+        } catch (error) {
+          console.error('Error fetching demo profile:', error);
         }
+        
+        setLoading(false);
+        return;
       }
-    };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [currentUser?.email]);
+      // Real instructor - fetch from API
+      const instructorId = user.id || user.instructorId;
+      
+      if (!instructorId) {
+        setCurrentUser({
+          name: user.name || 'Instructor',
+          email: user.email,
+          role: 'instructor',
+          initials: (user.name || user.email).substring(0, 2).toUpperCase()
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Fetch latest profile data from API
+      const response = await fetch(`/api/instructor/profile?instructorId=${instructorId}`);
+      const result = await response.json();
+
+      if (result.success) {
+        const instructorData = result.data.instructor;
+        const profileData = result.data.profile;
+        
+        // Set profile picture
+        if (profileData?.profilePicture) {
+          setProfilePicture(profileData.profilePicture);
+        }
+
+        // Set user details
+        setUserDetails(result.data);
+
+        // Determine name
+        const displayName = profileData?.fullName || instructorData.name || user.name || 'Instructor';
+        
+        // Get initials
+        const initials = displayName
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+
+        setCurrentUser({
+          id: instructorData.id,
+          name: displayName,
+          email: instructorData.email,
+          role: 'instructor',
+          instructorId: instructorData.id,
+          initials,
+          ...user
+        });
+      } else {
+        // Fallback to localStorage
+        setCurrentUser({
+          name: user.name || 'Instructor',
+          email: user.email,
+          role: 'instructor',
+          instructorId: user.id || user.instructorId,
+          initials: (user.name || user.email).substring(0, 2).toUpperCase()
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle logout
   const handleLogout = () => {
@@ -203,11 +159,10 @@ export default function Header() {
       return currentUser.name;
     }
     
-    // For real instructors, add a professional prefix if not already present
     const name = currentUser.name || 'Instructor';
-    const hasTitle = name.includes('Dr.') || name.includes('Prof.') || name.includes('Mr.') || name.includes('Ms.');
     
-    if (!hasTitle && currentUser.instructorDetails?.qualification?.toLowerCase().includes('phd')) {
+    // Add title if qualification exists
+    if (userDetails?.instructor?.qualification?.toLowerCase().includes('phd') && !name.includes('Dr.')) {
       return `Dr. ${name}`;
     }
     
@@ -222,10 +177,12 @@ export default function Header() {
       return 'Demo Instructor';
     }
     
-    if (currentUser.instructorDetails) {
-      return currentUser.instructorDetails.specialization || 
-             currentUser.instructorDetails.experience || 
-             'Instructor';
+    if (userDetails?.profile?.specialization) {
+      return userDetails.profile.specialization;
+    }
+    
+    if (userDetails?.instructor?.specialization) {
+      return userDetails.instructor.specialization;
     }
     
     return 'Instructor';
@@ -257,7 +214,7 @@ export default function Header() {
                 Welcome, {getUserDisplayName()}
               </h1>
               <p className="text-sm text-gray-600">
-               {getUserRole()}
+                {getUserRole()}
               </p>
             </div>
 
@@ -285,8 +242,14 @@ export default function Header() {
                         src={profilePicture} 
                         alt={getUserDisplayName()}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log("Image failed to load:", profilePicture);
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.classList.add('show-initials');
+                        }}
                       />
-                    ) : (
+                    ) : null}
+                    {(!profilePicture || profilePicture === 'null') && (
                       <span>{currentUser?.initials || 'I'}</span>
                     )}
                     {currentUser?.isDemoAccount && (
@@ -306,8 +269,12 @@ export default function Header() {
                             src={profilePicture} 
                             alt={getUserDisplayName()}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
-                        ) : (
+                        ) : null}
+                        {(!profilePicture || profilePicture === 'null') && (
                           <span>{currentUser?.initials || 'I'}</span>
                         )}
                       </div>
@@ -387,8 +354,12 @@ export default function Header() {
                     src={profilePicture} 
                     alt={getUserDisplayName()}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
-                ) : (
+                ) : null}
+                {(!profilePicture || profilePicture === 'null') && (
                   <span>{currentUser?.initials || 'I'}</span>
                 )}
               </div>
@@ -408,8 +379,12 @@ export default function Header() {
                     src={profilePicture} 
                     alt={getUserDisplayName()}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
-                ) : (
+                ) : null}
+                {(!profilePicture || profilePicture === 'null') && (
                   <span>{currentUser?.initials || 'I'}</span>
                 )}
               </div>
@@ -458,12 +433,12 @@ export default function Header() {
             </div>
 
             {/* Course Info (if available) */}
-            {currentUser?.instructorDetails?.assignedCourse && (
+            {userDetails?.instructor?.course && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs font-medium text-gray-700 mb-1">Assigned Course</p>
-                <p className="text-sm text-gray-900">{currentUser.instructorDetails.assignedCourse.title}</p>
+                <p className="text-sm text-gray-900">{userDetails.instructor.course.title}</p>
                 <p className="text-xs text-gray-600 mt-1">
-                  {currentUser.instructorDetails.assignedCourse.duration} • {currentUser.instructorDetails.totalStudents || 0} students
+                  {userDetails.instructor.totalStudents || 0} students
                 </p>
               </div>
             )}

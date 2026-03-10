@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 import { v4 as uuidv4 } from 'uuid';
 /* eslint-disable */
+
+// Question Type Enum
+enum QuestionType {
+  MCQ = 'mcq',
+  TEXT = 'text'
+}
+
 /* =====================================================
-   FULL COURSE UPDATE (Transactional) - WITHOUT DELETING EXISTING QUIZZES
+   FULL COURSE UPDATE (Transactional) - WITH MCQ & TEXT SUPPORT
 ===================================================== */
 export async function PUT(
   request: NextRequest,
@@ -14,7 +21,8 @@ export async function PUT(
     const { courseId } = await params;
     const body = await request.json();
 
-    console.log("🔄 Full course update started for:", courseId);
+    console.log("\n========== 🔄 FULL COURSE UPDATE ==========");
+    console.log("Course ID:", courseId);
     console.log("📦 Body received:", JSON.stringify(body, null, 2));
 
     if (!courseId) {
@@ -203,8 +211,8 @@ export async function PUT(
         /* =============================
            5. HANDLE FILES FOR THIS SLIDE
         ============================== */
-        // Delete files that are no longer present
         if (slide.files && Array.isArray(slide.files)) {
+          // Delete files that are no longer present
           const existingFileIds = slide.files.map((f: any) => f.id).filter(Boolean);
           
           if (existingFileIds.length > 0) {
@@ -252,7 +260,7 @@ export async function PUT(
         }
 
         /* =============================
-           6. HANDLE QUIZ QUESTIONS - ❌ NO DELETION
+           6. HANDLE QUIZ & QUESTIONS - UPDATED WITH MCQ & TEXT SUPPORT
         ============================== */
         if (slide.quizQuestions && Array.isArray(slide.quizQuestions)) {
           // Get existing quiz for this slide
@@ -277,9 +285,42 @@ export async function PUT(
             quizId = (existingQuiz as any[])[0].id;
           }
           
-          // Process each question - UPDATE if exists, INSERT if new
+          // ✅ DELETE questions that are no longer in the incoming data
+          const incomingQuestionIds = slide.quizQuestions
+            .map((q: any) => q.id)
+            .filter((id: string) => id && !id.startsWith('temp_'));
+          
+          if (incomingQuestionIds.length > 0) {
+            const questionPlaceholders = incomingQuestionIds.map(() => '?').join(',');
+            await connection.execute(
+              `DELETE FROM quiz_questions 
+               WHERE quiz_id = ? AND id NOT IN (${questionPlaceholders})`,
+              [quizId, ...incomingQuestionIds]
+            );
+          } else {
+            await connection.execute(
+              "DELETE FROM quiz_questions WHERE quiz_id = ?",
+              [quizId]
+            );
+          }
+          
+          // Process each question - INSERT or UPDATE
           for (const q of slide.quizQuestions) {
-            const safeQuestionId = q.id || uuidv4();
+            // ✅ Handle question based on type
+            let options = [];
+            let correctAnswer = -1;
+            
+            if (q.questionType === QuestionType.MCQ) {
+              // MCQ: Use provided options and correctAnswer
+              options = q.options || ['', '', '', ''];
+              correctAnswer = q.correctAnswer ?? 0;
+            } else {
+              // TEXT: Empty options array and correctAnswer = -1
+              options = [];
+              correctAnswer = -1;
+            }
+            
+            const safeQuestionId = q.id && !q.id.startsWith('temp_') ? q.id : uuidv4();
             
             // Check if question exists
             const [questionCheck] = await connection.execute(
@@ -288,18 +329,20 @@ export async function PUT(
             );
             
             if ((questionCheck as any[]).length === 0) {
-              // Insert new question
+              // Insert new question with type info
               await connection.execute(
-                `INSERT INTO quiz_questions (id, quiz_id, question, options, correct_answer, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())`,
+                `INSERT INTO quiz_questions 
+                 (id, quiz_id, question, options, correct_answer, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
                 [
                   safeQuestionId,
                   quizId,
                   q.question || '',
-                  JSON.stringify(q.options || ['', '', '', '']),
-                  q.correctAnswer ?? 0
+                  JSON.stringify(options),
+                  correctAnswer
                 ]
               );
+              console.log(`✅ New ${q.questionType} question inserted: ${safeQuestionId}`);
             } else {
               // Update existing question
               await connection.execute(
@@ -311,11 +354,12 @@ export async function PUT(
                  WHERE id = ?`,
                 [
                   q.question || '',
-                  JSON.stringify(q.options || ['', '', '', '']),
-                  q.correctAnswer ?? 0,
+                  JSON.stringify(options),
+                  correctAnswer,
                   safeQuestionId
                 ]
               );
+              console.log(`✅ ${q.questionType} question updated: ${safeQuestionId}`);
             }
           }
           console.log(`✅ ${slide.quizQuestions.length} quiz questions processed for slide: ${safeSlideId}`);
@@ -325,6 +369,26 @@ export async function PUT(
            7. HANDLE ASSIGNMENTS
         ============================== */
         if (slide.assignments && Array.isArray(slide.assignments)) {
+          // Delete assignments that are no longer present
+          const incomingAssignmentIds = slide.assignments
+            .map((a: any) => a.id)
+            .filter(Boolean);
+          
+          if (incomingAssignmentIds.length > 0) {
+            const assignmentPlaceholders = incomingAssignmentIds.map(() => '?').join(',');
+            await connection.execute(
+              `DELETE FROM course_assignments 
+               WHERE slide_id = ? AND id NOT IN (${assignmentPlaceholders})`,
+              [safeSlideId, ...incomingAssignmentIds]
+            );
+          } else {
+            await connection.execute(
+              "DELETE FROM course_assignments WHERE slide_id = ?",
+              [safeSlideId]
+            );
+          }
+          
+          // Insert or update assignments
           for (const assignment of slide.assignments) {
             if (!assignment.slideId) {
               assignment.slideId = safeSlideId;
@@ -404,7 +468,7 @@ export async function PUT(
 
     // Commit transaction
     await connection.commit();
-    console.log("🎉 Full course update completed successfully!");
+    console.log("\n========== 🎉 FULL COURSE UPDATE COMPLETED ==========");
 
     // Fetch and return updated course data
     const [updatedCourse] = await connection.execute(
@@ -417,14 +481,37 @@ export async function PUT(
       [courseId]
     );
 
+    // Fetch quizzes with questions for response
+    const slidesWithQuizzes = [];
+    for (const slide of (updatedSlides as any[])) {
+      const [quizzes] = await connection.execute(
+        `SELECT q.*, 
+          (SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', qq.id,
+              'question', qq.question,
+              'options', qq.options,
+              'correctAnswer', qq.correct_answer
+            )
+          ) FROM quiz_questions qq WHERE qq.quiz_id = q.id) as questions
+         FROM course_quizzes q
+         WHERE q.slide_id = ?`,
+        [slide.id]
+      );
+      
+      slidesWithQuizzes.push({
+        ...slide,
+        quizzes: quizzes || []
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: "Course updated successfully",
       data: {
         course: (updatedCourse as any[])[0] || null,
-        slides: updatedSlides || [],
-        slidesCount: body.slides?.length || 0,
-        assignmentsCount: body.assignments?.length || 0
+        slides: slidesWithQuizzes,
+        slidesCount: body.slides?.length || 0
       }
     });
 
