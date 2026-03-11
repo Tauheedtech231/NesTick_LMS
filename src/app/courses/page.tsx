@@ -47,6 +47,20 @@ const BRAND_COLORS = {
   teal: '#14B8A6'
 };
 
+// Z-index constants for better maintainability
+const Z_INDEX = {
+  BASE: 1,
+  NAVBAR: 100,
+  DROPDOWN: 110,
+  BACKDROP: 150,
+  MOBILE_MENU: 200,
+  CART_BUTTON: 999,      // Cart button stays above navbar
+  CART_SIDEBAR: 1000,     // Cart sidebar highest priority
+  CART_BACKDROP: 999,     // Cart backdrop
+  TOAST: 1001,            // Toast messages highest
+  MODAL: 2000
+};
+
 // Interface for course structure
 interface Course {
   id: string;
@@ -92,7 +106,7 @@ interface EmailPopupProps {
   savedEmail?: string;
 }
 
-// Email Popup Component
+// Email Popup Component - FIXED z-index
 const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: EmailPopupProps) => {
   const [email, setEmail] = useState(savedEmail || '');
   const [error, setError] = useState('');
@@ -152,7 +166,8 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: Z_INDEX.MODAL }}
     >
       {/* Backdrop */}
       <motion.div
@@ -884,16 +899,20 @@ export default function CoursesPage() {
         )}
       </AnimatePresence>
 
-      {/* Cart Message Toast - FIXED: Higher z-index */}
+      {/* Cart Message Toast - FIXED: Highest z-index */}
       <AnimatePresence mode="wait">
         {cartMessage && (
           <motion.div
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 ${
-              cartMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
-            }`}
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3"
+            style={{ 
+              zIndex: Z_INDEX.TOAST,
+              backgroundColor: cartMessage.type === 'success' ? '#f0fdf4' : '#fef2f2',
+              color: cartMessage.type === 'success' ? '#166534' : '#991b1b',
+              border: cartMessage.type === 'success' ? '1px solid #86efac' : '1px solid #fecaca'
+            }}
           >
             {cartMessage.type === 'success' ? (
               <HiCheckCircle className="w-5 h-5 text-green-500" />
@@ -905,8 +924,11 @@ export default function CoursesPage() {
         )}
       </AnimatePresence>
 
-      {/* Cart Bucket - Right Side - FIXED: Higher z-index */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[90]">
+      {/* Cart Bucket - Right Side - FIXED: Higher z-index than navbar */}
+      <div 
+        className="fixed right-6 top-1/2 -translate-y-1/2"
+        style={{ zIndex: Z_INDEX.CART_BUTTON }}
+      >
         <motion.button
           onClick={() => setShowCartSidebar(true)}
           className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 group"
@@ -928,7 +950,7 @@ export default function CoursesPage() {
         </motion.button>
       </div>
 
-      {/* Cart Sidebar - FIXED: Higher z-index to appear above everything */}
+      {/* Cart Sidebar - FIXED: Highest z-index to appear above everything */}
       <AnimatePresence>
         {showCartSidebar && (
           <>
@@ -938,7 +960,8 @@ export default function CoursesPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCartSidebar(false)}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[95]"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              style={{ zIndex: Z_INDEX.CART_BACKDROP }}
             />
             
             {/* Cart Sidebar */}
@@ -948,10 +971,11 @@ export default function CoursesPage() {
               animate="animate"
               exit="exit"
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[96] overflow-y-auto"
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto"
+              style={{ zIndex: Z_INDEX.CART_SIDEBAR }}
             >
               {/* Sidebar Header */}
-              <div className="sticky top-0 z-[97] bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
+              <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6" style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white/10 rounded-lg">
@@ -1193,7 +1217,8 @@ export default function CoursesPage() {
                       animate="animate"
                       exit="exit"
                       transition={{ duration: 0.2 }}
-                      className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[70]"
+                      className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                      style={{ zIndex: 60 }}
                     >
                       {/* Suggestions */}
                       {suggestions.length > 0 && (
@@ -1294,7 +1319,7 @@ export default function CoursesPage() {
           )}
         </AnimatePresence>
 
-        {/* Courses Grid */}
+        {/* Courses Grid - FIXED: Card sizes increased */}
         <motion.div 
           variants={staggerContainerVariants}
           initial="initial"
@@ -1329,167 +1354,162 @@ export default function CoursesPage() {
                     </div>
                   </motion.div>
 
-                  {/* Course Card */}
-                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-shadow duration-300 hover:shadow-2xl">
-                    {/* Image */}
-                    <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-100">
-                      {course.image && !imageErrors[course.id] ? (
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          onError={() => handleImageError(course.id)}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                          <HiBookOpen className="w-16 h-16 text-gray-300" />
-                        </div>
-                      )}
-                      
-                      {/* Category Badge */}
-                      <div className="absolute top-3 right-3">
-                        <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                          <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
-                            {course.category}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Course Card - FIXED: Increased size and better spacing */}
+                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
+  {/* Image - Fixed height */}
+  <div className="relative h-56 sm:h-64 overflow-hidden bg-gray-100 flex-shrink-0">
+    {course.image && !imageErrors[course.id] ? (
+      <img
+        src={course.image}
+        alt={course.title}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        onError={() => handleImageError(course.id)}
+        loading="lazy"
+      />
+    ) : (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+        <HiBookOpen className="w-20 h-20 text-gray-300" />
+      </div>
+    )}
+    
+    {/* Category Badge */}
+    <div className="absolute top-3 right-3">
+      <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+        <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
+          {course.category}
+        </span>
+      </div>
+    </div>
 
-                    {/* Content */}
-                    <div className="p-5">
-                      {/* Title and Icon */}
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-1 flex-1">
-                          {course.title}
-                        </h3>
-                        <Icon className="w-5 h-5 flex-shrink-0 ml-2" style={{ color: course.color || BRAND_COLORS.teal }} />
-                      </div>
+    {/* Featured Badge - Optional */}
+    {course.featured && (
+      <div className="absolute top-3 left-3">
+        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-semibold shadow-lg flex items-center">
+          <HiStar className="w-3 h-3 mr-1" />
+          Featured
+        </div>
+      </div>
+    )}
+  </div>
 
-                      {/* Instructor Name */}
-                      <p className="text-xs text-gray-500 mb-2">
-                        by {course.instructorName || 'Instructor'}
-                      </p>
+  {/* Content - Flex column with equal spacing */}
+  <div className="p-6 flex flex-col flex-grow">
+    {/* Title and Icon - Fixed height for 2 lines */}
+    <div className="flex items-start justify-between mb-3 min-h-[3.5rem]">
+      <h3 className="text-xl font-bold text-[#0B1C3D] line-clamp-2 flex-1">
+        {course.title}
+      </h3>
+      <div className="p-2 bg-gray-50 rounded-lg flex-shrink-0 ml-2">
+        <Icon className="w-5 h-5" style={{ color: course.color || BRAND_COLORS.teal }} />
+      </div>
+    </div>
 
-                      {/* Rating */}
-                      <div className="flex items-center mb-3">
-                        <div className="flex items-center">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <HiStar
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <= Math.floor(course.rating)
-                                  ? "text-yellow-400"
-                                  : "text-gray-200"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-500 ml-2">
-                          ({course.reviews})
-                        </span>
-                      </div>
+  
 
-                      {/* Description */}
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {course.description}
-                      </p>
+    {/* Description - Fixed height for 2 lines */}
+    <div className="mb-4 min-h-[2.5rem]">
+      <p className="text-sm text-gray-600 line-clamp-2">
+        {course.description || 'No description available'}
+      </p>
+    </div>
 
-                      {/* Meta Info */}
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.duration}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiUserGroup className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.students}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.level}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          Certificate
-                        </div>
-                      </div>
+    {/* Meta Info - Grid with equal height items */}
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.duration || 'Flexible'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiUserGroup className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.students || 'Limited seats'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.level || 'All Levels'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span>Certificate</span>
+      </div>
+    </div>
 
-                      {/* Price and Actions */}
-                      <div className="border-t border-gray-100 pt-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-[#B11217]">
-                                {course.price.replace('PKR', '').trim()}
-                              </span>
-                              {course.originalPrice && (
-                                <span className="text-xs text-gray-400 line-through">
-                                  {course.originalPrice.replace('PKR', '').trim()}
-                                </span>
-                              )}
-                            </div>
-                            {course.savings && (
-                              <p className="text-xs text-green-600 mt-1">{course.savings}</p>
-                            )}
-                          </div>
-                        </div>
+    {/* Price and Actions - Always at bottom */}
+    <div className="border-t border-gray-100 pt-4 mt-auto">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-[#B11217]">
+              {(course.price)}
+            </span>
+            {course.originalPrice && (
+              <span className="text-sm text-gray-400 line-through">
+                {(course.originalPrice)}
+              </span>
+            )}
+          </div>
+          {course.savings && (
+            <p className="text-xs text-green-600 mt-1 font-medium">
+              {course.savings}
+            </p>
+          )}
+        </div>
+      </div>
 
-                        <div className="flex gap-2">
-                          {/* View Details Button */}
-                          <Link
-                            href={`/courses/${course.id}`}
-                            className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center"
-                          >
-                            <span>Details</span>
-                            <HiArrowRight className="w-4 h-4 ml-1" />
-                          </Link>
+      {/* Buttons - Equal width and height */}
+      <div className="flex gap-2">
+        {/* View Details Button */}
+        <Link
+          href={`/courses/${course.id}`}
+          className="flex-1 py-3 px-4 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center min-h-[2.75rem]"
+        >
+          <span>Details</span>
+          <HiArrowRight className="w-4 h-4 ml-1" />
+        </Link>
 
-                          {/* Add to Cart / Remove from Cart Button */}
-                          {isInCart ? (
-                            <button
-                              onClick={() => {
-                                const cartItem = cartItems.find(item => item.course_id === course.id);
-                                if (cartItem) {
-                                  handleRemoveFromCart(cartItem.id, course.id);
-                                }
-                              }}
-                              disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
-                              className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center"
-                            >
-                              {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <HiTrash className="w-4 h-4 mr-1" />
-                                  Remove
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleAddToCartClick(course)}
-                              disabled={isLoading}
-                              className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center"
-                              style={{
-                                backgroundColor: hoveredCard === course.id ? '#1E3A8A' : '#B11217',
-                              }}
-                            >
-                              {isLoading ? (
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <HiShoppingCart className="w-4 h-4 mr-1" />
-                                  Add to Cart
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        {/* Add to Cart / Remove from Cart Button */}
+        {isInCart ? (
+          <button
+            onClick={() => {
+              const cartItem = cartItems.find(item => item.course_id === course.id);
+              if (cartItem) {
+                handleRemoveFromCart(cartItem.id, course.id);
+              }
+            }}
+            disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
+            className="flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center min-h-[2.75rem]"
+          >
+            {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <HiTrash className="w-4 h-4 mr-1" />
+                <span>Remove</span>
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={() => handleAddToCartClick(course)}
+            disabled={isLoading}
+            className="flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center min-h-[2.75rem]"
+            style={{
+              backgroundColor: hoveredCard === course.id ? '#1E3A8A' : '#B11217',
+            }}
+          >
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <HiShoppingCart className="w-4 h-4 mr-1" />
+                <span>Add to Cart</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
                 </motion.div>
               );
             })

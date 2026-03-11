@@ -1166,167 +1166,163 @@ const cartTotal = cartItems.reduce((sum, item) => {
                   </motion.div>
 
                   {/* Course Card */}
-                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                    {/* Image */}
-                    <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-100">
-                      {course.image && !imageErrors[course.id] ? (
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          onError={() => handleImageError(course.id)}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                          <Icon className="w-16 h-16 text-gray-300" />
-                        </div>
-                      )}
-                      
-                      {/* Category Badge */}
-                      <div className="absolute top-3 right-3">
-                        <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                          <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
-                            {course.category}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
+  {/* Image - Fixed height */}
+  <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
+    {course.image && !imageErrors[course.id] ? (
+      <img
+        src={course.image}
+        alt={course.title}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        onError={() => handleImageError(course.id)}
+        loading="lazy"
+      />
+    ) : (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+        <Icon className="w-16 h-16 text-gray-300" />
+      </div>
+    )}
+    
+    {/* Category Badge */}
+    <div className="absolute top-3 right-3 z-10">
+      <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+        <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
+          {course.category}
+        </span>
+      </div>
+    </div>
 
-                    {/* Content */}
-                    <div className="p-5">
-                      {/* Title and Icon */}
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-1 flex-1">
-                          {course.title}
-                        </h3>
-                        <Icon className="w-5 h-5 flex-shrink-0 ml-2" style={{ color: course.color || BRAND_COLORS.teal }} />
-                      </div>
+    {/* Featured Badge (if featured) */}
+    {course.featured && (
+      <div className="absolute top-3 left-3 z-10">
+        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-semibold shadow-lg flex items-center">
+          <HiStar className="w-3 h-3 mr-1" />
+          Featured
+        </div>
+      </div>
+    )}
+  </div>
 
-                      {/* Instructor Name */}
-                      <p className="text-xs text-gray-500 mb-2 flex items-center">
-                        <HiAcademicCap className="w-3 h-3 mr-1" />
-                        {course.instructorName || 'Expert Instructor'}
-                      </p>
+  {/* Content - Flexible height with flex-grow */}
+  <div className="p-5 flex flex-col flex-grow">
+    {/* Title and Icon - Fixed height for 2 lines */}
+    <div className="flex items-start justify-between mb-3 min-h-[3.5rem]">
+      <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-2 flex-1">
+        {course.title}
+      </h3>
+      <div className="p-2 bg-gray-50 rounded-lg flex-shrink-0 ml-2">
+        <Icon className="w-5 h-5" style={{ color: course.color || BRAND_COLORS.teal }} />
+      </div>
+    </div>
 
-                      {/* Rating */}
-                      <div className="flex items-center mb-3">
-                        <div className="flex items-center">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <HiStar
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <= Math.floor(course.rating)
-                                  ? "text-yellow-400"
-                                  : "text-gray-200"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-500 ml-2">
-                          ({course.reviews} reviews)
-                        </span>
-                      </div>
+    
 
-                      {/* Description */}
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {course.description}
-                      </p>
+ 
 
-                      {/* Meta Info */}
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.duration}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiUserGroup className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.students}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          {course.level}
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A]" />
-                          Certificate
-                        </div>
-                      </div>
+    {/* Description - Fixed height for 2 lines with truncation */}
+    <div className="mb-4 min-h-[2.5rem]">
+      <p className="text-sm text-gray-600 line-clamp-2">
+        {course.description || 'No description available'}
+      </p>
+    </div>
 
-                      {/* Price and Actions */}
-                      <div className="border-t border-gray-100 pt-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-[#B11217]">
-                                {course.price.replace('PKR', '').trim()}
-                              </span>
-                              {course.originalPrice && (
-                                <span className="text-xs text-gray-400 line-through">
-                                  {course.originalPrice.replace('PKR', '').trim()}
-                                </span>
-                              )}
-                            </div>
-                            {course.savings && (
-                              <p className="text-xs text-green-600 mt-1">{course.savings}</p>
-                            )}
-                          </div>
-                        </div>
+    {/* Meta Info - Grid with equal height items */}
+    <div className="grid grid-cols-2 gap-2 mb-4">
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.duration || 'Flexible'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiUserGroup className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.students || 'Limited seats'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span className="truncate">{course.level || 'All Levels'}</span>
+      </div>
+      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+        <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+        <span>Certificate</span>
+      </div>
+    </div>
 
-                        <div className="flex gap-2">
-                          {/* View Details Button */}
-                          <Link
-                            href={`/courses/${course.id}`}
-                            className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center"
-                          >
-                            <span>Details</span>
-                            <HiArrowRight className="w-4 h-4 ml-1" />
-                          </Link>
+    {/* Price and Actions - Always at bottom */}
+    <div className="border-t border-gray-100 pt-4 mt-auto">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-[#B11217]">
+              {(course.price)}
+            </span>
+            {course.originalPrice && (
+              <span className="text-xs text-gray-400 line-through">
+                {(course.originalPrice)}
+              </span>
+            )}
+          </div>
+          {course.savings && (
+            <p className="text-xs text-green-600 mt-1 font-medium">
+              {course.savings}
+            </p>
+          )}
+        </div>
+      </div>
 
-                          {/* Add to Cart / Remove from Cart Button */}
-                          {isInCart ? (
-                            <button
-                              onClick={() => {
-                                const cartItem = cartItems.find(item => item.course_id === course.id);
-                                if (cartItem) {
-                                  handleRemoveFromCart(cartItem.id, course.id);
-                                }
-                              }}
-                              disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
-                              className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center"
-                            >
-                              {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <HiTrash className="w-4 h-4 mr-1" />
-                                  Remove
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleAddToCartClick(course)}
-                              disabled={isLoading}
-                              className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center"
-                              style={{
-                                backgroundColor: hoveredCard === course.id ? '#1E3A8A' : '#B11217',
-                              }}
-                            >
-                              {isLoading ? (
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <HiShoppingCart className="w-4 h-4 mr-1" />
-                                  Add to Cart
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+      {/* Buttons - Equal width and height */}
+      <div className="flex gap-2">
+        {/* View Details Button */}
+        <Link
+          href={`/courses/${course.id}`}
+          className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center min-h-[2.75rem]"
+        >
+          <span>Details</span>
+          <HiArrowRight className="w-4 h-4 ml-1" />
+        </Link>
+
+        {/* Add to Cart / Remove from Cart Button */}
+        {isInCart ? (
+          <button
+            onClick={() => {
+              const cartItem = cartItems.find(item => item.course_id === course.id);
+              if (cartItem) {
+                handleRemoveFromCart(cartItem.id, course.id);
+              }
+            }}
+            disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
+            className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center min-h-[2.75rem]"
+          >
+            {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <HiTrash className="w-4 h-4 mr-1" />
+                <span>Remove</span>
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={() => handleAddToCartClick(course)}
+            disabled={isLoading}
+            className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center min-h-[2.75rem]"
+            style={{
+              backgroundColor: hoveredCard === course.id ? '#1E3A8A' : '#B11217',
+            }}
+          >
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <HiShoppingCart className="w-4 h-4 mr-1" />
+                <span>Add to Cart</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
                 </motion.div>
               );
             })

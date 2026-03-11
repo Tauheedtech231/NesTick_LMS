@@ -20,7 +20,8 @@ import {
   HiMail,
   HiExclamation,
   HiShoppingBag,
-  HiStar
+  HiStar,
+  HiChevronDown  // Add this for dropdown
 } from "react-icons/hi";
 import { FaCartPlus } from "react-icons/fa";
 import { IoMdArrowDropright } from "react-icons/io";
@@ -42,7 +43,21 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
-// Email Popup Component
+// Z-index constants - MUST match navbar
+const Z_INDEX = {
+  BASE: 1,
+  NAVBAR: 100,           // Navbar z-index
+  DROPDOWN: 110,
+  BACKDROP: 150,
+  MOBILE_MENU: 200,
+  CART_BUTTON: 999,      // Cart button above navbar
+  CART_SIDEBAR: 1000,    // Cart sidebar highest
+  CART_BACKDROP: 999,    // Cart backdrop
+  TOAST: 1001,           // Toast messages
+  MODAL: 2000            // Email popup
+};
+
+// Email Popup Component - FIXED z-index
 interface EmailPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -105,7 +120,8 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle }: EmailPopupProps
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: Z_INDEX.MODAL }}
     >
       {/* Backdrop */}
       <motion.div
@@ -252,10 +268,10 @@ const publishedCoursesData = {
       'Safety gear will be provided'
     ],
     price: 25000,
-    priceFormatted: 'PKR 25,000',
+    priceFormatted: 'Rs 25,000',
     originalPrice: 30000,
-    originalPriceFormatted: 'PKR 30,000',
-    savings: 'Save PKR 5,000',
+    originalPriceFormatted: 'Rs 30,000',
+    savings: 'Save Rs 5,000',
     icon: HiOutlineWrench,
     color: BRAND_COLORS.teal,
     image: "https://images.pexels.com/photos/6124242/pexels-photo-6124242.jpeg",
@@ -268,7 +284,7 @@ const publishedCoursesData = {
   },
   'safety-inspector': {
     id: 'safety-inspector',
-    title: 'Safety Inspector',
+    title: 'OSHA Safety Inspector',
     category: 'Safety Training',
     description: 'Professional safety inspection training for construction and industrial environments with OSHA certification preparation.',
     longDescription: 'Become a certified Safety Inspector with our 6-week intensive program. Learn to conduct site inspections, assess risks, and implement safety protocols according to OSHA and international standards.',
@@ -300,11 +316,11 @@ const publishedCoursesData = {
       'Background in construction or industry',
       'Basic computer skills'
     ],
-    price: 30000,
-    priceFormatted: 'PKR 30,000',
-    originalPrice: 35000,
-    originalPriceFormatted: 'PKR 35,000',
-    savings: 'Save PKR 5,000',
+    price: 34000,
+    priceFormatted: 'Rs 34,000',
+    originalPrice: 40000,
+    originalPriceFormatted: 'Rs 40,000',
+    savings: 'Save Rs 6,000',
     icon: HiOutlineShieldCheck,
     color: BRAND_COLORS.darkRoyalBlue,
     image: "https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg",
@@ -350,10 +366,10 @@ const publishedCoursesData = {
       'Good hand-eye coordination'
     ],
     price: 35000,
-    priceFormatted: 'PKR 35,000',
+    priceFormatted: 'Rs 35,000',
     originalPrice: 40000,
-    originalPriceFormatted: 'PKR 40,000',
-    savings: 'Save PKR 5,000',
+    originalPriceFormatted: 'Rs 40,000',
+    savings: 'Save Rs 5,000 (13%)',
     icon: HiOutlineCash,
     color: BRAND_COLORS.deepRed,
     image: "https://images.pexels.com/photos/7650512/pexels-photo-7650512.jpeg",
@@ -534,6 +550,12 @@ const slideInRightVariants = {
   exit: { x: 300, opacity: 0 }
 };
 
+const fadeInUpVariants = {
+  initial: { y: 20, opacity: 0 },
+  animate: { y: 0, opacity: 1 },
+  exit: { y: -20, opacity: 0 }
+};
+
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -552,6 +574,9 @@ export default function CourseDetailPage() {
   const [cartLoading, setCartLoading] = useState(false);
   const [showCartSidebar, setShowCartSidebar] = useState(false);
   const [removingFromCart, setRemovingFromCart] = useState<string | null>(null);
+  
+  // NEW: Curriculum dropdown state
+  const [openCurriculumIndex, setOpenCurriculumIndex] = useState<number | null>(null);
 
   const courseId = params.id as string;
 
@@ -680,11 +705,11 @@ export default function CourseDetailPage() {
           curriculum: dynamicContent.curriculum,
           requirements: dynamicContent.requirements,
           price: courseData.price || 0,
-          priceFormatted: courseData.price ? `PKR ${courseData.price.toLocaleString()}` : 'Contact for pricing',
+          priceFormatted: courseData.price ? `Rs ${courseData.price.toLocaleString()}` : 'Contact for pricing',
           originalPrice: courseData.original_price,
-          originalPriceFormatted: courseData.original_price ? `PKR ${courseData.original_price.toLocaleString()}` : undefined,
+          originalPriceFormatted: courseData.original_price ? `Rs ${courseData.original_price.toLocaleString()}` : undefined,
           savings: courseData.original_price && courseData.price 
-            ? `Save ${Math.round((1 - courseData.price/courseData.original_price) * 100)}%` 
+            ? `Save Rs ${(courseData.original_price - courseData.price).toLocaleString()} (${Math.round((1 - courseData.price/courseData.original_price) * 100)}%)` 
             : undefined,
           courseImage: courseData.image,
           featured: false,
@@ -791,14 +816,27 @@ export default function CourseDetailPage() {
     router.push(`/courses/${courseId}/enrollment`);
   };
 
-  const formatCurrency = (amount: number) => {
-    const validAmount = Number(amount) || 0;
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(validAmount).replace('PKR', 'Rs');
+  // FIXED: Normalize price to prevent doubling
+  const normalizePrice = (price: any): number => {
+    if (!price) return 0;
+    
+    // Convert to number
+    let numPrice = Number(price);
+    if (isNaN(numPrice)) return 0;
+    
+    // If price is too large (> 100000), divide by 100
+    // This fixes the 3,400,000 -> 34,000 issue
+    if (numPrice > 100000) {
+      numPrice = numPrice / 100;
+    }
+    
+    return numPrice;
+  };
+
+  // FIXED: Format currency properly
+  const formatCurrency = (amount: any) => {
+    const normalizedAmount = normalizePrice(amount);
+    return `Rs ${normalizedAmount.toLocaleString()}`;
   };
 
   // Format date properly
@@ -818,8 +856,10 @@ export default function CourseDetailPage() {
     }
   };
 
-  // Calculate cart total
-  const cartTotal = cartItems.reduce((sum, item) => sum + (Number(item.course_price) || 0), 0);
+  // Calculate cart total - FIXED: Normalize each price
+  const cartTotal = cartItems.reduce((sum, item) => {
+    return sum + normalizePrice(item.course_price);
+  }, 0);
 
   // FIXED: Handle cart bucket click - make sure it opens the sidebar
   const handleCartBucketClick = (e: React.MouseEvent) => {
@@ -827,6 +867,11 @@ export default function CourseDetailPage() {
     e.stopPropagation();
     console.log('Cart bucket clicked'); // Debug log
     setShowCartSidebar(true);
+  };
+
+  // Toggle curriculum dropdown
+  const toggleCurriculum = (index: number) => {
+    setOpenCurriculumIndex(openCurriculumIndex === index ? null : index);
   };
 
   if (loading) {
@@ -870,18 +915,20 @@ export default function CourseDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* Cart Message Alert */}
+      {/* Cart Message Alert - FIXED z-index */}
       <AnimatePresence>
         {cartMessage && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-[70] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 ${
-              cartMessage.type === 'success' 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}
+            className="fixed top-24 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3"
+            style={{ 
+              zIndex: Z_INDEX.TOAST,
+              backgroundColor: cartMessage.type === 'success' ? '#f0fdf4' : '#fef2f2',
+              color: cartMessage.type === 'success' ? '#166534' : '#991b1b',
+              border: cartMessage.type === 'success' ? '1px solid #86efac' : '1px solid #fecaca'
+            }}
           >
             {cartMessage.type === 'success' ? (
               <HiCheckCircle className="w-5 h-5 text-green-500" />
@@ -893,8 +940,11 @@ export default function CourseDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* Cart Bucket - Right Side - FIXED: Added proper click handler and z-index */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[80]">
+      {/* Cart Bucket - Right Side - FIXED: z-index 999 (above navbar's 100) */}
+      <div 
+        className="fixed right-6 top-1/2 -translate-y-1/2"
+        style={{ zIndex: Z_INDEX.CART_BUTTON }}
+      >
         <motion.button
           onClick={handleCartBucketClick}
           className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 group cursor-pointer"
@@ -917,30 +967,35 @@ export default function CourseDetailPage() {
         </motion.button>
       </div>
 
-      {/* Cart Sidebar - FIXED: Increased z-index to be above everything */}
+      {/* Cart Sidebar - FIXED: z-index 1000 (highest) */}
       <AnimatePresence>
         {showCartSidebar && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - FIXED z-index */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCartSidebar(false)}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[85]"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              style={{ zIndex: Z_INDEX.CART_BACKDROP }}
             />
             
-            {/* Cart Sidebar */}
+            {/* Cart Sidebar - FIXED z-index */}
             <motion.div
               variants={slideInRightVariants}
               initial="initial"
               animate="animate"
               exit="exit"
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[90] overflow-y-auto"
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto"
+              style={{ zIndex: Z_INDEX.CART_SIDEBAR }}
             >
-              {/* Sidebar Header */}
-              <div className="sticky top-0 z-10 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
+              {/* Sidebar Header - FIXED z-index */}
+              <div 
+                className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6"
+                style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white/10 rounded-lg">
@@ -993,6 +1048,7 @@ export default function CourseDetailPage() {
                     <div className="space-y-4 mb-6">
                       {cartItems.map((item) => {
                         const isCurrentCourse = item.course_id === courseId;
+                        const normalizedPrice = normalizePrice(item.course_price);
                         
                         return (
                           <motion.div
@@ -1021,7 +1077,7 @@ export default function CourseDetailPage() {
                                 </p>
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-[#B11217] text-sm">
-                                    {formatCurrency(item.course_price)}
+                                    {formatCurrency(normalizedPrice)}
                                   </span>
                                   <button
                                     onClick={() => handleRemoveFromCart(item.id, item.course_id)}
@@ -1042,7 +1098,7 @@ export default function CourseDetailPage() {
                       })}
                     </div>
 
-                    {/* Cart Summary */}
+                    {/* Cart Summary - FIXED: Show normalized total */}
                     <div className="border-t border-gray-200 pt-6">
                       <div className="space-y-3 mb-4">
                         <div className="flex justify-between items-center text-sm">
@@ -1239,7 +1295,7 @@ export default function CourseDetailPage() {
 
         {/* Course Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Left Column - Curriculum */}
+          {/* Left Column - Curriculum with Dropdown */}
           <div className="lg:col-span-2">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1255,12 +1311,65 @@ export default function CourseDetailPage() {
                 Course Curriculum
               </h2>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {course.curriculum.map((item, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <IoMdArrowDropright className="text-blue-900 w-6 h-6 mt-1 flex-shrink-0" />
-                    <span className="text-gray-700 text-base">{item}</span>
-                  </div>
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border border-gray-200 rounded-xl overflow-hidden"
+                  >
+                    {/* Curriculum Header - Clickable */}
+                    <button
+                      onClick={() => toggleCurriculum(index)}
+                      className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <IoMdArrowDropright 
+                          className={`text-blue-900 w-5 h-5 transition-transform duration-300 ${
+                            openCurriculumIndex === index ? 'rotate-90' : ''
+                          }`} 
+                        />
+                        <span className="font-medium text-gray-800">{item}</span>
+                      </div>
+                      <HiChevronDown 
+                        className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${
+                          openCurriculumIndex === index ? 'rotate-180' : ''
+                        }`} 
+                      />
+                    </button>
+
+                    {/* Curriculum Details - Dropdown Content */}
+                    <AnimatePresence>
+                      {openCurriculumIndex === index && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 bg-white border-t border-gray-200">
+                            <div className="prose prose-sm max-w-none text-gray-600">
+                              <p className="mb-2">
+                                <span className="font-semibold">What you'll learn in this module:</span>
+                              </p>
+                              <ul className="list-disc pl-5 space-y-1 text-sm">
+                                <li>Core concepts and fundamentals</li>
+                                <li>Hands-on practical exercises</li>
+                                <li>Industry best practices</li>
+                                <li>Assessment and quizzes</li>
+                              </ul>
+                              <p className="mt-3 text-xs text-gray-400">
+                                * Detailed syllabus available upon enrollment
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>

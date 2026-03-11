@@ -29,6 +29,18 @@ const BRAND_COLORS = {
   darkGrey: '#1F2933'
 };
 
+// Z-index constants for better maintainability
+const Z_INDEX = {
+  BASE: 1,
+  NAVBAR: 100,
+  DROPDOWN: 110,
+  BACKDROP: 150,
+  MOBILE_MENU: 200,
+  CART: 1000,        // Cart ko highest priority
+  MODAL: 2000,        // Future use
+  TOAST: 3000         // Future use
+};
+
 // Navbar Items
 const navItems = [
   {
@@ -318,10 +330,42 @@ export default function Navbar() {
 
   return (
     <>
+      {/* Global styles to ensure cart appears above navbar */}
+      <style jsx global>{`
+        /* Ensure any cart component has higher z-index */
+        .cart-component,
+        [class*="cart"],
+        [class*="Cart"],
+        .shopping-cart,
+        .courses-cart {
+          z-index: ${Z_INDEX.CART} !important;
+          position: relative;
+        }
+        
+        /* Fix for any absolutely positioned cart elements */
+        .cart-dropdown,
+        .cart-popup,
+        .cart-modal {
+          z-index: ${Z_INDEX.CART} !important;
+        }
+        
+        /* Ensure cart appears above all navbar elements */
+        .fixed.cart,
+        .absolute.cart {
+          z-index: ${Z_INDEX.CART} !important;
+        }
+        
+        /* Override for any inline styles */
+        [style*="z-index"]:where(.cart, [class*="cart"]) {
+          z-index: ${Z_INDEX.CART} !important;
+        }
+      `}</style>
+
       <nav 
-        className="w-full fixed top-0 left-0 right-0 z-[100] transition-all duration-300"
+        className="w-full fixed top-0 left-0 right-0 transition-all duration-300"
         style={{
-          backgroundColor: scrolled ? `${BRAND_COLORS.darkNavy}EE` : BRAND_COLORS.darkNavy
+          backgroundColor: scrolled ? `${BRAND_COLORS.darkNavy}EE` : BRAND_COLORS.darkNavy,
+          zIndex: Z_INDEX.NAVBAR  // Using constant
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -423,10 +467,11 @@ export default function Navbar() {
                   {userDropdownOpen && (
                     <div
                       ref={userDropdownRef}
-                      className="absolute top-full right-0 mt-2 w-64 rounded-lg shadow-xl transform-gpu origin-top-right z-[110]"
+                      className="absolute top-full right-0 mt-2 w-64 rounded-lg shadow-xl transform-gpu origin-top-right"
                       style={{
                         backgroundColor: BRAND_COLORS.darkNavy,
-                        border: `1px solid ${BRAND_COLORS.softGrey}`
+                        border: `1px solid ${BRAND_COLORS.softGrey}`,
+                        zIndex: Z_INDEX.DROPDOWN  // Using constant
                       }}
                     >
                       {/* User Info */}
@@ -517,10 +562,11 @@ export default function Navbar() {
                   {loginDropdownOpen && (
                     <div
                       ref={loginDropdownRef}
-                      className="absolute top-full right-0 mt-2 w-56 rounded-lg shadow-xl transform-gpu origin-top-right z-[110]"
+                      className="absolute top-full right-0 mt-2 w-56 rounded-lg shadow-xl transform-gpu origin-top-right"
                       style={{
                         backgroundColor: BRAND_COLORS.darkNavy,
-                        border: `1px solid ${BRAND_COLORS.softGrey}`
+                        border: `1px solid ${BRAND_COLORS.softGrey}`,
+                        zIndex: Z_INDEX.DROPDOWN  // Using constant
                       }}
                     >
                       <div className="p-2 space-y-1">
@@ -552,7 +598,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div
         ref={mobileMenuRef}
-        className={`lg:hidden fixed top-0 left-0 bottom-0 w-full max-w-xs z-[200] transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-0 left-0 bottom-0 w-full max-w-xs transform transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
@@ -560,6 +606,7 @@ export default function Navbar() {
           borderRight: `1px solid ${BRAND_COLORS.softGrey}`,
           boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
           willChange: 'transform',
+          zIndex: Z_INDEX.MOBILE_MENU  // Using constant
         }}
       >
         {/* Menu Header */}
@@ -643,7 +690,7 @@ export default function Navbar() {
                         key={idx}
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98]"
+                        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98"
                         style={{ color: BRAND_COLORS.lightGrey }}
                       >
                         <item.icon className="w-4 h-4 transition-transform duration-300" />
@@ -719,7 +766,8 @@ export default function Navbar() {
       {/* Backdrop Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] transition-opacity duration-300"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          style={{ zIndex: Z_INDEX.BACKDROP }}  // Using constant
           onClick={() => setMobileMenuOpen(false)}
         />
       )}

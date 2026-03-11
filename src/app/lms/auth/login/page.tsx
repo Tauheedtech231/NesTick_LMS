@@ -548,17 +548,7 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="text-center">
- 
-
-  <p className="text-xs text-gray-500 mt-2">
-    Don’t have an account?{' '}
-    <Link href="/lms/auth/sign_up" className="text-red-600 font-semibold hover:underline">
-      Sign Up
-    </Link>
-  </p>
-</div>
+          
         </div>
       </div>
 
