@@ -65,12 +65,12 @@ export async function POST(request: NextRequest) {
       });
 
       await transporter.sendMail({
-        from: '"Nestick LMS" <tauheeddeveloper13@gmail.com>',
+        from: '"Mansol Hab" <tauheeddeveloper13@gmail.com>',
         to: studentEmail,
-        subject: 'Your Login Credentials - Nestick LMS',
+        subject: 'Your Login Credentials - Mansol Hab LMS',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1E3A8A;">Welcome to Nestick LMS!</h2>
+            <h2 style="color: #1E3A8A;">Welcome to Mansol Hab LMS!</h2>
             <p>Dear ${studentName},</p>
             <p>Your enrollment for <strong>${course}</strong> has been confirmed.</p>
             
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
               ⚠️ Please change your password after first login for security.
             </p>
             
-            <p>Best regards,<br>Nestick LMS Team</p>
+            <p>Best regards,<br>Mansol Hab LMS Team</p>
           </div>
         `
       });

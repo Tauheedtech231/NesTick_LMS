@@ -88,131 +88,131 @@ function SuccessPopup({ message, onClose }: { message: string; onClose: () => vo
 }
 
 // Resend Credentials Modal
-function ResendCredentialsModal({ 
-  isOpen, 
-  onClose, 
-  instructor,
-  onResend 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  instructor: Instructor | null;
-  onResend: (sendToEmail: string, resetPassword: boolean) => Promise<void>;
-}) {
-  const [sendToEmail, setSendToEmail] = useState(instructor?.email || '');
-  const [resetPassword, setResetPassword] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
+// function ResendCredentialsModal({ 
+//   isOpen, 
+//   onClose, 
+//   instructor,
+//   onResend 
+// }: { 
+//   isOpen: boolean; 
+//   onClose: () => void; 
+//   instructor: Instructor | null;
+//   onResend: (sendToEmail: string, resetPassword: boolean) => Promise<void>;
+// }) {
+//   const [sendToEmail, setSendToEmail] = useState(instructor?.email || '');
+//   const [resetPassword, setResetPassword] = useState(false);
+//   const [sending, setSending] = useState(false);
+//   const [error, setError] = useState('');
 
-  if (!isOpen || !instructor) return null;
+//   if (!isOpen || !instructor) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSending(true);
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setError('');
+//     setSending(true);
     
-    try {
-      await onResend(sendToEmail, resetPassword);
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to send credentials');
-    } finally {
-      setSending(false);
-    }
-  };
+//     try {
+//       await onResend(sendToEmail, resetPassword);
+//       onClose();
+//     } catch (err: any) {
+//       setError(err.message || 'Failed to send credentials');
+//     } finally {
+//       setSending(false);
+//     }
+//   };
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Resend Credentials</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <XCircle className="w-5 h-5" />
-          </button>
-        </div>
+//   return (
+//     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+//       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+//         <div className="flex justify-between items-center mb-4">
+//           <h3 className="text-xl font-semibold text-gray-900">Resend Credentials</h3>
+//           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+//             <XCircle className="w-5 h-5" />
+//           </button>
+//         </div>
 
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            <strong>Instructor:</strong> {instructor.name} ({instructor.email})
-          </p>
-        </div>
+//         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+//           <p className="text-sm text-blue-700">
+//             <strong>Instructor:</strong> {instructor.name} ({instructor.email})
+//           </p>
+//         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Send Credentials To
-            </label>
-            <input
-              type="email"
-              value={sendToEmail}
-              onChange={(e) => setSendToEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
-              placeholder="Enter email address"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Credentials will be sent to this email address
-            </p>
-          </div>
+//         <form onSubmit={handleSubmit} className="space-y-4">
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-1">
+//               Send Credentials To
+//             </label>
+//             <input
+//               type="email"
+//               value={sendToEmail}
+//               onChange={(e) => setSendToEmail(e.target.value)}
+//               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
+//               placeholder="Enter email address"
+//               required
+//             />
+//             <p className="text-xs text-gray-500 mt-1">
+//               Credentials will be sent to this email address
+//             </p>
+//           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="resetPassword"
-              checked={resetPassword}
-              onChange={(e) => setResetPassword(e.target.checked)}
-              className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-            />
-            <label htmlFor="resetPassword" className="text-sm text-gray-700">
-              Reset password and send new credentials
-            </label>
-          </div>
+//           <div className="flex items-center gap-2">
+//             <input
+//               type="checkbox"
+//               id="resetPassword"
+//               checked={resetPassword}
+//               onChange={(e) => setResetPassword(e.target.checked)}
+//               className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+//             />
+//             <label htmlFor="resetPassword" className="text-sm text-gray-700">
+//               Reset password and send new credentials
+//             </label>
+//           </div>
 
-          {resetPassword && (
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <p className="text-xs text-yellow-700">
-                ⚠️ A new random password will be generated and sent to the instructor.
-              </p>
-            </div>
-          )}
+//           {resetPassword && (
+//             <div className="p-3 bg-yellow-50 rounded-lg">
+//               <p className="text-xs text-yellow-700">
+//                 ⚠️ A new random password will be generated and sent to the instructor.
+//               </p>
+//             </div>
+//           )}
 
-          {error && (
-            <div className="p-3 bg-red-50 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+//           {error && (
+//             <div className="p-3 bg-red-50 rounded-lg">
+//               <p className="text-sm text-red-600">{error}</p>
+//             </div>
+//           )}
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={sending}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {sending ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Send Credentials
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+//           <div className="flex gap-3 pt-4">
+//             <button
+//               type="button"
+//               onClick={onClose}
+//               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+//             >
+//               Cancel
+//             </button>
+//             <button
+//               type="submit"
+//               disabled={sending}
+//               className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+//             >
+//               {sending ? (
+//                 <>
+//                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+//                   Sending...
+//                 </>
+//               ) : (
+//                 <>
+//                   <Send className="w-4 h-4" />
+//                   Send Credentials
+//                 </>
+//               )}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function EditInstructorPage() {
   const params = useParams()
@@ -504,14 +504,7 @@ const handleResendCredentials = async (sendToEmail: string, resetPassword: boole
               </div>
             </div>
             
-            {/* Resend Credentials Button */}
-            <button
-              onClick={() => setShowResendModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              <span>Resend Credentials</span>
-            </button>
+        
           </div>
         </div>
       </div>
@@ -813,13 +806,7 @@ const handleResendCredentials = async (sendToEmail: string, resetPassword: boole
         </div>
       </form>
 
-      {/* Resend Credentials Modal */}
-      <ResendCredentialsModal
-        isOpen={showResendModal}
-        onClose={() => setShowResendModal(false)}
-        instructor={instructor}
-        onResend={handleResendCredentials}
-      />
+     
 
       {/* Success Popup */}
       {showSuccess && (

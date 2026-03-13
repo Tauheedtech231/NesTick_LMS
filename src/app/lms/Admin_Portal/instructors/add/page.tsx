@@ -201,10 +201,7 @@ export default function AddInstructor() {
         setWarningMessage(`
           ⚠️ Instructor added to database but email could not be sent.
           
-          Please save this password manually:
-          ${addResult.data?.password || 'Password not available'}
-          
-          You can resend credentials from the instructor list page.
+         
         `)
         setSuccessMessage('Instructor added to database!')
       }

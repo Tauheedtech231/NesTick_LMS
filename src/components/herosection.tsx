@@ -5,9 +5,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
-const slides = [
+// Define slide type for better TypeScript support
+interface Slide {
+  image?: string;
+  desktopImage?: string;
+  mobileImage?: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  cta: string;
+  ctaLink: string;
+}
+
+const slides: Slide[] = [
   {
-    image: "https://images.pexels.com/photos/6245621/pexels-photo-6245621.jpeg",
+    image: "https://images.pexels.com/photos/5125783/pexels-photo-5125783.jpeg",
     title: "Workplace Safety & Compliance Training",
     subtitle: "Skills Aligned with International Standards",
     description:
@@ -16,7 +28,8 @@ const slides = [
     ctaLink: "/courses?category=safety"
   },
   {
-    image: "https://images.pexels.com/photos/8961132/pexels-photo-8961132.jpeg",
+    desktopImage: "https://images.pexels.com/photos/4956920/pexels-photo-4956920.jpeg",
+    mobileImage: "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg",
     title: "Industrial Construction Skill Development",
     subtitle: "Practical Training for Technical Careers",
     description:
@@ -25,7 +38,7 @@ const slides = [
     ctaLink: "/courses?category=construction"
   },
   {
-    image: "https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg",
+    image: "https://images.pexels.com/photos/8960987/pexels-photo-8960987.jpeg",
     title: "Advanced Technical Trade Training",
     subtitle: "Learn Practical Skills That Matter",
     description:
@@ -34,7 +47,7 @@ const slides = [
     ctaLink: "/courses"
   },
   {
-    image: "https://images.pexels.com/photos/32467382/pexels-photo-32467382.jpeg",
+    image:"https://images.pexels.com/photos/5298215/pexels-photo-5298215.jpeg",
     title: "Industry-Ready Technical Education",
     subtitle: "Built for Construction & Industrial Fields",
     description:
@@ -49,8 +62,21 @@ export default function HeroSection() {
   const [direction, setDirection] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
-  const sectionRef = useRef<HTMLDivElement>(null); // Add this line
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Check screen size for responsive images
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (isAutoPlaying && !isHovered) {
@@ -70,14 +96,21 @@ export default function HeroSection() {
   const pauseAutoPlay = () => setIsAutoPlaying(false);
   const resumeAutoPlay = () => setIsAutoPlaying(true);
 
-  const goToSlide = (index: number) => {
-    setDirection(index > currentSlide ? 1 : -1);
-    setCurrentSlide(index);
+  // Get the appropriate image source based on slide and screen size with fallback
+  const getImageSource = (slide: Slide, index: number): string => {
+    // Only apply conditional image for the second slide (index 1)
+    if (index === 1) {
+      const source = isMobile ? slide.mobileImage : slide.desktopImage;
+      // Return the source or a fallback image if undefined
+      return source || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
+    }
+    // For all other slides, use the regular image property with fallback
+    return slide.image || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
   };
 
   // Simplified animation variants - lighter and more performant
-  const slideVariants:Variants = {
-    enter: (direction: number) => ({
+  const slideVariants: Variants = {
+    enter: () => ({
       opacity: 0,
     }),
     center: {
@@ -87,7 +120,7 @@ export default function HeroSection() {
         ease: "easeInOut",
       },
     },
-    exit: (direction: number) => ({
+    exit: () => ({
       opacity: 0,
       transition: {
         duration: 0.5,
@@ -140,12 +173,12 @@ export default function HeroSection() {
           className="absolute inset-0 w-full h-full"
         >
           <Image
-            src={slides[currentSlide].image}
+            src={getImageSource(slides[currentSlide], currentSlide)}
             alt={slides[currentSlide].title}
             fill
             className="object-cover"
-            priority
-            sizes="100vw"
+            priority={currentSlide === 0}
+            sizes="(max-width: 768px) 100vw, 100vw"
           />
           
           {/* Simple gradient overlay */}
@@ -153,10 +186,10 @@ export default function HeroSection() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Main Content - Centered */}
+      {/* Main Content - Perfectly Centered */}
       <div className="relative w-full h-full flex items-center justify-center">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="flex items-center justify-center min-h-screen">
             <div className="text-white w-full max-w-4xl mx-auto text-center">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -165,6 +198,7 @@ export default function HeroSection() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center justify-center"
                 >
                   {/* Subtitle */}
                   <motion.div
@@ -182,7 +216,7 @@ export default function HeroSection() {
                     <div className="w-1 h-5 bg-[#B11217] rounded-full" />
                   </motion.div>
 
-                  {/* Title */}
+                  {/* Title - Perfectly Centered */}
                   <motion.h1
                     custom={1}
                     variants={textVariants}
@@ -213,18 +247,18 @@ export default function HeroSection() {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="flex flex-wrap gap-3 justify-center"
+                    className="flex flex-wrap gap-4 justify-center"
                   >
                     <Link
                       href={slides[currentSlide].ctaLink}
-                      className="px-5 py-2.5 md:px-6 md:py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-colors duration-300 text-sm md:text-base shadow-lg"
+                      className="px-5 py-2.5 mt-5 md:px-6 md:py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-colors duration-300 text-sm md:text-base shadow-lg"
                     >
                       {slides[currentSlide].cta}
                     </Link>
 
                     <Link
                       href="/about"
-                      className="px-5 py-2.5 md:px-6 md:py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-colors duration-300 text-sm md:text-base"
+                      className="px-5 mt-5 py-2.5 md:px-6 md:py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-colors duration-300 text-sm md:text-base"
                     >
                       Learn More
                     </Link>
@@ -233,28 +267,6 @@ export default function HeroSection() {
               </AnimatePresence>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Navigation Dots - Simplified */}
-      <div className="absolute bottom-6 left-0 right-0 z-30 flex justify-center">
-        <div className="flex gap-2 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className="relative p-1"
-              aria-label={`Go to slide ${index + 1}`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  currentSlide === index 
-                    ? 'bg-[#B11217] w-4' 
-                    : 'bg-white/50 hover:bg-white/80'
-                }`}
-              />
-            </button>
-          ))}
         </div>
       </div>
 

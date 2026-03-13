@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['images.unsplash.com', 'randomuser.me', 'images.pexels.com','mansolhabtrainings.com'],
+    domains: ['images.unsplash.com', 'randomuser.me', 'images.pexels.com','mansolhabtrainings.com',"media.istockphoto.com"],
     // Optionally allow remote patterns if using different subpaths or query strings
     remotePatterns: [
       {
