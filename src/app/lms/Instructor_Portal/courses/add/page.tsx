@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
- 
   X,
   Plus,
   Trash2,
@@ -26,7 +25,9 @@ import {
   IndianRupee,
   Calendar,
   Award,
-  Download
+  Download,
+  Video,
+  Film
 } from 'lucide-react'
 /* eslint-disable */
 
@@ -42,12 +43,15 @@ const BRAND_COLORS = {
   brightRed: '#D32F2F'
 }
 
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME ='dfp9qc0gu'
+const CLOUDINARY_UPLOAD_PRESET = 'lms_upload'
+
 // Types
 interface Course {
   id: string;
   title: string;
   description: string;
- 
   category: string;
   status: 'draft' | 'published';
   instructorId: string;
@@ -118,11 +122,16 @@ interface Assignment {
   updatedAt: string;
 }
 
+interface UploadProgress {
+  [key: string]: number;
+}
+
 export default function AddCoursePage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [instructor, setInstructor] = useState<any>(null)
   const [uploading, setUploading] = useState<{[key: string]: boolean}>({})
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({})
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingAssignment, setUploadingAssignment] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -135,7 +144,6 @@ export default function AddCoursePage() {
   const [courseDetails, setCourseDetails] = useState({
     title: '',
     description: '',
-   
     category: '',
     status: 'draft' as 'draft' | 'published',
     price: '',
@@ -243,7 +251,6 @@ export default function AddCoursePage() {
         body: JSON.stringify({
           title: courseDetails.title,
           description: courseDetails.description,
-          
           category: courseDetails.category,
           status: courseDetails.status,
           instructorId: instructor.id,
@@ -374,7 +381,82 @@ export default function AddCoursePage() {
     }
   };
 
-  // ============ COURSE IMAGE UPLOAD FUNCTIONS ============
+  // ============ DIRECT CLOUDINARY UPLOAD (NO BACKEND) ============
+  const uploadToCloudinaryDirect = async (file: File, slideId: string): Promise<{ secure_url: string; public_id: string }> => {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+      
+      // Add folder structure
+      const folder = `lms/courses/${courseId}/slides/${slideId}`
+      formData.append('folder', folder)
+
+      // Determine resource type
+      const resourceType = file.type.startsWith('video/') ? 'video' : 
+                          file.type.startsWith('image/') ? 'image' : 'raw'
+      
+      // Cloudinary upload URL - DIRECT browser to Cloudinary
+      const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`
+
+      const xhr = new XMLHttpRequest()
+      
+      // Upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100)
+          setUploadProgress(prev => ({
+            ...prev,
+            [`${slideId}_${file.name}`]: progress
+          }))
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            // Clear progress
+            setUploadProgress(prev => {
+              const newProgress = { ...prev }
+              delete newProgress[`${slideId}_${file.name}`]
+              return newProgress
+            })
+            resolve({
+              secure_url: response.secure_url,
+              public_id: response.public_id
+            })
+          } catch (error) {
+            reject(new Error('Failed to parse Cloudinary response'))
+          }
+        } else {
+          let errorMessage = `Upload failed`
+          try {
+            const errorResponse = JSON.parse(xhr.responseText)
+            errorMessage = errorResponse.error?.message || errorMessage
+          } catch (e) {}
+          reject(new Error(errorMessage))
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error. Please check your connection.'))
+      })
+
+      xhr.addEventListener('timeout', () => {
+        reject(new Error('Upload timeout. File may be too large.'))
+      })
+
+      // Set timeout based on file size (30 seconds per MB)
+      const timeout = Math.max(300000, Math.ceil(file.size / (1024 * 1024)) * 30000)
+      xhr.timeout = timeout
+
+      xhr.open('POST', url)
+      xhr.send(formData)
+    })
+  }
+
+  // ============ COURSE IMAGE UPLOAD (DIRECT) ============
   const handleImageUpload = async (file: File) => {
     if (!file) return
 
@@ -391,30 +473,30 @@ export default function AddCoursePage() {
     setUploadingImage(true)
 
     try {
+      // Show preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setCourseImagePreview(reader.result as string)
       }
       reader.readAsDataURL(file)
 
+      // Direct upload to Cloudinary
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('type', 'course_image')
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+      formData.append('folder', 'lms/course_images')
 
-      const response = await fetch('/api/upload/cloudinary', {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
-        body: formData,
+        body: formData
       })
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`)
+        throw new Error('Upload failed')
       }
 
       const result = await response.json()
-
-      if (result.success) {
-        setCourseImage(result.data.secure_url)
-      }
+      setCourseImage(result.secure_url)
     } catch (error) {
       console.error('Image upload error:', error)
       alert('Failed to upload image. Please try again.')
@@ -478,16 +560,13 @@ export default function AddCoursePage() {
     setSaving(true)
     
     try {
-      // Save to database first
       const newCourseId = await saveCourseToDB()
       
       if (newCourseId) {
-        // Also save to localStorage for backward compatibility
         const newCourse: Course = {
           id: newCourseId,
           title: courseDetails.title,
           description: courseDetails.description,
-          
           category: courseDetails.category,
           status: courseDetails.status,
           instructorId: instructor.id,
@@ -607,7 +686,7 @@ export default function AddCoursePage() {
     setCurrentStep(3)
   }
 
-  // ============ STEP 3 FUNCTIONS ============
+  // ============ STEP 3 FUNCTIONS - DIRECT CLOUDINARY UPLOAD ============
   const handleFileUpload = async (slideId: string, files: FileList | null) => {
     if (!files || !courseId) return
     
@@ -622,36 +701,27 @@ export default function AddCoursePage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('slideId', slideId)
-        formData.append('courseId', courseId)
-        
-        const response = await fetch('/api/upload/cloudinary', {
-          method: 'POST',
-          body: formData,
-        })
-        
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`)
-        }
-        
-        const result = await response.json()
-        
-        if (result.success) {
+        try {
+          // Direct upload to Cloudinary (NO BACKEND)
+          const result = await uploadToCloudinaryDirect(file, slideId)
+          
           uploadedFiles.push({
             id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: file.name,
             type: file.type,
             size: file.size,
-            url: result.data.secure_url,
-            publicId: result.data.public_id,
+            url: result.secure_url,
+            publicId: result.public_id,
             uploadedAt: new Date().toISOString()
           })
+        } catch (error: any) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          alert(`Failed to upload ${file.name}: ${error.message}`)
         }
       }
       
       if (uploadedFiles.length > 0) {
+        // Save to localStorage
         const existingContents = JSON.parse(localStorage.getItem('slideContent') || '[]')
         const slideContent = existingContents.find((sc: SlideContent) => sc.slideId === slideId)
         
@@ -804,7 +874,7 @@ export default function AddCoursePage() {
     })
   }
 
-  // ============ ASSIGNMENT FUNCTIONS PER SLIDE ============
+  // ============ ASSIGNMENT FUNCTIONS ============
   const handleAssignmentFileUpload = async (file: File) => {
     if (!file) return
 
@@ -813,29 +883,31 @@ export default function AddCoursePage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('type', 'assignment')
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+      formData.append('folder', 'lms/assignments')
 
-      const response = await fetch('/api/upload/cloudinary', {
+      const resourceType = file.type.startsWith('video/') ? 'video' : 
+                          file.type.startsWith('image/') ? 'image' : 'raw'
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, {
         method: 'POST',
-        body: formData,
+        body: formData
       })
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`)
+        throw new Error('Upload failed')
       }
 
       const result = await response.json()
-
-      if (result.success) {
-        setAssignmentFile({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: result.data.secure_url,
-          publicId: result.data.public_id,
-          uploadedAt: new Date().toISOString()
-        })
-      }
+      
+      setAssignmentFile({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: result.secure_url,
+        publicId: result.public_id,
+        uploadedAt: new Date().toISOString()
+      })
     } catch (error) {
       console.error('Assignment file upload error:', error)
       alert('Failed to upload assignment file. Please try again.')
@@ -935,13 +1007,11 @@ export default function AddCoursePage() {
     setSaving(true)
     
     try {
-      // Save all data to database
       await saveSlidesToDB(courseId)
       await saveFilesToDB(courseId)
       await saveQuizzesToDB(courseId)
       await saveAssignmentsToDB(courseId)
       
-      // Update course status if published
       if (courseDetails.status === 'published') {
         const existingCourses = JSON.parse(localStorage.getItem('courses') || '[]')
         const updatedCourses = existingCourses.map((c: Course) => 
@@ -965,6 +1035,21 @@ export default function AddCoursePage() {
     if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />
     if (fileType.includes('word') || fileType.includes('document')) return <FileText className="w-5 h-5 text-blue-700" />
     return <File className="w-5 h-5 text-gray-500" />
+  }
+
+  // Check if Cloudinary is configured
+  if (!CLOUDINARY_CLOUD_NAME) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-red-700 text-center mb-2">Configuration Error</h2>
+          <p className="text-red-600 text-center">
+            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME environment variable is not set.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -1178,9 +1263,6 @@ export default function AddCoursePage() {
                   </p>
                 )}
               </div>
-
-              
-            
 
               {/* Course Price Section */}
               <div className="border-t border-softGrey pt-4 mt-2">
@@ -1435,7 +1517,7 @@ export default function AddCoursePage() {
         </div>
       )}
 
-      {/* Step 3: Slide Content Management */}
+      {/* Step 3: Slide Content Management - Updated with Video Support */}
       {currentStep === 3 && (
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -1485,13 +1567,13 @@ export default function AddCoursePage() {
                           Drag & drop files or click to upload
                         </p>
                         <p className="text-xs text-darkGrey/50 mb-4">
-                          Supports: MP4, PDF, DOC/DOCX, JPG, PNG
+                          Supports: MP4, PDF, DOC/DOCX, JPG, PNG (Videos up to 100MB+)
                         </p>
                         <label className="inline-block relative">
                           <input
                             type="file"
                             multiple
-                            accept=".pdf,.doc,.docx,.mp4,.mov,.avi,.jpg,.jpeg,.png"
+                            accept=".pdf,.doc,.docx,.mp4,.mov,.avi,.wmv,.flv,.mkv,.webm,.jpg,.jpeg,.png"
                             onChange={(e) => handleFileUpload(selectedSlideId, e.target.files)}
                             className="hidden"
                             disabled={uploading[selectedSlideId]}
@@ -1515,6 +1597,32 @@ export default function AddCoursePage() {
                       </div>
                     </div>
 
+                    {/* Upload Progress */}
+                    {Object.keys(uploadProgress).length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-darkGrey mb-2">Upload Progress</h4>
+                        <div className="space-y-2">
+                          {Object.entries(uploadProgress).map(([key, progress]) => {
+                            const fileName = key.split('_').slice(1).join('_')
+                            return (
+                              <div key={key} className="bg-lightGrey rounded-lg p-3">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-darkGrey truncate max-w-[200px]">{fileName}</span>
+                                  <span className="text-darkRoyalBlue font-medium">{progress}%</span>
+                                </div>
+                                <div className="w-full bg-softGrey rounded-full h-2">
+                                  <div 
+                                    className="h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${progress}%`, backgroundColor: BRAND_COLORS.darkRoyalBlue }}
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Uploaded Files List */}
                     {slideContents[selectedSlideId]?.files?.length > 0 && (
                       <div>
@@ -1522,21 +1630,41 @@ export default function AddCoursePage() {
                         <div className="space-y-2">
                           {slideContents[selectedSlideId].files.map((file) => (
                             <div key={file.id} className="flex items-center justify-between p-3 bg-lightGrey rounded-lg">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 flex-1">
                                 {getFileIcon(file.type)}
-                                <div>
-                                  <p className="text-sm font-medium text-darkGrey">{file.name}</p>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium text-darkGrey">{file.name}</p>
+                                    {file.type.includes('video') && (
+                                      <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
+                                        <Film className="w-3 h-3" />
+                                        Video
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-darkGrey/60">
-                                    {(file.size / 1024).toFixed(2)} KB • {new Date(file.uploadedAt).toLocaleDateString()}
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB • {new Date(file.uploadedAt).toLocaleDateString()}
                                   </p>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => handleRemoveFile(selectedSlideId, file.publicId)}
-                                className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {file.type.includes('video') && (
+                                  <a 
+                                    href={file.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded"
+                                  >
+                                    <Video className="w-4 h-4" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => handleRemoveFile(selectedSlideId, file.publicId)}
+                                  className="p-1 text-brightRed hover:bg-brightRed/5 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1605,13 +1733,13 @@ export default function AddCoursePage() {
                           </p>
                         </div>
 
-                       <button
-  onClick={() => handleAddQuestion(selectedSlideId)}
-  className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
-  style={{ backgroundColor: '#1E3A8A' }} // darkRoyalBlue color
->
-  Add Question
-</button>
+                        <button
+                          onClick={() => handleAddQuestion(selectedSlideId)}
+                          className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+                          style={{ backgroundColor: '#1E3A8A' }}
+                        >
+                          Add Question
+                        </button>
                       </div>
                     </div>
 
