@@ -272,7 +272,7 @@ export default function HeroSection() {
       
       <Link
         href={slides[currentSlide].ctaLink}
-        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105 mb-5 sm:mb-0 "
+        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105  "
       >
         {slides[currentSlide].cta}
       </Link>
