@@ -7,7 +7,6 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 // Define slide type for better TypeScript support
 interface Slide {
-  image?: string;
   desktopImage?: string;
   mobileImage?: string;
   title: string;
@@ -19,7 +18,8 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    image: "https://images.pexels.com/photos/5125783/pexels-photo-5125783.jpeg",
+    desktopImage: "https://images.pexels.com/photos/5125783/pexels-photo-5125783.jpeg",
+    mobileImage: "https://images.pexels.com/photos/6059068/pexels-photo-6059068.jpeg",
     title: "Workplace Safety & Compliance Training",
     subtitle: "Skills Aligned with International Standards",
     description:
@@ -29,7 +29,7 @@ const slides: Slide[] = [
   },
   {
     desktopImage: "https://images.pexels.com/photos/4956920/pexels-photo-4956920.jpeg",
-    mobileImage: "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg",
+    mobileImage: "https://images.pexels.com/photos/6474476/pexels-photo-6474476.jpeg",
     title: "Industrial Construction Skill Development",
     subtitle: "Practical Training for Technical Careers",
     description:
@@ -38,7 +38,8 @@ const slides: Slide[] = [
     ctaLink: "/courses?category=construction"
   },
   {
-    image: "https://images.pexels.com/photos/8960987/pexels-photo-8960987.jpeg",
+    desktopImage: "https://images.pexels.com/photos/8960987/pexels-photo-8960987.jpeg",
+    mobileImage: "https://images.pexels.com/photos/9242801/pexels-photo-9242801.jpeg",
     title: "Advanced Technical Trade Training",
     subtitle: "Learn Practical Skills That Matter",
     description:
@@ -47,7 +48,8 @@ const slides: Slide[] = [
     ctaLink: "/courses"
   },
   {
-    image:"https://images.pexels.com/photos/5298215/pexels-photo-5298215.jpeg",
+    desktopImage: "https://images.pexels.com/photos/5298215/pexels-photo-5298215.jpeg",
+    mobileImage:"https://images.pexels.com/photos/4956912/pexels-photo-4956912.jpeg",
     title: "Industry-Ready Technical Education",
     subtitle: "Built for Construction & Industrial Fields",
     description:
@@ -59,7 +61,6 @@ const slides: Slide[] = [
 
 export default function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [direction, setDirection] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -81,7 +82,6 @@ export default function HeroSection() {
   useEffect(() => {
     if (isAutoPlaying && !isHovered) {
       autoPlayRef.current = setInterval(() => {
-        setDirection(1);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
       }, 6000);
     }
@@ -96,51 +96,89 @@ export default function HeroSection() {
   const pauseAutoPlay = () => setIsAutoPlaying(false);
   const resumeAutoPlay = () => setIsAutoPlaying(true);
 
-  // Get the appropriate image source based on slide and screen size with fallback
-  const getImageSource = (slide: Slide, index: number): string => {
-    // Only apply conditional image for the second slide (index 1)
-    if (index === 1) {
-      const source = isMobile ? slide.mobileImage : slide.desktopImage;
-      // Return the source or a fallback image if undefined
-      return source || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
+  // Get the appropriate image source based on screen size
+  const getImageSource = (slide: Slide): string => {
+    if (isMobile) {
+      return slide.mobileImage || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
     }
-    // For all other slides, use the regular image property with fallback
-    return slide.image || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
+    return slide.desktopImage || slide.mobileImage || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
   };
 
-  // Simplified animation variants - lighter and more performant
-  const slideVariants: Variants = {
-    enter: () => ({
+  // Smooth crossfade animation for images
+  const imageVariants: Variants = {
+    enter: {
       opacity: 0,
-    }),
+      scale: 1.05,
+    },
     center: {
       opacity: 1,
+      scale: 1,
       transition: {
-        duration: 0.6,
+        duration: 1.2,
         ease: "easeInOut",
       },
     },
-    exit: () => ({
+    exit: {
       opacity: 0,
+      scale: 1.05,
       transition: {
-        duration: 0.5,
+        duration: 1,
         ease: "easeInOut",
       },
-    }),
+    },
+  };
+
+  // Smooth text animation with staggered children
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.2,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        staggerChildren: 0.05,
+        staggerDirection: -1,
+      },
+    },
   };
 
   const textVariants: Variants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.6,
+        ease: [0.4, 0, 0.2, 1],
+      },
+    },
+    exit: {
+      y: -20,
+      opacity: 0,
+      transition: {
+        duration: 0.4,
+        ease: [0.4, 0, 0.2, 1],
+      },
+    },
+  };
+
+  const subtitleVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
-    visible: (delay: number) => ({
+    visible: {
       y: 0,
       opacity: 1,
       transition: {
         duration: 0.5,
-        delay: delay * 0.1,
-        ease: "easeOut",
+        ease: [0.4, 0, 0.2, 1],
       },
-    }),
+    },
     exit: {
+      y: -15,
       opacity: 0,
       transition: {
         duration: 0.3,
@@ -151,7 +189,7 @@ export default function HeroSection() {
   return (
     <section 
       ref={sectionRef}
-      className="relative w-full h-screen overflow-hidden"
+      className="relative w-full h-[70vh] sm:h-[80vh] lg:h-screen overflow-hidden"
       onMouseEnter={() => {
         pauseAutoPlay();
         setIsHovered(true);
@@ -161,120 +199,100 @@ export default function HeroSection() {
         setIsHovered(false);
       }}
     >
-      {/* Background Images with simple fade */}
-      <AnimatePresence mode="wait" custom={direction}>
+      {/* Background Images with Smooth Crossfade */}
+      <AnimatePresence mode="wait">
         <motion.div
           key={currentSlide}
-          custom={direction}
-          variants={slideVariants}
+          variants={imageVariants}
           initial="enter"
           animate="center"
           exit="exit"
           className="absolute inset-0 w-full h-full"
         >
           <Image
-            src={getImageSource(slides[currentSlide], currentSlide)}
+            src={getImageSource(slides[currentSlide])}
             alt={slides[currentSlide].title}
             fill
+            priority
             className="object-cover"
-            priority={currentSlide === 0}
-            sizes="(max-width: 768px) 100vw, 100vw"
           />
-          
-          {/* Simple gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
         </motion.div>
       </AnimatePresence>
 
-      {/* Main Content - Perfectly Centered */}
-      <div className="relative w-full h-full flex items-center justify-center">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-white w-full max-w-4xl mx-auto text-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center justify-center"
-                >
-                  {/* Subtitle */}
-                  <motion.div
-                    custom={0}
-                    variants={textVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="flex items-center justify-center gap-2 mb-4"
-                  >
-                    <div className="w-1 h-5 bg-[#B11217] rounded-full" />
-                    <p className="text-xs sm:text-sm font-medium text-[#B11217] uppercase tracking-wider">
-                      {slides[currentSlide].subtitle}
-                    </p>
-                    <div className="w-1 h-5 bg-[#B11217] rounded-full" />
-                  </motion.div>
+      {/* Center Content with Smooth Text Animation */}
+      <div className="relative z-10 w-full h-full flex items-center justify-center text-center px-4">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="max-w-4xl text-white"
+          >
+            {/* Subtitle */}
+            <motion.p 
+              variants={subtitleVariants}
+              className="text-xs sm:text-sm text-[#B11217] uppercase mb-3 tracking-wider"
+            >
+              {slides[currentSlide].subtitle}
+            </motion.p>
 
-                  {/* Title - Perfectly Centered */}
-                  <motion.h1
-                    custom={1}
-                    variants={textVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight text-center"
-                  >
-                    {slides[currentSlide].title}
-                  </motion.h1>
+            {/* Heading */}
+            <motion.h1 
+              variants={textVariants}
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+            >
+              {slides[currentSlide].title}
+            </motion.h1>
 
-                  {/* Description */}
-                  <motion.p
-                    custom={2}
-                    variants={textVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="text-sm sm:text-base md:text-lg text-gray-200 mb-6 leading-relaxed max-w-2xl mx-auto"
-                  >
-                    {slides[currentSlide].description}
-                  </motion.p>
-
-                  {/* CTA Buttons */}
-                  <motion.div
-                    custom={3}
-                    variants={textVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="flex flex-wrap gap-4 justify-center"
-                  >
-                    <Link
-                      href={slides[currentSlide].ctaLink}
-                      className="px-5 py-2.5 mt-5 md:px-6 md:py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-colors duration-300 text-sm md:text-base shadow-lg"
-                    >
-                      {slides[currentSlide].cta}
-                    </Link>
-
-                    <Link
-                      href="/about"
-                      className="px-5 mt-5 py-2.5 md:px-6 md:py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-colors duration-300 text-sm md:text-base"
-                    >
-                      Learn More
-                    </Link>
-                  </motion.div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
+            {/* Description */}
+            <motion.p 
+              variants={textVariants}
+              className="mt-4 text-sm sm:text-base md:text-lg text-gray-200 max-w-2xl mx-auto"
+            >
+              {slides[currentSlide].description}
+            </motion.p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* Scroll Indicator - Simplified */}
+      {/* Buttons with Smooth Entrance */}
+     <AnimatePresence mode="wait">
+  <motion.div 
+    key={`buttons-${currentSlide}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: 20 }}
+    transition={{ duration: 0.5, delay: 0.3 }}
+    className="absolute bottom-8 sm:bottom-12 w-full flex justify-center items-center z-10 px-4"
+  >
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 items-center">
+      
+      <Link
+        href={slides[currentSlide].ctaLink}
+        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105 mb-5 sm:mb-0 "
+      >
+        {slides[currentSlide].cta}
+      </Link>
+
+      <Link
+        href="/about"
+        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-all duration-300 text-sm md:text-base hover:scale-105"
+      >
+        Learn More
+      </Link>
+
+    </div>
+  </motion.div>
+</AnimatePresence>
+
+      {/* Scroll Indicator with Smooth Animation */}
       <motion.div
         className="absolute bottom-6 right-6 z-20 hidden lg:block"
-        animate={{ y: [0, 5, 0] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ y: [0, 8, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
       >
         <div className="flex flex-col items-center gap-1 text-white/60">
           <span className="text-[10px] uppercase tracking-wider">Scroll</span>

@@ -842,27 +842,27 @@ const cartTotal = cartItems.reduce((sum, item) => {
       </AnimatePresence>
 
       {/* Cart Bucket - Right Side */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[99999]">
-        <motion.button
-          onClick={() => setIsCartOpen(true)}
-          className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 group"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <FaCartPlus className="w-6 h-6" />
-          
-          {/* Cart Count Badge */}
-          {cartCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-white text-[#B11217] text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg border-2 border-[#B11217]"
-            >
-              {cartCount > 99 ? '99+' : cartCount}
-            </motion.span>
-          )}
-        </motion.button>
-      </div>
+   <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[99999]">
+  <motion.button
+    onClick={() => setIsCartOpen(true)}
+    className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-3 sm:p-4 rounded-l-full rounded-r-none shadow-2xl hover:shadow-3xl transition-all duration-300 group flex items-center justify-center"
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    <FaCartPlus className="w-6 h-6" />
+
+    {/* Cart Count Badge */}
+    {cartCount > 0 && (
+      <motion.span
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-white text-[#B11217] text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg border-2 border-[#B11217]"
+      >
+        {cartCount > 99 ? '99+' : cartCount}
+      </motion.span>
+    )}
+  </motion.button>
+</div>
 
       {/* Cart Sidebar */}
       <AnimatePresence>
