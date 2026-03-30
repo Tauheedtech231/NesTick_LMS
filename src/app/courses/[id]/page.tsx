@@ -952,7 +952,7 @@ export default function CourseDetailPage() {
     whileTap={{ scale: 0.95 }}
     aria-label="Open shopping cart"
   >
-    <FaCartPlus className="w-6 h-6" />
+    <HiShoppingBag className="w-6 h-6" />
 
     {/* Cart Count Badge */}
     {cartItems.length > 0 && (
@@ -1028,10 +1028,10 @@ export default function CourseDetailPage() {
                 ) : cartItems.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <FaCartPlus className="w-12 h-12 text-gray-400" />
+                   <HiShoppingBag  />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Your cart is empty
+                      Your Bag is empty
                     </h3>
                     <p className="text-gray-500 mb-6">
                       Start adding courses to get started
@@ -1254,7 +1254,7 @@ export default function CourseDetailPage() {
                         }}
                       >
                         <HiCheck className="w-5 h-5" />
-                        View in Cart
+                        View in Bag
                       </button>
                     ) : (
                       <button
@@ -1269,9 +1269,9 @@ export default function CourseDetailPage() {
                         {addingToCart ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
-                          <HiShoppingCart className="w-5 h-5" />
+                          <HiShoppingBag className="w-5 h-5" />
                         )}
-                        {addingToCart ? 'Adding...' : 'Add to Cart'}
+                        {addingToCart ? 'Adding...' : 'Add to Bag'}
                       </button>
                     )}
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, Easing } from "framer-motion";
 import { 
   HiClock, 
-  HiUserGroup, 
+ 
   HiAcademicCap, 
   HiCheckCircle,
   HiArrowRight,
@@ -19,12 +19,13 @@ import {
   HiBadgeCheck,
   HiCog,
   HiBriefcase,
-  HiShoppingCart,
+ 
   HiMail,
   HiExclamation,
   HiCheck,
   HiTrash,
-  HiShoppingBag
+  HiShoppingBag,
+  HiUserGroup
 } from "react-icons/hi";
 import { FaCartPlus } from "react-icons/fa";
 import { MdKeyboardArrowDown } from 'react-icons/md';
@@ -936,7 +937,7 @@ export default function CoursesPage() {
     whileHover={{ scale: 1.1 }}
     whileTap={{ scale: 0.95 }}
   >
-    <FaCartPlus className="w-6 h-6" />
+    <HiShoppingBag className="w-6 h-6" />
 
     {/* Cart Count Badge */}
     {cartCount > 0 && (
@@ -1420,10 +1421,7 @@ export default function CoursesPage() {
         <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
         <span className="truncate">{course.duration || 'Flexible'}</span>
       </div>
-      <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
-        <HiUserGroup className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
-        <span className="truncate">{course.students || 'Limited seats'}</span>
-      </div>
+     
       <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
         <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
         <span className="truncate">{course.level || 'All Levels'}</span>
@@ -1501,8 +1499,8 @@ export default function CoursesPage() {
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <HiShoppingCart className="w-4 h-4 mr-1" />
-                <span>Add to Cart</span>
+                <HiShoppingBag className="w-4 h-4 mr-1" />
+                <span>Add to Bag</span>
               </>
             )}
           </button>
@@ -1634,7 +1632,7 @@ export default function CoursesPage() {
       </div>
 
       {/* CoursesTab Component */}
-      <div className="mt-16">
+      <div >
         <CoursesTab />
       </div>
     </div>

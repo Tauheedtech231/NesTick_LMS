@@ -1,14 +1,24 @@
-// app/api/enrollment/create/route.ts - Updated Version with Email
+// app/api/enrollment/create/route.ts - Updated Version with Email & Update Support
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEnrollmentConfirmation } from '@/lib/email';
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 export async function POST(request: NextRequest) {
   let connection;
   try {
     const body = await request.json();
-    const { studentDetails, courses, totalAmount, documents, enrollmentId, voucherNumber, sendEmail } = body;
+    const { 
+      studentDetails, 
+      courses, 
+      totalAmount, 
+      documents, 
+      enrollmentId, 
+      voucherNumber, 
+      sendEmail,
+      isUpdate 
+    } = body;
 
     // Validate required fields
     if (!studentDetails.student_name || !studentDetails.student_email || 
@@ -28,7 +38,124 @@ export async function POST(request: NextRequest) {
 
     connection = await getConnection();
 
-    // Start transaction
+    // ============ UPDATE EXISTING ENROLLMENT ============
+    if (isUpdate && enrollmentId) {
+      // Check if enrollment exists
+      const [existing] = await connection.execute(
+        'SELECT id, payment_status, status FROM enrollments WHERE id = ?',
+        [enrollmentId]
+      );
+
+      if ((existing as any[]).length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Enrollment not found for update' },
+          { status: 404 }
+        );
+      }
+
+      // Start transaction for update
+      await connection.beginTransaction();
+
+      try {
+        // Update student information and documents
+        await connection.execute(
+          `UPDATE enrollments SET
+            student_name = ?,
+            student_phone = ?,
+            student_cnic = ?,
+            student_address = ?,
+            student_education = ?,
+            student_experience = ?,
+            cnic_front_url = COALESCE(?, cnic_front_url),
+            cnic_back_url = COALESCE(?, cnic_back_url),
+            educational_doc_url = COALESCE(?, educational_doc_url),
+            voucher_number = COALESCE(?, voucher_number),
+            voucher_generated = TRUE,
+            updated_at = NOW()
+          WHERE id = ?`,
+          [
+            studentDetails.student_name,
+            studentDetails.student_phone,
+            studentDetails.student_cnic,
+            studentDetails.student_address || null,
+            studentDetails.student_education || null,
+            studentDetails.student_experience || null,
+            documents.cnic_front?.url || null,
+            documents.cnic_back?.url || null,
+            documents.educational_doc?.url || null,
+            voucherNumber || null,
+            enrollmentId
+          ]
+        );
+
+        // Update payment amount if different
+        const [currentEnrollment] = await connection.execute(
+          'SELECT payment_amount FROM enrollments WHERE id = ?',
+          [enrollmentId]
+        );
+        const currentAmount = (currentEnrollment as any[])[0]?.payment_amount || 0;
+        
+        if (totalAmount && totalAmount !== currentAmount) {
+          await connection.execute(
+            `UPDATE enrollments SET
+              payment_amount = ?,
+              updated_at = NOW()
+            WHERE id = ?`,
+            [totalAmount, enrollmentId]
+          );
+        }
+
+        await connection.commit();
+
+        // Send email notification
+        let emailSent = false;
+        if (sendEmail === true) {
+          try {
+            const emailResult = await sendEnrollmentConfirmation({
+              studentName: studentDetails.student_name,
+              studentEmail: studentDetails.student_email,
+              studentPhone: studentDetails.student_phone,
+              enrollmentId: enrollmentId,
+              courses: courses,
+              totalAmount: totalAmount,
+              enrollmentDate: new Date().toLocaleString(),
+              status: 'pending'
+            });
+            
+            if (emailResult.success) {
+              emailSent = true;
+              console.log('✅ Update confirmation email sent to:', studentDetails.student_email);
+            } else {
+              console.error('❌ Failed to send update email:', emailResult.error);
+            }
+          } catch (emailError) {
+            console.error('❌ Email sending error:', emailError);
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            enrollmentIds: [enrollmentId],
+            studentName: studentDetails.student_name,
+            totalAmount,
+            coursesCount: courses.length,
+            isUpdate: true
+          },
+          emailSent: emailSent,
+          message: emailSent 
+            ? 'Enrollment updated successfully and confirmation email sent!'
+            : 'Enrollment updated successfully'
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    }
+
+    // ============ CREATE NEW ENROLLMENT ============
+    // Start transaction for new enrollment
     await connection.beginTransaction();
 
     try {
@@ -123,9 +250,9 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Error creating enrollment:', error);
+    console.error('Error creating/updating enrollment:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create enrollment' },
+      { success: false, error: error.message || 'Failed to process enrollment' },
       { status: 500 }
     );
   } finally {

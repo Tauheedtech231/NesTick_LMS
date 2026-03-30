@@ -167,7 +167,7 @@ export async function sendEnrollmentConfirmation(data: EnrollmentEmailData) {
             .button {
               display: inline-block;
               padding: 12px 24px;
-              background-color: #1FB6CB;
+              background-color: #B11217;
               color: white;
               text-decoration: none;
               border-radius: 8px;
@@ -260,11 +260,348 @@ export async function sendEnrollmentConfirmation(data: EnrollmentEmailData) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent:', info.messageId);
+    console.log('✅ Enrollment confirmation email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
     
   } catch (error) {
-    console.error('❌ Error sending email:', error);
+    console.error('❌ Error sending enrollment confirmation email:', error);
     return { success: false, error };
   }
+}
+
+// Send payment verification email
+export async function sendPaymentVerificationEmail(
+  studentEmail: string,
+  studentName: string,
+  enrollmentId: string,
+  status: 'pending' | 'verified' | 'rejected'
+) {
+  try {
+    let subject = '';
+    let html = '';
+
+    if (status === 'pending') {
+      subject = `Payment Received - ${enrollmentId}`;
+      html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Received</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              background-color: #f4f6f8;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #0B1C3D 0%, #1E3A8A 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+            }
+            .content {
+              padding: 30px;
+            }
+            .info-box {
+              background-color: #f9fafb;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              border-radius: 20px;
+              font-size: 14px;
+              font-weight: bold;
+              background-color: #FEF3C7;
+              color: #92400E;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #B11217;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              margin-top: 20px;
+              font-weight: bold;
+            }
+            .footer {
+              background-color: #f9fafb;
+              padding: 20px;
+              text-align: center;
+              font-size: 12px;
+              color: #9ca3af;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>💰 Payment Received</h1>
+            </div>
+            <div class="content">
+              <h2>Dear ${studentName},</h2>
+              <p>We have received your payment for enrollment <strong>${enrollmentId}</strong>.</p>
+              
+              <div class="info-box">
+                <p><strong>Status:</strong> <span class="status-badge">Pending Verification</span></p>
+                <p><strong>Enrollment ID:</strong> ${enrollmentId}</p>
+              </div>
+              
+              <p>Our team will verify your payment within 24-48 hours. You will receive another email once verified.</p>
+              <p>If you have any questions, please contact our support team.</p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
+                  Track Enrollment
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
+              <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    } else if (status === 'verified') {
+      subject = `Payment Verified - ${enrollmentId}`;
+      html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Verified</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              background-color: #f4f6f8;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #0B1C3D 0%, #1E3A8A 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+            }
+            .content {
+              padding: 30px;
+            }
+            .success-box {
+              background-color: #f0fdf4;
+              border: 1px solid #bbf7d0;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              text-align: center;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              border-radius: 20px;
+              font-size: 14px;
+              font-weight: bold;
+              background-color: #10B981;
+              color: white;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #B11217;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              margin-top: 20px;
+              font-weight: bold;
+            }
+            .footer {
+              background-color: #f9fafb;
+              padding: 20px;
+              text-align: center;
+              font-size: 12px;
+              color: #9ca3af;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ Payment Verified</h1>
+            </div>
+            <div class="content">
+              <h2>Dear ${studentName},</h2>
+              <p>Great news! Your payment for enrollment <strong>${enrollmentId}</strong> has been verified.</p>
+              
+              <div class="success-box">
+                <span class="status-badge">✓ Payment Confirmed</span>
+                <p style="margin-top: 10px;"><strong>Enrollment ID:</strong> ${enrollmentId}</p>
+              </div>
+              
+              <p>You now have full access to all your enrolled courses. You can start learning immediately!</p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
+                  Start Learning
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
+              <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    } else if (status === 'rejected') {
+      subject = `Payment Issue - ${enrollmentId}`;
+      html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Issue</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              background-color: #f4f6f8;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #B11217 0%, #991b1b 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+            }
+            .content {
+              padding: 30px;
+            }
+            .warning-box {
+              background-color: #fef9e3;
+              border: 1px solid #fde047;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #B11217;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              margin-top: 20px;
+              font-weight: bold;
+            }
+            .footer {
+              background-color: #f9fafb;
+              padding: 20px;
+              text-align: center;
+              font-size: 12px;
+              color: #9ca3af;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⚠️ Payment Issue</h1>
+            </div>
+            <div class="content">
+              <h2>Dear ${studentName},</h2>
+              <p>We encountered an issue while verifying your payment for enrollment <strong>${enrollmentId}</strong>.</p>
+              
+              <div class="warning-box">
+                <p><strong>Please check:</strong></p>
+                <ul>
+                  <li>Ensure the payment amount matches your voucher total</li>
+                  <li>Verify the bank account details used for payment</li>
+                  <li>Upload a clear screenshot of the payment confirmation</li>
+                </ul>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
+                  Upload Again
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
+              <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+    }
+
+    const mailOptions = {
+      from: `"LMS Education System" <${process.env.EMAIL_USER}>`,
+      to: studentEmail,
+      subject: subject,
+      html: html,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Payment verification email sent (${status}):`, info.messageId);
+    return { success: true, messageId: info.messageId };
+    
+  } catch (error) {
+    console.error('❌ Error sending payment verification email:', error);
+    return { success: false, error };
+  }
+}
+
+// Send payment received confirmation email (alias for sendPaymentVerificationEmail with pending status)
+export async function sendPaymentReceivedEmail(
+  studentEmail: string,
+  studentName: string,
+  enrollmentId: string
+) {
+  return sendPaymentVerificationEmail(studentEmail, studentName, enrollmentId, 'pending');
 }

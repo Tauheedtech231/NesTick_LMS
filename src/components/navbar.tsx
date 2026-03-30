@@ -17,6 +17,8 @@ import {
   HiInformationCircle,
   HiPhone
 } from "react-icons/hi";
+import { title } from "process";
+import { CreditCard } from "lucide-react";
 
 // Brand Colors
 const BRAND_COLORS = {
@@ -48,6 +50,7 @@ const navItems = [
     href: '/',
     icon: HiHome
   },
+
   {
     title: 'Courses',
     href: '/courses',
@@ -62,7 +65,12 @@ const navItems = [
     title: 'Contact',
     href: '/contact',
     icon: HiPhone
-  }
+  },
+    {
+    title:"Pay Your Fees",
+     href: '/cartEnrollment',
+     icon:CreditCard
+  },
 ];
 
 // Login Dropdown Items
