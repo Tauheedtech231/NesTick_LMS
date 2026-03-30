@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // /app/api/student/cart/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Calculate total
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items = rows as any[];
     const total = items.reduce((sum, item) => sum + (Number(item.course_price) || 0), 0);
 

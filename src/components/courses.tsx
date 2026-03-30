@@ -864,258 +864,255 @@ const cartTotal = cartItems.reduce((sum, item) => {
   </motion.button>
 </div>
 
-      {/* Cart Sidebar */}
-      <AnimatePresence>
-        {isCartOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+    {/* Learning Plan Sidebar */}
+<AnimatePresence>
+  {isCartOpen && (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setIsCartOpen(false)}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99998]"
+      />
+
+      {/* Sidebar */}
+      <motion.div
+        variants={slideInRightVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto z-[99999]"
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/10 rounded-lg">
+                <HiAcademicCap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Selected Courses
+                </h2>
+                <p className="text-sm text-white/80">
+                  {cartCount} {cartCount === 1 ? 'Course Selected' : 'Courses Selected'}
+                </p>
+              </div>
+            </div>
+            <button
               onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99998]"
-              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            
-            {/* Cart Sidebar */}
-            <motion.div
-              variants={slideInRightVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto"
-              style={{ 
-                position: 'fixed',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                zIndex: 99999
-              }}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              {/* Sidebar Header */}
-              <div className="sticky top-0 z-[100000] bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                      <HiShoppingBag className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">
-                        Your Cart
-                      </h2>
-                      <p className="text-sm text-white/80">
-                        {cartCount} {cartCount === 1 ? 'Course' : 'Courses'}
-                      </p>
-                    </div>
+              <HiX className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Items */}
+        <div className="p-6">
+          {cartItems.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <HiAcademicCap className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No courses selected yet
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Explore courses and build your learning plan
+              </p>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
+              >
+                Browse Courses
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {cartItems.map((item) => {
+                  const course = allCourses.find(c => c.id === item.course_id);
+                  const Icon = course?.icon || HiBookOpen;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                            {item.course_title}
+                          </h3>
+
+                          <p className="text-xs text-gray-500 mb-2">
+                            Selected on {formatDate(item.added_at)}
+                          </p>
+
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#B11217] text-sm">
+                              {formatCurrency(item.course_price)}
+                            </span>
+
+                            <button
+                              onClick={() => handleRemoveFromCart(item.id, item.course_id)}
+                              disabled={removingFromCart === item.id}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              {removingFromCart === item.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <HiTrash className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Summary */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total Fee</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(cartTotal)}
+                    </span>
                   </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Courses Selected</span>
+                    <span className="font-semibold text-gray-900">{cartCount}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setIsCartOpen(false);
+                      router.push('/checkout');
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
+                  >
+                    Continue Enrollment
+                  </button>
+
                   <button
                     onClick={() => setIsCartOpen(false)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    className="w-full py-3 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-lg font-medium hover:bg-[#1E3A8A] hover:text-white transition-all"
                   >
-                    <HiX className="w-5 h-5 text-white" />
+                    Continue Browsing
                   </button>
                 </div>
               </div>
-
-              {/* Cart Items */}
-              <div className="p-6">
-                {cartItems.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <FaCartPlus className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Your cart is empty
-                    </h3>
-                    <p className="text-gray-500 mb-6">
-                      Start adding courses to get started
-                    </p>
-                    <button
-                      onClick={() => setIsCartOpen(false)}
-                      className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
-                    >
-                      Continue Shopping
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4 mb-6">
-                      {cartItems.map((item) => {
-                        const course = allCourses.find(c => c.id === item.course_id);
-                        const Icon = course?.icon || HiBookOpen;
-                        
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-white rounded-lg shadow-sm">
-                                <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
-                                  {item.course_title}
-                                </h3>
-                                <p className="text-xs text-gray-500 mb-2">
-                                  Added {formatDate(item.added_at)}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-[#B11217] text-sm">
-                                    {formatCurrency(item.course_price)}
-                                  </span>
-                                  <button
-                                    onClick={() => handleRemoveFromCart(item.id, item.course_id)}
-                                    disabled={removingFromCart === item.id}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  >
-                                    {removingFromCart === item.id ? (
-                                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <HiTrash className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Cart Summary */}
-                    <div className="border-t border-gray-200 pt-6">
-                      <div className="space-y-3 mb-4">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="font-semibold text-gray-900">
-                            {formatCurrency(cartTotal)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">Total Items</span>
-                          <span className="font-semibold text-gray-900">{cartCount}</span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => {
-                            setIsCartOpen(false);
-                            router.push('/checkout');
-                          }}
-                          className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
-                        >
-                          Proceed to Checkout
-                        </button>
-                        <button
-                          onClick={() => setIsCartOpen(false)}
-                          className="w-full py-3 rounded-lg font-medium transition-all border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
-                        >
-                          Continue Shopping
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
 
       {/* Hero Section */}
-      <div className="relative min-h-[400px] flex items-center justify-center pt-20 pb-16 overflow-hidden bg-gradient-to-br from-[#0B1C3D] via-[#1E3A8A] to-[#B11217]">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
+   <div className="relative min-h-[500px] flex items-center justify-center pt-20 pb-24 overflow-hidden bg-gradient-to-br from-[#0B1C3D] via-[#1E3A8A] to-[#B11217]">
+  {/* Animated Background Pattern */}
+  <div className="absolute inset-0 opacity-10">
+    <div className="absolute inset-0" style={{
+      backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+      backgroundSize: '40px 40px'
+    }} />
+  </div>
 
-        {/* Floating Shapes */}
-        <motion.div
-          animate={{
-            y: [0, -20, 0],
-            rotate: [0, 5, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-3xl backdrop-blur-sm"
-        />
-        <motion.div
-          animate={{
-            y: [0, 20, 0],
-            rotate: [0, -5, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute bottom-20 right-10 w-40 h-40 bg-white/5 rounded-full backdrop-blur-sm"
-        />
+  {/* Floating Shapes */}
+  <motion.div
+    animate={{
+      y: [0, -20, 0],
+      rotate: [0, 5, 0],
+    }}
+    transition={{
+      duration: 8,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+    className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-3xl backdrop-blur-sm hidden md:block"
+  />
+  <motion.div
+    animate={{
+      y: [0, 20, 0],
+      rotate: [0, -5, 0],
+    }}
+    transition={{
+      duration: 10,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+    className="absolute bottom-20 right-10 w-40 h-40 bg-white/5 rounded-full backdrop-blur-sm hidden md:block"
+  />
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center px-4 py-2 rounded-full mb-6 bg-white/10 backdrop-blur-sm border border-white/20"
-            >
-              <HiAcademicCap className="w-4 h-4 mr-2 text-yellow-400" />
-              <span className="text-sm font-medium text-white">
-                Featured Courses
-              </span>
-            </motion.div>
+  {/* Hero Content */}
+  <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.2, type: "spring" }}
+        className="inline-flex items-center px-4 py-2 rounded-full mb-8 bg-white/10 backdrop-blur-sm border border-white/20"
+      >
+        <HiAcademicCap className="w-4 h-4 mr-2 text-yellow-400" />
+        <span className="text-sm font-medium text-white">
+          Expert-Led Courses
+        </span>
+      </motion.div>
 
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-4xl md:text-5xl font-bold mb-4 text-white"
-            >
-              Top Instructor-Led
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-                Training Programs
-              </span>
-            </motion.h1>
+      <motion.h1 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white leading-tight"
+      >
+        Expert-Led Courses
+        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400 mt-2">
+          Learn from industry leaders
+        </span>
+      </motion.h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-lg text-gray-200 max-w-2xl mx-auto"
-            >
-              Discover our most popular courses taught by industry experts. 
-              Limited seats available for each program.
-            </motion.p>
-          </motion.div>
-        </div>
+      <motion.p
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="text-base sm:text-lg md:text-xl text-gray-200 max-w-3xl mx-auto leading-relaxed"
+      >
+        Learn from industry leaders with limited seats available.
+      </motion.p>
+    </motion.div>
+  </div>
 
-        {/* Bottom Wave */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white"/>
-          </svg>
-        </div>
-      </div>
+  {/* Bottom Wave */}
+  <div className="absolute bottom-0 left-0 right-0">
+    <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+      <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white"/>
+    </svg>
+  </div>
+</div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

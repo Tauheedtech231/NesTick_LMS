@@ -254,96 +254,105 @@ export default function EditCoursePage() {
   };
 
   // ============ API FUNCTIONS ============
-  const fetchCourseFromAPI = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+const fetchCourseFromAPI = async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      console.log('🔍 Fetching course from API:', courseId);
+    console.log('🔍 Fetching course from API:', courseId);
 
-      const response = await fetch(`/api/instructors/course/${courseId}`);
-      const result = await response.json();
+    const response = await fetch(`/api/instructors/course/${courseId}`);
+    const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch course');
-      }
-
-      if (result.success) {
-        const courseData = result.data.course;
-        const slidesData = result.data.slides || [];
-        
-        setCourseDetails(courseData);
-        setEditedDetails({
-          title: courseData.title,
-          description: courseData.description,
-          category: courseData.category,
-          status: courseData.status,
-          duration: courseData.duration,
-          level: courseData.level,
-          price: courseData.price
-        });
-        
-        setSlides(slidesData);
-        
-        // Load slide contents (files) and quiz questions
-        const contentsMap: Record<string, SlideFile[]> = {};
-        const quizMap: Record<string, QuizQuestion[]> = {};
-        const allAssignments: Assignment[] = [];
-        
-        slidesData.forEach((slide: any) => {
-          // Load files
-          if (slide.files && Array.isArray(slide.files)) {
-            contentsMap[slide.id] = slide.files.map((f: any) => ({
-              id: f.id,
-              name: f.file_name || f.name,
-              type: f.file_type || f.type,
-              size: f.file_size || f.size,
-              url: f.file_url || f.url,
-              publicId: f.public_id || f.publicId,
-              uploadedAt: f.uploaded_at || f.uploadedAt
-            }));
-          }
-          
-          // Load quiz questions
-          if (slide.quizQuestions && Array.isArray(slide.quizQuestions)) {
-            quizMap[slide.id] = slide.quizQuestions.map((q: any) => ({
-              id: q.id,
-              slideId: slide.id,
-              courseId: courseId,
-              question: q.question,
-              options: q.options || [],
-              correctAnswer: q.correctAnswer ?? (q.options?.length > 0 ? 0 : -1),
-              questionType: q.questionType || (q.options?.length > 0 ? QuestionType.MCQ : QuestionType.TEXT),
-              createdAt: q.created_at || q.createdAt,
-              updatedAt: q.updated_at || q.updatedAt
-            }));
-          }
-          
-          // Load assignments
-          if (slide.assignments && Array.isArray(slide.assignments)) {
-            allAssignments.push(...slide.assignments.map((a: any) => ({
-              ...a,
-              slideId: a.slideId || slide.id
-            })));
-          }
-        });
-        
-        setSlideContents(contentsMap);
-        setQuizQuestions(quizMap);
-        setAssignments(allAssignments);
-        
-        if (slidesData.length > 0) {
-          setSelectedSlideId(slidesData[0].id);
-        }
-      }
-      
-    } catch (error: any) {
-      console.error('Error fetching course:', error);
-      setError(error.message || 'Failed to load course');
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch course');
     }
-  };
+
+    if (result.success) {
+      const courseData = result.data.course;
+      const slidesData = result.data.slides || [];
+      
+      // ✅ SORT SLIDES BY TITLE NUMBER (Module 1, Module 2, Module 3)
+      const sortedSlides = [...slidesData].sort((a, b) => {
+        const getNumber = (title: string) => {
+          const match = title?.match(/\d+/);
+          return match ? parseInt(match[0]) : 999;
+        };
+        return getNumber(a.title) - getNumber(b.title);
+      });
+      
+      setCourseDetails(courseData);
+      setEditedDetails({
+        title: courseData.title,
+        description: courseData.description,
+        category: courseData.category,
+        status: courseData.status,
+        duration: courseData.duration,
+        level: courseData.level,
+        price: courseData.price
+      });
+      
+      setSlides(sortedSlides);
+      
+      // Load slide contents (files) and quiz questions
+      const contentsMap: Record<string, SlideFile[]> = {};
+      const quizMap: Record<string, QuizQuestion[]> = {};
+      const allAssignments: Assignment[] = [];
+      
+      sortedSlides.forEach((slide: any) => {
+        // Load files
+        if (slide.files && Array.isArray(slide.files)) {
+          contentsMap[slide.id] = slide.files.map((f: any) => ({
+            id: f.id,
+            name: f.file_name || f.name,
+            type: f.file_type || f.type,
+            size: f.file_size || f.size,
+            url: f.file_url || f.url,
+            publicId: f.public_id || f.publicId,
+            uploadedAt: f.uploaded_at || f.uploadedAt
+          }));
+        }
+        
+        // Load quiz questions
+        if (slide.quizQuestions && Array.isArray(slide.quizQuestions)) {
+          quizMap[slide.id] = slide.quizQuestions.map((q: any) => ({
+            id: q.id,
+            slideId: slide.id,
+            courseId: courseId,
+            question: q.question,
+            options: q.options || [],
+            correctAnswer: q.correctAnswer ?? (q.options?.length > 0 ? 0 : -1),
+            questionType: q.questionType || (q.options?.length > 0 ? QuestionType.MCQ : QuestionType.TEXT),
+            createdAt: q.created_at || q.createdAt,
+            updatedAt: q.updated_at || q.updatedAt
+          }));
+        }
+        
+        // Load assignments
+        if (slide.assignments && Array.isArray(slide.assignments)) {
+          allAssignments.push(...slide.assignments.map((a: any) => ({
+            ...a,
+            slideId: a.slideId || slide.id
+          })));
+        }
+      });
+      
+      setSlideContents(contentsMap);
+      setQuizQuestions(quizMap);
+      setAssignments(allAssignments);
+      
+      if (sortedSlides.length > 0) {
+        setSelectedSlideId(sortedSlides[0].id);
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('Error fetching course:', error);
+    setError(error.message || 'Failed to load course');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ============ FULL COURSE SAVE ============
   const handleSaveAll = async () => {

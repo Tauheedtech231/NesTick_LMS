@@ -24,7 +24,7 @@ const slides: Slide[] = [
     subtitle: "Skills Aligned with International Standards",
     description:
       "Industry-focused safety education designed to prepare professionals for real construction and industrial environments.",
-    cta: "Explore Safety Courses",
+    cta: "Explore Courses",
     ctaLink: "/courses?category=safety"
   },
   {
@@ -34,7 +34,7 @@ const slides: Slide[] = [
     subtitle: "Practical Training for Technical Careers",
     description:
       "Hands-on technical training covering essential construction, installation, and industrial work practices.",
-    cta: "View Construction Programs",
+    cta: "Construction Programs",
     ctaLink: "/courses?category=construction"
   },
   {
@@ -44,7 +44,7 @@ const slides: Slide[] = [
     subtitle: "Learn Practical Skills That Matter",
     description:
       "Professionally structured training programs focused on technical trades, safety practices, and on-site readiness.",
-    cta: "Start Learning Today",
+    cta: "Start Today",
     ctaLink: "/courses"
   },
   {
@@ -189,7 +189,7 @@ export default function HeroSection() {
   return (
     <section 
       ref={sectionRef}
-      className="relative w-full h-[70vh] sm:h-[80vh] lg:h-screen overflow-hidden"
+      className="relative w-full  h-[70vh] sm:h-[80vh] lg:h-screen overflow-hidden"
       onMouseEnter={() => {
         pauseAutoPlay();
         setIsHovered(true);
@@ -276,6 +276,7 @@ export default function HeroSection() {
       >
         {slides[currentSlide].cta}
       </Link>
+      
 
       <Link
         href="/about"

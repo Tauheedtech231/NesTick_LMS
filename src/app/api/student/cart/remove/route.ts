@@ -1,7 +1,7 @@
 // /app/api/student/cart/remove/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export async function DELETE(request: NextRequest) {
   let connection;
   try {

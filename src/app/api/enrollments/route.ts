@@ -230,7 +230,9 @@ export async function POST(request: NextRequest) {
     console.log('📦 Received enrollment data:', {
       full_name: body.full_name,
       email: body.email,
+      studentEmail: body.studentEmail,
       courseId: body.courseId,
+      useCart: body.useCart || false,
       hasFiles: {
         cnic_front: !!body.cnic_frontUrl,
         cnic_back: !!body.cnic_backUrl,
@@ -238,29 +240,91 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Extract fields from dynamic form data
     const {
-      full_name,           // from form field
-      email,               // from form field
-      phone,               // from form field
-      cnic,                // from form field
-      address,             // from form field
-      education,           // from form field
-      experience,          // from form field
-      cnic_frontUrl,       // from file upload
-      cnic_backUrl,        // from file upload
-      certificateUrl,      // from file upload
+      full_name,
+      email,
+      phone,
+      cnic,
+      address,
+      education,
+      experience,
+      cnic_frontUrl,
+      cnic_backUrl,
+      certificateUrl,
       courseId,
       courseTitle,
       coursePrice,
-      enrollmentDate
+      enrollmentDate,
+      useCart
     } = body;
 
-    console.log('📝 Creating new enrollment:', { 
-      studentEmail: email || 'MISSING', 
-      courseId,
-      courseTitle
-    });
+    const studentEmail = (body.studentEmail || email || '').toString().trim().toLowerCase();
+
+    // CART-DRIVEN ENROLLMENT
+    const cartFlow = useCart || (!!studentEmail && !courseId);
+
+    if (cartFlow) {
+      if (!studentEmail) {
+        return NextResponse.json({ success: false, error: 'studentEmail is required for cart-based enrollment' }, { status: 400 });
+      }
+
+      connection = await getConnection();
+
+      const [cartRows] = await connection.execute(
+        'SELECT course_id, course_title, course_price FROM cart_bucket WHERE student_email = ? ORDER BY created_at ASC',
+        [studentEmail]
+      );
+
+      const cartItems = cartRows as any[];
+
+      if (!cartItems.length) {
+        return NextResponse.json({ success: false, error: 'No courses in cart to create enrollment' }, { status: 400 });
+      }
+
+      const totalAmount = cartItems.reduce((sum, item) => sum + Number(item.course_price || 0), 0);
+      const first = cartItems[0];
+
+      const [existing] = await connection.execute(
+        'SELECT id FROM enrollments WHERE student_email = ? AND course_id = ? AND status != "cancelled" LIMIT 1',
+        [studentEmail, first.course_id]
+      );
+
+      if ((existing as any[]).length > 0) {
+        return NextResponse.json({ success: false, error: 'You are already enrolled in this course' }, { status: 400 });
+      }
+
+      const enrollmentId = uuidv4();
+
+      await connection.execute(
+        `INSERT INTO enrollments (
+          id, student_id, student_email, student_name, student_phone, student_cnic, student_address, student_education,
+          student_experience, cnic_front_url, cnic_back_url, educational_doc_url, course_id, course_title, course_price,
+          payment_amount, enrollment_date, status, payment_status, voucher_generated, slip_uploaded, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'pending', 'pending', FALSE, FALSE, NOW(), NOW())`,
+        [
+          enrollmentId,
+          studentEmail,
+          studentEmail,
+          full_name || studentEmail,
+          phone || null,
+          cnic || null,
+          address || null,
+          education || null,
+          experience || null,
+          cnic_frontUrl || null,
+          cnic_backUrl || null,
+          certificateUrl || null,
+          first.course_id,
+          first.course_title,
+          Number(first.course_price || 0),
+          totalAmount
+        ]
+      );
+
+      await connection.execute('DELETE FROM cart_bucket WHERE student_email = ?', [studentEmail]);
+
+      return NextResponse.json({ success: true, data: { enrollmentId, totalAmount, courseCount: cartItems.length } });
+    }
 
     // ============ VALIDATION ============
     if (!email || !courseId) {

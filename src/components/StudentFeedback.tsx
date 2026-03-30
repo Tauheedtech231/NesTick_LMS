@@ -15,39 +15,39 @@ interface Student {
 const students: Student[] = [
   {
     id: 1,
-    name: "Ali Khan",
-    role: "Frontend Developer Intern",
+    name: "Ahmed Raza",
+    role: "Site Engineer",
     image:
       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80",
     feedback:
-      "This LMS transformed my internship journey. The structure and mentorship were exceptional.",
+      "The construction management course gave me practical insights that I apply daily on site. The project planning modules were exceptional.",
   },
   {
     id: 2,
-    name: "Sara Ahmed",
-    role: "UI/UX Intern",
+    name: "Fatima Khalid",
+    role: "Civil Engineer",
     image:
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
     feedback:
-      "The gamified learning experience kept me motivated every single week.",
+      "Learning about modern construction techniques and safety standards through this platform helped me advance in my career.",
   },
   {
     id: 3,
-    name: "Hassan Raza",
-    role: "Backend Developer Intern",
+    name: "Usman Chaudhry",
+    role: "Project Manager",
     image:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500&q=80",
     feedback:
-      "Project-based internship tracking helped me improve real-world skills.",
+      "The structural analysis courses are top-notch. I've implemented many concepts in my ongoing infrastructure projects.",
   },
   {
     id: 4,
-    name: "Ayesha Malik",
-    role: "Software Engineering Student",
+    name: "Sana Tariq",
+    role: "Architect",
     image:
       "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500&q=80",
     feedback:
-      "Performance dashboards and feedback system are truly next level.",
+      "The BIM and 3D modeling courses transformed my design workflow. Highly recommended for construction professionals.",
   },
 ];
 
@@ -59,18 +59,14 @@ export default function StudentFeedback() {
   useEffect(() => {
     setMounted(true);
     
-    // Calculate circle size based on viewport
     const calculateSize = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       
-      // Desktop: larger size, Mobile: smaller size
       if (vw >= 1024) {
-        // Desktop - larger orbit
         const minSize = Math.min(vw * 0.45, vh * 0.7, 700);
         setCircleSize(minSize);
       } else {
-        // Mobile - smaller orbit
         const minSize = Math.min(vw * 0.8, vh * 0.4, 450);
         setCircleSize(minSize);
       }
@@ -81,7 +77,6 @@ export default function StudentFeedback() {
     return () => window.removeEventListener('resize', calculateSize);
   }, []);
 
-  // Brand Colors
   const brandColors = {
     darkNavy: '#0B1C3D',
     darkRoyalBlue: '#1E3A8A',
@@ -93,7 +88,6 @@ export default function StudentFeedback() {
 
   if (!mounted) return null;
 
-  // Desktop: larger rings, Mobile: smaller rings
   const isDesktop = typeof window !== 'undefined' ? window.innerWidth >= 1024 : false;
   
   const ringSizes = {
@@ -105,37 +99,28 @@ export default function StudentFeedback() {
 
   return (
     <section className="relative w-full min-h-screen flex flex-col items-center justify-start lg:justify-center bg-white text-gray-900 py-12 lg:py-8 overflow-hidden">
-      {/* Background Pattern - Light Grey - Full width */}
-      <div className="absolute inset-0 w-full h-full opacity-30">
-        <div className="absolute inset-0 w-full h-full" style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, #0B1C3D 1px, transparent 0)',
-          backgroundSize: '40px 40px'
-        }}></div>
-      </div>
+      {/* Full White Background - No pattern */}
+      <div className="absolute inset-0 w-full h-full bg-white"></div>
 
-      {/* Gradient Overlay - Full width */}
-      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#0B1C3D]/5 via-transparent to-[#1E3A8A]/5"></div>
-
-      {/* Content Container - Full width with proper padding */}
+      {/* Content Container */}
       <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
         {/* Center Content */}
         <div className="text-center max-w-2xl px-4 mb-8 lg:mb-12 mt-8 lg:mt-0">
           <div className="inline-block px-4 py-2 rounded-full mb-4 lg:mb-6 bg-[#F4F6F8] border border-[#E5E7EB]">
             <span className="text-xs lg:text-sm font-semibold text-[#B11217]">
-              Student Testimonials
+              Industry Professionals
             </span>
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-[#0B1C3D]">
-            Student Success Stories
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl  font-bold tracking-tight text-[#0B1C3D]">
+            Construction & Civil Engineering
           </h2>
           <p className="mt-3 lg:mt-4 text-sm sm:text-base lg:text-lg text-gray-600">
-            Real feedback from students using our LMS internship platform.
+            Real feedback from industry professionals using our construction training platform.
           </p>
         </div>
 
-        {/* Orbit Container - Full width with centered content */}
+        {/* Orbit Container */}
         <div className="relative w-full flex items-center justify-center overflow-visible min-h-[350px] sm:min-h-[400px] lg:min-h-[500px]">
-          {/* Outer Rings - Responsive and fully visible */}
           <div 
             className="relative flex items-center justify-center"
             style={{ 
@@ -143,27 +128,27 @@ export default function StudentFeedback() {
               height: ringSizes.large
             }}
           >
-            {/* Ring 1 - Largest */}
+            {/* Ring 1 - Largest - Black */}
             <div 
-              className="absolute rounded-full border border-[#1E3A8A]/20"
+              className="absolute rounded-full border border-black/20"
               style={{ 
                 width: ringSizes.large,
                 height: ringSizes.large
               }}
             ></div>
             
-            {/* Ring 2 - Middle */}
+            {/* Ring 2 - Middle - Black */}
             <div 
-              className="absolute rounded-full border border-[#0B1C3D]/15"
+              className="absolute rounded-full border border-black/15"
               style={{ 
                 width: ringSizes.medium,
                 height: ringSizes.medium
               }}
             ></div>
             
-            {/* Ring 3 - Smallest */}
+            {/* Ring 3 - Smallest - Black */}
             <div 
-              className="absolute rounded-full border border-[#B11217]/10"
+              className="absolute rounded-full border border-black/10"
               style={{ 
                 width: ringSizes.small,
                 height: ringSizes.small
@@ -202,7 +187,7 @@ export default function StudentFeedback() {
                         style={{ 
                           width: isDesktop ? Math.min(90, ringSizes.orbit * 0.2) : Math.min(70, ringSizes.orbit * 0.2),
                           height: isDesktop ? Math.min(90, ringSizes.orbit * 0.2) : Math.min(70, ringSizes.orbit * 0.2),
-                          borderColor: brandColors.darkRoyalBlue,
+                          borderColor: '#000000',
                           marginLeft: isDesktop ? -45 : -35,
                           marginTop: isDesktop ? -45 : -35
                         }}
@@ -216,7 +201,6 @@ export default function StudentFeedback() {
                           className="rounded-full object-cover"
                           sizes={isDesktop ? "90px" : "70px"}
                         />
-                        {/* Hover effect ring */}
                         <div className="absolute inset-0 rounded-full border-2 border-[#B11217] opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                       </motion.button>
                     </div>
@@ -246,7 +230,7 @@ export default function StudentFeedback() {
               className="bg-white rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Top gradient bar */}
+              {/* Top gradient bar - Construction theme */}
               <div className="h-2 bg-gradient-to-r from-[#0B1C3D] via-[#1E3A8A] to-[#B11217]"></div>
               
               <button
@@ -259,7 +243,7 @@ export default function StudentFeedback() {
               </button>
 
               <div className="p-8">
-                {/* Profile Image with brand colored ring */}
+                {/* Profile Image */}
                 <div className="relative w-28 h-28 mx-auto mb-6">
                   <div className="absolute inset-0 rounded-full border-4 border-[#B11217] animate-pulse"></div>
                   <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white">
@@ -288,7 +272,7 @@ export default function StudentFeedback() {
                   {selected.feedback}
                 </p>
 
-                {/* Decorative dots */}
+                {/* Decorative dots - Construction theme */}
                 <div className="flex justify-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[#0B1C3D]"></div>
                   <div className="w-2 h-2 rounded-full bg-[#1E3A8A]"></div>

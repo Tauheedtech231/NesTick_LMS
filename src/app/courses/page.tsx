@@ -31,6 +31,7 @@ import { MdKeyboardArrowDown } from 'react-icons/md';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CoursesTab from "@/components/stats";
+import { GraduationCap } from "lucide-react";
 
 /* eslint-disable */
 
@@ -952,163 +953,163 @@ export default function CoursesPage() {
 
       {/* Cart Sidebar - FIXED: Highest z-index to appear above everything */}
       <AnimatePresence>
-        {showCartSidebar && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+  {showCartSidebar && (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setShowCartSidebar(false)}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        style={{ zIndex: Z_INDEX.CART_BACKDROP }}
+      />
+      
+      {/* Cart Sidebar */}
+      <motion.div
+        variants={slideInRightVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto"
+        style={{ zIndex: Z_INDEX.CART_SIDEBAR }}
+      >
+        {/* Sidebar Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6" style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/10 rounded-lg">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Selected Courses
+                </h2>
+                <p className="text-sm text-white/80">
+                  {cartItems.length} {cartItems.length === 1 ? 'Course Selected' : 'Courses Selected'}
+                </p>
+              </div>
+            </div>
+            <button
               onClick={() => setShowCartSidebar(false)}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-              style={{ zIndex: Z_INDEX.CART_BACKDROP }}
-            />
-            
-            {/* Cart Sidebar */}
-            <motion.div
-              variants={slideInRightVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto"
-              style={{ zIndex: Z_INDEX.CART_SIDEBAR }}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              {/* Sidebar Header */}
-              <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6" style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                      <HiShoppingBag className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">
-                        Your Cart
-                      </h2>
-                      <p className="text-sm text-white/80">
-                        {cartItems.length} {cartItems.length === 1 ? 'Course' : 'Courses'}
-                      </p>
-                    </div>
+              <HiX className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Courses List */}
+        <div className="p-6">
+          {cartItems.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <GraduationCap className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Courses Selected
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Start exploring courses to add to your learning journey
+              </p>
+              <button
+                onClick={() => setShowCartSidebar(false)}
+                className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
+              >
+                Browse Courses
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {cartItems.map((item) => {
+                  const course = allCourses.find(c => c.id === item.course_id);
+                  const Icon = course?.icon || HiBookOpen;
+                  
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
+                            {item.course_title}
+                          </h3>
+                          <p className="text-xs text-gray-500 mb-2">
+                            Added {formatDate(item.created_at)}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#B11217] text-sm">
+                              {formatCurrency(item.course_price)}
+                            </span>
+                            <button
+                              onClick={() => handleRemoveFromCart(item.id, item.course_id)}
+                              disabled={removingFromCart === item.id}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              {removingFromCart === item.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <HiTrash className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Enrollment Summary */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Total Enrollment Fee</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatCurrency(cartTotal)}
+                    </span>
                   </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Total Courses</span>
+                    <span className="font-semibold text-gray-900">{cartItems.length}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowCartSidebar(false);
+                      router.push('/cartEnrollment');
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
+                  >
+                    Proceed to Enrollment
+                  </button>
                   <button
                     onClick={() => setShowCartSidebar(false)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    className="w-full py-3 rounded-lg font-medium transition-all border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
                   >
-                    <HiX className="w-5 h-5 text-white" />
+                    Continue Browsing
                   </button>
                 </div>
               </div>
-
-              {/* Cart Items */}
-              <div className="p-6">
-                {cartItems.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <FaCartPlus className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Your cart is empty
-                    </h3>
-                    <p className="text-gray-500 mb-6">
-                      Start adding courses to get started
-                    </p>
-                    <button
-                      onClick={() => setShowCartSidebar(false)}
-                      className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
-                    >
-                      Continue Shopping
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4 mb-6">
-                      {cartItems.map((item) => {
-                        const course = allCourses.find(c => c.id === item.course_id);
-                        const Icon = course?.icon || HiBookOpen;
-                        
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-white rounded-lg shadow-sm">
-                                <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
-                                  {item.course_title}
-                                </h3>
-                                <p className="text-xs text-gray-500 mb-2">
-                                  Added {formatDate(item.created_at)}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-[#B11217] text-sm">
-                                    {formatCurrency(item.course_price)}
-                                  </span>
-                                  <button
-                                    onClick={() => handleRemoveFromCart(item.id, item.course_id)}
-                                    disabled={removingFromCart === item.id}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  >
-                                    {removingFromCart === item.id ? (
-                                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <HiTrash className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Cart Summary */}
-                    <div className="border-t border-gray-200 pt-6">
-                      <div className="space-y-3 mb-4">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="font-semibold text-gray-900">
-                            {formatCurrency(cartTotal)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">Total Items</span>
-                          <span className="font-semibold text-gray-900">{cartItems.length}</span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => {
-                            setShowCartSidebar(false);
-                            router.push('/checkout');
-                          }}
-                          className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
-                        >
-                          Proceed to Checkout
-                        </button>
-                        <button
-                          onClick={() => setShowCartSidebar(false)}
-                          className="w-full py-3 rounded-lg font-medium transition-all border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
-                        >
-                          Continue Shopping
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
 
       {/* Hero Section */}
       <div className="relative min-h-[650px] flex items-start justify-center pt-32 pb-20 overflow-hidden">

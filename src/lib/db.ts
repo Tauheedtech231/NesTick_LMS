@@ -28,6 +28,7 @@ if (process.env.NODE_ENV === 'development') {
   pool = mysql.createPool(dbConfig);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
   try {
     const [results] = await pool.execute(sql, params);

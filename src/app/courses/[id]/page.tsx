@@ -26,7 +26,7 @@ import {
 import { FaCartPlus } from "react-icons/fa";
 import { IoMdArrowDropright } from "react-icons/io";
 import { MdLanguage } from "react-icons/md";
-import { Loader2 } from "lucide-react";
+import { GraduationCap, Loader2 } from "lucide-react";
 import Link from "next/link";
 /* eslint-disable */
 
@@ -992,32 +992,32 @@ export default function CourseDetailPage() {
               style={{ zIndex: Z_INDEX.CART_SIDEBAR }}
             >
               {/* Sidebar Header - FIXED z-index */}
-              <div 
-                className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6"
-                style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                      <HiShoppingBag className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">
-                        Your Cart
-                      </h2>
-                      <p className="text-sm text-white/80">
-                        {cartItems.length} {cartItems.length === 1 ? 'Course' : 'Courses'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowCartSidebar(false)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    <HiX className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-              </div>
+             <div 
+  className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6"
+  style={{ zIndex: Z_INDEX.CART_SIDEBAR + 1 }}
+>
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-white/10 rounded-lg">
+        <GraduationCap className="w-6 h-6 text-white" />
+      </div>
+      <div>
+        <h2 className="text-xl font-bold text-white">
+          Selected Courses
+        </h2>
+        <p className="text-sm text-white/80">
+          {cartItems.length} {cartItems.length === 1 ? 'Course Selected' : 'Courses Selected'}
+        </p>
+      </div>
+    </div>
+    <button
+      onClick={() => setShowCartSidebar(false)}
+      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+    >
+      <HiX className="w-5 h-5 text-white" />
+    </button>
+  </div>
+</div>
 
               {/* Cart Items */}
               <div className="p-6">
@@ -1040,7 +1040,7 @@ export default function CourseDetailPage() {
                       onClick={() => setShowCartSidebar(false)}
                       className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all"
                     >
-                      Continue Shopping
+                      Browse Courses
                     </button>
                   </div>
                 ) : (
@@ -1128,7 +1128,7 @@ export default function CourseDetailPage() {
                           onClick={() => setShowCartSidebar(false)}
                           className="w-full py-3 rounded-lg font-medium transition-all border-2 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
                         >
-                          Continue Shopping
+                          Continue Browsing
                         </button>
                       </div>
                     </div>

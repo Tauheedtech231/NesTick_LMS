@@ -222,49 +222,49 @@ export default function AboutSection() {
   return (
     <>
       {/* FULL WIDTH Hero Section with Video - NO MARGINS, NO PADDING */}
-      <div
-        ref={heroRef}
-        className="relative w-full h-[450px] md:h-[550px] lg:h-[600px] overflow-hidden shadow-2xl"
-        style={{ margin: 0, padding: 0 }}
-      >
-        {/* Background Video */}
-        <video
-          ref={heroVideoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="/about.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-        <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
-
-        {/* Content Overlay - Centered with mobile top margin */}
-<div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 mt-24 md:mt-0">
-  <h2
-    ref={headingAboutRef}
-    className="text-4xl md:text-5xl lg:text-6xl font-bold text-white inline-block relative mt-8 md:mt-0"
+     <div
+  ref={heroRef}
+  className="relative w-full h-[380px] md:h-[450px] lg:h-[500px] overflow-hidden shadow-2xl"
+  style={{ margin: 0, padding: 0 }}
+>
+  {/* Background Video */}
+  <video
+    ref={heroVideoRef}
+    autoPlay
+    loop
+    muted
+    playsInline
+    className="absolute inset-0 w-full h-full object-cover"
   >
-    About Mansol Hab
-    <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
-  </h2>
+    <source src="/about.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+  <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
 
-  <p
-    ref={overviewRef}
-    className="text-lg md:text-xl lg:text-2xl text-white/90 leading-relaxed max-w-4xl mx-auto mt-6 px-4"
-  >
-    Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
-  </p>
+  {/* Content Overlay - Centered with better spacing */}
+  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+    <h2
+      ref={headingAboutRef}
+      className="text-3xl md:text-4xl lg:text-5xl font-bold text-white inline-block relative"
+    >
+      About Mansol Hab
+      <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-32 md:w-40 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
+    </h2>
 
-  <div ref={heroButtonRef} className="mt-8 mb-12 md:mb-0">
-    <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-3 px-8 rounded-full text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
-      Explore Our Courses
-    </button>
+    <p
+      ref={overviewRef}
+      className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed max-w-3xl mx-auto mt-5 px-4"
+    >
+      Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
+    </p>
+
+    <div ref={heroButtonRef} className="mt-6">
+      <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-2.5 px-7 rounded-full text-base md:text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
+        Explore Our Courses
+      </button>
+    </div>
   </div>
 </div>
-      </div>
 
       {/* Rest of the section with padding */}
       <section

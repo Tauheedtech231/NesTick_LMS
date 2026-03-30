@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // /app/api/student/cart/add/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
@@ -6,10 +7,10 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(request: NextRequest) {
   let connection;
   try {
-    const { studentEmail, courseId, courseTitle, coursePrice } = await request.json();
+    const { studentEmail, courseId } = await request.json();
 
     // Validation
-    if (!studentEmail || !courseId || !courseTitle) {
+    if (!studentEmail || !courseId) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -17,6 +18,22 @@ export async function POST(request: NextRequest) {
     }
 
     connection = await getConnection();
+
+    // Check if course exists in instructor_course
+    const [courseRows] = await connection.execute(
+      'SELECT title, price FROM instructor_course WHERE id = ? AND status = "published"',
+      [courseId]
+    );
+
+    const courses = courseRows as any[];
+    if (courses.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Course not found or not published' },
+        { status: 404 }
+      );
+    }
+
+    const course = courses[0];
 
     // Check if course already exists in cart
     const [existing] = await connection.execute(
@@ -31,12 +48,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert into cart
+    // Insert into cart using correct price from instructor_course
     const cartId = uuidv4();
     await connection.execute(
       `INSERT INTO cart_bucket (id, student_email, course_id, course_title, course_price, created_at)
        VALUES (?, ?, ?, ?, ?, NOW())`,
-      [cartId, studentEmail, courseId, courseTitle, coursePrice || 0]
+      [cartId, studentEmail, courseId, course.title, course.price]
     );
 
     return NextResponse.json({
