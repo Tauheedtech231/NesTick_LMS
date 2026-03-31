@@ -91,7 +91,7 @@ export default function Sidebar() {
       {/* Mobile toggle button */}
       <button
         onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-        className="lg:hidden fixed top-3 left-3 z-50 p-2 bg-[#0B1C3D] text-white rounded-lg shadow-md"
+        className="lg:hidden fixed top-3 left-3 z-50 p-2 bg-[#0B1C3D] text-white rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? (
@@ -113,7 +113,7 @@ export default function Sidebar() {
         <div className="hidden lg:flex items-center justify-center gap-3 p-6 border-b border-white/10">
           <button 
             onClick={handleLogoClick}
-            className="flex items-center gap-3 focus:outline-none hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 focus:outline-none hover:opacity-80 transition-opacity cursor-pointer"
             aria-label="Go to home"
           >
             <div className="relative w-10 h-10 flex items-center justify-center">
@@ -134,7 +134,7 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-            <h1 className="text-lg font-semibold tracking-wide">
+            <h1 className="text-lg font-semibold tracking-wide cursor-pointer">
               Student Portal
             </h1>
           </button>
@@ -144,7 +144,7 @@ export default function Sidebar() {
         <div className="lg:hidden flex items-center justify-center p-4 border-b border-white/10">
           <button 
             onClick={handleLogoClick}
-            className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity cursor-pointer"
             aria-label="Go to home"
           >
             <div className="relative w-8 h-8 flex items-center justify-center">
@@ -163,7 +163,7 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-            <span className="text-sm font-medium">Mansol Hub</span>
+            <span className="text-sm font-medium cursor-pointer">Mansol Hub</span>
           </button>
         </div>
 
@@ -178,7 +178,7 @@ export default function Sidebar() {
                 href={item.path}
                 onClick={() => handleNavigation(item.id)}
                 className={`
-                  flex items-center justify-between px-4 py-3 rounded-lg transition-all
+                  flex items-center justify-between px-4 py-3 rounded-lg transition-all cursor-pointer
                   ${
                     isActive
                       ? 'bg-purple-600/20 text-purple-300 border-l-4 border-purple-500'
@@ -212,7 +212,7 @@ export default function Sidebar() {
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden cursor-pointer"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

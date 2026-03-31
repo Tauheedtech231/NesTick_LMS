@@ -139,17 +139,18 @@ export default function TrainersSlider() {
         );
       }
 
-      // Subheading animation - from right
+      // Subheading animation - from left with delay
       if (subHeadingRef.current) {
         gsap.fromTo(subHeadingRef.current,
           {
-            x: 80,
+            x: -60,
             opacity: 0
           },
           {
             x: 0,
             opacity: 1,
             duration: 0.8,
+            delay: 0.2,
             ease: "power3.out",
             scrollTrigger: {
               trigger: subHeadingRef.current,
@@ -232,10 +233,10 @@ export default function TrainersSlider() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="mb-12">
             <div className="inline-block px-4 py-2 rounded-full mb-4 bg-gray-200 animate-pulse w-32 h-8"></div>
-            <div className="h-12 bg-gray-200 animate-pulse w-96 mx-auto mb-4 rounded"></div>
-            <div className="h-6 bg-gray-200 animate-pulse w-64 mx-auto rounded"></div>
+            <div className="h-12 bg-gray-200 animate-pulse w-96 mb-4 rounded"></div>
+            <div className="h-6 bg-gray-200 animate-pulse w-64 rounded"></div>
           </div>
           
           <div className="flex justify-center gap-6 py-8">
@@ -257,21 +258,22 @@ export default function TrainersSlider() {
   return (
     <div ref={sectionRef} className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <div ref={badgeRef} className="inline-block px-4 py-2 rounded-full mb-4 bg-red-50">
-            <span className="text-sm font-semibold text-red-700">
-              Expert Faculty
-            </span>
-          </div>
-          
-          <h1 ref={headingRef} className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
-            Meet Our <span className="text-red-700">Trainers</span>
-          </h1>
-          
-          <p ref={subHeadingRef} className="text-base text-gray-600 max-w-2xl mx-auto">
-            Click on any trainer to view their professional details and expertise
-          </p>
-        </div>
+        {/* Left-aligned Header Section */}
+       <div className="mb-12 text-center">
+  <div ref={badgeRef} className="inline-block px-4 py-2 rounded-full mb-4" style={{ backgroundColor: '#1E3A8A' }}>
+    <span className="text-sm font-semibold text-white">
+      Expert Faculty
+    </span>
+  </div>
+  
+  <h1 ref={headingRef} className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+    Meet Our <span className="text-[#1E3A8A]">Trainers</span>
+  </h1>
+  
+  <p ref={subHeadingRef} className="text-base text-gray-600 max-w-2xl mx-auto">
+    Click on any trainer to view their professional details and expertise
+  </p>
+</div>
 
         <div className="relative py-8">
           {/* Navigation Buttons */}
@@ -319,7 +321,7 @@ export default function TrainersSlider() {
                     
                     {/* Experience badge */}
                     <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                      <div className="flex items-center gap-1 bg-red-700 text-white px-4 py-1.5 rounded-full shadow-lg">
+                      <div className="flex items-center gap-1 bg-[#1E3A8A] text-white px-4 py-1.5 rounded-full shadow-lg">
                         <Clock className="w-3 h-3" />
                         <span className="text-xs font-semibold">
                           {trainer.experience}
@@ -332,7 +334,7 @@ export default function TrainersSlider() {
                     <h3 className="font-bold text-lg mb-1 text-gray-900">
                       {trainer.name}
                     </h3>
-                    <p className="text-sm font-medium text-blue-900">
+                    <p className="text-sm font-medium text-[#1E3A8A]">
                       {trainer.role}
                     </p>
                   </div>
@@ -349,7 +351,7 @@ export default function TrainersSlider() {
                 onClick={() => setCurrentIndex(index)}
                 className={`h-2 rounded-full transition-all ${
                   index === currentIndex
-                    ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
+                    ? 'w-8 bg-[#1E3A8A]'
                     : 'w-2 bg-gray-300 hover:bg-gray-400'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
@@ -368,7 +370,7 @@ export default function TrainersSlider() {
               className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative h-48 md:h-56 bg-gradient-to-r from-blue-900 to-gray-900">
+              <div className="relative h-48 md:h-56 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D]">
                 <button
                   onClick={closePopup}
                   className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20"
@@ -399,7 +401,7 @@ export default function TrainersSlider() {
                   <h2 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">
                     {selectedTrainer.name}
                   </h2>
-                  <div className="text-lg font-semibold mb-3 text-blue-900">
+                  <div className="text-lg font-semibold mb-3 text-[#1E3A8A]">
                     {selectedTrainer.role}
                   </div>
                   <div className="flex justify-center items-center gap-4 text-sm text-gray-600">
@@ -417,7 +419,7 @@ export default function TrainersSlider() {
 
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-red-700" />
+                    <div className="w-2 h-2 rounded-full bg-[#1E3A8A]" />
                     <h3 className="font-semibold text-gray-900">Expertise</h3>
                   </div>
                   <p className="text-gray-700 leading-relaxed">
@@ -427,7 +429,7 @@ export default function TrainersSlider() {
 
                 <div className="mb-6 bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Briefcase className="w-4 h-4 text-red-700" />
+                    <Briefcase className="w-4 h-4 text-[#1E3A8A]" />
                     <h4 className="font-semibold text-gray-900">Training Style</h4>
                   </div>
                   <p className="text-gray-600">{selectedTrainer.trainingStyle}</p>
@@ -435,7 +437,7 @@ export default function TrainersSlider() {
 
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-5 h-5 text-red-700" />
+                    <Award className="w-5 h-5 text-[#1E3A8A]" />
                     <h3 className="font-semibold text-gray-900">Certifications</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -444,7 +446,7 @@ export default function TrainersSlider() {
                         key={index}
                         className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 bg-white"
                       >
-                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-900" />
+                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#1E3A8A]" />
                         <span className="text-sm text-gray-700">{cert}</span>
                       </div>
                     ))}
@@ -454,7 +456,7 @@ export default function TrainersSlider() {
                 <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-200">
                   <button
                     onClick={handlePrevPopup}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors"
                   >
                     ← Previous Trainer
                   </button>
@@ -466,7 +468,7 @@ export default function TrainersSlider() {
                         onClick={() => setSelectedTrainer(trainer)}
                         className={`h-2 rounded-full transition-all ${
                           selectedTrainer.id === trainer.id
-                            ? 'w-8 bg-gradient-to-r from-blue-600 to-purple-600'
+                            ? 'w-8 bg-[#1E3A8A]'
                             : 'w-2 bg-gray-300 hover:bg-gray-400'
                         }`}
                         aria-label={`Select ${trainer.name}`}
@@ -476,7 +478,7 @@ export default function TrainersSlider() {
                   
                   <button
                     onClick={handleNextPopup}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors"
                   >
                     Next Trainer →
                   </button>

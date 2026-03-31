@@ -169,31 +169,40 @@ export default function CoursesTab() {
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <h2 
-        ref={headingRef}
-        className="text-3xl md:text-4xl font-bold text-center mb-8"
-      >
-        About Courses
-      </h2>
-
-      {/* Tabs */}
+      {/* Heading aligned to left */}
+  <h2 
+  ref={headingRef}
+  className="text-3xl md:text-4xl font-bold mb-8 text-left cursor-pointer group relative inline-block"
+>
+  <span className="relative">
+    <span className="text-red-700 transition-all duration-300 group-hover:text-red-600">About</span>
+    <span className="text-black transition-all duration-300 group-hover:text-gray-800"> Courses</span>
+  </span>
+  <span className="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-red-700 to-black transition-all duration-500 group-hover:w-full"></span>
+  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gray-200"></span>
+</h2>
+      {/* Card */}
       <div 
         ref={cardRef}
         className="bg-white rounded-2xl shadow-lg p-6 md:p-8"
       >
+        {/* Rounded Tabs */}
         <div 
           ref={tabsRef}
-          className="flex flex-wrap justify-start gap-6 border-b border-gray-200 mb-6"
+          className="flex flex-wrap gap-3 mb-8"
         >
           {coursesData.map((course, index) => (
             <button
               key={index}
               onClick={() => setActiveIndex(index)}
-              className={`text-sm md:text-base font-semibold pb-2 transition-all ${
-                activeIndex === index
-                  ? "text-red-700 border-b-2 border-red-700"
-                  : "text-gray-600 hover:text-red-700"
-              }`}
+              className={`
+                px-5 py-2.5 rounded-full text-sm md:text-base font-semibold 
+                transition-all duration-300 cursor-pointer
+                ${activeIndex === index
+                  ? "bg-red-700 text-white shadow-md transform scale-105"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105"
+                }
+              `}
             >
               {course.name}
             </button>

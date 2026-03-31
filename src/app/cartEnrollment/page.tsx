@@ -173,25 +173,44 @@ const CartEnrollmentPage: React.FC = () => {
     }
   }, []);
 
-  const fetchCartCourses = async (email: string) => {
-    try {
-      const res = await fetch(`/api/student/cart?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-      
-      if (data.success) {
-        const uniqueCourses = data.data.items.filter(
-          (course: Course, index: number, self: Course[]) =>
-            index === self.findIndex((c) => c.id === course.id)
-        );
-        setCourses(uniqueCourses);
-        
-        const total = uniqueCourses.reduce((sum: number, item: Course) => sum + item.course_price, 0);
-        setTotalAmount(total);
-      }
-    } catch (error) {
-      console.error("Error fetching cart:", error);
+const fetchCartCourses = async (email: string) => {
+  try {
+    const res = await fetch(`/api/student/cart?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    
+    if (data.success) {
+      const uniqueCourses = data.data.items.filter(
+        (course: Course, index: number, self: Course[]) =>
+          index === self.findIndex((c) => c.id === course.id)
+      );
+
+      console.log("Courses:", uniqueCourses);
+
+      setCourses(uniqueCourses);
+
+      const total = uniqueCourses.reduce((sum: number, item: Course) => {
+        const raw = item.course_price;
+
+        // Debug each item
+        console.log("PRICE RAW:", raw);
+
+        if (raw === null || raw === undefined) return sum;
+
+        const price = Number(raw);
+
+        console.log("PRICE CONVERTED:", price);
+
+        return isNaN(price) ? sum : sum + price;
+      }, 0);
+
+      console.log("TOTAL AMOUNT:", total); // ✅ FINAL PRINT
+
+      setTotalAmount(total);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching cart:", error);
+  }
+};
 
   const fetchExistingEnrollment = async (enrollmentId: string) => {
     setCheckingEnrollment(true);
@@ -1009,7 +1028,18 @@ const CartEnrollmentPage: React.FC = () => {
                     <div>
                       <h3 className="text-lg font-bold mb-3 pb-1 border-b" style={{ color: BRAND_COLORS.darkNavy, borderColor: BRAND_COLORS.softGrey }}>Payment Information</h3>
                       <div className="space-y-2 text-sm">
-                        <div><div className="text-gray-500">Amount Payable</div><div className="font-bold text-2xl" style={{ color: BRAND_COLORS.deepRed }}>Rs. {totalAmount.toLocaleString()}</div></div>
+                       <div>
+  <div className="text-gray-500">Amount Payable</div>
+  <div
+  className="font-bold text-2xl"
+  style={{ color: BRAND_COLORS.deepRed }}
+>
+  Rs. {(isNaN(Number(totalAmount)) ? 0 : Number(totalAmount)).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}
+</div>
+</div>
                         <div><div className="text-gray-500">Due Date</div><div className="font-medium">{expiryDate.toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div></div>
                         <div><div className="text-gray-500">Courses Enrolled</div><div className="font-medium">{courses.length} course(s)</div></div>
                         <div><div className="text-gray-500">Payment Status</div><div className="inline-block px-2 py-1 rounded-full font-semibold" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>PENDING PAYMENT</div></div>

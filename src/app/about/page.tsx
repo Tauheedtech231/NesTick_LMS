@@ -222,66 +222,73 @@ export default function AboutSection() {
   return (
     <>
       {/* FULL WIDTH Hero Section with Video - NO MARGINS, NO PADDING */}
-     <div
-  ref={heroRef}
-  className="relative w-full h-[380px] md:h-[450px] lg:h-[500px] overflow-hidden shadow-2xl"
-  style={{ margin: 0, padding: 0 }}
->
-  {/* Background Video */}
-  <video
-    ref={heroVideoRef}
-    autoPlay
-    loop
-    muted
-    playsInline
-    className="absolute inset-0 w-full h-full object-cover"
-  >
-    <source src="/about.mp4" type="video/mp4" />
-    Your browser does not support the video tag.
-  </video>
-  <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
+      <div
+        ref={heroRef}
+        className="relative w-full h-[380px] md:h-[450px] lg:h-[500px] overflow-hidden shadow-2xl"
+        style={{ margin: 0, padding: 0 }}
+      >
+        {/* Background Video */}
+        <video
+          ref={heroVideoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/about.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <div className="absolute inset-0 bg-black/50" /> {/* Dark overlay */}
 
-  {/* Content Overlay - Centered with better spacing */}
-  <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-    <h2
-      ref={headingAboutRef}
-      className="text-3xl md:text-4xl lg:text-5xl font-bold text-white inline-block relative"
-    >
-      About Mansol Hab
-      <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-32 md:w-40 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
-    </h2>
+        {/* Content Overlay - Centered with better spacing */}
+        <div className="absolute inset-0 flex flex-col items-center justify-between py-8 md:py-12 px-4">
+          {/* Top spacer to push content down if needed */}
+          <div></div>
+          
+          {/* Center content */}
+          <div className="flex flex-col items-center text-center">
+            <h2
+              ref={headingAboutRef}
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-white inline-block relative"
+            >
+              About Mansol Hab
+              <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-32 md:w-40 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
+            </h2>
 
-    <p
-      ref={overviewRef}
-      className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed max-w-3xl mx-auto mt-5 px-4"
-    >
-      Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
-    </p>
+            <p
+              ref={overviewRef}
+              className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed max-w-3xl mx-auto mt-5 px-4"
+            >
+              Mansol is dedicated to shaping future-ready professionals through industry-aligned technical education. With a focus on safety, innovation, and hands-on learning, we empower students to excel in their chosen fields.
+            </p>
+          </div>
 
-    <div ref={heroButtonRef} className="mt-6">
-      <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-2.5 px-7 rounded-full text-base md:text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
-        Explore Our Courses
-      </button>
-    </div>
-  </div>
-</div>
+          {/* Button at the bottom */}
+          <div ref={heroButtonRef}>
+            <button className="bg-[#B11217] hover:bg-[#8e0e13] text-white font-semibold py-2.5 px-7 rounded-full text-base md:text-lg shadow-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl hover:rotate-1 active:scale-95">
+              Explore Our Courses
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Rest of the section with padding */}
+      {/* Rest of the section with REDUCED padding and gaps */}
       <section
         ref={sectionRef}
         id="about"
-        className="relative py-12 md:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden"
+        className="relative py-8 md:py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white to-blue-50/30 overflow-hidden"
       >
         {/* Background decorative elements */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-blue-100/20 to-transparent rounded-full -translate-x-32 -translate-y-32" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-blue-100/10 to-transparent rounded-full translate-x-48 translate-y-48" />
 
-        <div className="max-w-7xl mx-auto relative z-10 space-y-12 md:space-y-16">
-          {/* --- Mission & Vision Section - NO CARDS, MODERN MINIMALIST LAYOUT --- */}
+        <div className="max-w-7xl mx-auto relative z-10 space-y-8 md:space-y-10">
+          {/* --- Mission & Vision Section - REDUCED GAP --- */}
           <div ref={missionVisionRef}>
             {/* Main Heading */}
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            <div className="text-center mb-6 md:mb-8">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
                 Our <span className="text-[#B11217]">Mission & Vision</span>
               </h2>
               <p className="text-base text-gray-600 max-w-2xl mx-auto">
@@ -290,17 +297,17 @@ export default function AboutSection() {
             </div>
 
             {/* Mission & Vision - Side by side without cards */}
-            <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+            <div className="grid md:grid-cols-2 gap-6 lg:gap-10">
               {/* Mission Column */}
               <div className="relative">
                 {/* Decorative line */}
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#B11217] to-transparent rounded-full"></div>
                 <div className="pl-6">
-                  <h3 className="text-xl font-bold text-[#B11217] mb-5 flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-[#B11217] mb-4 flex items-center gap-2">
                     <span className="w-2 h-2 bg-[#B11217] rounded-full animate-pulse"></span>
                     Our Mission
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {missionItems.map((item, index) => (
                       <div key={index} className="flex items-start gap-3 group">
                         <MdCheckCircle className="text-[#B11217] text-lg flex-shrink-0 mt-0.5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300" />
@@ -316,11 +323,11 @@ export default function AboutSection() {
                 {/* Decorative line */}
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#1E3A8A] to-transparent rounded-full"></div>
                 <div className="pl-6">
-                  <h3 className="text-xl font-bold text-[#1E3A8A] mb-5 flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
                     <span className="w-2 h-2 bg-[#1E3A8A] rounded-full animate-pulse"></span>
                     Our Vision
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {visionItems.map((item, index) => (
                       <div key={index} className="flex items-start gap-3 group">
                         <MdCheckCircle className="text-[#1E3A8A] text-lg flex-shrink-0 mt-0.5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300" />
@@ -332,22 +339,22 @@ export default function AboutSection() {
               </div>
             </div>
 
-            {/* Bottom decorative element */}
-            <div className="flex justify-center mt-8">
+            {/* Bottom decorative element - REDUCED MARGIN */}
+            <div className="flex justify-center mt-4">
               <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent rounded-full"></div>
             </div>
           </div>
 
           {/* --- Why Choose Section with Clickable Dropdowns - REDUCED GAP --- */}
-          <div ref={whyChooseRef} className="py-8 sm:py-10 px-4">
+          <div ref={whyChooseRef} className="py-4 sm:py-6 px-4">
             {/* Center Wrapper */}
             <div className="max-w-4xl mx-auto">
               {/* Header */}
-              <div className="max-w-2xl mx-auto text-center mb-8">
+              <div className="max-w-2xl mx-auto text-center mb-6">
                 <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
                   Why Choose <span className="text-[#B11217]">Mansol</span>
                 </h3>
-                <p className="mt-3 text-gray-600 text-sm sm:text-base leading-relaxed">
+                <p className="mt-2 text-gray-600 text-sm sm:text-base leading-relaxed">
                   We focus on academic excellence, student safety, and long-term
                   development — building a foundation that prepares students for the future.
                 </p>
@@ -359,7 +366,7 @@ export default function AboutSection() {
                 className="max-w-3xl mx-auto divide-y divide-gray-200"
               >
                 {whyChooseItems.map((item, index) => (
-                  <div key={index} className="py-4">
+                  <div key={index} className="py-3">
                     {/* Header */}
                     <button
                       onClick={() => toggleDropdown(index)}
@@ -393,7 +400,7 @@ export default function AboutSection() {
                           transition={{ duration: 0.3 }}
                           className="overflow-hidden"
                         >
-                          <div className="pl-7 pr-2 pt-3 text-gray-600 text-xs sm:text-sm leading-relaxed border-l-2 border-[#B11217] ml-2">
+                          <div className="pl-7 pr-2 pt-2 text-gray-600 text-xs sm:text-sm leading-relaxed border-l-2 border-[#B11217] ml-2">
                             {item.description}
                           </div>
                         </motion.div>
@@ -406,14 +413,10 @@ export default function AboutSection() {
           </div>
 
           {/* --- Journey Section Component - REDUCED MARGIN --- */}
-          
-            <JourneySection />
-          
+          <JourneySection />
 
           {/* --- Student Feedback Component - REDUCED MARGIN --- */}
-          
-            <StudentFeedback />
-          
+          <StudentFeedback />
         </div>
       </section>
     </>

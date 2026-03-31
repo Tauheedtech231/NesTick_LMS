@@ -17,7 +17,6 @@ import {
   HiInformationCircle,
   HiPhone
 } from "react-icons/hi";
-import { title } from "process";
 import { CreditCard } from "lucide-react";
 
 // Brand Colors
@@ -38,9 +37,9 @@ const Z_INDEX = {
   DROPDOWN: 110,
   BACKDROP: 150,
   MOBILE_MENU: 200,
-  CART: 1000,        // Cart ko highest priority
-  MODAL: 2000,        // Future use
-  TOAST: 3000         // Future use
+  CART: 1000,
+  MODAL: 2000,
+  TOAST: 3000
 };
 
 // Navbar Items
@@ -50,7 +49,6 @@ const navItems = [
     href: '/',
     icon: HiHome
   },
-
   {
     title: 'Courses',
     href: '/courses',
@@ -65,11 +63,6 @@ const navItems = [
     title: 'Contact',
     href: '/contact',
     icon: HiPhone
-  },
-    {
-    title:"Pay Your Fees",
-     href: '/cartEnrollment',
-     icon:CreditCard
   },
 ];
 
@@ -230,6 +223,13 @@ export default function Navbar() {
     router.push('/');
   }, [router]);
 
+  // Handle Pay Fees click
+  const handlePayFees = useCallback(() => {
+    router.push('/cartEnrollment');
+    setMobileMenuOpen(false);
+    setUserDropdownOpen(false);
+  }, [router]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -373,7 +373,7 @@ export default function Navbar() {
         className="w-full fixed top-0 left-0 right-0 transition-all duration-300"
         style={{
           backgroundColor: scrolled ? `${BRAND_COLORS.darkNavy}EE` : BRAND_COLORS.darkNavy,
-          zIndex: Z_INDEX.NAVBAR  // Using constant
+          zIndex: Z_INDEX.NAVBAR
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -391,7 +391,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Mobile Navigation Header - FIXED */}
+            {/* Mobile Navigation Header */}
             <div className="lg:hidden flex items-center justify-between w-full">
               {/* Mobile Menu Button - Left Side */}
               <button
@@ -406,7 +406,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Mobile Logo - NOW CENTERED with flex-1 and text-center */}
+              {/* Mobile Logo - CENTERED */}
               <div className="flex-1 flex justify-center">
                 <Link href="/" className="flex items-center">
                   <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center">
@@ -419,7 +419,7 @@ export default function Navbar() {
                 </Link>
               </div>
 
-              {/* Empty div for spacing - maintains flex layout */}
+              {/* Empty div for spacing */}
               <div className="w-10 sm:w-12 flex-shrink-0"></div>
             </div>
 
@@ -447,8 +447,23 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right Side - Desktop Login/User Button */}
+            {/* Right Side - Desktop Login/User Button and Pay Fees */}
             <div className="hidden lg:flex items-center space-x-4">
+              {/* Pay Fees Button */}
+              <button
+                onClick={handlePayFees}
+                className="flex items-center cursor-pointer space-x-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-lg active:scale-95"
+                style={{
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white
+                }}
+              >
+                <CreditCard className="w-4 h-4 transition-transform duration-300 hover:scale-110" />
+                <span className="text-sm transition-all duration-200 hover:tracking-wide">
+                  Pay Your Fees
+                </span>
+              </button>
+
               {currentUser ? (
                 <div className="relative">
                   <button
@@ -479,7 +494,7 @@ export default function Navbar() {
                       style={{
                         backgroundColor: BRAND_COLORS.darkNavy,
                         border: `1px solid ${BRAND_COLORS.softGrey}`,
-                        zIndex: Z_INDEX.DROPDOWN  // Using constant
+                        zIndex: Z_INDEX.DROPDOWN
                       }}
                     >
                       {/* User Info */}
@@ -574,7 +589,7 @@ export default function Navbar() {
                       style={{
                         backgroundColor: BRAND_COLORS.darkNavy,
                         border: `1px solid ${BRAND_COLORS.softGrey}`,
-                        zIndex: Z_INDEX.DROPDOWN  // Using constant
+                        zIndex: Z_INDEX.DROPDOWN
                       }}
                     >
                       <div className="p-2 space-y-1">
@@ -614,7 +629,7 @@ export default function Navbar() {
           borderRight: `1px solid ${BRAND_COLORS.softGrey}`,
           boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
           willChange: 'transform',
-          zIndex: Z_INDEX.MOBILE_MENU  // Using constant
+          zIndex: Z_INDEX.MOBILE_MENU
         }}
       >
         {/* Menu Header */}
@@ -655,6 +670,21 @@ export default function Navbar() {
                 </Link>
               </div>
             ))}
+
+            {/* Mobile Pay Fees Button */}
+            <div className="pt-4 hover:cursor-pointer">
+              <button
+                onClick={handlePayFees}
+                className="flex items-center hover:cursor-pointer justify-center space-x-2 w-full px-3 py-3 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95"
+                style={{
+                  backgroundColor: BRAND_COLORS.deepRed,
+                  color: BRAND_COLORS.white
+                }}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Pay Your Fees</span>
+              </button>
+            </div>
 
             {/* Mobile Login/User Section */}
             <div className="pt-4 mt-3 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
@@ -698,7 +728,7 @@ export default function Navbar() {
                         key={idx}
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98"
+                        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98]"
                         style={{ color: BRAND_COLORS.lightGrey }}
                       >
                         <item.icon className="w-4 h-4 transition-transform duration-300" />
@@ -775,7 +805,7 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div 
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
-          style={{ zIndex: Z_INDEX.BACKDROP }}  // Using constant
+          style={{ zIndex: Z_INDEX.BACKDROP }}
           onClick={() => setMobileMenuOpen(false)}
         />
       )}

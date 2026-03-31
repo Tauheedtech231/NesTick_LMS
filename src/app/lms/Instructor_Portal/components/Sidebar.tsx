@@ -98,7 +98,7 @@ export default function Sidebar() {
 
   // ✅ NEW: Handle logo click - navigate to profile
   const handleLogoClick = () => {
-    router.push('/lms/Instructor_Portal/profile');
+    router.push('/');
     if (isMobile) {
       setMobileOpen(false);
     }

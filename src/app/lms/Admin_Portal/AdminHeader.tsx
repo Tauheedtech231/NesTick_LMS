@@ -14,7 +14,9 @@ import {
   HiSearch, 
   HiCreditCard, 
   HiUserCircle,
-  HiTemplate      // ✅ For Form Fields
+  HiTemplate,
+  HiChevronLeft,
+  HiChevronRight
 } from 'react-icons/hi'
 /* eslint-disable */
 
@@ -32,6 +34,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [mobileSubMenuOpen, setMobileSubMenuOpen] = useState<number | null>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const navDropdownRef = useRef<HTMLDivElement>(null)
@@ -39,10 +42,25 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   const userButtonRef = useRef<HTMLButtonElement>(null)
   const navButtonRef = useRef<HTMLButtonElement>(null)
 
+  // Load sidebar state from localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebarCollapsed')
+    if (savedState !== null) {
+      setIsSidebarCollapsed(savedState === 'true')
+    }
+  }, [])
+
+  // Save sidebar state to localStorage
+  const handleToggleSidebar = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    localStorage.setItem('sidebarCollapsed', String(newState))
+  }
+
   // Consistent brand colors
   const BRAND_COLORS = {
     darkNavy: '#0B1C3D',
-    darkRoyalBlue: '#1E3A8A',      // main background
+    darkRoyalBlue: '#1E3A8A',
     deepRed: '#B11217',
     white: '#FFFFFF',
     lightGrey: '#F4F6F8',
@@ -51,12 +69,11 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     brightRed: '#D32F2F'
   }
 
-  // ✅ NAVIGATION ITEMS - Added Form Fields
+  // ✅ NAVIGATION ITEMS
   const navItems = [
     { href: '/lms/Admin_Portal/dashboard', label: 'Dashboard', icon: HiHome },
     { href: '/lms/Admin_Portal/instructors', label: 'Instructors', icon: HiAcademicCap },
     { href: '/lms/Admin_Portal/payments', label: 'Payments', icon: HiCreditCard },
-    // ✅ NEW: Form Fields Tab
     { href: '/lms/Admin_Portal/form-fields', label: 'Form Fields', icon: HiTemplate },
     { href: '/lms/Admin_Portal/profile', label: 'Profile', icon: HiUserCircle },
   ]
@@ -92,7 +109,6 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close user dropdown
       if (
         userDropdownRef.current && 
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -102,7 +118,6 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
         setIsUserDropdownOpen(false);
       }
 
-      // Close nav dropdown
       if (
         navDropdownRef.current && 
         !navDropdownRef.current.contains(event.target as Node) &&
@@ -112,7 +127,6 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
         setIsNavDropdownOpen(false);
       }
 
-      // Close mobile menu
       if (
         mobileMenuRef.current && 
         !mobileMenuRef.current.contains(event.target as Node) &&
@@ -150,12 +164,10 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     }
   }
 
-  // Toggle mobile sub-menu
   const toggleMobileSubMenu = (index: number) => {
     setMobileSubMenuOpen(mobileSubMenuOpen === index ? null : index)
   }
 
-  // Check if link is active
   const isActive = (href: string) => {
     if (href === '/lms/Admin_Portal/dashboard') {
       return pathname === '/lms/Admin_Portal/dashboard';
@@ -163,24 +175,33 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
     return pathname?.startsWith(href);
   };
 
-  // Navigate to profile
   const goToProfile = () => {
     router.push('/lms/Admin_Portal/profile')
     setIsUserDropdownOpen(false)
     setIsMobileMenuOpen(false)
   }
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/');
+  };
+
   return (
     <>
-      {/* Desktop Sidebar (fixed, visible on md and up) */}
+      {/* Desktop Sidebar - Collapsible */}
       <aside 
-        className="fixed left-0 top-0 bottom-0 w-72 z-50 hidden md:flex flex-col border-r" 
+        className={`fixed left-0 top-0 bottom-0 z-50 hidden md:flex flex-col border-r transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'w-20' : 'w-72'
+        }`}
         style={{ borderColor: '#1E407F', backgroundColor: BRAND_COLORS.darkRoyalBlue }}
       >
-        {/* Logo Section with Real Logo */}
-        <div className="h-20 flex items-center px-4 border-b" style={{ borderColor: '#1E407F' }}>
-          <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-3">
-            <div className="relative w-12 h-12">
+        {/* Logo Section */}
+        <div className={`h-20 flex items-center border-b transition-all duration-300 ${isSidebarCollapsed ? 'justify-center px-2' : 'px-4'}`} style={{ borderColor: '#1E407F' }}>
+          <button 
+            onClick={handleLogoClick}
+            className={`flex items-center w-full text-left hover:opacity-90 transition-opacity cursor-pointer ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
+          >
+            <div className="relative w-12 h-12 flex-shrink-0">
               <Image
                 src="/newlogo.jpg"
                 alt="Mansol Hab"
@@ -189,117 +210,115 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 priority
               />
             </div>
-            <div>
-              <div className="text-base font-semibold text-white">Mansol Hab</div>
-              <div className="text-sm text-white/80">Admin Portal</div>
-            </div>
-          </Link>
+            {!isSidebarCollapsed && (
+              <div>
+                <div className="text-base font-semibold text-white">Mansol Hab</div>
+                <div className="text-sm text-white/80">Admin Portal</div>
+              </div>
+            )}
+          </button>
         </div>
+
+        {/* Collapse/Expand Button */}
+        <button
+          onClick={handleToggleSidebar}
+          className="absolute -right-3 top-20 bg-white rounded-full p-1 shadow-lg border border-softGrey hover:bg-lightGrey transition-all cursor-pointer z-10"
+          style={{ color: BRAND_COLORS.darkRoyalBlue }}
+        >
+          {isSidebarCollapsed ? (
+            <HiChevronRight className="w-4 h-4" />
+          ) : (
+            <HiChevronLeft className="w-4 h-4" />
+          )}
+        </button>
 
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
-            {/* Dashboard */}
-            <li>
-              <Link 
-                href="/lms/Admin_Portal/dashboard" 
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${
-                  isActive('/lms/Admin_Portal/dashboard') ? 'bg-white/10 font-medium' : ''
-                }`}
-              >
-                <HiHome className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Dashboard</span>
-              </Link>
-            </li>
-
-            {/* Instructors */}
-            <li>
-              <Link 
-                href="/lms/Admin_Portal/instructors" 
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${
-                  isActive('/lms/Admin_Portal/instructors') ? 'bg-white/10 font-medium' : ''
-                }`}
-              >
-                <HiAcademicCap className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Instructors</span>
-              </Link>
-            </li>
-
-            {/* Payments */}
-            <li>
-              <Link 
-                href="/lms/Admin_Portal/payments" 
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${
-                  isActive('/lms/Admin_Portal/payments') ? 'bg-white/10 font-medium' : ''
-                }`}
-              >
-                <HiCreditCard className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Payments</span>
-              </Link>
-            </li>
-
-            {/* ✅ NEW: Form Fields */}
-            <li>
-              <Link 
-                href="/lms/Admin_Portal/form-fields" 
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${
-                  isActive('/lms/Admin_Portal/form-fields') ? 'bg-white/10 font-medium' : ''
-                }`}
-              >
-                <HiTemplate className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Form Fields</span>
-              </Link>
-            </li>
-
-            {/* Profile */}
-            <li>
-              <Link 
-                href="/lms/Admin_Portal/profile" 
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 ${
-                  isActive('/lms/Admin_Portal/profile') ? 'bg-white/10 font-medium' : ''
-                }`}
-              >
-                <HiUserCircle className="w-5 h-5 text-white/90" />
-                <span className="text-base text-white">Profile</span>
-              </Link>
-            </li>
+            {navItems.map((item) => (
+              <li key={item.href}>
+                <Link 
+                  href={item.href} 
+                  className={`flex items-center rounded-lg hover:bg-white/10 transition-all duration-200 cursor-pointer ${
+                    isSidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2'
+                  } ${
+                    isActive(item.href) ? 'bg-white/10 font-medium' : ''
+                  }`}
+                  title={isSidebarCollapsed ? item.label : ''}
+                >
+                  <item.icon className={`w-5 h-5 text-white/90 flex-shrink-0 ${isSidebarCollapsed ? 'w-6 h-6' : ''}`} />
+                  {!isSidebarCollapsed && (
+                    <span className="text-base text-white">{item.label}</span>
+                  )}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
 
+        {/* User Section - Collapsible */}
         <div className="p-4 border-t" style={{ borderColor: '#1E407F' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
               <span className="text-white font-medium text-base">{currentUser?.name?.charAt(0) || 'A'}</span>
             </div>
-            <div>
-              <div className="text-base font-medium text-white">{currentUser?.name || 'Admin User'}</div>
-              <div className="text-sm text-white/80">{currentUser?.email || 'admin@example.com'}</div>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-medium text-white truncate">{currentUser?.name || 'Admin User'}</div>
+                <div className="text-sm text-white/80 truncate">{currentUser?.email || 'admin@example.com'}</div>
+              </div>
+            )}
           </div>
 
-          <div className="mt-3 flex gap-2">
-            <Link
-              href="/lms/Admin_Portal/profile"
-              className="flex-1 text-center text-base py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors"
-            >
-              Profile
-            </Link>
-            <button 
-              onClick={handleLogout} 
-              className="flex-1 text-base py-2 rounded-lg bg-white hover:bg-white/90 transition-colors"
-              style={{ color: BRAND_COLORS.deepRed }}
-            >
-              Logout
-            </button>
-          </div>
+          {!isSidebarCollapsed && (
+            <div className="mt-3 flex gap-2">
+              <Link
+                href="/lms/Admin_Portal/profile"
+                className="flex-1 text-center text-base py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Profile
+              </Link>
+              <button 
+                onClick={handleLogout} 
+                className="flex-1 text-base py-2 rounded-lg bg-white hover:bg-white/90 transition-colors cursor-pointer"
+                style={{ color: BRAND_COLORS.deepRed }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+
+          {/* Collapsed view - just icons */}
+          {isSidebarCollapsed && (
+            <div className="mt-3 space-y-2">
+              <Link
+                href="/lms/Admin_Portal/profile"
+                className="flex justify-center py-2 rounded-lg border border-white/30 text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Profile"
+              >
+                <HiUserCircle className="w-5 h-5" />
+              </Link>
+              <button 
+                onClick={handleLogout} 
+                className="flex justify-center w-full py-2 rounded-lg bg-white hover:bg-white/90 transition-colors cursor-pointer"
+                style={{ color: BRAND_COLORS.deepRed }}
+                title="Logout"
+              >
+                <HiLogout className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* Mobile Header (fixed, visible only on mobile) */}
+      {/* Mobile Header */}
       <header 
         className="fixed top-0 left-0 right-0 h-16 z-40 flex md:hidden items-center justify-between px-4 shadow-md"
         style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
       >
-        <Link href="/lms/Admin_Portal/dashboard" className="flex items-center space-x-2">
+        <button 
+          onClick={handleLogoClick}
+          className="flex items-center space-x-2 hover:opacity-90 transition-opacity cursor-pointer"
+        >
           <div className="relative w-8 h-8">
             <Image
               src="/newlogo.jpg"
@@ -310,22 +329,22 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
             />
           </div>
           <span className="text-white font-semibold text-base">Mansol Hab</span>
-        </Link>
+        </button>
 
         <button
           data-mobile-menu-button
           onClick={toggleMobileMenu}
-          className="p-2 rounded-lg text-white/90 hover:bg-white/10 transition-colors"
+          className="p-2 rounded-lg text-white/90 hover:bg-white/10 transition-colors cursor-pointer"
           aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
         </button>
       </header>
 
-      {/* Mobile Menu Slider (off-canvas) */}
+      {/* Mobile Menu Slider */}
       {isMobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-50"
+          className="md:hidden fixed inset-0 bg-black/50 z-50 cursor-pointer"
           onClick={toggleMobileMenu}
         >
           <div 
@@ -337,10 +356,13 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
               borderLeft: `1px solid ${BRAND_COLORS.softGrey}20`
             }}
           >
-            {/* Mobile Menu Header with Logo */}
+            {/* Mobile Menu Header */}
             <div className="p-4 border-b" style={{ borderColor: BRAND_COLORS.softGrey }}>
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
+                <button 
+                  onClick={handleLogoClick}
+                  className="flex items-center space-x-2 hover:opacity-90 hover:cursor-pointer transition-opacity cursor-pointer"
+                >
                   <div className="relative w-10 h-10">
                     <Image
                       src="/newlogo.jpg"
@@ -351,10 +373,10 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                     />
                   </div>
                   <span className="text-white font-bold text-lg">Mansol Hab</span>
-                </div>
+                </button>
                 <button 
                   onClick={toggleMobileMenu}
-                  className="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"
+                  className="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <HiX className="w-6 h-6" />
                 </button>
@@ -391,85 +413,22 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
 
             {/* Mobile Navigation */}
             <div className="flex-1 overflow-y-auto p-4" style={{ maxHeight: 'calc(100vh - 240px)' }}>
-              {/* Dashboard Link */}
-              <div className="mb-4">
-                <Link
-                  href="/lms/Admin_Portal/dashboard"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/dashboard') 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <HiHome className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Dashboard</span>
-                </Link>
-              </div>
-
-              {/* Instructors Link */}
-              <div className="mb-4">
-                <Link
-                  href="/lms/Admin_Portal/instructors"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/instructors') 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <HiAcademicCap className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Instructors</span>
-                </Link>
-              </div>
-
-              {/* Payments Link */}
-              <div className="mb-4">
-                <Link
-                  href="/lms/Admin_Portal/payments"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/payments') 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <HiCreditCard className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Payments</span>
-                </Link>
-              </div>
-
-              {/* ✅ NEW: Form Fields Link in Mobile */}
-              <div className="mb-4">
-                <Link
-                  href="/lms/Admin_Portal/form-fields"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/form-fields') 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <HiTemplate className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Form Fields</span>
-                </Link>
-              </div>
-
-              {/* Profile Link */}
-              <div className="mb-4">
-                <Link
-                  href="/lms/Admin_Portal/profile"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 ${
-                    isActive('/lms/Admin_Portal/profile') 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-white/5'
-                  }`}
-                >
-                  <HiUserCircle className="w-5 h-5 text-white/80" />
-                  <span className="font-medium text-white text-base">Profile</span>
-                </Link>
-              </div>
+              {navItems.map((item) => (
+                <div key={item.href} className="mb-4">
+                  <Link
+                    href={item.href}
+                    onClick={toggleMobileMenu}
+                    className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+                      isActive(item.href) 
+                        ? 'bg-white/10' 
+                        : 'hover:bg-white/5'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 text-white/80" />
+                    <span className="font-medium text-white text-base">{item.label}</span>
+                  </Link>
+                </div>
+              ))}
             </div>
 
             {/* Mobile Logout Button */}
@@ -478,14 +437,14 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
                 <Link
                   href="/lms/Admin_Portal/profile"
                   onClick={toggleMobileMenu}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base border border-white/30 text-white hover:bg-white/10"
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base border border-white/30 text-white hover:bg-white/10 cursor-pointer"
                 >
                   <HiUserCircle className="w-5 h-5" />
                   <span className="font-medium">Profile</span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base"
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 text-base cursor-pointer"
                   style={{
                     backgroundColor: BRAND_COLORS.white,
                     color: BRAND_COLORS.brightRed,
@@ -502,7 +461,8 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
       )}
 
       {/* Spacer for fixed header (mobile) and sidebar (desktop) */}
-      <div className="h-16 md:h-0"></div>
+      <div className={`hidden md:block transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-72'}`}></div>
+      <div className="h-16 md:hidden"></div>
     </>
   )
 }

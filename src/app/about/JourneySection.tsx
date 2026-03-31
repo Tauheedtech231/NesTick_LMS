@@ -155,13 +155,13 @@ export default function JourneySection() {
   }, []);
 
   return (
-    <section className="relative bg-white py-12 md:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="relative bg-white py-8 md:py-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div ref={containerRef} className="max-w-6xl mx-auto relative">
         
         {/* Section Heading */}
-        <div className="text-center mb-10 md:mb-14">
+        <div className="text-center mb-8 md:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1F2933]">
-            Our Journey
+            Our <span className="text-[#B11217]">Journey</span>
           </h2>
           <p className="mt-3 text-[#1F2933]/70 max-w-2xl mx-auto text-sm sm:text-base px-4">
             A progressive path of growth, innovation, and commitment to excellence.
@@ -191,7 +191,7 @@ export default function JourneySection() {
               return (
                 <div
                   key={step.id}
-                  className="relative flex items-center justify-center mb-12 md:mb-20 last:mb-0"
+                  className="relative flex items-center justify-center mb-10 md:mb-16 last:mb-0"
                 >
                   {/* Desktop Layout */}
                   <div className="hidden md:flex w-full items-center justify-center">
@@ -203,7 +203,7 @@ export default function JourneySection() {
                       className="absolute left-1/2 transform -translate-x-1/2 z-20"
                     >
                       <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-lg lg:text-xl font-bold border-4 border-white shadow-lg hover:scale-110 transition-transform duration-300">
-                        {step.id.toString().padStart(2, "0")}
+                        {step.id}
                       </div>
                     </div>
 
@@ -258,7 +258,7 @@ export default function JourneySection() {
                       className="absolute left-8 transform -translate-x-1/2 z-20"
                     >
                       <div className="w-12 h-12 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center text-base font-bold border-3 border-white shadow-lg">
-                        {step.id.toString().padStart(2, "0")}
+                        {step.id}
                       </div>
                     </div>
 
@@ -285,7 +285,7 @@ export default function JourneySection() {
         </div>
 
         {/* Bottom Decorative Element */}
-        <div className="flex justify-center mt-8 md:mt-12">
+        <div className="flex justify-center mt-6 md:mt-8">
           <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full"></div>
         </div>
       </div>

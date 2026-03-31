@@ -249,7 +249,7 @@ export default function CoursesPage() {
           <p className="text-darkGrey/70 mb-6">{error}</p>
           <button
             onClick={handleRefresh}
-            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg inline-flex items-center gap-2 hover:bg-darkRoyalBlue/90 transition-colors"
+            className="px-4 py-2 bg-darkRoyalBlue text-white rounded-lg inline-flex items-center gap-2 hover:bg-darkRoyalBlue/90 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -277,7 +277,7 @@ export default function CoursesPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="p-2 rounded-lg border border-darkGrey/30 hover:bg-lightGrey transition-colors disabled:opacity-50"
+                className="p-2 rounded-lg border border-darkGrey/30 hover:bg-lightGrey transition-colors disabled:opacity-50 cursor-pointer"
                 title="Refresh"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -285,7 +285,7 @@ export default function CoursesPage() {
               
               <Link
                 href="/lms/Instructor_Portal/courses/add"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                 style={{ 
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white 
@@ -317,7 +317,7 @@ export default function CoursesPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="sm:hidden px-3 py-2 border border-softGrey rounded-lg flex items-center gap-2"
+                className="sm:hidden px-3 py-2 border border-softGrey rounded-lg flex items-center gap-2 cursor-pointer"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span className="text-sm">Filter</span>
@@ -327,7 +327,7 @@ export default function CoursesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="hidden sm:block px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white"
+                className="hidden sm:block px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="published">Published</option>
@@ -341,7 +341,7 @@ export default function CoursesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white"
+                className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="published">Published</option>
@@ -370,14 +370,14 @@ export default function CoursesPage() {
                 setSearchTerm('')
                 setStatusFilter('all')
               }}
-              className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors"
+              className="px-4 py-2 border border-darkRoyalBlue text-darkRoyalBlue rounded-lg hover:bg-darkRoyalBlue/5 transition-colors cursor-pointer"
             >
               Clear Filters
             </button>
           ) : (
             <Link
               href="/lms/Instructor_Portal/courses/add"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer"
               style={{ 
                 backgroundColor: BRAND_COLORS.deepRed,
                 color: BRAND_COLORS.white 
@@ -397,8 +397,6 @@ export default function CoursesPage() {
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Course</th>
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Status</th>
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Slides</th>
-
-  
                   <th className="text-left text-xs font-medium py-3 px-4 text-white">Actions</th>
                 </tr>
               </thead>
@@ -445,27 +443,25 @@ export default function CoursesPage() {
                     <td className="py-3 px-4 text-sm text-darkGrey">
                       {course.stats?.slides || 0}
                     </td>
-                    
-                   
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handlePreviewCourse(course.id)}
-                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors cursor-pointer"
                           title="Preview Course"
                         >
                           <Eye className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
                         </button>
                         <button
                           onClick={() => handleManageSlides(course.id)}
-                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors cursor-pointer"
                           title="Manage Slides & Content"
                         >
                           <FileVideo className="w-4 h-4" style={{ color: BRAND_COLORS.teal }} />
                         </button>
                         <button
                           onClick={() => handleDeleteCourse(course.id)}
-                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors"
+                          className="p-1.5 hover:bg-lightGrey rounded-lg transition-colors cursor-pointer"
                           title="Delete Course"
                         >
                           <Trash2 className="w-4 h-4" style={{ color: BRAND_COLORS.brightRed }} />
