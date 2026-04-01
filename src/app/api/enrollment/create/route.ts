@@ -1,32 +1,94 @@
-// app/api/enrollment/create/route.ts - Updated Version with Duplicate Handling
+// app/api/enrollment/create/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEnrollmentConfirmation } from '@/lib/email';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// Helper function to generate unique enrollment ID
+async function generateUniqueEnrollmentId(connection: any): Promise<string> {
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  while (attempts < maxAttempts) {
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const enrollmentId = `ENR-${timestamp}-${randomStr}`;
+    
+    const [existing] = await connection.execute(
+      'SELECT id FROM enrollments WHERE id = ? LIMIT 1',
+      [enrollmentId]
+    );
+    
+    if ((existing as any[]).length === 0) {
+      return enrollmentId;
+    }
+    
+    attempts++;
+  }
+  
+  return `ENR-${Date.now()}-${Math.random().toString(36).substring(2, 15).toUpperCase()}`;
+}
+
+// Helper function to generate payment ID
+function generatePaymentId(): string {
+  return `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+}
+
+// Helper function to extract student details from dynamic fields
+function extractStudentDetails(dynamicFields: any) {
+  return {
+    student_name: dynamicFields?.full_name || dynamicFields?.student_name || '',
+    student_email: dynamicFields?.email || dynamicFields?.student_email || '',
+    student_phone: dynamicFields?.phone || dynamicFields?.student_phone || '',
+    student_cnic: dynamicFields?.cnic || dynamicFields?.student_cnic || '',
+    student_address: dynamicFields?.address || dynamicFields?.student_address || '',
+    student_education: dynamicFields?.education || dynamicFields?.student_education || '',
+    student_experience: dynamicFields?.experience || dynamicFields?.student_experience || ''
+  };
+}
+
 export async function POST(request: NextRequest) {
   let connection;
   try {
     const body = await request.json();
     const { 
-      studentDetails, 
+      dynamicFields,
+      uploadedFiles,
       courses, 
       totalAmount, 
-      documents, 
-      enrollmentId, 
       voucherNumber, 
-      sendEmail,
-      isUpdate 
+      sendEmail 
     } = body;
 
-    console.log('📝 Enrollment request:', { enrollmentId, isUpdate, coursesCount: courses?.length });
+    console.log('📝 Enrollment request received:', { 
+      coursesCount: courses?.length,
+      totalAmount,
+      dynamicFieldsKeys: dynamicFields ? Object.keys(dynamicFields) : []
+    });
+
+    // Extract student details from dynamic fields
+    const studentDetails = extractStudentDetails(dynamicFields);
 
     // Validate required fields
-    if (!studentDetails?.student_name || !studentDetails?.student_email || 
-        !studentDetails?.student_phone || !studentDetails?.student_cnic) {
+    const missingFields = [];
+    if (!studentDetails.student_name) missingFields.push('full_name');
+    if (!studentDetails.student_email) missingFields.push('email');
+    if (!studentDetails.student_phone) missingFields.push('phone');
+    if (!studentDetails.student_cnic) missingFields.push('cnic');
+
+    if (missingFields.length > 0) {
       return NextResponse.json(
-        { success: false, error: 'Missing required student information' },
+        { success: false, error: `Missing required fields: ${missingFields.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(studentDetails.student_email)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -40,183 +102,36 @@ export async function POST(request: NextRequest) {
 
     connection = await getConnection();
 
-    // ============ CHECK IF ENROLLMENT EXISTS (for both update and duplicate prevention) ============
-    let enrollmentExists = false;
-    let existingEnrollmentId = null;
+    // ✅ STEP 1: Create PAYMENT record first
+    const paymentId = generatePaymentId();
+    const slipUrl = uploadedFiles?.payment_slip?.url || null;
     
-    if (enrollmentId && !isUpdate) {
-      // Check if the provided enrollment ID already exists (duplicate prevention)
-      const [existing] = await connection.execute(
-        'SELECT id FROM enrollments WHERE id = ?',
-        [enrollmentId]
-      );
-      enrollmentExists = (existing as any[]).length > 0;
-      if (enrollmentExists) {
-        existingEnrollmentId = enrollmentId;
-        console.log('⚠️ Enrollment ID already exists, will treat as update:', enrollmentId);
-      }
-    }
+    await connection.execute(
+      `INSERT INTO payments (id, student_email, total_amount, status, slip_url, created_at)
+       VALUES (?, ?, ?, 'pending', ?, NOW())`,
+      [paymentId, studentDetails.student_email, totalAmount, slipUrl]
+    );
+    console.log('✅ Payment record created:', paymentId);
 
-    // ============ UPDATE EXISTING ENROLLMENT ============
-    if ((isUpdate && enrollmentId) || (enrollmentExists && existingEnrollmentId)) {
-      const updateId = enrollmentId || existingEnrollmentId;
-      console.log('🔄 Updating existing enrollment:', updateId);
-      
-      // Check if enrollment exists
-      const [existing] = await connection.execute(
-        'SELECT id, payment_status, status FROM enrollments WHERE id = ?',
-        [updateId]
-      );
-
-      if ((existing as any[]).length === 0) {
-        return NextResponse.json(
-          { success: false, error: 'Enrollment not found for update' },
-          { status: 404 }
-        );
-      }
-
-      // Start transaction for update
-      await connection.beginTransaction();
-
-      try {
-        // Get existing documents to preserve if not updated
-        const [existingDocs] = await connection.execute(
-          `SELECT cnic_front_url, cnic_back_url, educational_doc_url 
-           FROM enrollments WHERE id = ? LIMIT 1`,
-          [updateId]
-        );
-        const existingData = (existingDocs as any[])[0] || {};
-
-        // Update student information and documents
-        await connection.execute(
-          `UPDATE enrollments SET
-            student_name = ?,
-            student_phone = ?,
-            student_cnic = ?,
-            student_address = ?,
-            student_education = ?,
-            student_experience = ?,
-            cnic_front_url = COALESCE(?, ?),
-            cnic_back_url = COALESCE(?, ?),
-            educational_doc_url = COALESCE(?, ?),
-            voucher_number = COALESCE(?, voucher_number),
-            voucher_generated = CASE WHEN ? IS NOT NULL THEN TRUE ELSE voucher_generated END,
-            updated_at = NOW()
-          WHERE id = ?`,
-          [
-            studentDetails.student_name,
-            studentDetails.student_phone,
-            studentDetails.student_cnic,
-            studentDetails.student_address || null,
-            studentDetails.student_education || null,
-            studentDetails.student_experience || null,
-            documents.cnic_front?.url || null, existingData.cnic_front_url,
-            documents.cnic_back?.url || null, existingData.cnic_back_url,
-            documents.educational_doc?.url || null, existingData.educational_doc_url,
-            voucherNumber || null,
-            voucherNumber || null,
-            updateId
-          ]
-        );
-
-        // Update payment amount if different
-        const [currentEnrollment] = await connection.execute(
-          'SELECT payment_amount FROM enrollments WHERE id = ?',
-          [updateId]
-        );
-        const currentAmount = (currentEnrollment as any[])[0]?.payment_amount || 0;
-        
-        if (totalAmount && totalAmount !== currentAmount) {
-          await connection.execute(
-            `UPDATE enrollments SET
-              payment_amount = ?,
-              updated_at = NOW()
-            WHERE id = ?`,
-            [totalAmount, updateId]
-          );
-        }
-
-        await connection.commit();
-
-        // Send email notification
-        let emailSent = false;
-        if (sendEmail === true) {
-          try {
-            const emailResult = await sendEnrollmentConfirmation({
-              studentName: studentDetails.student_name,
-              studentEmail: studentDetails.student_email,
-              studentPhone: studentDetails.student_phone,
-              enrollmentId: updateId,
-              courses: courses,
-              totalAmount: totalAmount,
-              enrollmentDate: new Date().toLocaleString(),
-              status: 'pending'
-            });
-            
-            if (emailResult.success) {
-              emailSent = true;
-              console.log('✅ Update confirmation email sent to:', studentDetails.student_email);
-            } else {
-              console.error('❌ Failed to send update email:', emailResult.error);
-            }
-          } catch (emailError) {
-            console.error('❌ Email sending error:', emailError);
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            enrollmentIds: [updateId],
-            studentName: studentDetails.student_name,
-            totalAmount,
-            coursesCount: courses.length,
-            isUpdate: true
-          },
-          emailSent: emailSent,
-          message: emailSent 
-            ? 'Enrollment updated successfully and confirmation email sent!'
-            : 'Enrollment updated successfully'
-        });
-
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      }
-    }
-
-    // ============ CREATE NEW ENROLLMENT ============
-    console.log('📝 Creating new enrollment');
-    
-    // Generate a unique enrollment ID
-    let finalEnrollmentId = enrollmentId;
-    let isNewIdGenerated = false;
-    
-    if (!finalEnrollmentId) {
-      finalEnrollmentId = `ENR-${Date.now()}-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-      isNewIdGenerated = true;
-    } else {
-      // Double check that the ID doesn't exist (for safety)
-      const [checkDuplicate] = await connection.execute(
-        'SELECT id FROM enrollments WHERE id = ?',
-        [finalEnrollmentId]
-      );
-      if ((checkDuplicate as any[]).length > 0) {
-        // ID exists, generate a new one
-        finalEnrollmentId = `ENR-${Date.now()}-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-        isNewIdGenerated = true;
-        console.log('⚠️ Provided ID existed, using new ID:', finalEnrollmentId);
-      }
-    }
-
+    // Start transaction
     await connection.beginTransaction();
 
     try {
-      const enrollmentIds = [];
+      const enrollmentIds: string[] = [];
+      const enrollmentRecords = [];
+
+      // Extract document URLs from uploadedFiles
+      const cnicFrontUrl = uploadedFiles?.cnic_front?.url || uploadedFiles?.cnic?.url || null;
+      const cnicBackUrl = uploadedFiles?.cnic_back?.url || null;
+      const educationalDocUrl = uploadedFiles?.educational_doc?.url || null;
       
-      // Insert enrollment record for EACH course with SAME enrollment ID (bundle)
-      for (const course of courses) {
-        enrollmentIds.push(finalEnrollmentId);
+      // ✅ STEP 2: Create SEPARATE enrollment for EACH course with its own ID
+      for (let i = 0; i < courses.length; i++) {
+        const course = courses[i];
+        
+        // Generate unique enrollment ID for each course
+        const enrollmentId = await generateUniqueEnrollmentId(connection);
+        enrollmentIds.push(enrollmentId);
         
         await connection.execute(
           `INSERT INTO enrollments (
@@ -225,10 +140,10 @@ export async function POST(request: NextRequest) {
             cnic_front_url, cnic_back_url, educational_doc_url,
             course_id, course_title, course_price,
             enrollment_date, status, payment_status, payment_amount,
-            slip_uploaded, voucher_generated, voucher_number, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            slip_uploaded, voucher_generated, voucher_number, payment_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
           [
-            finalEnrollmentId,
+            enrollmentId,
             studentDetails.student_email,
             studentDetails.student_email,
             studentDetails.student_name,
@@ -237,25 +152,34 @@ export async function POST(request: NextRequest) {
             studentDetails.student_address || null,
             studentDetails.student_education || null,
             studentDetails.student_experience || null,
-            documents.cnic_front?.url || null,
-            documents.cnic_back?.url || null,
-            documents.educational_doc?.url || null,
+            cnicFrontUrl,
+            cnicBackUrl,
+            educationalDocUrl,
             course.id,
             course.course_title,
-            course.course_price,
+            parseFloat(course.course_price) || 0,
             'pending',
             'pending',
-            course.course_price,
-            false,
-            true,
-            voucherNumber || null
+            parseFloat(totalAmount) || 0,
+            0,
+            1,
+            voucherNumber || null,
+            paymentId
           ]
         );
+        
+        console.log(`✅ [${i + 1}/${courses.length}] Enrollment created: ${enrollmentId} for course: ${course.course_title}`);
+        enrollmentRecords.push({
+          enrollmentId,
+          courseId: course.id,
+          courseTitle: course.course_title
+        });
       }
 
       await connection.commit();
+      console.log(`✅ All ${courses.length} enrollments created. Payment ID: ${paymentId}`);
 
-      // Send email notification
+      // Send email notification with enrollment IDs
       let emailSent = false;
       if (sendEmail === true) {
         try {
@@ -263,16 +187,18 @@ export async function POST(request: NextRequest) {
             studentName: studentDetails.student_name,
             studentEmail: studentDetails.student_email,
             studentPhone: studentDetails.student_phone,
-            enrollmentId: finalEnrollmentId,
+            enrollmentId: enrollmentIds[0], // First enrollment ID for reference
+            enrollmentIds: enrollmentIds, // All enrollment IDs
+            paymentId: paymentId,
             courses: courses,
-            totalAmount: totalAmount,
+            totalAmount: parseFloat(totalAmount) || 0,
             enrollmentDate: new Date().toLocaleString(),
             status: 'pending'
           });
           
           if (emailResult.success) {
             emailSent = true;
-            console.log('✅ Confirmation email sent successfully to:', studentDetails.student_email);
+            console.log('✅ Confirmation email sent to:', studentDetails.student_email);
           } else {
             console.error('❌ Failed to send email:', emailResult.error);
           }
@@ -281,33 +207,41 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // ✅ Return the PAYMENT ID and ENROLLMENT IDs to frontend
       return NextResponse.json({
         success: true,
         data: {
-          enrollmentIds,
+          paymentId: paymentId,
+          enrollmentIds: enrollmentIds,
+          primaryEnrollmentId: enrollmentIds[0], // Main enrollment ID for user reference
           studentName: studentDetails.student_name,
-          totalAmount,
+          studentEmail: studentDetails.student_email,
+          totalAmount: parseFloat(totalAmount) || 0,
           coursesCount: courses.length,
-          isUpdate: false,
-          isNewIdGenerated
+          courses: courses.map((c: any) => ({
+            id: c.id,
+            title: c.course_title,
+            price: c.course_price
+          })),
+          voucherNumber: voucherNumber || null
         },
         emailSent: emailSent,
         message: emailSent 
-          ? 'Enrollment created successfully! Confirmation email sent.'
-          : 'Enrollment created successfully!'
+          ? `Enrollment created successfully! Payment ID: ${paymentId}. Confirmation email sent.`
+          : `Enrollment created successfully! Payment ID: ${paymentId}.`
       });
 
     } catch (error: any) {
       await connection.rollback();
+      console.error('❌ Error during enrollment creation:', error);
       
-      // Handle duplicate entry error specifically
-      if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
-        console.error('❌ Duplicate entry error:', error.message);
+      if (error.code === 'ER_DUP_ENTRY') {
         return NextResponse.json(
           { 
             success: false, 
-            error: 'An enrollment with this ID already exists. Please use the "Continue Existing Enrollment" option.',
-            duplicate: true
+            error: 'Unable to create enrollment. Please try again.',
+            duplicate: true,
+            shouldRetry: true
           },
           { status: 409 }
         );
@@ -317,25 +251,20 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Error creating/updating enrollment:', error);
-    
-    // Handle duplicate entry error at top level
-    if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Duplicate enrollment detected. Please refresh and try again.',
-          duplicate: true
-        },
-        { status: 409 }
-      );
-    }
+    console.error('❌ Error processing enrollment:', error);
     
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process enrollment' },
+      { 
+        success: false, 
+        error: error.message || 'Failed to process enrollment',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   } finally {
-    if (connection) connection.release();
+    if (connection) {
+      connection.release();
+      console.log('🔌 Database connection released');
+    }
   }
 }

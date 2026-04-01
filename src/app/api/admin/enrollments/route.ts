@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 
     connection = await getConnection();
 
+    // Updated SQL to use payments table instead of payment_slips
     let sql = `
       SELECT 
         e.id,
@@ -35,14 +36,16 @@ export async function GET(request: NextRequest) {
         e.payment_date,
         e.voucher_generated,
         e.slip_uploaded,
+        e.voucher_number,
+        e.payment_id,
         e.created_at,
         e.updated_at,
-        ps.id as slip_id,
-        ps.slip_url,
-        ps.status as slip_status,
-        ps.uploaded_at as slip_uploaded_at
+        p.id as payment_id_from_payments,
+        p.slip_url as payment_slip_url,
+        p.status as payment_record_status,
+        p.created_at as payment_created_at
       FROM enrollments e
-      LEFT JOIN payment_slips ps ON e.id = ps.enrollment_id
+      LEFT JOIN payments p ON e.payment_id = p.id
       WHERE 1=1
     `;
     
@@ -60,11 +63,22 @@ export async function GET(request: NextRequest) {
 
     const [rows] = await connection.execute(sql, params);
 
+    // Transform data to match frontend expectations
+    const transformedRows = (rows as any[]).map(row => ({
+      ...row,
+      // Map payment slip URL from payments table
+      slip_url: row.payment_slip_url,
+      // Keep compatibility with old field names
+      screenshot_url: row.payment_slip_url,
+      payment_record_id: row.payment_id_from_payments,
+      payment_record_status: row.payment_record_status
+    }));
+
     console.log(`✅ Found ${(rows as any[]).length} enrollments`);
 
     return NextResponse.json({ 
       success: true, 
-      data: rows,
+      data: transformedRows,
       count: (rows as any[]).length
     });
 

@@ -225,7 +225,7 @@ export default function Navbar() {
 
   // Handle Pay Fees click
   const handlePayFees = useCallback(() => {
-    router.push('/cartEnrollment');
+    router.push('/enrollment-payment');
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
   }, [router]);

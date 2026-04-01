@@ -18,7 +18,7 @@ export default function ClientLayout({
   const cleanPath = pathname?.replace(/\/$/, "") || "";
 
   // Routes where navbar/footer should show
-  const exactRoutes = ["", "/", "/about", "/contact", "/courses","/checkout","/cartEnrollment"];
+  const exactRoutes = ["", "/", "/about", "/contact", "/courses","/checkout","/cartEnrollment","/enrollment-payment"];
   
   // Check if current route should show navbar
   const showNav = 

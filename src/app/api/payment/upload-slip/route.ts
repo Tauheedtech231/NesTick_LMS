@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { v2 as cloudinary } from 'cloudinary';
+import { sendPaymentVerificationEmail } from '@/lib/email';
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dfp9qc0gu',
@@ -18,12 +20,20 @@ export async function POST(request: NextRequest) {
     
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const enrollmentId = formData.get('enrollmentId') as string;
-    const studentId = formData.get('studentId') as string;
+    const paymentId = formData.get('paymentId') as string;
     const studentEmail = formData.get('studentEmail') as string;
-    const enrollmentData = formData.get('enrollmentData') as string; // New: Get enrollment data
+    const enrollmentId = formData.get('enrollmentId') as string;
+    const isPublic = formData.get('isPublic') === 'true';
 
-    console.log('Received data:', { enrollmentId, studentId, studentEmail, fileName: file?.name, hasEnrollmentData: !!enrollmentData });
+    console.log('Received data:', { 
+      paymentId, 
+      studentEmail, 
+      enrollmentId, 
+      fileName: file?.name, 
+      fileSize: file?.size,
+      fileType: file?.type,
+      isPublic 
+    });
 
     // Validation
     if (!file) {
@@ -33,9 +43,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!enrollmentId) {
+    if (!paymentId) {
       return NextResponse.json(
-        { success: false, error: 'Enrollment ID is required' },
+        { success: false, error: 'Payment ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!studentEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Student email is required' },
         { status: 400 }
       );
     }
@@ -73,6 +90,7 @@ export async function POST(request: NextRequest) {
             resource_type: 'auto',
             allowed_formats: ['jpg', 'jpeg', 'png', 'pdf'],
             max_bytes: 5 * 1024 * 1024,
+            timeout: 60000,
           },
           (error, result) => {
             if (error) {
@@ -85,11 +103,16 @@ export async function POST(request: NextRequest) {
         );
         
         uploadStream.end(buffer);
+        
+        setTimeout(() => {
+          uploadStream.destroy();
+          reject(new Error('Upload timeout'));
+        }, 55000);
       });
-    } catch (cloudinaryError) {
+    } catch (cloudinaryError: any) {
       console.error('Cloudinary upload failed:', cloudinaryError);
       return NextResponse.json(
-        { success: false, error: 'Failed to upload file to cloud storage' },
+        { success: false, error: cloudinaryError.message || 'Failed to upload file to cloud storage' },
         { status: 500 }
       );
     }
@@ -107,119 +130,144 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if enrollment exists in database
-    let enrollmentExists = false;
-    try {
-      const [enrollmentCheck] = await connection.execute(
-        'SELECT id, payment_status FROM enrollments WHERE id = ?',
-        [enrollmentId]
-      );
-      enrollmentExists = (enrollmentCheck as any[]).length > 0;
-      console.log('Enrollment exists in DB:', enrollmentExists);
-    } catch (checkError) {
-      console.error('Error checking enrollment:', checkError);
-    }
-
     // Start transaction
     await connection.beginTransaction();
 
     try {
-      let finalEnrollmentId = enrollmentId;
-
-      // If enrollment doesn't exist in database, create it from the provided data
-      if (!enrollmentExists && enrollmentData) {
-        console.log('Creating enrollment from provided data...');
-        const enrollmentDataObj = JSON.parse(enrollmentData);
+      let paymentExists = false;
+      let paymentStudentName = '';
+      let paymentStudentEmail = '';
+      
+      // Check if payment record exists
+      try {
+        const [paymentCheck] = await connection.execute(
+          'SELECT id, student_email, status FROM payments WHERE id = ?',
+          [paymentId]
+        );
+        paymentExists = (paymentCheck as any[]).length > 0;
         
-        // Create enrollment records for each course
-        for (const course of enrollmentDataObj.courses) {
-          const newEnrollmentId = uuidv4();
-          finalEnrollmentId = newEnrollmentId;
-          
-          await connection.execute(
-            `INSERT INTO enrollments (
-              id, student_id, student_email, student_name, student_phone,
-              student_cnic, student_address, student_education, student_experience,
-              cnic_front_url, cnic_back_url, educational_doc_url,
-              course_id, course_title, course_price,
-              enrollment_date, status, payment_status, payment_amount,
-              slip_uploaded, voucher_generated, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, NOW(), NOW())`,
-            [
-              newEnrollmentId,
-              enrollmentDataObj.studentDetails.student_email,
-              enrollmentDataObj.studentDetails.student_email,
-              enrollmentDataObj.studentDetails.student_name,
-              enrollmentDataObj.studentDetails.student_phone,
-              enrollmentDataObj.studentDetails.student_cnic,
-              enrollmentDataObj.studentDetails.student_address || null,
-              enrollmentDataObj.studentDetails.student_education || null,
-              enrollmentDataObj.studentDetails.student_experience || null,
-              enrollmentDataObj.documents.cnic_front?.url || null,
-              enrollmentDataObj.documents.cnic_back?.url || null,
-              enrollmentDataObj.documents.educational_doc?.url || null,
-              course.id,
-              course.course_title,
-              course.course_price,
-              'pending',
-              'pending',
-              course.course_price,
-              false,
-              true
-            ]
-          );
+        if (paymentExists) {
+          const payment = (paymentCheck as any[])[0];
+          paymentStudentEmail = payment.student_email;
+          paymentStudentName = studentEmail || paymentStudentEmail;
+          console.log('✅ Payment record exists:', paymentId);
         }
-        
-        console.log('✅ Enrollment created in database');
+      } catch (checkError) {
+        console.error('Error checking payment:', checkError);
       }
 
-      // Save payment slip record
-      const slipId = uuidv4();
-      await connection.execute(
-        `INSERT INTO payment_slips (
-          id, enrollment_id, student_id, slip_url, slip_public_id,
-          file_name, file_size, uploaded_at, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'pending')`,
-        [
-          slipId,
-          finalEnrollmentId,
-          studentId || studentEmail,
-          (uploadResult as any).secure_url,
-          (uploadResult as any).public_id,
-          file.name,
-          file.size
-        ]
-      );
+      // If payment doesn't exist, create it
+      if (!paymentExists) {
+        console.log('📝 Payment record not found, creating new payment...');
+        
+        // Get total amount from enrollments or use default
+        let totalAmount = 0;
+        try {
+          const [amountCheck] = await connection.execute(
+            'SELECT SUM(payment_amount) as total FROM enrollments WHERE payment_id = ?',
+            [paymentId]
+          );
+          totalAmount = (amountCheck as any[])[0]?.total || 0;
+        } catch (e) {
+          console.error('Error getting total amount:', e);
+        }
+        
+        await connection.execute(
+          `INSERT INTO payments (id, student_email, total_amount, status, slip_url, created_at, updated_at)
+           VALUES (?, ?, ?, 'pending', ?, NOW(), NOW())`,
+          [paymentId, studentEmail, totalAmount, (uploadResult as any).secure_url]
+        );
+        console.log('✅ Payment record created:', paymentId);
+      } else {
+        // Update existing payment with slip URL
+        await connection.execute(
+          `UPDATE payments SET 
+            slip_url = ?,
+            status = 'pending',
+            updated_at = NOW()
+           WHERE id = ?`,
+          [(uploadResult as any).secure_url, paymentId]
+        );
+        console.log('✅ Payment record updated with slip:', paymentId);
+      }
 
-      // Update enrollment to mark slip uploaded
-      await connection.execute(
-        `UPDATE enrollments SET
+      // Update all enrollments linked to this payment
+      const [enrollmentUpdate] = await connection.execute(
+        `UPDATE enrollments SET 
           slip_uploaded = TRUE,
           payment_status = 'pending',
           updated_at = NOW()
-         WHERE id = ?`,
-        [finalEnrollmentId]
+         WHERE payment_id = ?`,
+        [paymentId]
       );
+      
+      console.log(`✅ Updated ${(enrollmentUpdate as any).affectedRows} enrollment(s) for payment: ${paymentId}`);
+
+      // Get student name for email
+      let studentName = studentEmail;
+      try {
+        const [studentCheck] = await connection.execute(
+          'SELECT student_name FROM enrollments WHERE payment_id = ? LIMIT 1',
+          [paymentId]
+        );
+        if ((studentCheck as any[]).length > 0) {
+          studentName = (studentCheck as any[])[0].student_name;
+        }
+      } catch (e) {
+        console.error('Error getting student name:', e);
+      }
 
       await connection.commit();
 
-      console.log('✅ Payment slip saved to database:', slipId);
+      console.log('✅ Payment slip processed successfully for payment:', paymentId);
+
+      // Send email notification
+      let emailSent = false;
+      try {
+        const emailResult = await sendPaymentVerificationEmail(
+          studentEmail,
+          studentName,
+          paymentId,
+          'pending'
+        );
+        
+        if (emailResult.success) {
+          emailSent = true;
+          console.log('✅ Payment verification email sent to:', studentEmail);
+        } else {
+          console.error('❌ Failed to send email:', emailResult.error);
+        }
+      } catch (emailError) {
+        console.error('❌ Email sending error:', emailError);
+      }
 
       return NextResponse.json({
         success: true,
         data: {
-          slipId,
-          url: (uploadResult as any).secure_url,
-          enrollmentId: finalEnrollmentId
+          paymentId,
+          slipUrl: (uploadResult as any).secure_url,
+          enrollmentsUpdated: (enrollmentUpdate as any).affectedRows,
+          emailSent
         },
-        message: 'Payment slip uploaded successfully. Your enrollment is pending verification.'
+        message: emailSent 
+          ? 'Payment slip uploaded successfully. A confirmation email has been sent.'
+          : 'Payment slip uploaded successfully.'
       });
 
-    } catch (dbError) {
+    } catch (dbError: any) {
       await connection.rollback();
-      console.error('Database insert error:', dbError);
+      console.error('Database error:', dbError);
+      
+      // Handle duplicate entry error
+      if (dbError.code === 'ER_DUP_ENTRY' || dbError.message?.includes('Duplicate entry')) {
+        return NextResponse.json(
+          { success: false, error: 'Payment slip already uploaded for this payment.' },
+          { status: 409 }
+        );
+      }
+      
       return NextResponse.json(
-        { success: false, error: 'Failed to save payment slip record: ' + (dbError as Error).message },
+        { success: false, error: 'Failed to save payment slip: ' + dbError.message },
         { status: 500 }
       );
     }

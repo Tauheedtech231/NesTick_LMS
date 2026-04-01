@@ -9,12 +9,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS || 'ramo reiv jlsy ogsg', // Use the app password
   },
 });
-
 export interface EnrollmentEmailData {
   studentName: string;
   studentEmail: string;
   studentPhone: string;
   enrollmentId: string;
+  enrollmentIds?: string[]; // Add support for multiple enrollment IDs
+  paymentId?: string; // Add payment ID
   courses: Array<{
     course_title: string;
     course_price: number;
