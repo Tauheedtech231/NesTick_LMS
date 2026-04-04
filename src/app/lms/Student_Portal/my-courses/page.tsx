@@ -7,11 +7,22 @@ import { HiClock, HiUser, HiOutlineRefresh, HiXCircle, HiSearch, HiBookOpen, HiA
 import { Loader2 } from 'lucide-react';
 /* eslint-disable */
 
+type Enrollment = {
+  id: number;
+  student_id: string;
+  student_name: string;
+  student_email: string;
+  course_id: string;
+  course_title: string;
+  enrollment_date: string;
+  status: string;
+  payment_status: string;
+};
+
 type Course = {
   id: string;
   title: string;
   instructor: string;
-  instructorName?: string;
   description: string;
   category: string;
   enrolledDate: string;
@@ -22,8 +33,9 @@ type Course = {
   image?: string;
   duration?: string;
   level?: string;
-  instructorImage?: string;
-  enrollmentId: string;
+  enrollmentId: number;
+  status: string;
+  payment_status: string;
 };
 
 const BRAND_COLORS = {
@@ -45,25 +57,6 @@ export default function MyCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Helper function to get instructor name
-  const getInstructorName = (course: any): string => {
-    const instructorName = 
-      course.instructorName || 
-      course.instructor || 
-      course.instructor_name || 
-      'Not Assigned';
-    
-    if (typeof instructorName === 'object' && instructorName !== null) {
-      return instructorName.name || instructorName.fullName || 'Instructor';
-    }
-    
-    if (typeof instructorName === 'string' && instructorName.trim()) {
-      return instructorName;
-    }
-    
-    return 'Not Assigned';
-  };
 
   // Load user from localStorage
   useEffect(() => {
@@ -100,10 +93,12 @@ export default function MyCoursesPage() {
 
     try {
       console.log('🔍 Fetching enrolled courses for:', user.email);
-
-      // Get student's enrollments from database
+      
+      // ✅ Single API call to get enrollments
       const response = await fetch(`/api/students/enrollments?email=${encodeURIComponent(user.email)}`);
       const result = await response.json();
+
+      console.log('📦 API Response:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch enrollments');
@@ -111,52 +106,42 @@ export default function MyCoursesPage() {
 
       if (result.success && result.data) {
         console.log('📊 Enrollments found:', result.data.length);
-
-        // Get course details for each enrollment
-        const coursesWithDetails = await Promise.all(
-          result.data.map(async (enrollment: any) => {
-            // Fetch course details
-            const courseResponse = await fetch(`/api/instructors/course/${enrollment.course_id}`);
-            const courseResult = await courseResponse.json();
-
-            if (!courseResponse.ok || !courseResult.success) {
-              return null;
-            }
-
-            const course = courseResult.data.course;
-
-            return {
-              id: course.id,
-              title: course.title,
-              instructor: getInstructorName(course),
-              instructorName: getInstructorName(course),
-              description: course.description || course.title,
-              category: course.category || 'General',
-              enrolledDate: enrollment.enrollment_date,
-              modules: [],
-              totalModules: 10,
-              completedModules: 0,
-              lastAccessed: enrollment.last_accessed,
-              image: course.image || '',
-              duration: course.duration || 'Self-paced',
-              level: course.level || 'All Levels',
-              enrollmentId: enrollment.id
-            };
-          })
-        );
-
-        const validCourses = coursesWithDetails.filter(Boolean) as Course[];
-        setCourses(validCourses);
-        setFilteredCourses(validCourses);
-        localStorage.setItem('studentCourses', JSON.stringify(validCourses));
+        
+        // ✅ Transform enrollments to Course format
+        const transformedCourses: Course[] = result.data.map((enrollment: Enrollment) => ({
+          id: enrollment.course_id,
+          title: enrollment.course_title,
+          instructor: 'Course Instructor', // Default instructor name
+          description: enrollment.course_title,
+          category: 'Professional Development',
+          enrolledDate: enrollment.enrollment_date,
+          modules: [],
+          totalModules: 0,
+          completedModules: 0,
+          lastAccessed: undefined,
+          image: '',
+          duration: 'Self-paced',
+          level: 'All Levels',
+          enrollmentId: enrollment.id,
+          status: enrollment.status,
+          payment_status: enrollment.payment_status
+        }));
+        
+        setCourses(transformedCourses);
+        setFilteredCourses(transformedCourses);
+        
+        // Save to localStorage as backup
+        localStorage.setItem('studentCourses', JSON.stringify(transformedCourses));
       } else {
         setCourses([]);
         setFilteredCourses([]);
       }
+      
     } catch (error: any) {
       console.error('Error fetching enrolled courses:', error);
       setError(error.message || 'Failed to load courses');
       
+      // Try to load from localStorage as fallback
       try {
         const studentCoursesStr = localStorage.getItem('studentCourses');
         if (studentCoursesStr) {
@@ -180,15 +165,12 @@ export default function MyCoursesPage() {
   }, [user]);
 
   useEffect(() => {
-    const displayCourses = courses;
-    let filtered = displayCourses;
+    let filtered = courses;
 
     if (searchTerm) {
       filtered = filtered.filter(
         (course) =>
           course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
           course.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -234,7 +216,7 @@ export default function MyCoursesPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section with Clean Background */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-200 px-4 sm:px-6 py-10 sm:py-12">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center justify-center p-3 bg-white shadow-md rounded-full mb-4">
@@ -249,7 +231,7 @@ export default function MyCoursesPage() {
             Welcome back, {user?.name?.split(' ')[0] || 'Student'}! You're enrolled in {courses.length} {courses.length === 1 ? 'course' : 'courses'}
           </p>
 
-          {/* Search Input - Clean Design */}
+          {/* Search Input */}
           <div className="relative max-w-xl mx-auto">
             <div className="relative">
               <HiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -306,7 +288,7 @@ export default function MyCoursesPage() {
               You haven't enrolled in any courses yet. Browse available courses to start your learning journey!
             </p>
             <Link
-              href="/courses"
+              href="/lms/courses"
               className="inline-block px-5 py-2 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors"
               style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
@@ -347,21 +329,7 @@ export default function MyCoursesPage() {
                 className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
               >
                 <div className="p-4 sm:p-5">
-                  {/* Image if available */}
-                  {course.image && (
-                    <div className="h-32 sm:h-36 overflow-hidden mb-3 sm:mb-4 rounded-lg">
-                      <img
-                        src={course.image}
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Category */}
+                  {/* Category Badge */}
                   <div className="mb-2 sm:mb-3">
                     <span
                       className="text-xs font-semibold px-2 py-1 rounded"
@@ -396,10 +364,24 @@ export default function MyCoursesPage() {
                   </div>
 
                   {/* Instructor */}
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                     <HiUser className="w-3 h-3 text-gray-400" />
                     <span className="truncate">{course.instructor}</span>
                   </div>
+                  
+                  {/* Enrollment Date */}
+                  <div className="text-xs text-gray-400">
+                    Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}
+                  </div>
+
+                  {/* Status Badge (if needed) */}
+                  {course.status && (
+                    <div className="mt-2">
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}

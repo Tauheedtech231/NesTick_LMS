@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 /* eslint-disable */
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +26,81 @@ export async function GET(
 
     connection = await getConnection();
 
-    // 1. Get course details
+    // FIRST: Get enrollment details
+    const [enrollmentRows] = await connection.execute(
+      `SELECT * FROM enrollments WHERE id = ? AND student_email = ?`,
+      [enrollmentId, studentEmail]
+    );
+
+    if ((enrollmentRows as any[]).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Enrollment not found' },
+        { status: 404 }
+      );
+    }
+
+    const enrollment = (enrollmentRows as any[])[0];
+    let actualCourseId = id;
+    let courseTitle = enrollment.course_title;
+
+    // Find the correct course ID from instructor_course table by title
+    const [correctCourseRows] = await connection.execute(
+      `SELECT id, title FROM instructor_course WHERE title LIKE ? OR id = ?`,
+      [`%${courseTitle}%`, id]
+    );
+
+    let courseExists = false;
+    let finalCourseId = id;
+
+    if ((correctCourseRows as any[]).length > 0) {
+      const correctCourse = (correctCourseRows as any[])[0];
+      
+      // Check if the course ID in URL matches any existing course
+      const urlCourseExists = (correctCourseRows as any[]).some((c: any) => c.id === id);
+      
+      if (!urlCourseExists && correctCourse.id !== id) {
+        // Course ID mismatch - use the correct one from database
+        console.log(`⚠️ Course ID mismatch: URL has ${id}, but database has ${correctCourse.id} for title "${courseTitle}"`);
+        console.log(`✅ Auto-correcting to use: ${correctCourse.id}`);
+        finalCourseId = correctCourse.id;
+        courseExists = true;
+      } else if (urlCourseExists) {
+        courseExists = true;
+        finalCourseId = id;
+      } else {
+        courseExists = false;
+      }
+    } else {
+      // Course doesn't exist in instructor_course - check by exact ID
+      const [existingCourse] = await connection.execute(
+        `SELECT id FROM instructor_course WHERE id = ?`,
+        [id]
+      );
+      courseExists = (existingCourse as any[]).length > 0;
+    }
+
+    // If course doesn't exist, create it automatically
+    if (!courseExists) {
+      console.log(`📝 Course not found, auto-creating: ${finalCourseId} - ${courseTitle}`);
+      
+      await connection.execute(
+        `INSERT INTO instructor_course (
+          id, title, description, category, duration, instructor_name, level, price, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', NOW(), NOW())`,
+        [
+          finalCourseId,
+          courseTitle,
+          `${courseTitle} - Course content is being prepared. Please contact instructor for materials.`,
+          'Safety Training',
+          'Self-paced',
+          'Not Assigned',
+          'Beginner',
+          enrollment.course_price || 0
+        ]
+      );
+    }
+
+    // Now fetch course details with the correct ID
     const [courseRows] = await connection.execute(
       `SELECT 
         id,
@@ -39,19 +114,19 @@ export async function GET(
         price
        FROM instructor_course 
        WHERE id = ?`,
-      [id]
+      [finalCourseId]
     );
 
     if ((courseRows as any[]).length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Course not found' },
+        { success: false, error: 'Course not found even after creation attempt' },
         { status: 404 }
       );
     }
 
     const course = (courseRows as any[])[0];
 
-    // 2. Get slides
+    // Get slides
     const [slideRows] = await connection.execute(
       `SELECT 
         id,
@@ -63,46 +138,47 @@ export async function GET(
        FROM course_slides 
        WHERE course_id = ? 
        ORDER BY slide_number`,
-      [id]
+      [finalCourseId]
     );
     const slides = slideRows as any[];
 
-    // 3. Get slide contents (files)
-    const [contentRows] = await connection.execute(
-      `SELECT 
-        id,
-        slide_id as slideId,
-        course_id as courseId,
-        file_name as name,
-        file_type as type,
-        file_size as size,
-        file_url as url,
-        public_id as publicId,
-        uploaded_at as uploadedAt
-       FROM slide_files 
-       WHERE course_id = ?`,
-      [id]
-    );
-    const contents = contentRows as any[];
+    // Get slide contents
+    let contentsBySlide: Record<string, any[]> = {};
+    if (slides.length > 0) {
+      const [contentRows] = await connection.execute(
+        `SELECT 
+          id,
+          slide_id as slideId,
+          course_id as courseId,
+          file_name as name,
+          file_type as type,
+          file_size as size,
+          file_url as url,
+          public_id as publicId,
+          uploaded_at as uploadedAt
+         FROM slide_files 
+         WHERE course_id = ?`,
+        [finalCourseId]
+      );
+      const contents = contentRows as any[];
 
-    // Group contents by slideId
-    const contentsBySlide: Record<string, any[]> = {};
-    contents.forEach(content => {
-      if (!contentsBySlide[content.slideId]) {
-        contentsBySlide[content.slideId] = [];
-      }
-      contentsBySlide[content.slideId].push({
-        id: content.id,
-        name: content.name,
-        type: content.type,
-        size: content.size,
-        url: content.url,
-        publicId: content.publicId,
-        uploadedAt: content.uploadedAt
+      contents.forEach(content => {
+        if (!contentsBySlide[content.slideId]) {
+          contentsBySlide[content.slideId] = [];
+        }
+        contentsBySlide[content.slideId].push({
+          id: content.id,
+          name: content.name,
+          type: content.type,
+          size: content.size,
+          url: content.url,
+          publicId: content.publicId,
+          uploadedAt: content.uploadedAt
+        });
       });
-    });
+    }
 
-    // 4. Get quizzes with questions - FIXED ✅
+    // Get quizzes
     const [quizRows] = await connection.execute(
       `SELECT 
         q.id as quiz_id,
@@ -116,11 +192,10 @@ export async function GET(
        LEFT JOIN quiz_questions qq ON q.id = qq.quiz_id
        WHERE q.course_id = ?
        ORDER BY q.slide_id, qq.created_at`,
-      [id]
+      [finalCourseId]
     );
     const quizzes = quizRows as any[];
 
-    // Group quizzes by slideId with proper JSON parsing
     const quizzesBySlide: Record<string, any> = {};
     const quizMap = new Map();
 
@@ -138,24 +213,17 @@ export async function GET(
         const quiz = quizMap.get(row.quiz_id);
         let options = [];
         
-        // ✅ FIXED: Proper JSON parsing
         if (row.options) {
           try {
-            // If it's already a string, try to parse it
-            if (typeof row.options === 'string') {
-              // Check if it's a JSON array
-              if (row.options.trim().startsWith('[')) {
-                options = JSON.parse(row.options);
-              } else {
-                // Handle comma-separated string
-                options = row.options.split(',').map((opt: string) => opt.trim());
-              }
+            if (typeof row.options === 'string' && row.options.trim().startsWith('[')) {
+              options = JSON.parse(row.options);
             } else if (Array.isArray(row.options)) {
               options = row.options;
+            } else if (typeof row.options === 'string') {
+              options = row.options.split(',').map((opt: string) => opt.trim());
             }
           } catch (e) {
-            console.error('❌ Error parsing quiz options:', e);
-            options = [];
+            console.error('Error parsing quiz options:', e);
           }
         }
         
@@ -172,7 +240,7 @@ export async function GET(
       quizzesBySlide[quiz.slideId] = quiz;
     });
 
-    // 5. Get assignments
+    // Get assignments
     const [assignmentRows] = await connection.execute(
       `SELECT 
         id,
@@ -194,7 +262,7 @@ export async function GET(
         updated_at as updatedAt
        FROM course_assignments 
        WHERE course_id = ? AND status = 'published'`,
-      [id]
+      [finalCourseId]
     );
     const assignments = assignmentRows as any[];
 
@@ -220,7 +288,7 @@ export async function GET(
       updatedAt: a.updatedAt
     }));
 
-    // 6. Get or create student progress - FIXED ✅
+    // Get or create student progress
     let progress = {
       completedSlides: [],
       completedContent: [],
@@ -231,7 +299,6 @@ export async function GET(
 
     if (enrollmentId) {
       try {
-        // Check if progress table exists
         const [tableCheck] = await connection.execute(
           `SELECT COUNT(*) as count FROM information_schema.tables 
            WHERE table_schema = DATABASE() AND table_name = 'student_progress'`
@@ -252,43 +319,26 @@ export async function GET(
 
           if ((progressRows as any[]).length > 0) {
             const p = (progressRows as any[])[0];
-            
-            // ✅ FIXED: Safe parsing for completed_slides
             let completedSlides = [];
-            if (p.completed_slides) {
-              try {
-                if (typeof p.completed_slides === 'string') {
-                  if (p.completed_slides.trim().startsWith('[')) {
-                    completedSlides = JSON.parse(p.completed_slides);
-                  } else {
-                    completedSlides = p.completed_slides ? [p.completed_slides] : [];
-                  }
+            let completedContent = [];
+            
+            try {
+              if (p.completed_slides) {
+                if (typeof p.completed_slides === 'string' && p.completed_slides.trim().startsWith('[')) {
+                  completedSlides = JSON.parse(p.completed_slides);
                 } else if (Array.isArray(p.completed_slides)) {
                   completedSlides = p.completed_slides;
                 }
-              } catch (e) {
-                console.error('❌ Error parsing completed_slides:', e);
-                completedSlides = [];
               }
-            }
-            
-            // ✅ FIXED: Safe parsing for completed_content
-            let completedContent = [];
-            if (p.completed_content) {
-              try {
-                if (typeof p.completed_content === 'string') {
-                  if (p.completed_content.trim().startsWith('[')) {
-                    completedContent = JSON.parse(p.completed_content);
-                  } else {
-                    completedContent = p.completed_content ? [p.completed_content] : [];
-                  }
+              if (p.completed_content) {
+                if (typeof p.completed_content === 'string' && p.completed_content.trim().startsWith('[')) {
+                  completedContent = JSON.parse(p.completed_content);
                 } else if (Array.isArray(p.completed_content)) {
                   completedContent = p.completed_content;
                 }
-              } catch (e) {
-                console.error('❌ Error parsing completed_content:', e);
-                completedContent = [];
               }
+            } catch (e) {
+              console.error('Error parsing progress:', e);
             }
             
             progress = {
@@ -299,29 +349,23 @@ export async function GET(
               status: p.status || 'not_started'
             };
           } else {
-            // Create new progress record
-            try {
-              const progressId = uuidv4();
-              await connection.execute(
-                `INSERT INTO student_progress 
-                 (id, enrollment_id, student_email, course_id, completed_slides, completed_content, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, '[]', '[]', NOW(), NOW())`,
-                [progressId, enrollmentId, studentEmail, id]
-              );
-            } catch (insertError) {
-              console.error('❌ Error creating progress:', insertError);
-            }
+            const progressId = uuidv4();
+            await connection.execute(
+              `INSERT INTO student_progress 
+               (id, enrollment_id, student_email, course_id, completed_slides, completed_content, created_at, updated_at)
+               VALUES (?, ?, ?, ?, '[]', '[]', NOW(), NOW())`,
+              [progressId, enrollmentId, studentEmail, finalCourseId]
+            );
           }
         }
       } catch (tableError) {
-        console.error('❌ Progress table error:', tableError);
+        console.error('Progress table error:', tableError);
       }
     }
 
-    // 7. Get quiz attempts - FIXED ✅
+    // Get quiz attempts
     let quizAttemptsMap: Record<string, any> = {};
     try {
-      // Check if quiz_attempts table exists
       const [tableCheck] = await connection.execute(
         `SELECT COUNT(*) as count FROM information_schema.tables 
          WHERE table_schema = DATABASE() AND table_name = 'quiz_attempts'`
@@ -339,27 +383,20 @@ export async function GET(
             attempted_at as attemptedAt
            FROM quiz_attempts 
            WHERE student_email = ? AND course_id = ?`,
-          [studentEmail, id]
+          [studentEmail, finalCourseId]
         );
         const attempts = attemptRows as any[];
 
         attempts.forEach(attempt => {
           let answers = [];
-          if (attempt.answers) {
-            try {
-              if (typeof attempt.answers === 'string') {
-                if (attempt.answers.trim().startsWith('[')) {
-                  answers = JSON.parse(attempt.answers);
-                } else {
-                  answers = attempt.answers.split(',').map((a: string) => parseInt(a.trim()));
-                }
-              } else if (Array.isArray(attempt.answers)) {
-                answers = attempt.answers;
-              }
-            } catch (e) {
-              console.error('❌ Error parsing quiz answers:', e);
-              answers = [];
+          try {
+            if (typeof attempt.answers === 'string' && attempt.answers.trim().startsWith('[')) {
+              answers = JSON.parse(attempt.answers);
+            } else if (Array.isArray(attempt.answers)) {
+              answers = attempt.answers;
             }
+          } catch (e) {
+            console.error('Error parsing quiz answers:', e);
           }
           
           quizAttemptsMap[attempt.quizId] = {
@@ -374,13 +411,12 @@ export async function GET(
         });
       }
     } catch (tableError) {
-      console.error('❌ Quiz attempts table error:', tableError);
+      console.error('Quiz attempts table error:', tableError);
     }
 
-    // 8. Get assignment submissions - FIXED ✅
+    // Get assignment submissions
     let submissionsMap: Record<string, any> = {};
     try {
-      // Check if assignment_submissions table exists
       const [tableCheck] = await connection.execute(
         `SELECT COUNT(*) as count FROM information_schema.tables 
          WHERE table_schema = DATABASE() AND table_name = 'assignment_submissions'`
@@ -400,27 +436,20 @@ export async function GET(
             feedback
            FROM assignment_submissions 
            WHERE student_email = ? AND course_id = ?`,
-          [studentEmail, id]
+          [studentEmail, finalCourseId]
         );
         const submissions = submissionRows as any[];
 
         submissions.forEach(sub => {
           let files = [];
-          if (sub.files) {
-            try {
-              if (typeof sub.files === 'string') {
-                if (sub.files.trim().startsWith('[')) {
-                  files = JSON.parse(sub.files);
-                } else {
-                  files = [{ url: sub.files, name: 'file' }];
-                }
-              } else if (Array.isArray(sub.files)) {
-                files = sub.files;
-              }
-            } catch (e) {
-              console.error('❌ Error parsing submission files:', e);
-              files = [];
+          try {
+            if (typeof sub.files === 'string' && sub.files.trim().startsWith('[')) {
+              files = JSON.parse(sub.files);
+            } else if (Array.isArray(sub.files)) {
+              files = sub.files;
             }
+          } catch (e) {
+            console.error('Error parsing submission files:', e);
           }
           
           submissionsMap[sub.assignmentId] = {
@@ -437,10 +466,10 @@ export async function GET(
         });
       }
     } catch (tableError) {
-      console.error('❌ Assignment submissions table error:', tableError);
+      console.error('Assignment submissions table error:', tableError);
     }
 
-    // ✅ Calculate overall progress
+    // Calculate overall progress
     if (slides.length > 0 && progress.completedSlides.length > 0) {
       progress.progressPercentage = Math.round((progress.completedSlides.length / slides.length) * 100);
     }

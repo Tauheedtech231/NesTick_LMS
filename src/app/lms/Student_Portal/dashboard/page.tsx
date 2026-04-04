@@ -244,7 +244,7 @@ const CourseRow = ({ course }: { course: DashboardCourse }) => {
                 : 'Not Started'}
           </span>
           <Link
-            href={`/lms/Student_Portal/my-courses/${course.id}`}
+            href={`/lms/Student_Portal/my-courses`}
             className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all text-white hover:opacity-90 hover:shadow-md group"
             style={{ backgroundColor: BRAND_COLORS.deepRed }}
           >
