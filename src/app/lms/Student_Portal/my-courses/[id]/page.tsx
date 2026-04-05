@@ -18,18 +18,13 @@ import {
   HiChartBar,
   HiTrendingUp,
   HiTrendingDown,
-  HiDocumentReport,
   HiPaperClip,
   HiRefresh,
   HiEye,
-  HiEyeOff,
   HiChartPie,
   HiCalendar,
-  HiTrendingUp as HiTrendingUpIcon,
   HiViewGrid,
   HiViewList,
-  HiFolder,
-  HiFolderOpen,
   HiLockClosed,
   HiLockOpen
 } from 'react-icons/hi';
@@ -215,6 +210,7 @@ export default function StudentCourseDetailPage() {
   const [quizFeedback, setQuizFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
   const [assignmentFeedback, setAssignmentFeedback] = useState<{show: boolean; message: string; type: 'success' | 'error'} | null>(null);
   const [trackingContent, setTrackingContent] = useState<Record<string, boolean>>({});
+  const [markingComplete, setMarkingComplete] = useState<Record<string, boolean>>({});
   
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
@@ -319,7 +315,6 @@ export default function StudentCourseDetailPage() {
       if (result.success && result.data) {
         const data: CourseData = result.data;
         
-        // ✅ FIX: Check if slides exist
         if (!data.slides || data.slides.length === 0) {
           console.warn('⚠️ No slides found for this course');
           setError('No lessons available for this course yet.');
@@ -332,14 +327,12 @@ export default function StudentCourseDetailPage() {
         
         console.log(`✅ Loaded ${data.slides.length} slides`);
         
-        // Set slide contents
         const contentsMap = new Map();
         Object.entries(data.contents || {}).forEach(([slideId, files]) => {
           contentsMap.set(slideId, files);
         });
         setSlideContents(contentsMap);
         
-        // Set quizzes
         const quizzesMap = new Map();
         Object.entries(data.quizzes || {}).forEach(([key, quiz]) => {
           const quizData = quiz as any;
@@ -350,14 +343,13 @@ export default function StudentCourseDetailPage() {
         
         setAssignments(data.assignments || []);
         
-        // Set progress
         if (data.progress) {
           setCompletedSlides(new Set(data.progress.completedSlides || []));
           setCompletedContent(new Set(data.progress.completedContent || []));
           console.log(`📊 Progress: ${data.progress.completedSlides?.length || 0}/${data.slides.length} slides completed`);
+          console.log(`📊 Completed Content: ${Array.from(completedContent).length} items`);
         }
         
-        // Set quiz attempts
         const attemptsMap = new Map();
         Object.entries(data.quizAttempts || {}).forEach(([quizId, attempt]) => {
           const attemptData = attempt as any;
@@ -368,14 +360,12 @@ export default function StudentCourseDetailPage() {
         });
         setQuizAttempts(attemptsMap);
         
-        // Set assignment submissions
         const submissionsMap = new Map();
         Object.entries(data.assignmentSubmissions || {}).forEach(([assignmentId, sub]) => {
           submissionsMap.set(assignmentId, sub);
         });
         setAssignmentSubmissions(submissionsMap);
         
-        // Auto-expand first incomplete slide
         const completed = new Set(data.progress?.completedSlides || []);
         const firstIncomplete = data.slides.find((s: Slide) => !completed.has(s.id));
         if (firstIncomplete) {
@@ -403,35 +393,7 @@ export default function StudentCourseDetailPage() {
     }
   }, [user, courseId]);
 
-  // Update progress API call
-  const updateProgress = async (slideId?: string, contentType?: string, contentId?: string) => {
-    if (!user?.email || !enrollmentId) return;
-
-    try {
-      const response = await fetch('/api/students/progress/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enrollmentId,
-          studentEmail: user.email,
-          courseId,
-          slideId,
-          contentType,
-          contentId
-        })
-      });
-
-      const result = await response.json();
-      if (result.success && result.data) {
-        setCompletedSlides(new Set(result.data.completedSlides || []));
-        setCompletedContent(new Set(result.data.completedContent || []));
-      }
-    } catch (error) {
-      console.error('Error updating progress:', error);
-    }
-  };
-
-  // Track content view
+  // Track content view with view instead of download
   const trackContentView = async (slideId: string, fileId: string, completed: boolean, durationWatched: number = 0) => {
     if (!user?.email || !enrollmentId) return;
 
@@ -441,6 +403,8 @@ export default function StudentCourseDetailPage() {
     setTrackingContent(prev => ({ ...prev, [trackingKey]: true }));
 
     try {
+      console.log(`📊 Tracking content view: slide=${slideId}, file=${fileId}, completed=${completed}`);
+      
       const response = await fetch('/api/students/track/content-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -456,9 +420,18 @@ export default function StudentCourseDetailPage() {
       });
 
       const result = await response.json();
+      console.log('📊 Track content response:', result);
       
-      if (result.success && result.data?.slideProgress?.status === 'completed') {
-        setCompletedSlides(prev => new Set([...prev, slideId]));
+      if (result.success) {
+        // Update completed content in state
+        const contentKey = `${slideId}_${fileId}`;
+        if (completed) {
+          setCompletedContent(prev => new Set([...prev, contentKey]));
+        }
+        
+        if (result.data?.slideProgress?.status === 'completed') {
+          setCompletedSlides(prev => new Set([...prev, slideId]));
+        }
       }
     } catch (error) {
       console.error('Error tracking content view:', error);
@@ -500,30 +473,37 @@ export default function StudentCourseDetailPage() {
     }
   };
 
-  // Mark content as complete
-  const markContentComplete = async (slideId: string, fileId: string) => {
+  // Mark content as viewed
+  const markContentViewed = async (slideId: string, fileId: string) => {
     if (!user) return;
 
     const contentKey = `${slideId}_${fileId}`;
-    const isCurrentlyCompleted = completedContent.has(contentKey);
-    const newCompleted = !isCurrentlyCompleted;
+    const isCurrentlyViewed = completedContent.has(contentKey);
     
-    const newCompletedSet = new Set(completedContent);
-    if (newCompleted) {
-      newCompletedSet.add(contentKey);
-    } else {
-      newCompletedSet.delete(contentKey);
+    // Only mark if not already viewed
+    if (isCurrentlyViewed) {
+      console.log('Content already viewed:', contentKey);
+      return;
     }
-    setCompletedContent(newCompletedSet);
+    
+    console.log('Marking content as viewed:', contentKey);
+    
+    // Update UI immediately
+    setCompletedContent(prev => new Set([...prev, contentKey]));
 
-    await trackContentView(slideId, fileId, newCompleted, 30);
+    // Track as viewed (completed = true)
+    await trackContentView(slideId, fileId, true, 30);
 
+    // Check if all files in this slide are viewed
     const slideFiles = slideContents.get(slideId) || [];
-    const allCompleted = slideFiles.every(f => 
-      newCompletedSet.has(`${slideId}_${f.id}`)
+    const allViewed = slideFiles.every(f => 
+      completedContent.has(`${slideId}_${f.id}`) || f.id === fileId
     );
-
-    if (allCompleted) {
+    
+    console.log(`Slide ${slideId} - All viewed: ${allViewed}, Total files: ${slideFiles.length}`);
+    
+    if (allViewed) {
+      console.log('All content viewed, auto-completing slide...');
       await autoCompleteSlide(slideId);
     }
   };
@@ -535,7 +515,7 @@ export default function StudentCourseDetailPage() {
     const quizAttempt = quiz ? quizAttempts.get(slideId) : null;
     const slideAssignments = assignments.filter(a => a.slideId === slideId);
     
-    const allContentCompleted = slideFiles.length === 0 || slideFiles.every(f => 
+    const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
       completedContent.has(`${slideId}_${f.id}`)
     );
     
@@ -544,12 +524,12 @@ export default function StudentCourseDetailPage() {
     const allAssignmentsSubmitted = slideAssignments.length === 0 || 
       slideAssignments.every(a => assignmentSubmissions.has(a.id));
     
-    return allContentCompleted && quizAttempted && allAssignmentsSubmitted;
+    return allContentViewed && quizAttempted && allAssignmentsSubmitted;
   };
 
   // Mark slide as complete
   const markSlideComplete = async (slideId: string) => {
-    if (!user) return;
+    if (!user || markingComplete[slideId]) return;
     
     if (!canMarkSlideComplete(slideId)) {
       setQuizFeedback({
@@ -561,19 +541,45 @@ export default function StudentCourseDetailPage() {
       return;
     }
 
-    const newCompleted = new Set(completedSlides);
-    newCompleted.add(slideId);
-    setCompletedSlides(newCompleted);
-    
-    await updateProgress(slideId, 'slide');
-    await autoCompleteSlide(slideId);
-    
-    setQuizFeedback({
-      show: true,
-      message: `✓ Lesson completed!`,
-      type: 'success'
-    });
-    setTimeout(() => setQuizFeedback(null), 2000);
+    setMarkingComplete(prev => ({ ...prev, [slideId]: true }));
+
+    try {
+      const response = await fetch('/api/students/slide/auto-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.slideCompleted) {
+        setCompletedSlides(prev => new Set([...prev, slideId]));
+        
+        setQuizFeedback({
+          show: true,
+          message: `✓ Lesson completed!`,
+          type: 'success'
+        });
+        setTimeout(() => setQuizFeedback(null), 2000);
+      } else {
+        throw new Error(result.error || 'Failed to complete slide');
+      }
+    } catch (error: any) {
+      console.error('Error marking slide complete:', error);
+      setQuizFeedback({
+        show: true,
+        message: error.message || 'Failed to complete lesson. Please try again.',
+        type: 'error'
+      });
+      setTimeout(() => setQuizFeedback(null), 3000);
+    } finally {
+      setMarkingComplete(prev => ({ ...prev, [slideId]: false }));
+    }
   };
 
   // Handle quiz submission
@@ -684,11 +690,11 @@ export default function StudentCourseDetailPage() {
         setTimeout(() => setQuizFeedback(null), 4000);
 
         const slideFiles = slideContents.get(slideId) || [];
-        const allContentCompleted = slideFiles.length === 0 || slideFiles.every(f => 
+        const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
           completedContent.has(`${slideId}_${f.id}`)
         );
         
-        if (allContentCompleted) {
+        if (allContentViewed) {
           await autoCompleteSlide(slideId);
         }
       }
@@ -798,6 +804,18 @@ export default function StudentCourseDetailPage() {
         
         setActiveAssignment(null);
         setAssignmentFiles([]);
+        
+        // Check if slide can be auto-completed
+        const slideFiles = slideContents.get(slideId) || [];
+        const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
+          completedContent.has(`${slideId}_${f.id}`)
+        );
+        const quiz = quizzes.get(slideId);
+        const quizAttempted = quiz ? quizAttempts.has(slideId) : true;
+        
+        if (allContentViewed && quizAttempted) {
+          await autoCompleteSlide(slideId);
+        }
       }
     } catch (error: any) {
       console.error('❌ Submission error:', error);
@@ -1086,7 +1104,7 @@ export default function StudentCourseDetailPage() {
     );
   };
 
-  // Render slide list view
+  // Render slide list view with VIEW button
   const renderSlideList = () => {
     if (slides.length === 0) {
       return (
@@ -1108,23 +1126,28 @@ export default function StudentCourseDetailPage() {
           const hasAssignment = slideAssignments.length > 0;
           const canComplete = canMarkSlideComplete(slide.id);
           const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
+          const isMarking = markingComplete[slide.id];
 
           return (
             <div key={slide.id} className={`border rounded-lg overflow-hidden ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between p-4 bg-gray-50">
+              {/* Slide Header - Clickable */}
+              <div 
+                className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleSlideExpansion(slide.id)}
+              >
                 <div className="flex items-center gap-3 flex-1">
                   <div>{isCompleted ? <HiCheckCircle className="w-6 h-6 text-green-600" /> : <IoMdRadioButtonOff className="w-6 h-6 text-gray-400" />}</div>
-                  <button onClick={() => toggleSlideExpansion(slide.id)} className="flex-1 text-left">
+                  <div className="flex-1 text-left">
                     <h3 className={`font-medium ${isCompleted ? 'text-gray-700' : 'text-gray-900'}`}>
                       Lesson {slide.slideNumber}: {slide.title}
                     </h3>
                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                       <span>{slideFiles.length} file(s)</span>
-                      {slideFiles.length > 0 && <span className="text-blue-600">{completedFilesCount}/{slideFiles.length} completed</span>}
+                      {slideFiles.length > 0 && <span className="text-blue-600">{completedFilesCount}/{slideFiles.length} viewed</span>}
                       {quiz && <span>• 1 quiz</span>}
                       {hasAssignment && <span>• {slideAssignments.length} assignment(s)</span>}
                     </div>
-                  </button>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -1133,7 +1156,7 @@ export default function StudentCourseDetailPage() {
                       Quiz: {attempt.score}%
                     </span>
                   )}
-                  <button onClick={() => toggleSlideExpansion(slide.id)} className="p-1 hover:bg-gray-200 rounded-full">
+                  <button className="p-1 hover:bg-gray-200 rounded-full">
                     {isExpanded ? <HiChevronUp className="w-5 h-5" /> : <HiChevronDown className="w-5 h-5" />}
                   </button>
                 </div>
@@ -1141,13 +1164,15 @@ export default function StudentCourseDetailPage() {
 
               {isExpanded && (
                 <div className="p-4 space-y-4">
-                  {/* Files */}
+                  {/* Files - With VIEW button */}
                   {slideFiles.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
                       <div className="space-y-2">
                         {slideFiles.map((file) => {
-                          const isContentCompleted = completedContent.has(`${slide.id}_${file.id}`);
+                          const isContentViewed = completedContent.has(`${slide.id}_${file.id}`);
+                          const isVideo = file.type.includes('video');
+                          
                           return (
                             <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-3 flex-1">
@@ -1160,18 +1185,35 @@ export default function StudentCourseDetailPage() {
                               
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => markContentComplete(slide.id, file.id)}
-                                  disabled={trackingContent[`${slide.id}_${file.id}`]}
-                                  className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                                    isContentCompleted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                  onClick={() => markContentViewed(slide.id, file.id)}
+                                  disabled={trackingContent[`${slide.id}_${file.id}`] || isContentViewed}
+                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                    isContentViewed 
+                                      ? 'bg-green-100 text-green-700 cursor-default'
+                                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                   } disabled:opacity-50`}
                                 >
-                                  {trackingContent[`${slide.id}_${file.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : (isContentCompleted ? '✓ Completed' : 'Mark Complete')}
+                                  {trackingContent[`${slide.id}_${file.id}`] ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : isContentViewed ? (
+                                    <span className="flex items-center gap-1">✓ Viewed</span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      <HiEye className="w-3 h-3" />
+                                      View
+                                    </span>
+                                  )}
                                 </button>
                                 
-                                <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline px-3 py-1 flex items-center gap-1">
-                                  <HiDownload className="w-4 h-4" />
-                                  Download
+                                {/* Open in new tab */}
+                                <a 
+                                  href={file.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <HiEye className="w-4 h-4" />
+                                  Open
                                 </a>
                               </div>
                             </div>
@@ -1217,7 +1259,7 @@ export default function StudentCourseDetailPage() {
                                   <div className="space-y-2">
                                     {q.options.map((opt, optIdx) => (
                                       <label key={optIdx} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
-                                        <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600" />
+                                        <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600 cursor-pointer" />
                                         <span>{opt}</span>
                                       </label>
                                     ))}
@@ -1227,12 +1269,12 @@ export default function StudentCourseDetailPage() {
                             );
                           })}
                           <div className="flex gap-2">
-                            <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Submit Quiz</button>
-                            <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                            <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Submit Quiz</button>
+                            <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
                           </div>
                         </div>
                       ) : (
-                        <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100">Start Quiz</button>
+                        <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 cursor-pointer">Start Quiz</button>
                       )}
                     </div>
                   )}
@@ -1256,10 +1298,10 @@ export default function StudentCourseDetailPage() {
                               {assignment.file && (
                                 <div className="mt-3 p-2 bg-white rounded-lg border">
                                   <p className="text-xs font-medium text-gray-500 mb-1">Assignment File:</p>
-                                  <a href={assignment.file.url} download={assignment.file.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                  <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
                                     <HiPaperClip className="w-4 h-4" />
                                     {assignment.file.name}
-                                    <HiDownload className="w-4 h-4 ml-1" />
+                                    <HiEye className="w-4 h-4 ml-1" />
                                   </a>
                                 </div>
                               )}
@@ -1285,14 +1327,14 @@ export default function StudentCourseDetailPage() {
                                   </label>
                                 </div>
                                 <div className="flex gap-2 mt-4">
-                                  <button onClick={() => handleAssignmentSubmit(assignment.id, slide.id)} disabled={uploadingAssignment || assignmentFiles.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                                  <button onClick={() => handleAssignmentSubmit(assignment.id, slide.id)} disabled={uploadingAssignment || assignmentFiles.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 cursor-pointer">
                                     {uploadingAssignment ? 'Uploading...' : 'Submit'}
                                   </button>
-                                  <button onClick={() => { setActiveAssignment(null); setAssignmentFiles([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                                  <button onClick={() => { setActiveAssignment(null); setAssignmentFiles([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
                                 </div>
                               </div>
                             ) : (
-                              <button onClick={() => setActiveAssignment(assignment.id)} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Start Assignment</button>
+                              <button onClick={() => setActiveAssignment(assignment.id)} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Start Assignment</button>
                             )}
                           </div>
                         );
@@ -1302,9 +1344,17 @@ export default function StudentCourseDetailPage() {
 
                   {/* Complete Lesson Button */}
                   {canComplete && !isCompleted && (
-                    <button onClick={() => markSlideComplete(slide.id)} className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                      <HiCheckCircle className="w-4 h-4 inline mr-2" />
-                      Mark Lesson as Complete
+                    <button 
+                      onClick={() => markSlideComplete(slide.id)} 
+                      disabled={isMarking}
+                      className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {isMarking ? (
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                      ) : (
+                        <HiCheckCircle className="w-4 h-4 inline mr-2" />
+                      )}
+                      {isMarking ? 'Completing...' : 'Mark Lesson as Complete'}
                     </button>
                   )}
                 </div>
@@ -1337,14 +1387,14 @@ export default function StudentCourseDetailPage() {
           <div className="space-y-3">
             <Link
               href="/lms/Student_Portal/my-courses"
-              className="inline-block w-full px-6 py-3 rounded-lg text-white text-center"
+              className="inline-block w-full px-6 py-3 rounded-lg text-white text-center cursor-pointer"
               style={{ backgroundColor: BRAND_COLORS.deepRed }}
             >
               Back to My Courses
             </Link>
             <button
               onClick={() => loadCourseData()}
-              className="inline-block w-full px-6 py-3 rounded-lg border border-gray-300 text-gray-700 text-center hover:bg-gray-50"
+              className="inline-block w-full px-6 py-3 rounded-lg border border-gray-300 text-gray-700 text-center hover:bg-gray-50 cursor-pointer"
             >
               Try Again
             </button>
@@ -1375,22 +1425,22 @@ export default function StudentCourseDetailPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Link href="/lms/Student_Portal/my-courses" className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors">
+        <Link href="/lms/Student_Portal/my-courses" className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
           <HiArrowLeft className="w-5 h-5 mr-2" />
           Back to Courses
         </Link>
         
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button onClick={() => handleViewModeChange('grid')} className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="Grid View">
+            <button onClick={() => handleViewModeChange('grid')} className={`p-2 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="Grid View">
               <HiViewGrid className="w-5 h-5" />
             </button>
-            <button onClick={() => handleViewModeChange('list')} className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="List View">
+            <button onClick={() => handleViewModeChange('list')} className={`p-2 rounded-lg transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="List View">
               <HiViewList className="w-5 h-5" />
             </button>
           </div>
           
-          <button onClick={() => loadCourseData(true)} disabled={refreshing} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50" title="Refresh">
+          <button onClick={() => loadCourseData(true)} disabled={refreshing} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer" title="Refresh">
             <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -1439,7 +1489,7 @@ export default function StudentCourseDetailPage() {
       </div>
 
       {/* Performance Toggle */}
-      <button onClick={() => setShowPerformance(!showPerformance)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+      <button onClick={() => setShowPerformance(!showPerformance)} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
         <HiChartBar className="w-4 h-4" />
         {showPerformance ? 'Hide' : 'Show'} Detailed Performance
         {showPerformance ? <HiChevronUp className="w-4 h-4" /> : <HiChevronDown className="w-4 h-4" />}
@@ -1456,7 +1506,7 @@ export default function StudentCourseDetailPage() {
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Score</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {getSlidePerformance().map((perf) => (
@@ -1486,31 +1536,33 @@ export default function StudentCourseDetailPage() {
         
         {viewMode === 'grid' && selectedSlide && (
           <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Lesson {selectedSlide.slideNumber}: {selectedSlide.title}</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              {/* Find and render the selected slide content */}
-              {slides.map(slide => {
-                if (slide.id === selectedSlide.id) {
-                  const isCompleted = completedSlides.has(slide.id);
-                  const isExpanded = true;
-                  const slideFiles = slideContents.get(slide.id) || [];
-                  const quiz = quizzes.get(slide.id);
-                  const attempt = quiz ? quizAttempts.get(slide.id) : null;
-                  const slideAssignments = assignments.filter(a => a.slideId === slide.id);
-                  const hasAssignment = slideAssignments.length > 0;
-                  const canComplete = canMarkSlideComplete(slide.id);
-                  const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
+            <h3 className="text-lg font-semibold mb-4 cursor-pointer" onClick={() => toggleSlideExpansion(selectedSlide.id)}>
+              Lesson {selectedSlide.slideNumber}: {selectedSlide.title}
+              {expandedSlides.has(selectedSlide.id) ? <HiChevronUp className="inline ml-2" /> : <HiChevronDown className="inline ml-2" />}
+            </h3>
+            {expandedSlides.has(selectedSlide.id) && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                {slides.map(slide => {
+                  if (slide.id === selectedSlide.id) {
+                    const isCompleted = completedSlides.has(slide.id);
+                    const slideFiles = slideContents.get(slide.id) || [];
+                    const quiz = quizzes.get(slide.id);
+                    const attempt = quiz ? quizAttempts.get(slide.id) : null;
+                    const slideAssignments = assignments.filter(a => a.slideId === slide.id);
+                    const hasAssignment = slideAssignments.length > 0;
+                    const canComplete = canMarkSlideComplete(slide.id);
+                    const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
+                    const isMarking = markingComplete[slide.id];
 
-                  return (
-                    <div key={slide.id}>
-                      <div className="space-y-4">
+                    return (
+                      <div key={slide.id} className="space-y-4">
                         {/* Files */}
                         {slideFiles.length > 0 && (
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
                             <div className="space-y-2">
                               {slideFiles.map((file) => {
-                                const isContentCompleted = completedContent.has(`${slide.id}_${file.id}`);
+                                const isContentViewed = completedContent.has(`${slide.id}_${file.id}`);
                                 return (
                                   <div key={file.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
                                     <div className="flex items-center gap-3 flex-1">
@@ -1523,18 +1575,29 @@ export default function StudentCourseDetailPage() {
                                     
                                     <div className="flex items-center gap-2">
                                       <button
-                                        onClick={() => markContentComplete(slide.id, file.id)}
-                                        disabled={trackingContent[`${slide.id}_${file.id}`]}
-                                        className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                                          isContentCompleted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        onClick={() => markContentViewed(slide.id, file.id)}
+                                        disabled={trackingContent[`${slide.id}_${file.id}`] || isContentViewed}
+                                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                          isContentViewed 
+                                            ? 'bg-green-100 text-green-700 cursor-default'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                         } disabled:opacity-50`}
                                       >
-                                        {trackingContent[`${slide.id}_${file.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : (isContentCompleted ? '✓ Completed' : 'Mark Complete')}
+                                        {trackingContent[`${slide.id}_${file.id}`] ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : isContentViewed ? (
+                                          <span className="flex items-center gap-1">✓ Viewed</span>
+                                        ) : (
+                                          <span className="flex items-center gap-1">
+                                            <HiEye className="w-3 h-3" />
+                                            View
+                                          </span>
+                                        )}
                                       </button>
                                       
-                                      <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline px-3 py-1 flex items-center gap-1">
-                                        <HiDownload className="w-4 h-4" />
-                                        Download
+                                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 flex items-center gap-1 cursor-pointer">
+                                        <HiEye className="w-4 h-4" />
+                                        Open
                                       </a>
                                     </div>
                                   </div>
@@ -1580,7 +1643,7 @@ export default function StudentCourseDetailPage() {
                                         <div className="space-y-2">
                                           {q.options.map((opt, optIdx) => (
                                             <label key={optIdx} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
-                                              <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600" />
+                                              <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600 cursor-pointer" />
                                               <span>{opt}</span>
                                             </label>
                                           ))}
@@ -1590,12 +1653,12 @@ export default function StudentCourseDetailPage() {
                                   );
                                 })}
                                 <div className="flex gap-2">
-                                  <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Submit Quiz</button>
-                                  <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                                  <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Submit Quiz</button>
+                                  <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
                                 </div>
                               </div>
                             ) : (
-                              <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100">Start Quiz</button>
+                              <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 cursor-pointer">Start Quiz</button>
                             )}
                           </div>
                         )}
@@ -1619,10 +1682,10 @@ export default function StudentCourseDetailPage() {
                                     {assignment.file && (
                                       <div className="mt-3 p-2 bg-white rounded-lg border">
                                         <p className="text-xs font-medium text-gray-500 mb-1">Assignment File:</p>
-                                        <a href={assignment.file.url} download={assignment.file.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                                        <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
                                           <HiPaperClip className="w-4 h-4" />
                                           {assignment.file.name}
-                                          <HiDownload className="w-4 h-4 ml-1" />
+                                          <HiEye className="w-4 h-4 ml-1" />
                                         </a>
                                       </div>
                                     )}
@@ -1648,14 +1711,14 @@ export default function StudentCourseDetailPage() {
                                         </label>
                                       </div>
                                       <div className="flex gap-2 mt-4">
-                                        <button onClick={() => handleAssignmentSubmit(assignment.id, slide.id)} disabled={uploadingAssignment || assignmentFiles.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                                        <button onClick={() => handleAssignmentSubmit(assignment.id, slide.id)} disabled={uploadingAssignment || assignmentFiles.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 cursor-pointer">
                                           {uploadingAssignment ? 'Uploading...' : 'Submit'}
                                         </button>
-                                        <button onClick={() => { setActiveAssignment(null); setAssignmentFiles([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                                        <button onClick={() => { setActiveAssignment(null); setAssignmentFiles([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <button onClick={() => setActiveAssignment(assignment.id)} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Start Assignment</button>
+                                    <button onClick={() => setActiveAssignment(assignment.id)} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Start Assignment</button>
                                   )}
                                 </div>
                               );
@@ -1665,18 +1728,26 @@ export default function StudentCourseDetailPage() {
 
                         {/* Complete Lesson Button */}
                         {canComplete && !isCompleted && (
-                          <button onClick={() => markSlideComplete(slide.id)} className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                            <HiCheckCircle className="w-4 h-4 inline mr-2" />
-                            Mark Lesson as Complete
+                          <button 
+                            onClick={() => markSlideComplete(slide.id)} 
+                            disabled={isMarking}
+                            className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {isMarking ? (
+                              <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                            ) : (
+                              <HiCheckCircle className="w-4 h-4 inline mr-2" />
+                            )}
+                            {isMarking ? 'Completing...' : 'Mark Lesson as Complete'}
                           </button>
                         )}
                       </div>
-                    </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
