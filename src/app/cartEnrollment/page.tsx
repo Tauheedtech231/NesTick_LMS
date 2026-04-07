@@ -186,9 +186,9 @@ const CartEnrollmentPage: React.FC = () => {
   const [isPublicPortal, setIsPublicPortal] = useState(false);
   const [publicEnrollmentId, setPublicEnrollmentId] = useState("");
 
-  // Load saved form data from localStorage
+  // Load saved form data from sessionStorage (temporary, clears on tab close)
   useEffect(() => {
-    const savedFormData = localStorage.getItem("enrollment_form_data");
+    const savedFormData = sessionStorage.getItem("enrollment_form_data");
     if (savedFormData) {
       try {
         const parsed = JSON.parse(savedFormData);
@@ -202,14 +202,14 @@ const CartEnrollmentPage: React.FC = () => {
         if (parsed.enrollmentCreated) setEnrollmentCreated(parsed.enrollmentCreated);
         if (parsed.enrollmentId) setEnrollmentId(parsed.enrollmentId);
         if (parsed.paymentId) setPaymentId(parsed.paymentId);
-        console.log("✅ Loaded saved form data from localStorage");
+        console.log("✅ Loaded saved form data from sessionStorage");
       } catch (e) {
         console.error("Error loading saved form data:", e);
       }
     }
   }, []);
 
-  // Save form data to localStorage whenever it changes
+  // Save form data to sessionStorage (temporary, clears on tab close)
   useEffect(() => {
     const formDataToSave = {
       dynamicFormData,
@@ -224,12 +224,12 @@ const CartEnrollmentPage: React.FC = () => {
       paymentId,
       lastUpdated: new Date().toISOString()
     };
-    localStorage.setItem("enrollment_form_data", JSON.stringify(formDataToSave));
+    sessionStorage.setItem("enrollment_form_data", JSON.stringify(formDataToSave));
   }, [dynamicFormData, uploadedFileUrls, courses, totalAmount, voucherNumber, voucherDownloaded, currentStep, enrollmentCreated, enrollmentId, paymentId]);
 
-  // Clear saved form data after successful enrollment
+  // Clear saved form data
   const clearSavedFormData = () => {
-    localStorage.removeItem("enrollment_form_data");
+    sessionStorage.removeItem("enrollment_form_data");
     console.log("🗑️ Cleared saved form data");
   };
 
@@ -251,7 +251,7 @@ const CartEnrollmentPage: React.FC = () => {
         
         setFormFields(activeFields);
         
-        const savedData = localStorage.getItem("enrollment_form_data");
+        const savedData = sessionStorage.getItem("enrollment_form_data");
         if (!savedData) {
           const initialData: Record<string, any> = {};
           activeFields.forEach((field: FormField) => {
@@ -509,7 +509,7 @@ const CartEnrollmentPage: React.FC = () => {
       status: 'pending_payment'
     };
     
-    localStorage.setItem("pendingEnrollment", JSON.stringify(enrollmentData));
+    sessionStorage.setItem("pendingEnrollment", JSON.stringify(enrollmentData));
     return;
   };
 
@@ -551,16 +551,10 @@ const CartEnrollmentPage: React.FC = () => {
       return false;
     }
     
-    const savedEnrollmentId = localStorage.getItem("enrollmentId");
-    if (savedEnrollmentId && enrollmentCreated) {
-      console.log('✅ Enrollment already created with ID:', savedEnrollmentId);
-      return true;
-    }
-    
     try {
       isCreatingEnrollment.current = true;
       
-      const pendingData = localStorage.getItem("pendingEnrollment");
+      const pendingData = sessionStorage.getItem("pendingEnrollment");
       if (!pendingData) return false;
       
       const enrollmentData = JSON.parse(pendingData);
@@ -591,15 +585,15 @@ const CartEnrollmentPage: React.FC = () => {
         setEnrollmentId(primaryEnrollmentId);
         setEnrollmentCreated(true);
         
-        localStorage.setItem("paymentId", newPaymentId);
-        localStorage.setItem("enrollmentId", primaryEnrollmentId);
-        localStorage.setItem("enrollmentIds", JSON.stringify(enrollmentIds));
+        sessionStorage.setItem("paymentId", newPaymentId);
+        sessionStorage.setItem("enrollmentId", primaryEnrollmentId);
+        sessionStorage.setItem("enrollmentIds", JSON.stringify(enrollmentIds));
         
         if (data.emailSent) {
           setEmailSent(true);
         }
         
-        localStorage.removeItem("pendingEnrollment");
+        sessionStorage.removeItem("pendingEnrollment");
         
         alert(`✅ Enrollment created successfully!\n\n💳 Payment ID: ${newPaymentId}\n📌 Enrollment ID: ${primaryEnrollmentId}\n\n📧 Confirmation email sent to ${userEmail}\n\nPlease use the Payment ID for payment reference.`);
         
@@ -618,40 +612,40 @@ const CartEnrollmentPage: React.FC = () => {
     }
   };
 
+  // ✅ UPDATED: Generate voucher - NO DOWNLOAD RESTRICTION, can download multiple times
   const generateVoucherPDF = async () => {
     if (!voucherRef.current) return;
-    
-    const voucherKey = `voucher_downloaded_${enrollmentId}`;
-    const alreadyDownloaded = localStorage.getItem(voucherKey) === 'true';
-    
-    if (alreadyDownloaded) {
-      alert("⚠️ Voucher has already been downloaded. Please proceed to payment.");
-      setVoucherDownloaded(true);
-      return;
-    }
-
-    const existingEnrollmentId = localStorage.getItem("enrollmentId");
-    if (existingEnrollmentId && enrollmentCreated) {
-      alert(`✅ Enrollment already exists with ID: ${existingEnrollmentId}\n\nPlease proceed to payment.`);
-      setVoucherDownloaded(true);
-      setCurrentStep(3);
-      return;
-    }
 
     setIsGeneratingVoucher(true);
     
     try {
-      const enrollmentCreated_success = await saveToDatabaseAndSendEmail();
+      // Check if enrollment already exists
+      const existingEnrollmentId = sessionStorage.getItem("enrollmentId");
+      let currentEnrollmentId = enrollmentId;
+      let currentPaymentId = paymentId;
       
-      if (!enrollmentCreated_success) {
-        const savedId = localStorage.getItem("enrollmentId");
-        if (savedId) {
-          setEnrollmentId(savedId);
-          setEnrollmentCreated(true);
+      // If enrollment not created yet, create it first
+      if (!existingEnrollmentId || !enrollmentCreated) {
+        const enrollmentCreated_success = await saveToDatabaseAndSendEmail();
+        
+        if (!enrollmentCreated_success) {
+          const savedId = sessionStorage.getItem("enrollmentId");
+          if (savedId) {
+            setEnrollmentId(savedId);
+            setEnrollmentCreated(true);
+            currentEnrollmentId = savedId;
+            currentPaymentId = sessionStorage.getItem("paymentId") || "";
+          } else {
+            setIsGeneratingVoucher(false);
+            return;
+          }
         } else {
-          setIsGeneratingVoucher(false);
-          return;
+          currentEnrollmentId = enrollmentId;
+          currentPaymentId = paymentId;
         }
+      } else {
+        currentEnrollmentId = existingEnrollmentId;
+        currentPaymentId = sessionStorage.getItem("paymentId") || paymentId;
       }
       
       // Generate voucher PDF
@@ -675,11 +669,11 @@ const CartEnrollmentPage: React.FC = () => {
       pdf.save(`payment-voucher-${voucherNumber}.pdf`);
 
       setVoucherDownloaded(true);
-      localStorage.setItem(voucherKey, 'true');
       
+      // Clear cart after successful voucher generation
       await clearCartAfterVoucher();
       
-      alert(`✅ Enrollment created successfully!\n\n💳 Payment ID: ${paymentId}\n📌 Use this Payment ID for payment.\n\n📧 Confirmation email sent to ${userEmail}`);
+      alert(`✅ Voucher downloaded successfully!\n\n💳 Payment ID: ${currentPaymentId}\n📌 Use this Payment ID for payment.\n\n📧 Confirmation email sent to ${userEmail}`);
       
     } catch (error) {
       console.error('Error generating voucher:', error);
@@ -817,8 +811,6 @@ const CartEnrollmentPage: React.FC = () => {
 
   return (
     <>
- 
-
       <div className="min-h-screen pt-20 bg-[#F4F6F8] px-4 md:px-10 pb-10">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
@@ -917,7 +909,7 @@ const CartEnrollmentPage: React.FC = () => {
                   <h2 className="text-lg font-bold text-white">Enrollment Instructions</h2>
                 </div>
                 <div className="space-y-2.5">
-                  {[ "Download the payment voucher below (one time only)", "Pay the amount using any of the provided accounts", "Save your payment slip/receipt for upload", "Upload the payment slip to complete enrollment" ].map((text, index) => (
+                  {[ "Download the payment voucher below", "Pay the amount using any of the provided accounts", "Save your payment slip/receipt for upload", "Upload the payment slip to complete enrollment" ].map((text, index) => (
                     <div key={index} className="flex items-start">
                       <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center mr-3">
                         <span className="text-white text-xs font-bold">{index + 1}</span>
@@ -935,9 +927,9 @@ const CartEnrollmentPage: React.FC = () => {
                     <p className="text-gray-500 text-sm">Valid for 3 days only</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <button onClick={generateVoucherPDF} disabled={isGeneratingVoucher || voucherDownloaded} className={`flex items-center px-4 py-2 rounded-lg font-semibold transition-all duration-300 ${!voucherDownloaded ? 'hover:scale-105' : 'opacity-50 cursor-not-allowed'}`} style={{ backgroundColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.white }}>
+                    <button onClick={generateVoucherPDF} disabled={isGeneratingVoucher} className={`flex items-center px-4 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105`} style={{ backgroundColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.white }}>
                       {isGeneratingVoucher ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                      {isGeneratingVoucher ? 'Creating Enrollment...' : voucherDownloaded ? 'Voucher Downloaded' : 'Download Voucher'}
+                      {isGeneratingVoucher ? 'Creating Enrollment...' : 'Download Voucher'}
                     </button>
                     <button onClick={() => window.print()} className="flex items-center px-4 py-2 rounded-lg font-semibold border transition-all duration-300 hover:bg-gray-50" style={{ borderColor: BRAND_COLORS.deepRed, color: BRAND_COLORS.deepRed }}>
                       <Printer className="w-4 h-4 mr-1" /> Print
@@ -993,7 +985,6 @@ const CartEnrollmentPage: React.FC = () => {
                       <li>• Use <strong>Payment ID: {paymentId || 'from email'}</strong> for transaction reference</li>
                       <li>• This voucher is valid for 3 days only</li>
                       <li>• Save payment receipt for verification</li>
-                      <li>• You can only download this voucher once</li>
                     </ul>
                   </div>
                 </div>
