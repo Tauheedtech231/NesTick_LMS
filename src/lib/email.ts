@@ -243,11 +243,7 @@ export async function sendEnrollmentConfirmation(data: EnrollmentEmailData) {
                 </ul>
               </div>
 
-              <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
-                  Go to Dashboard
-                </a>
-              </div>
+              
             </div>
 
             <div class="footer">
@@ -371,11 +367,7 @@ export async function sendPaymentVerificationEmail(
               <p>Our team will verify your payment within 24-48 hours. You will receive another email once verified.</p>
               <p>If you have any questions, please contact our support team.</p>
               
-              <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
-                  Track Enrollment
-                </a>
-              </div>
+              
             </div>
             <div class="footer">
               <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
@@ -472,11 +464,7 @@ export async function sendPaymentVerificationEmail(
               
               <p>You now have full access to all your enrolled courses. You can start learning immediately!</p>
               
-              <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
-                  Start Learning
-                </a>
-              </div>
+              
             </div>
             <div class="footer">
               <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
@@ -565,11 +553,7 @@ export async function sendPaymentVerificationEmail(
                 </ul>
               </div>
               
-              <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="button">
-                  Upload Again
-                </a>
-              </div>
+              
             </div>
             <div class="footer">
               <p>© ${new Date().getFullYear()} LMS Education System. All rights reserved.</p>
