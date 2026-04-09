@@ -2,7 +2,7 @@
 'use client';
 /* eslint-disable */
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   HiArrowLeft, 
@@ -26,10 +26,12 @@ import {
   HiViewGrid,
   HiViewList,
   HiLockClosed,
-  HiLockOpen
+  HiLockOpen,
+  HiX
 } from 'react-icons/hi';
 import { IoMdRadioButtonOff } from 'react-icons/io';
 import { Loader2 } from 'lucide-react';
+import StudentAdvancedQuiz from '../../components/StudentAdvancedQuiz';
 
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
@@ -176,6 +178,16 @@ interface CourseData {
 
 type ViewMode = 'grid' | 'list';
 
+// Video progress tracking interface
+interface VideoProgress {
+  fileId: string;
+  slideId: string;
+  progress: number;
+  lastPosition: number;
+  completed: boolean;
+  updatedAt: string;
+}
+
 export default function StudentCourseDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -215,6 +227,210 @@ export default function StudentCourseDetailPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
 
+  // Video player states - NO POPUP, inline player
+  const [activeVideo, setActiveVideo] = useState<{ slideId: string; fileId: string; file: SlideFile } | null>(null);
+  const [videoProgress, setVideoProgress] = useState<Record<string, VideoProgress>>({});
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showViewButton, setShowViewButton] = useState<Record<string, boolean>>({});
+  const [maxAllowedPosition, setMaxAllowedPosition] = useState<Record<string, number>>({});
+
+  // Load video progress from localStorage
+  useEffect(() => {
+    const savedProgress = localStorage.getItem('videoProgress');
+    if (savedProgress) {
+      try {
+        const progress = JSON.parse(savedProgress);
+        setVideoProgress(progress);
+        
+        // Track max allowed position for each video
+        const maxPos: Record<string, number> = {};
+        Object.keys(progress).forEach(key => {
+          if (progress[key].lastPosition > 0) {
+            maxPos[key] = progress[key].lastPosition;
+          }
+        });
+        setMaxAllowedPosition(maxPos);
+        
+        // Determine which videos should show VIEW button (completed ones)
+        const completedVideos: Record<string, boolean> = {};
+        Object.keys(progress).forEach(key => {
+          if (progress[key].completed) {
+            completedVideos[key] = true;
+          }
+        });
+        setShowViewButton(completedVideos);
+      } catch (e) {
+        console.error('Error loading video progress:', e);
+      }
+    }
+  }, []);
+
+  // Save video progress to localStorage
+  const saveVideoProgress = (fileId: string, slideId: string, progress: number, position: number, completed: boolean) => {
+    const key = `${slideId}_${fileId}`;
+    const newProgress = {
+      ...videoProgress,
+      [key]: {
+        fileId,
+        slideId,
+        progress,
+        lastPosition: position,
+        completed,
+        updatedAt: new Date().toISOString()
+      }
+    };
+    setVideoProgress(newProgress);
+    localStorage.setItem('videoProgress', JSON.stringify(newProgress));
+    
+    // Update max allowed position (the furthest they've watched)
+    if (position > (maxAllowedPosition[key] || 0)) {
+      setMaxAllowedPosition(prev => ({ ...prev, [key]: position }));
+    }
+    
+    if (completed && !showViewButton[key]) {
+      setShowViewButton(prev => ({ ...prev, [key]: true }));
+    }
+  };
+
+  // Handle video time update - prevent forward seeking BEYOND watched position
+// Handle video time update - ONLY prevent manual seeking, allow normal playback
+const handleVideoTimeUpdate = () => {
+  if (!videoRef.current || !activeVideo) return;
+  
+  const currentTime = videoRef.current.currentTime;
+  const duration = videoRef.current.duration;
+  const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+  const savedProgress = videoProgress[key];
+  const lastSavedPosition = savedProgress?.lastPosition || 0;
+  
+  // CRITICAL: Allow normal playback - DO NOT reset currentTime automatically
+  // Only track the furthest position they've reached naturally
+  if (currentTime > lastSavedPosition) {
+    // Update max position as they watch normally
+    const progressPercent = (currentTime / duration) * 100;
+    const completed = progressPercent >= 95;
+    
+    // Save progress every 3 seconds
+    if (Math.floor(currentTime) % 3 === 0 || completed) {
+      saveVideoProgress(activeVideo.fileId, activeVideo.slideId, progressPercent, currentTime, completed);
+      
+      if (completed && !completedContent.has(key)) {
+        markContentViewed(activeVideo.slideId, activeVideo.fileId);
+        setQuizFeedback({
+          show: true,
+          message: '✅ Video completed!',
+          type: 'success'
+        });
+        setTimeout(() => setQuizFeedback(null), 2000);
+        setActiveVideo(null);
+      }
+    }
+  }
+  
+  // Progress bar update for UI
+  const progressPercent = (currentTime / duration) * 100;
+  if (Math.floor(currentTime) % 2 === 0) {
+    setVideoProgress(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        progress: progressPercent,
+        lastPosition: currentTime
+      }
+    }));
+  }
+};
+
+// Handle seeking - THIS is where we prevent forward seeking
+const handleVideoSeeking = () => {
+  if (!videoRef.current || !activeVideo) return;
+  
+  const currentTime = videoRef.current.currentTime;
+  const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+  const savedProgress = videoProgress[key];
+  const maxAllowedPosition = savedProgress?.lastPosition || 0;
+  
+  // If user tries to seek forward beyond watched position, prevent it
+  if (currentTime > maxAllowedPosition + 1 && maxAllowedPosition > 0) {
+    videoRef.current.currentTime = maxAllowedPosition;
+    setQuizFeedback({
+      show: true,
+      message: '⚠️ You cannot skip forward. Please watch the video sequentially.',
+      type: 'error'
+    });
+    setTimeout(() => setQuizFeedback(null), 2000);
+  }
+  // Allow seeking backward (rewind) anytime
+};
+
+  // Handle video loaded - restore last position
+  const handleVideoLoaded = () => {
+    if (!videoRef.current || !activeVideo) return;
+    
+    const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+    const savedProgress = videoProgress[key];
+    
+    if (savedProgress && savedProgress.lastPosition > 0 && !savedProgress.completed) {
+      videoRef.current.currentTime = savedProgress.lastPosition;
+      setQuizFeedback({
+        show: true,
+        message: `▶️ Resuming from ${Math.floor(savedProgress.lastPosition / 60)}:${Math.floor(savedProgress.lastPosition % 60).toString().padStart(2, '0')}`,
+        type: 'success'
+      });
+      setTimeout(() => setQuizFeedback(null), 2000);
+    }
+  };
+
+  // Handle video ended
+  const handleVideoEnded = () => {
+    if (!activeVideo) return;
+    
+    const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+    saveVideoProgress(activeVideo.fileId, activeVideo.slideId, 100, videoRef.current?.duration || 0, true);
+    markContentViewed(activeVideo.slideId, activeVideo.fileId);
+    
+    setQuizFeedback({
+      show: true,
+      message: '✅ Video completed!',
+      type: 'success'
+    });
+    setTimeout(() => setQuizFeedback(null), 2000);
+    
+    // Close video player
+    setActiveVideo(null);
+  };
+
+  // Handle "Watch Video" button click - NO POPUP, inline
+  const handleWatchVideo = (slideId: string, file: SlideFile) => {
+    // If already playing same video, close it
+    if (activeVideo?.fileId === file.id) {
+      if (videoRef.current) videoRef.current.pause();
+      setActiveVideo(null);
+    } else {
+      setActiveVideo({ slideId, fileId: file.id, file });
+    }
+  };
+
+  // Handle "VIEW" button click (original view functionality)
+  const handleViewClick = async (slideId: string, fileId: string) => {
+    await markContentViewed(slideId, fileId);
+    
+    setQuizFeedback({
+      show: true,
+      message: '✓ Content marked as viewed!',
+      type: 'success'
+    });
+    setTimeout(() => setQuizFeedback(null), 2000);
+  };
+
+  // Close video player
+  const closeVideoPlayer = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+    setActiveVideo(null);
+  };
+
   // Load user from localStorage
   useEffect(() => {
     try {
@@ -240,11 +456,8 @@ export default function StudentCourseDetailPage() {
     if (!user?.email) return null;
 
     try {
-      console.log('🔍 Fetching enrollments for:', user.email);
       const response = await fetch(`/api/students/enrollments?email=${encodeURIComponent(user.email)}`);
       const result = await response.json();
-
-      console.log('📦 Enrollments response:', result);
 
       if (result.success && result.data && result.data.length > 0) {
         const enrollment = result.data.find((e: any) => {
@@ -252,19 +465,15 @@ export default function StudentCourseDetailPage() {
         });
         
         if (enrollment) {
-          console.log('✅ Found enrollment:', enrollment);
           setEnrollmentId(enrollment.id);
           setEnrollment(enrollment);
-          
           const actualCourseId = enrollment.course_id;
           return { enrollmentId: enrollment.id, courseId: actualCourseId };
         } else {
-          console.log('❌ No enrollment found for course:', courseId);
           setError('You are not enrolled in this course');
           return null;
         }
       } else {
-        console.log('❌ No enrollments found');
         setError('No enrollments found');
         return null;
       }
@@ -290,23 +499,18 @@ export default function StudentCourseDetailPage() {
       const enrollmentInfo = await fetchAndValidateEnrollment();
       
       if (!enrollmentInfo) {
-        setError('You are not enrolled in this course. Please check your enrollments.');
+        setError('You are not enrolled in this course.');
         setLoading(false);
         return;
       }
 
       const { enrollmentId: eid, courseId: actualCourseId } = enrollmentInfo;
-      
-      console.log('📚 Fetching course details for:', actualCourseId);
-      console.log('📝 With enrollment ID:', eid);
 
       const response = await fetch(
         `/api/students/courses/${actualCourseId}?studentEmail=${encodeURIComponent(user.email)}${eid ? `&enrollmentId=${eid}` : ''}`
       );
       
       const result = await response.json();
-
-      console.log('📦 Course API response:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to load course');
@@ -316,7 +520,6 @@ export default function StudentCourseDetailPage() {
         const data: CourseData = result.data;
         
         if (!data.slides || data.slides.length === 0) {
-          console.warn('⚠️ No slides found for this course');
           setError('No lessons available for this course yet.');
           setLoading(false);
           return;
@@ -324,8 +527,6 @@ export default function StudentCourseDetailPage() {
         
         setCourse(data.course);
         setSlides(data.slides || []);
-        
-        console.log(`✅ Loaded ${data.slides.length} slides`);
         
         const contentsMap = new Map();
         Object.entries(data.contents || {}).forEach(([slideId, files]) => {
@@ -346,8 +547,6 @@ export default function StudentCourseDetailPage() {
         if (data.progress) {
           setCompletedSlides(new Set(data.progress.completedSlides || []));
           setCompletedContent(new Set(data.progress.completedContent || []));
-          console.log(`📊 Progress: ${data.progress.completedSlides?.length || 0}/${data.slides.length} slides completed`);
-          console.log(`📊 Completed Content: ${Array.from(completedContent).length} items`);
         }
         
         const attemptsMap = new Map();
@@ -379,7 +578,7 @@ export default function StudentCourseDetailPage() {
         throw new Error(result.error || 'Failed to load course data');
       }
     } catch (error: any) {
-      console.error('❌ Error loading course:', error);
+      console.error('Error loading course:', error);
       setError(error.message || 'Failed to load course');
     } finally {
       setLoading(false);
@@ -393,7 +592,7 @@ export default function StudentCourseDetailPage() {
     }
   }, [user, courseId]);
 
-  // Track content view with view instead of download
+  // Track content view
   const trackContentView = async (slideId: string, fileId: string, completed: boolean, durationWatched: number = 0) => {
     if (!user?.email || !enrollmentId) return;
 
@@ -403,8 +602,6 @@ export default function StudentCourseDetailPage() {
     setTrackingContent(prev => ({ ...prev, [trackingKey]: true }));
 
     try {
-      console.log(`📊 Tracking content view: slide=${slideId}, file=${fileId}, completed=${completed}`);
-      
       const response = await fetch('/api/students/track/content-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -420,10 +617,8 @@ export default function StudentCourseDetailPage() {
       });
 
       const result = await response.json();
-      console.log('📊 Track content response:', result);
       
       if (result.success) {
-        // Update completed content in state
         const contentKey = `${slideId}_${fileId}`;
         if (completed) {
           setCompletedContent(prev => new Set([...prev, contentKey]));
@@ -480,30 +675,19 @@ export default function StudentCourseDetailPage() {
     const contentKey = `${slideId}_${fileId}`;
     const isCurrentlyViewed = completedContent.has(contentKey);
     
-    // Only mark if not already viewed
     if (isCurrentlyViewed) {
-      console.log('Content already viewed:', contentKey);
       return;
     }
     
-    console.log('Marking content as viewed:', contentKey);
-    
-    // Update UI immediately
     setCompletedContent(prev => new Set([...prev, contentKey]));
-
-    // Track as viewed (completed = true)
     await trackContentView(slideId, fileId, true, 30);
 
-    // Check if all files in this slide are viewed
     const slideFiles = slideContents.get(slideId) || [];
     const allViewed = slideFiles.every(f => 
       completedContent.has(`${slideId}_${f.id}`) || f.id === fileId
     );
     
-    console.log(`Slide ${slideId} - All viewed: ${allViewed}, Total files: ${slideFiles.length}`);
-    
     if (allViewed) {
-      console.log('All content viewed, auto-completing slide...');
       await autoCompleteSlide(slideId);
     }
   };
@@ -520,7 +704,6 @@ export default function StudentCourseDetailPage() {
     );
     
     const quizAttempted = quiz ? !!quizAttempt : true;
-    
     const allAssignmentsSubmitted = slideAssignments.length === 0 || 
       slideAssignments.every(a => assignmentSubmissions.has(a.id));
     
@@ -573,7 +756,7 @@ export default function StudentCourseDetailPage() {
       console.error('Error marking slide complete:', error);
       setQuizFeedback({
         show: true,
-        message: error.message || 'Failed to complete lesson. Please try again.',
+        message: error.message || 'Failed to complete lesson',
         type: 'error'
       });
       setTimeout(() => setQuizFeedback(null), 3000);
@@ -805,7 +988,6 @@ export default function StudentCourseDetailPage() {
         setActiveAssignment(null);
         setAssignmentFiles([]);
         
-        // Check if slide can be auto-completed
         const slideFiles = slideContents.get(slideId) || [];
         const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
           completedContent.has(`${slideId}_${f.id}`)
@@ -818,7 +1000,7 @@ export default function StudentCourseDetailPage() {
         }
       }
     } catch (error: any) {
-      console.error('❌ Submission error:', error);
+      console.error('Submission error:', error);
       setAssignmentFeedback({
         show: true,
         message: error.message || 'Failed to submit assignment',
@@ -1104,7 +1286,7 @@ export default function StudentCourseDetailPage() {
     );
   };
 
-  // Render slide list view with VIEW button
+  // Render slide list view
   const renderSlideList = () => {
     if (slides.length === 0) {
       return (
@@ -1130,7 +1312,7 @@ export default function StudentCourseDetailPage() {
 
           return (
             <div key={slide.id} className={`border rounded-lg overflow-hidden ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
-              {/* Slide Header - Clickable */}
+              {/* Slide Header */}
               <div 
                 className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => toggleSlideExpansion(slide.id)}
@@ -1164,7 +1346,7 @@ export default function StudentCourseDetailPage() {
 
               {isExpanded && (
                 <div className="p-4 space-y-4">
-                  {/* Files - With VIEW button */}
+                  {/* Files Section */}
                   {slideFiles.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
@@ -1172,50 +1354,133 @@ export default function StudentCourseDetailPage() {
                         {slideFiles.map((file) => {
                           const isContentViewed = completedContent.has(`${slide.id}_${file.id}`);
                           const isVideo = file.type.includes('video');
+                          const key = `${slide.id}_${file.id}`;
+                          const showView = showViewButton[key] || isContentViewed;
+                          const videoProgressData = videoProgress[key];
+                          const progressPercent = videoProgressData?.progress || 0;
+                          const isVideoPlaying = activeVideo?.fileId === file.id;
                           
                           return (
-                            <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center gap-3 flex-1">
-                                {getFileIcon(file.type)}
-                                <div>
-                                  <p className="text-sm text-gray-700">{file.name}</p>
-                                  <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                            <div key={file.id} className="flex flex-col space-y-2">
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3 flex-1">
+                                  {getFileIcon(file.type)}
+                                  <div>
+                                    <p className="text-sm text-gray-700">{file.name}</p>
+                                    <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                                    {isVideo && videoProgressData && !isContentViewed && progressPercent < 95 && (
+                                      <div className="mt-1 w-32">
+                                        <div className="flex justify-between text-xs mb-0.5">
+                                          <span className="text-gray-500">Progress</span>
+                                          <span className="font-medium">{Math.round(progressPercent)}%</span>
+                                        </div>
+                                        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                                          <div className="h-full rounded-full transition-all duration-300" style={{ 
+                                            width: `${progressPercent}%`,
+                                            backgroundColor: BRAND_COLORS.deepRed
+                                          }} />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  {isVideo ? (
+                                    <>
+                                      {!showView ? (
+                                        <button
+                                          onClick={() => handleWatchVideo(slide.id, file)}
+                                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-2"
+                                        >
+                                          <HiPlay className="w-4 h-4" />
+                                          {isVideoPlaying ? 'Close Video' : 'Watch Video'}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleViewClick(slide.id, file.id)}
+                                          disabled={trackingContent[key] || isContentViewed}
+                                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                                            isContentViewed 
+                                              ? 'bg-green-100 text-green-700 cursor-default'
+                                              : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                          } disabled:opacity-50`}
+                                        >
+                                          {trackingContent[key] ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : isContentViewed ? (
+                                            <>
+                                              <HiCheckCircle className="w-4 h-4" />
+                                              Viewed
+                                            </>
+                                          ) : (
+                                            <>
+                                              <HiEye className="w-4 h-4" />
+                                              View
+                                            </>
+                                          )}
+                                        </button>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleViewClick(slide.id, file.id)}
+                                      disabled={trackingContent[key] || isContentViewed}
+                                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                                        isContentViewed 
+                                          ? 'bg-green-100 text-green-700 cursor-default'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                      } disabled:opacity-50`}
+                                    >
+                                      {trackingContent[key] ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : isContentViewed ? (
+                                        <>
+                                          <HiCheckCircle className="w-4 h-4" />
+                                          Viewed
+                                        </>
+                                      ) : (
+                                        <>
+                                          <HiEye className="w-4 h-4" />
+                                          View
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => markContentViewed(slide.id, file.id)}
-                                  disabled={trackingContent[`${slide.id}_${file.id}`] || isContentViewed}
-                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                    isContentViewed 
-                                      ? 'bg-green-100 text-green-700 cursor-default'
-                                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                  } disabled:opacity-50`}
-                                >
-                                  {trackingContent[`${slide.id}_${file.id}`] ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : isContentViewed ? (
-                                    <span className="flex items-center gap-1">✓ Viewed</span>
-                                  ) : (
-                                    <span className="flex items-center gap-1">
-                                      <HiEye className="w-3 h-3" />
-                                      View
-                                    </span>
-                                  )}
-                                </button>
-                                
-                                {/* Open in new tab */}
-                                <a 
-                                  href={file.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 flex items-center gap-1 cursor-pointer"
-                                >
-                                  <HiEye className="w-4 h-4" />
-                                  Open
-                                </a>
-                              </div>
+                              {/* Inline Video Player - NO POPUP */}
+                              {isVideo && isVideoPlaying && (
+                                <div className="mt-2 p-3 bg-black rounded-lg">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-white text-sm">Now Playing: {file.name}</span>
+                                    <button 
+                                      onClick={closeVideoPlayer}
+                                      className="text-white hover:text-gray-300 cursor-pointer"
+                                    >
+                                      <HiX className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                  <video
+                                    ref={videoRef}
+                                    src={file.url}
+                                    controls
+                                    controlsList="nodownload noplaybackrate"
+                                    disablePictureInPicture
+                                    onTimeUpdate={handleVideoTimeUpdate}
+                                    onLoadedMetadata={handleVideoLoaded}
+                                    onEnded={handleVideoEnded}
+                                    className="w-full rounded-lg"
+                                    style={{ maxHeight: '400px' }}
+                                  >
+                                    Your browser does not support the video tag.
+                                  </video>
+                                  <div className="mt-2 text-center text-xs text-gray-400">
+                                    <p>⚠️ You cannot skip forward. Watch sequentially to complete.</p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1223,7 +1488,7 @@ export default function StudentCourseDetailPage() {
                     </div>
                   )}
 
-                  {/* Quiz */}
+                  {/* Quiz Section */}
                   {quiz && (
                     <div className={slideFiles.length > 0 ? 'border-t pt-4' : ''}>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Quiz</h4>
@@ -1278,8 +1543,24 @@ export default function StudentCourseDetailPage() {
                       )}
                     </div>
                   )}
+                                    {/* True/False & Fill in Blanks Quiz Section */}
+                                 {/* True/False & Fill in Blanks Quiz Section */}
+                  {selectedSlide && (
+                    <div className="mt-4">
+                      <StudentAdvancedQuiz
+                        slideId={slide.id}
+                        courseId={courseId}
+                        enrollmentId={enrollmentId}
+                        studentEmail={user?.email || ''}
+                        onQuizComplete={(score, total, passed) => {
+                          console.log('Advanced Quiz completed:', { score, total, passed });
+                          loadCourseData();
+                        }}
+                      />
+                    </div>
+                  )}
 
-                  {/* Assignments */}
+                  {/* Assignments Section */}
                   {hasAssignment && (
                     <div className={(slideFiles.length > 0 || quiz) ? 'border-t pt-4' : ''}>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Assignments</h4>
@@ -1506,7 +1787,7 @@ export default function StudentCourseDetailPage() {
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Score</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment</th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
               {getSlidePerformance().map((perf) => (
@@ -1563,43 +1844,133 @@ export default function StudentCourseDetailPage() {
                             <div className="space-y-2">
                               {slideFiles.map((file) => {
                                 const isContentViewed = completedContent.has(`${slide.id}_${file.id}`);
+                                const isVideo = file.type.includes('video');
+                                const key = `${slide.id}_${file.id}`;
+                                const showView = showViewButton[key] || isContentViewed;
+                                const videoProgressData = videoProgress[key];
+                                const isVideoPlaying = activeVideo?.fileId === file.id;
+                                
                                 return (
-                                  <div key={file.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                                    <div className="flex items-center gap-3 flex-1">
-                                      {getFileIcon(file.type)}
-                                      <div>
-                                        <p className="text-sm text-gray-700">{file.name}</p>
-                                        <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                                  <div key={file.id} className="flex flex-col space-y-2">
+                                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        {getFileIcon(file.type)}
+                                        <div>
+                                          <p className="text-sm text-gray-700">{file.name}</p>
+                                          <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                                          {isVideo && videoProgressData && !isContentViewed && (
+                                            <div className="mt-1 w-32">
+                                              <div className="flex justify-between text-xs mb-0.5">
+                                                <span className="text-gray-500">Progress</span>
+                                                <span className="font-medium">{Math.round(videoProgressData.progress)}%</span>
+                                              </div>
+                                              <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                                                <div className="h-full rounded-full transition-all duration-300" style={{ 
+                                                  width: `${videoProgressData.progress}%`,
+                                                  backgroundColor: BRAND_COLORS.deepRed
+                                                }} />
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-2">
+                                        {isVideo ? (
+                                          <>
+                                            {!showView ? (
+                                              <button
+                                                onClick={() => handleWatchVideo(slide.id, file)}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-2"
+                                              >
+                                                <HiPlay className="w-4 h-4" />
+                                                {isVideoPlaying ? 'Close Video' : 'Watch Video'}
+                                              </button>
+                                            ) : (
+                                              <button
+                                                onClick={() => handleViewClick(slide.id, file.id)}
+                                                disabled={trackingContent[key] || isContentViewed}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                                                  isContentViewed 
+                                                    ? 'bg-green-100 text-green-700 cursor-default'
+                                                    : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                                } disabled:opacity-50`}
+                                              >
+                                                {trackingContent[key] ? (
+                                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : isContentViewed ? (
+                                                  <>
+                                                    <HiCheckCircle className="w-4 h-4" />
+                                                    Viewed
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <HiEye className="w-4 h-4" />
+                                                    View
+                                                  </>
+                                                )}
+                                              </button>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleViewClick(slide.id, file.id)}
+                                            disabled={trackingContent[key] || isContentViewed}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                                              isContentViewed 
+                                                ? 'bg-green-100 text-green-700 cursor-default'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                            } disabled:opacity-50`}
+                                          >
+                                            {trackingContent[key] ? (
+                                              <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : isContentViewed ? (
+                                              <>
+                                                <HiCheckCircle className="w-4 h-4" />
+                                                Viewed
+                                              </>
+                                            ) : (
+                                              <>
+                                                <HiEye className="w-4 h-4" />
+                                                View
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() => markContentViewed(slide.id, file.id)}
-                                        disabled={trackingContent[`${slide.id}_${file.id}`] || isContentViewed}
-                                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                          isContentViewed 
-                                            ? 'bg-green-100 text-green-700 cursor-default'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                        } disabled:opacity-50`}
-                                      >
-                                        {trackingContent[`${slide.id}_${file.id}`] ? (
-                                          <Loader2 className="w-3 h-3 animate-spin" />
-                                        ) : isContentViewed ? (
-                                          <span className="flex items-center gap-1">✓ Viewed</span>
-                                        ) : (
-                                          <span className="flex items-center gap-1">
-                                            <HiEye className="w-3 h-3" />
-                                            View
-                                          </span>
-                                        )}
-                                      </button>
-                                      
-                                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 flex items-center gap-1 cursor-pointer">
-                                        <HiEye className="w-4 h-4" />
-                                        Open
-                                      </a>
-                                    </div>
+                                    {/* Inline Video Player - NO POPUP */}
+                                    {isVideo && isVideoPlaying && (
+                                      <div className="mt-2 p-3 bg-black rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                          <span className="text-white text-sm">Now Playing: {file.name}</span>
+                                          <button 
+                                            onClick={closeVideoPlayer}
+                                            className="text-white hover:text-gray-300 cursor-pointer"
+                                          >
+                                            <HiX className="w-5 h-5" />
+                                          </button>
+                                        </div>
+                                        <video
+                                          ref={videoRef}
+                                          src={file.url}
+                                          controls
+                                          controlsList="nodownload noplaybackrate"
+                                          disablePictureInPicture
+                                          onTimeUpdate={handleVideoTimeUpdate}
+                                          onLoadedMetadata={handleVideoLoaded}
+                                          onEnded={handleVideoEnded}
+                                          className="w-full rounded-lg"
+                                          style={{ maxHeight: '400px' }}
+                                        >
+                                          Your browser does not support the video tag.
+                                        </video>
+                                        <div className="mt-2 text-center text-xs text-gray-400">
+                                          <p>⚠️ You cannot skip forward. Watch sequentially to complete.</p>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}

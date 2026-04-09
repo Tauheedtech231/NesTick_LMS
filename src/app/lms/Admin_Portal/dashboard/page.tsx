@@ -62,6 +62,7 @@ type PaymentStudent = {
   cnicBackUrl: string;
   educationalDocUrl: string;
   credentialsSent?: boolean;
+  paymentId?: string;
 }
 
 type StudentCredentials = {
@@ -118,6 +119,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSendingCredentials, setIsSendingCredentials] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState<string | null>(null)
+  const [isResendingEmail, setIsResendingEmail] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<'payments' | 'credentials' | 'revenue'>('payments')
@@ -188,7 +190,8 @@ export default function AdminDashboard() {
           cnicFrontUrl: item.cnic_front_url || '',
           cnicBackUrl: item.cnic_back_url || '',
           educationalDocUrl: item.educational_doc_url || '',
-          credentialsSent: item.credentials_sent || false
+          credentialsSent: item.credentials_sent || false,
+          paymentId: item.payment_id || ''
         }))
         setPaymentStudents(students)
       }
@@ -305,6 +308,44 @@ export default function AdminDashboard() {
     }
   }
 
+  // ✅ NEW: Resend enrollment confirmation email
+  const resendEnrollmentEmail = async (student: PaymentStudent) => {
+    if (!student.email) {
+      alert('Student email is required')
+      return
+    }
+
+    setIsResendingEmail(student.enrollmentId)
+
+    try {
+      const response = await fetch('/api/admin/resend-enrollment-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId: student.enrollmentId,
+          studentEmail: student.email,
+          studentName: student.name,
+          course: student.course,
+          amount: student.amount,
+          paymentId: student.paymentId
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`✅ Enrollment confirmation email resent successfully to ${student.email}!`)
+      } else {
+        throw new Error(data.error || 'Failed to resend email')
+      }
+    } catch (error: any) {
+      console.error('Error resending email:', error)
+      alert(`❌ Failed to resend email: ${error.message}`)
+    } finally {
+      setIsResendingEmail(null)
+    }
+  }
+
   // Handle reject payment
   const handleRejectPayment = async (enrollmentId: string, studentId: string) => {
     if (!confirm('Are you sure you want to reject this payment?')) return
@@ -349,10 +390,9 @@ export default function AdminDashboard() {
     cred.studentEmail.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Calculate revenue statistics - FIXED NaN ISSUES
+  // Calculate revenue statistics
   const totalVerifiedRevenue = revenueStats?.totalRevenue || 0
   
-  // Fix: Properly calculate pending revenue with number conversion
   const pendingRevenue = paymentStudents
     .filter(s => s.status === 'pending')
     .reduce((sum, s) => {
@@ -360,15 +400,12 @@ export default function AdminDashboard() {
       return sum + amount
     }, 0)
   
-  // Fix: Calculate average with proper number handling
   const averageRevenuePerStudent = (revenueStats?.payingStudents || 0) > 0 
     ? Math.round((revenueStats?.totalRevenue || 0) / (revenueStats?.payingStudents || 1)) 
     : 0
 
-  // Fix: Calculate projected total safely
   const projectedTotal = (Number(totalVerifiedRevenue) || 0) + (Number(pendingRevenue) || 0)
 
-  // Calculate stats from paymentStudents if API stats are not available
   const calculatedStats = {
     totalEnrollments: paymentStudents?.length || 0,
     pendingPayments: paymentStudents?.filter(s => s.status === 'pending')?.length || 0,
@@ -381,7 +418,6 @@ export default function AdminDashboard() {
     topCourses: stats?.topCourses || []
   }
 
-  // Use API stats if available, otherwise use calculated stats
   const displayStats = stats?.totalEnrollments ? stats : calculatedStats
 
   if (isLoading) {
@@ -511,7 +547,6 @@ export default function AdminDashboard() {
 
         {/* Revenue Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Verified Revenue */}
           <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
@@ -527,7 +562,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Pending Revenue */}
           <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
@@ -543,7 +577,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Projected Total */}
           <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl shadow-lg p-6 border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
@@ -673,7 +706,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="divide-y divide-indigo-100 bg-white">
                   {filteredStudents.length > 0 ? (
-                    filteredStudents.map((student, idx) => (
+                    filteredStudents.map((student) => (
                       <tr key={student.enrollmentId} className="hover:bg-indigo-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div>
@@ -700,7 +733,7 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex justify-center">
+                          <div className="flex justify-center gap-2">
                             <button 
                               onClick={() => {
                                 setSelectedStudentDetails(student)
@@ -711,6 +744,19 @@ export default function AdminDashboard() {
                               title="View Details"
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                            {/* ✅ Resend Email Button */}
+                            <button 
+                              onClick={() => resendEnrollmentEmail(student)}
+                              disabled={isResendingEmail === student.enrollmentId}
+                              className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
+                              title="Resend Enrollment Email"
+                            >
+                              {isResendingEmail === student.enrollmentId ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </td>
@@ -739,11 +785,12 @@ export default function AdminDashboard() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Verified Date</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-white">Status</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-white">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-indigo-100 bg-white">
                   {filteredCredentials.length > 0 ? (
-                    filteredCredentials.map((cred, idx) => (
+                    filteredCredentials.map((cred) => (
                       <tr key={cred.enrollmentId} className="hover:bg-emerald-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div>
@@ -752,7 +799,6 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">{cred.course}</td>
-                        
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {cred.verifiedDate ? new Date(cred.verifiedDate).toLocaleDateString() : 'N/A'}
                         </td>
@@ -761,6 +807,28 @@ export default function AdminDashboard() {
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white bg-emerald-600 shadow-sm">
                               {cred.credentialsSent ? 'Credentials Sent' : 'Verified'}
                             </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <button 
+                              onClick={() => {
+                                // Resend credentials email for verified student
+                                const student = paymentStudents.find(s => s.enrollmentId === cred.enrollmentId)
+                                if (student) {
+                                  resendEnrollmentEmail(student)
+                                }
+                              }}
+                              disabled={isResendingEmail === cred.enrollmentId}
+                              className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
+                              title="Resend Email"
+                            >
+                              {isResendingEmail === cred.enrollmentId ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -782,7 +850,6 @@ export default function AdminDashboard() {
           {activeTab === 'revenue' && (
             <div className="p-6 bg-gray-50 rounded-xl space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                 {/* Revenue Summary */}
                 <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow hover:shadow-md transition-all">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
@@ -866,7 +933,6 @@ export default function AdminDashboard() {
                     </table>
                   </div>
                 </div>
-
               </div>
             </div>
           )}
@@ -1013,17 +1079,37 @@ export default function AdminDashboard() {
                     )}
                     
                     {selectedStudentDetails.status === 'verified' && (
-                      <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 text-center">
-                        <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-600" />
-                        <p className="text-emerald-800 font-medium">Payment Verified</p>
-                        <p className="text-sm text-emerald-600 mt-2">
-                          Amount: PKR {(selectedStudentDetails.amount || 0).toLocaleString()} added to revenue
-                        </p>
-                        {selectedStudentDetails.credentialsSent && (
-                          <p className="text-xs text-emerald-600 mt-2 bg-emerald-100 p-2 rounded-lg">
-                            ✓ Credentials sent successfully
+                      <div className="mt-6 space-y-3">
+                        <div className="p-6 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 text-center">
+                          <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-600" />
+                          <p className="text-emerald-800 font-medium">Payment Verified</p>
+                          <p className="text-sm text-emerald-600 mt-2">
+                            Amount: PKR {(selectedStudentDetails.amount || 0).toLocaleString()} added to revenue
                           </p>
-                        )}
+                          {selectedStudentDetails.credentialsSent && (
+                            <p className="text-xs text-emerald-600 mt-2 bg-emerald-100 p-2 rounded-lg">
+                              ✓ Credentials sent successfully
+                            </p>
+                          )}
+                        </div>
+                        {/* Resend Email Button in Modal */}
+                        <button
+                          onClick={() => resendEnrollmentEmail(selectedStudentDetails)}
+                          disabled={isResendingEmail === selectedStudentDetails.enrollmentId}
+                          className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                        >
+                          {isResendingEmail === selectedStudentDetails.enrollmentId ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Resending...
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-4 h-4" />
+                              Resend Enrollment Email
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
                     

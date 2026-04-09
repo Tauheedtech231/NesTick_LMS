@@ -80,6 +80,27 @@ const BANK_DETAILS = {
   easyPaisa: "0315-7654321"
 };
 
+// CNIC Formatting function (only for text/number fields)
+const formatCNIC = (value: string): string => {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, '');
+  
+  // Format as 12345-1234567-1
+  if (digits.length <= 5) {
+    return digits;
+  } else if (digits.length <= 12) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  } else {
+    return `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12, 13)}`;
+  }
+};
+
+// Validate CNIC (only for text/number fields)
+const validateCNIC = (value: string): boolean => {
+  const cleanValue = value.replace(/-/g, '');
+  return /^[0-9]{13}$/.test(cleanValue);
+};
+
 // File Input Component
 const DynamicFileInput = ({ field, value, error, onFileUpload, isUploading, uploadedFile }: { 
   field: FormField;
@@ -340,6 +361,12 @@ const CartEnrollmentPage: React.FC = () => {
     if (uploaded) {
       setUploadedFileUrls(prev => ({ ...prev, [fieldName]: uploaded }));
       setDynamicFormData(prev => ({ ...prev, [fieldName]: uploaded.url }));
+      // Clear any error for this file field
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
     }
     setUploadingFiles(prev => ({ ...prev, [fieldName]: false }));
   };
@@ -348,155 +375,84 @@ const CartEnrollmentPage: React.FC = () => {
     paymentSlipInputRef.current?.click();
   };
 
-  const handleDynamicFieldChange = (name: string, value: any) => {
-    setDynamicFormData(prev => ({ ...prev, [name]: value }));
+  // Handle field change with CNIC formatting (only for text/number fields, not file fields)
+  const handleDynamicFieldChange = (name: string, value: any, fieldType: string) => {
+    let formattedValue = value;
+    let error = "";
     
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: "" }));
+    // Only apply CNIC formatting to text/input fields, NOT file fields
+    if (fieldType !== 'file') {
+      const fieldNameLower = name.toLowerCase();
+      // Check if this is a CNIC text field (not a file upload field)
+      const isCNICTextField = (fieldNameLower.includes('cnic') || fieldNameLower.includes('nic')) && 
+                              !fieldNameLower.includes('image') && 
+                              !fieldNameLower.includes('front') && 
+                              !fieldNameLower.includes('back');
+      
+      if (isCNICTextField) {
+        formattedValue = formatCNIC(value);
+        if (value && !validateCNIC(formattedValue)) {
+          error = "Invalid CNIC number (should be 13 digits: 12345-1234567-1)";
+        }
+      }
+    }
+    
+    setDynamicFormData(prev => ({ ...prev, [name]: formattedValue }));
+    
+    // Update error state
+    if (error) {
+      setFormErrors(prev => ({ ...prev, [name]: error }));
+    } else {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
-  const renderDynamicField = (field: FormField) => {
-    const value = dynamicFormData[field.name] || '';
-    const error = formErrors[field.name];
+  // Validate only CNIC text fields before proceeding
+  const validateAllFields = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
     
-    if (field.type === 'file') {
-      return (
-        <DynamicFileInput
-          key={field.id}
-          field={field}
-          value={value}
-          error={error}
-          onFileUpload={handleDynamicFileUpload}
-          isUploading={uploadingFiles[field.name] || false}
-          uploadedFile={uploadedFileUrls[field.name] || null}
-        />
-      );
-    }
+    formFields.forEach(field => {
+      if (field.required && !dynamicFormData[field.name] && field.type !== 'file') {
+        newErrors[field.name] = `${field.label} is required`;
+        isValid = false;
+      }
+      
+      // Validate CNIC only for text/number fields, NOT for file uploads
+      if (field.type !== 'file') {
+        const value = dynamicFormData[field.name];
+        if (value) {
+          const fieldNameLower = field.name.toLowerCase();
+          const isCNICTextField = (fieldNameLower.includes('cnic') || fieldNameLower.includes('nic')) && 
+                                  !fieldNameLower.includes('image') && 
+                                  !fieldNameLower.includes('front') && 
+                                  !fieldNameLower.includes('back');
+          
+          if (isCNICTextField) {
+            if (!validateCNIC(value)) {
+              newErrors[field.name] = "Invalid CNIC number (13 digits required: 12345-1234567-1)";
+              isValid = false;
+            }
+          }
+        }
+      }
+    });
     
-    switch (field.type) {
-      case 'textarea':
-        return (
-          <div key={field.id} className="md:col-span-2">
-            <label className="block text-sm font-semibold mb-2 text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <textarea
-              value={value}
-              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-              placeholder={field.placeholder || `Enter ${field.label}`}
-              rows={3}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                error ? 'border-red-500' : 'border-gray-300'
-              }`}
-              required={field.required}
-            />
-            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-          </div>
-        );
-      
-      case 'select':
-        return (
-          <div key={field.id}>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <select
-              value={value}
-              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white ${
-                error ? 'border-red-500' : 'border-gray-300'
-              }`}
-              required={field.required}
-            >
-              <option value="">Select {field.label}</option>
-              {field.options?.map((opt, idx) => (
-                <option key={idx} value={opt}>{opt}</option>
-              ))}
-            </select>
-            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-          </div>
-        );
-      
-      case 'radio':
-        return (
-          <div key={field.id}>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="space-y-2">
-              {field.options?.map((opt, idx) => (
-                <label key={idx} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={field.name}
-                    value={opt}
-                    checked={value === opt}
-                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                    className="w-4 h-4 text-red-500"
-                    required={field.required}
-                  />
-                  <span className="text-sm text-gray-700">{opt}</span>
-                </label>
-              ))}
-            </div>
-            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-          </div>
-        );
-      
-      case 'checkbox':
-        return (
-          <div key={field.id}>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="space-y-2">
-              {field.options?.map((opt, idx) => (
-                <label key={idx} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name={field.name}
-                    value={opt}
-                    checked={Array.isArray(value) ? value.includes(opt) : value === opt}
-                    onChange={(e) => {
-                      let newValue = Array.isArray(value) ? [...value] : [];
-                      if (e.target.checked) {
-                        newValue.push(opt);
-                      } else {
-                        newValue = newValue.filter(v => v !== opt);
-                      }
-                      handleDynamicFieldChange(field.name, newValue);
-                    }}
-                    className="w-4 h-4 text-red-500 rounded"
-                  />
-                  <span className="text-sm text-gray-700">{opt}</span>
-                </label>
-              ))}
-            </div>
-            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-          </div>
-        );
-      
-      default:
-        return (
-          <div key={field.id}>
-            <label className="block text-sm font-semibold mb-2 text-gray-700">
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              type={field.type}
-              value={value}
-              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-              placeholder={field.placeholder || `Enter ${field.label}`}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                error ? 'border-red-500' : 'border-gray-300'
-              }`}
-              required={field.required}
-            />
-            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-          </div>
-        );
-    }
+    // Check file fields
+    const fileFields = formFields.filter(f => f.type === 'file');
+    fileFields.forEach(field => {
+      if (field.required && !uploadedFileUrls[field.name]) {
+        newErrors[field.name] = `Please upload ${field.label}`;
+        isValid = false;
+      }
+    });
+    
+    setFormErrors(newErrors);
+    return isValid;
   };
 
   const saveEnrollmentDataToLocal = () => {
@@ -514,18 +470,9 @@ const CartEnrollmentPage: React.FC = () => {
   };
 
   const handleSubmitDetails = async () => {
-    // Check all required fields
-    const missingRequired = formFields.filter(f => f.required && !dynamicFormData[f.name]);
-    if (missingRequired.length > 0) {
-      alert(`Please fill all required fields: ${missingRequired.map(f => f.label).join(", ")}`);
-      return;
-    }
-    
-    // Check all file fields are uploaded
-    const fileFields = formFields.filter(f => f.type === 'file');
-    const missingFiles = fileFields.filter(f => f.required && !uploadedFileUrls[f.name]);
-    if (missingFiles.length > 0) {
-      alert(`Please upload: ${missingFiles.map(f => f.label).join(", ")}`);
+    // Validate all fields
+    if (!validateAllFields()) {
+      alert("Please correct the errors in the form before proceeding.");
       return;
     }
     
@@ -612,7 +559,7 @@ const CartEnrollmentPage: React.FC = () => {
     }
   };
 
-  // ✅ UPDATED: Generate voucher - NO DOWNLOAD RESTRICTION, can download multiple times
+  // Generate voucher PDF
   const generateVoucherPDF = async () => {
     if (!voucherRef.current) return;
 
@@ -808,6 +755,164 @@ const CartEnrollmentPage: React.FC = () => {
   );
 
   const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+
+  // Render dynamic field with CNIC formatting
+  const renderDynamicField = (field: FormField) => {
+    const value = dynamicFormData[field.name] || '';
+    const error = formErrors[field.name];
+    const fieldNameLower = field.name.toLowerCase();
+    
+    // Check if this is a CNIC text field (not a file upload)
+    const isCNICTextField = (fieldNameLower.includes('cnic') || fieldNameLower.includes('nic')) && 
+                            field.type !== 'file' &&
+                            !fieldNameLower.includes('image') && 
+                            !fieldNameLower.includes('front') && 
+                            !fieldNameLower.includes('back');
+    
+    if (field.type === 'file') {
+      return (
+        <DynamicFileInput
+          key={field.id}
+          field={field}
+          value={value}
+          error={error}
+          onFileUpload={handleDynamicFileUpload}
+          isUploading={uploadingFiles[field.name] || false}
+          uploadedFile={uploadedFileUrls[field.name] || null}
+        />
+      );
+    }
+    
+    // Set placeholder for CNIC text field
+    let placeholder = field.placeholder || `Enter ${field.label}`;
+    if (isCNICTextField) {
+      placeholder = "e.g., 12345-1234567-1";
+    }
+    
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <div key={field.id} className="md:col-span-2">
+            <label className="block text-sm font-semibold mb-2 text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              value={value}
+              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value, field.type)}
+              placeholder={placeholder}
+              rows={3}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                error ? 'border-red-500' : 'border-gray-300'
+              }`}
+              required={field.required}
+            />
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+        );
+      
+      case 'select':
+        return (
+          <div key={field.id}>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <select
+              value={value}
+              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value, field.type)}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white ${
+                error ? 'border-red-500' : 'border-gray-300'
+              }`}
+              required={field.required}
+            >
+              <option value="">Select {field.label}</option>
+              {field.options?.map((opt, idx) => (
+                <option key={idx} value={opt}>{opt}</option>
+              ))}
+            </select>
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+        );
+      
+      case 'radio':
+        return (
+          <div key={field.id}>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="space-y-2">
+              {field.options?.map((opt, idx) => (
+                <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={field.name}
+                    value={opt}
+                    checked={value === opt}
+                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value, field.type)}
+                    className="w-4 h-4 text-red-500"
+                    required={field.required}
+                  />
+                  <span className="text-sm text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+        );
+      
+      case 'checkbox':
+        return (
+          <div key={field.id}>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="space-y-2">
+              {field.options?.map((opt, idx) => (
+                <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name={field.name}
+                    value={opt}
+                    checked={Array.isArray(value) ? value.includes(opt) : value === opt}
+                    onChange={(e) => {
+                      let newValue = Array.isArray(value) ? [...value] : [];
+                      if (e.target.checked) {
+                        newValue.push(opt);
+                      } else {
+                        newValue = newValue.filter(v => v !== opt);
+                      }
+                      handleDynamicFieldChange(field.name, newValue, field.type);
+                    }}
+                    className="w-4 h-4 text-red-500 rounded"
+                  />
+                  <span className="text-sm text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+        );
+      
+      default:
+        return (
+          <div key={field.id}>
+            <label className="block text-sm font-semibold mb-2 text-gray-700">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type={field.type}
+              value={value}
+              onChange={(e) => handleDynamicFieldChange(field.name, e.target.value, field.type)}
+              placeholder={placeholder}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                error ? 'border-red-500' : 'border-gray-300'
+              }`}
+              required={field.required}
+            />
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+        );
+    }
+  };
 
   return (
     <>

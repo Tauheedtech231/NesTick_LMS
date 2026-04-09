@@ -73,7 +73,7 @@ const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   const navItems = [
     { href: '/lms/Admin_Portal/dashboard', label: 'Dashboard', icon: HiHome },
     { href: '/lms/Admin_Portal/instructors', label: 'Instructors', icon: HiAcademicCap },
-    { href: '/lms/Admin_Portal/payments', label: 'Payments', icon: HiCreditCard },
+
     { href: '/lms/Admin_Portal/form-fields', label: 'Form Fields', icon: HiTemplate },
     { href: '/lms/Admin_Portal/profile', label: 'Profile', icon: HiUserCircle },
   ]

@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Video,
   Film,
-  GripVertical
+  GripVertical,
+  Camera
 } from 'lucide-react'
 import {
   DndContext,
@@ -46,6 +47,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import TrueFalseFillBlanksManager from '../../../components/TrueFalseFillBlanksManager'
 /* eslint-disable */
 
 const BRAND_COLORS = {
@@ -286,6 +288,8 @@ export default function EditCoursePage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
+  // True/False & Fill in Blanks questions state
+const [tfFillQuestions, setTfFillQuestions] = useState<Record<string, any[]>>({});
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -299,6 +303,12 @@ export default function EditCoursePage() {
   // Edit slide states
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [editingSlideTitle, setEditingSlideTitle] = useState('');
+  
+  // Course Image states
+  const [courseImage, setCourseImage] = useState<string>('');
+  const [courseImagePreview, setCourseImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [oldImagePublicId, setOldImagePublicId] = useState<string>('');
   
   const [activeTab, setActiveTab] = useState<'details' | 'slides' | 'content' | 'assignments'>('details');
   const [instructor, setInstructor] = useState<any>(null);
@@ -445,6 +455,17 @@ export default function EditCoursePage() {
           price: courseData.price
         });
         
+        // Set course image
+        if (courseData.image) {
+          setCourseImage(courseData.image);
+          setCourseImagePreview(courseData.image);
+          // Extract public_id from Cloudinary URL for deletion
+          const urlParts = courseData.image.split('/');
+          const filename = urlParts[urlParts.length - 1];
+          const publicId = `lms/course_images/${filename.split('.')[0]}`;
+          setOldImagePublicId(publicId);
+        }
+        
         setSlides(sortedSlides);
         
         // Load slide contents (files) and quiz questions
@@ -507,6 +528,120 @@ export default function EditCoursePage() {
     }
   };
 
+  // ============ COURSE IMAGE FUNCTIONS ============
+  const uploadCourseImageToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', 'lms/course_images');
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const result = await response.json();
+    return result.secure_url;
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      // Show preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCourseImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Cloudinary
+      const newImageUrl = await uploadCourseImageToCloudinary(file);
+      setCourseImage(newImageUrl);
+
+      // Save to database via API
+      const saveResponse = await fetch('/api/instructors/course/update-image', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: courseId,
+          imageUrl: newImageUrl,
+          oldImagePublicId: oldImagePublicId
+        })
+      });
+
+      const saveResult = await saveResponse.json();
+
+      if (saveResult.success) {
+        showSuccess('✅ Course image updated successfully!');
+        // Update oldImagePublicId for future deletions
+        const newPublicId = `lms/course_images/${newImageUrl.split('/').pop()?.split('.')[0]}`;
+        setOldImagePublicId(newPublicId);
+        // Refresh course details
+        await fetchCourseFromAPI();
+      } else {
+        throw new Error(saveResult.error || 'Failed to save image');
+      }
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      alert(error.message || 'Failed to upload image');
+      setCourseImagePreview(courseImage);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageRemove = async () => {
+    if (!confirm('Are you sure you want to remove the course image?')) return;
+
+    setUploadingImage(true);
+
+    try {
+      // Update database with null image
+      const response = await fetch('/api/instructors/course/update-image', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: courseId,
+          imageUrl: '',
+          oldImagePublicId: oldImagePublicId
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setCourseImage('');
+        setCourseImagePreview('');
+        showSuccess('✅ Course image removed successfully!');
+        await fetchCourseFromAPI();
+      } else {
+        throw new Error(result.error || 'Failed to remove image');
+      }
+    } catch (error: any) {
+      console.error('Error removing image:', error);
+      alert(error.message || 'Failed to remove image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // ============ DRAG AND DROP HANDLER ============
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -524,7 +659,7 @@ export default function EditCoursePage() {
     const reorderedSlides = newSlides.map((slide, index) => ({
       ...slide,
       slideNumber: index + 1,
-      title: slide.title, // ✅ Keep original title
+      title: slide.title,
       updatedAt: new Date().toISOString()
     }));
     
@@ -536,7 +671,6 @@ export default function EditCoursePage() {
     setReorderingSlides(true);
     
     try {
-      // Prepare data for API
       const slidesOrderData = reorderedSlides.map((slide, idx) => ({
         id: slide.id,
         slideNumber: idx + 1,
@@ -625,7 +759,8 @@ export default function EditCoursePage() {
           status: editedDetails.status,
           duration: editedDetails.duration,
           level: editedDetails.level,
-          price: editedDetails.price
+          price: editedDetails.price,
+          image: courseImage
         },
         slides: slidesData,
         assignments: assignmentsData
@@ -1430,6 +1565,74 @@ export default function EditCoursePage() {
               </div>
             ) : (
               <div className="space-y-5 max-w-3xl">
+                {/* Course Image Upload Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-darkGrey mb-2">
+                    Course Image
+                  </label>
+                  <div className="flex items-center gap-6">
+                    <div className="relative">
+                      <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-softGrey bg-lightGrey flex items-center justify-center">
+                        {courseImagePreview ? (
+                          <img 
+                            src={courseImagePreview} 
+                            alt="Course preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <BookOpen className="w-12 h-12 text-darkGrey/40" />
+                        )}
+                      </div>
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <label className="relative cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleImageUpload(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                            disabled={uploadingImage}
+                          />
+                          <span className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors
+                            ${uploadingImage ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 cursor-pointer'}`}
+                            style={{ 
+                              backgroundColor: BRAND_COLORS.darkRoyalBlue,
+                              color: BRAND_COLORS.white 
+                            }}>
+                            <Camera className="w-4 h-4" />
+                            {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                          </span>
+                        </label>
+                        
+                        {courseImagePreview && (
+                          <button
+                            onClick={handleImageRemove}
+                            disabled={uploadingImage}
+                            className="px-4 py-2 border border-brightRed text-brightRed rounded-lg text-sm font-medium hover:bg-brightRed/5 transition-colors disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-darkGrey/60 mt-2">
+                        Upload a cover image for the course. Max size: 5MB. Supported formats: JPG, PNG, GIF
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Course Name */}
                 <div>
                   <label className="block text-sm font-medium text-darkGrey mb-2">Course Name</label>
                   <input
@@ -1441,6 +1644,7 @@ export default function EditCoursePage() {
                   />
                 </div>
 
+                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-darkGrey mb-2">Description</label>
                   <textarea
@@ -1452,6 +1656,7 @@ export default function EditCoursePage() {
                   />
                 </div>
 
+                {/* Duration and Level */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">Duration</label>
@@ -1480,6 +1685,7 @@ export default function EditCoursePage() {
                   </div>
                 </div>
 
+                {/* Price */}
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-darkGrey mb-2">Price (PKR)</label>
@@ -1493,6 +1699,7 @@ export default function EditCoursePage() {
                   </div>
                 </div>
 
+                {/* Category */}
                 <div>
                   <label className="block text-sm font-medium text-darkGrey mb-2">Category</label>
                   <select
@@ -1509,6 +1716,7 @@ export default function EditCoursePage() {
                   </select>
                 </div>
 
+                {/* Status */}
                 <div>
                   <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
                   <div className="flex gap-4">
@@ -1637,7 +1845,7 @@ export default function EditCoursePage() {
         {/* Tab 3: Content & Quizzes */}
         {activeTab === 'content' && !isSystemCourse && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Slide List - NO SORTING */}
+            {/* Slide List */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg border border-softGrey p-4">
                 <h3 className="font-medium text-darkGrey mb-3">Slides</h3>
@@ -1898,6 +2106,20 @@ export default function EditCoursePage() {
                       </div>
                     )}
                   </div>
+                  {selectedSlideId && (
+                    <div className="mt-6">
+                      <TrueFalseFillBlanksManager 
+                        slideId={selectedSlideId}
+                        courseId={courseId}
+                        onQuestionsChange={(questions) => {
+                          setTfFillQuestions(prev => ({
+                            ...prev,
+                            [selectedSlideId]: questions
+                          }));
+                        }}
+                      />
+                    </div>
+                  )}
 
                   {/* Assignments */}
                   <div className="bg-white rounded-lg border border-softGrey p-6">
