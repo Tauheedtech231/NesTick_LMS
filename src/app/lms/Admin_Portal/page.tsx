@@ -140,7 +140,7 @@ export default function AdminDashboard() {
     topCourses: []
   })
 
-  // Brand Colors
+  // Brand Colors (Same as before)
   const BRAND_COLORS = {
     darkNavy: '#0B1C3D',
     darkRoyalBlue: '#1E3A8A',
@@ -162,7 +162,6 @@ export default function AdminDashboard() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      // Fetch all enrollments
       const enrollmentsRes = await fetch('/api/admin/enrollments')
       const enrollmentsData = await enrollmentsRes.json()
       
@@ -196,7 +195,6 @@ export default function AdminDashboard() {
         setPaymentStudents(students)
       }
 
-      // Fetch credentials (verified students)
       const credentialsRes = await fetch('/api/admin/credentials')
       const credentialsData = await credentialsRes.json()
       
@@ -204,7 +202,6 @@ export default function AdminDashboard() {
         setStudentCredentials(credentialsData.data)
       }
 
-      // Fetch revenue stats
       const revenueRes = await fetch('/api/admin/revenue')
       const revenueData = await revenueRes.json()
       
@@ -212,7 +209,6 @@ export default function AdminDashboard() {
         setRevenueStats(revenueData.data)
       }
 
-      // Fetch stats with revenue data
       const statsRes = await fetch('/api/admin/stats')
       const statsData = await statsRes.json()
       
@@ -231,7 +227,7 @@ export default function AdminDashboard() {
     loadData()
   }, [])
 
-  // Handle verify payment only
+  // ✅ UPDATED: Verify payment only (no credentials)
   const handleVerifyPayment = async (enrollmentId: string, studentId: string) => {
     setIsVerifying(enrollmentId)
     try {
@@ -244,38 +240,82 @@ export default function AdminDashboard() {
       const data = await response.json()
       
       if (data.success) {
-        // Update local state
         setPaymentStudents(prev => prev.map(s => 
           s.enrollmentId === enrollmentId ? { ...s, status: 'verified' } : s
         ))
-        
-        // Refresh all data to update revenue
         await loadData()
-        
-        alert('Payment verified successfully!')
+        return true
       } else {
         throw new Error(data.error || 'Verification failed')
       }
     } catch (error: any) {
       console.error('Error verifying payment:', error)
       alert(`❌ Failed to verify payment: ${error.message}`)
+      return false
     } finally {
       setIsVerifying(null)
     }
   }
 
-  // Send credentials to student (after verification)
+  // ✅ UPDATED: Send credentials (only one email for all courses)
   const sendCredentialsToStudent = async (student: PaymentStudent) => {
     if (!student.email) {
       alert('Student email is required')
       return
     }
 
-    // First verify the payment
-    await handleVerifyPayment(student.enrollmentId, student.studentId)
-    
-    // Then send credentials
     setIsSendingCredentials(student.enrollmentId)
+
+    try {
+      // First verify the payment
+      const verified = await handleVerifyPayment(student.enrollmentId, student.studentId)
+      if (!verified) return
+
+      // Then send credentials (API will handle single email for all courses)
+      const response = await fetch('/api/admin/generate-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: student.studentId,
+          enrollmentId: student.enrollmentId,
+          studentName: student.name,
+          studentEmail: student.email,
+          course: student.course,
+          courseId: student.courseId,
+          amount: student.amount,
+          paymentId: student.paymentId
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        if (data.data?.isExistingUser) {
+          alert(`✅ Course "${student.course}" added to existing account!\n\nEmail sent to ${student.email}`)
+        } else {
+          alert(`✅ Credentials sent successfully to ${student.email}!\n\nUsername: ${data.data?.username}\nPassword: ${data.data?.password}`)
+        }
+        setShowScreenshotModal(false)
+        await loadData()
+      } else {
+        throw new Error(data.error || 'Failed to send credentials')
+      }
+    } catch (error: any) {
+      console.error('Error sending credentials:', error)
+      alert(`❌ Failed: ${error.message}`)
+    } finally {
+      setIsSendingCredentials(null)
+    }
+  }
+
+  // ✅ UPDATED: Resend credentials (only shows for already verified students)
+  const resendCredentialsEmail = async (student: PaymentStudent) => {
+    if (!student.email) {
+      alert('Student email is required')
+      return
+    }
+
+    setIsResendingEmail(student.enrollmentId)
 
     try {
       const response = await fetch('/api/admin/generate-credentials', {
@@ -287,60 +327,24 @@ export default function AdminDashboard() {
           studentName: student.name,
           studentEmail: student.email,
           course: student.course,
-          courseId: student.courseId
+          courseId: student.courseId,
+          amount: student.amount,
+          paymentId: student.paymentId,
+          isResend: true
         })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        alert(`✅ Credentials sent successfully to ${student.email}!`)
-        setShowScreenshotModal(false)
+        alert(`✅ New credentials sent to ${student.email}!\n\nNew Password: ${data.data?.password}`)
         await loadData()
       } else {
-        throw new Error(data.error || 'Failed to send credentials')
+        throw new Error(data.error || 'Failed to resend credentials')
       }
     } catch (error: any) {
-      console.error('Error sending credentials:', error)
-      alert(`❌ Failed to send credentials: ${error.message}`)
-    } finally {
-      setIsSendingCredentials(null)
-    }
-  }
-
-  // ✅ NEW: Resend enrollment confirmation email
-  const resendEnrollmentEmail = async (student: PaymentStudent) => {
-    if (!student.email) {
-      alert('Student email is required')
-      return
-    }
-
-    setIsResendingEmail(student.enrollmentId)
-
-    try {
-      const response = await fetch('/api/admin/resend-enrollment-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enrollmentId: student.enrollmentId,
-          studentEmail: student.email,
-          studentName: student.name,
-          course: student.course,
-          amount: student.amount,
-          paymentId: student.paymentId
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        alert(`✅ Enrollment confirmation email resent successfully to ${student.email}!`)
-      } else {
-        throw new Error(data.error || 'Failed to resend email')
-      }
-    } catch (error: any) {
-      console.error('Error resending email:', error)
-      alert(`❌ Failed to resend email: ${error.message}`)
+      console.error('Error resending credentials:', error)
+      alert(`❌ Failed: ${error.message}`)
     } finally {
       setIsResendingEmail(null)
     }
@@ -436,7 +440,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen">
-      {/* Top Bar */}
+      {/* Top Bar - Same */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-indigo-100 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between shadow-sm">
         <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-400" />
@@ -466,7 +470,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {/* Welcome Section */}
+        {/* Welcome Section - Same */}
         <div className="mb-8">
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 text-white shadow-xl">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -481,9 +485,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Same */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Enrollments */}
           <div className="bg-white rounded-xl shadow p-6 border border-indigo-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
             <div className="flex items-center justify-between">
               <div>
@@ -497,7 +500,6 @@ export default function AdminDashboard() {
             <div className="mt-3 text-xs text-gray-500">Total number of enrollments so far</div>
           </div>
 
-          {/* Pending Verification */}
           <div className="bg-white rounded-xl shadow p-6 border border-amber-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
             <div className="flex items-center justify-between">
               <div>
@@ -511,7 +513,6 @@ export default function AdminDashboard() {
             <div className="mt-3 text-xs text-amber-600">Payments waiting for confirmation</div>
           </div>
 
-          {/* Verified Payments */}
           <div className="bg-white rounded-xl shadow p-6 border border-emerald-100 hover:shadow-lg transition-all hover:-translate-y-1 min-h-[120px]">
             <div className="flex items-center justify-between">
               <div>
@@ -525,7 +526,6 @@ export default function AdminDashboard() {
             <div className="mt-3 text-xs text-emerald-600">Payments successfully verified</div>
           </div>
 
-          {/* Total Revenue */}
           <div className="bg-white rounded-xl shadow p-6 border border-purple-100 hover:shadow-lg transition-all hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
@@ -541,11 +541,10 @@ export default function AdminDashboard() {
                 <Wallet className="w-6 h-6 text-white" />
               </div>
             </div>
-            
           </div>
         </div>
 
-        {/* Revenue Stats Row */}
+        {/* Revenue Stats Row - Same */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-emerald-50 to-white rounded-xl shadow-lg p-6 border border-emerald-100 hover:shadow-xl transition-all hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -595,7 +594,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Credentials Status */}
+        {/* Credentials Status - Same */}
         <div className="mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
@@ -633,7 +632,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Filter Bar */}
+        {/* Filter Bar - Same */}
         <div className="mb-6">
           <div className="bg-white rounded-xl shadow-lg p-4 border border-indigo-100">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -656,7 +655,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - Same */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
           <div className="flex border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50 p-1">
             <button
@@ -745,19 +744,21 @@ export default function AdminDashboard() {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {/* ✅ Resend Email Button */}
-                            <button 
-                              onClick={() => resendEnrollmentEmail(student)}
-                              disabled={isResendingEmail === student.enrollmentId}
-                              className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
-                              title="Resend Enrollment Email"
-                            >
-                              {isResendingEmail === student.enrollmentId ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Mail className="w-4 h-4" />
-                              )}
-                            </button>
+                            {/* ✅ Resend button - only shows if credentials already sent AND status is verified */}
+                            {student.credentialsSent && student.status === 'verified' && (
+                              <button 
+                                onClick={() => resendCredentialsEmail(student)}
+                                disabled={isResendingEmail === student.enrollmentId}
+                                className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
+                                title="Resend Credentials"
+                              >
+                                {isResendingEmail === student.enrollmentId ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Mail className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -775,7 +776,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Credentials Table */}
+          {/* Credentials Table - Same */}
           {activeTab === 'credentials' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-indigo-100">
@@ -813,15 +814,14 @@ export default function AdminDashboard() {
                           <div className="flex justify-center">
                             <button 
                               onClick={() => {
-                                // Resend credentials email for verified student
                                 const student = paymentStudents.find(s => s.enrollmentId === cred.enrollmentId)
-                                if (student) {
-                                  resendEnrollmentEmail(student)
+                                if (student && student.credentialsSent) {
+                                  resendCredentialsEmail(student)
                                 }
                               }}
                               disabled={isResendingEmail === cred.enrollmentId}
                               className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors disabled:opacity-50"
-                              title="Resend Email"
+                              title="Resend Credentials"
                             >
                               {isResendingEmail === cred.enrollmentId ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -846,11 +846,10 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Revenue Details Tab */}
+          {/* Revenue Details Tab - Same */}
           {activeTab === 'revenue' && (
             <div className="p-6 bg-gray-50 rounded-xl space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Revenue Summary */}
                 <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow hover:shadow-md transition-all">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Summary</h3>
                   <div className="space-y-4">
@@ -873,7 +872,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Course-wise Revenue */}
                 <div className="bg-white rounded-xl p-6 border border-purple-100 shadow hover:shadow-md transition-all">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Course-wise Revenue</h3>
                   <div className="space-y-3">
@@ -904,7 +902,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Verified Payments */}
                 <div className="md:col-span-2 bg-white rounded-xl p-6 border border-emerald-100 shadow hover:shadow-md transition-all">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Revenue</h3>
                   <div className="overflow-x-auto">
@@ -938,7 +935,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Screenshot Modal */}
+        {/* Screenshot Modal - Same UI, updated logic */}
         {showScreenshotModal && selectedStudentDetails && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
@@ -999,7 +996,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {/* Documents */}
                     <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
                       <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <FileText className="w-5 h-5 text-indigo-600" />
@@ -1092,24 +1088,21 @@ export default function AdminDashboard() {
                             </p>
                           )}
                         </div>
-                        {/* Resend Email Button in Modal */}
-                        <button
-                          onClick={() => resendEnrollmentEmail(selectedStudentDetails)}
-                          disabled={isResendingEmail === selectedStudentDetails.enrollmentId}
-                          className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                        >
-                          {isResendingEmail === selectedStudentDetails.enrollmentId ? (
-                            <>
+                        {/* Resend Button in Modal - only if credentials already sent */}
+                        {selectedStudentDetails.credentialsSent && (
+                          <button
+                            onClick={() => resendCredentialsEmail(selectedStudentDetails)}
+                            disabled={isResendingEmail === selectedStudentDetails.enrollmentId}
+                            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                          >
+                            {isResendingEmail === selectedStudentDetails.enrollmentId ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Resending...
-                            </>
-                          ) : (
-                            <>
+                            ) : (
                               <Mail className="w-4 h-4" />
-                              Resend Enrollment Email
-                            </>
-                          )}
-                        </button>
+                            )}
+                            Resend Credentials
+                          </button>
+                        )}
                       </div>
                     )}
                     
