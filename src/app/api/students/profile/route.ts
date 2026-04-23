@@ -1,7 +1,7 @@
-// /app/api/students/profile/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 /* eslint-disable */
+
 export async function GET(request: NextRequest) {
   let connection;
   try {
@@ -17,13 +17,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get connection with timeout
     connection = await getConnection();
     
     // Set connection timeout
     await connection.execute('SET SESSION wait_timeout = 28800');
 
-    // Get student profile from enrollments table
+    // ✅ Get student profile from enrollments table with username
     const [rows] = await connection.execute(
       `SELECT 
         id,
@@ -35,6 +34,7 @@ export async function GET(request: NextRequest) {
         student_address as address,
         student_education as education,
         student_experience as experience,
+        username,
         profile_image as profileImage,
         created_at as createdAt,
         last_login as lastLogin
@@ -52,8 +52,14 @@ export async function GET(request: NextRequest) {
     }
 
     const student = (rows as any[])[0];
+    
+    console.log('📝 Student data:', {
+      email: student.email,
+      name: student.name,
+      username: student.username,  // ✅ Now username will be fetched
+    });
 
-    // Get additional stats with separate queries to avoid timeout
+    // Get additional stats
     const [enrollmentRows] = await connection.execute(
       `SELECT 
         COUNT(*) as totalEnrollments,
@@ -79,7 +85,6 @@ export async function GET(request: NextRequest) {
         : 'N/A'
     };
 
-    // Release connection before sending response
     connection.release();
 
     return NextResponse.json({
@@ -94,6 +99,7 @@ export async function GET(request: NextRequest) {
         address: student.address || '',
         education: student.education || '',
         experience: student.experience || '',
+        username: student.username || '',  // ✅ Added username field
         profileImage: student.profileImage || '',
         lastLogin: student.lastLogin,
         stats
@@ -103,7 +109,6 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error fetching profile:', error);
     
-    // Make sure to release connection if error occurs
     if (connection) {
       try {
         connection.release();
@@ -112,7 +117,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Return user-friendly error message
     return NextResponse.json(
       { 
         success: false, 

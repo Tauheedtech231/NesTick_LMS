@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/db';
 /* eslint-disable */
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,7 +39,7 @@ export async function GET(
        FROM instructor_course 
        WHERE id = ?`,
       [id, id, id, id, id]
-    );
+    ) as any[];
 
     if ((courseRows as any[]).length === 0) {
       return NextResponse.json(
@@ -59,7 +60,7 @@ export async function GET(
        WHERE course_id = ? 
        ORDER BY slide_number ASC`,
       [id]
-    );
+    ) as any[];
     const slides = slideRows as any[];
 
     // 3. Get files for all slides
@@ -75,7 +76,7 @@ export async function GET(
        FROM slide_files 
        WHERE course_id = ?`,
       [id]
-    );
+    ) as any[];
     const files = fileRows as any[];
 
     // Group files by slideId
@@ -94,22 +95,64 @@ export async function GET(
       });
     });
 
-    // 4. Get quizzes with questions
-    const [quizRows] = await connection.execute(
+    // ✅ 4. Get quizzes from ALL tables
+    // 4a. Get quizzes from quiz_questions_new
+    const [quizNewRows] = await connection.execute(
       `SELECT 
         q.id as quiz_id,
         q.slide_id as slideId,
         qq.id as question_id,
-        qq.question,
+        qq.question_type as questionType,
+        qq.question_text as question,
         qq.options,
-        qq.correct_answer as correctAnswer
+        qq.correct_answer as correctAnswer,
+        qq.points
+       FROM course_quizzes q
+       LEFT JOIN quiz_questions_new qq ON q.id = qq.quiz_id
+       WHERE q.course_id = ?
+       ORDER BY q.slide_id, qq.created_at`,
+      [id]
+    ) as any[];
+
+    // ✅ 4b. Get quizzes from tf_fill_questions - FIXED: join using slide_id and course_id
+    const [tfFillRows] = await connection.execute(
+      `SELECT 
+        q.id as quiz_id,
+        q.slide_id as slideId,
+        tf.id as question_id,
+        tf.question_type as questionType,
+        tf.question_text as question,
+        NULL as options,
+        tf.correct_answer as correctAnswer,
+        tf.points
+       FROM course_quizzes q
+       LEFT JOIN tf_fill_questions tf ON q.slide_id = tf.slide_id AND q.course_id = tf.course_id
+       WHERE q.course_id = ?
+       ORDER BY q.slide_id, tf.created_at`,
+      [id]
+    ) as any[];
+
+    // 4c. Get quizzes from quiz_questions (simple MCQ)
+    const [quizSimpleRows] = await connection.execute(
+      `SELECT 
+        q.id as quiz_id,
+        q.slide_id as slideId,
+        qq.id as question_id,
+        'mcq' as questionType,
+        qq.question as question,
+        qq.options,
+        qq.correct_answer as correctAnswer,
+        qq.points
        FROM course_quizzes q
        LEFT JOIN quiz_questions qq ON q.id = qq.quiz_id
        WHERE q.course_id = ?
        ORDER BY q.slide_id, qq.created_at`,
       [id]
-    );
-    const quizzes = quizRows as any[];
+    ) as any[];
+
+    // Combine all quiz results
+    const allQuizRows = [...quizNewRows, ...tfFillRows, ...quizSimpleRows];
+    const quizzes = allQuizRows as any[];
 
     // Group quizzes by slideId
     const quizzesBySlide: Record<string, any> = {};
@@ -129,25 +172,38 @@ export async function GET(
         let options = [];
         
         try {
-          if (typeof row.options === 'string') {
-            if (row.options.trim().startsWith('[')) {
-              options = JSON.parse(row.options);
-            } else {
-              options = row.options.split(',').map((opt: string) => opt.trim());
+          if (row.questionType === 'true_false') {
+            options = ['True', 'False'];
+          } else if (row.options) {
+            if (typeof row.options === 'string') {
+              if (row.options.trim().startsWith('[')) {
+                options = JSON.parse(row.options);
+              } else {
+                options = row.options.split(',').map((opt: string) => opt.trim());
+              }
+            } else if (Array.isArray(row.options)) {
+              options = row.options;
             }
-          } else if (Array.isArray(row.options)) {
-            options = row.options;
           }
         } catch (e) {
           console.error('Error parsing quiz options:', e);
           options = [];
         }
         
+        let correctAnswer = row.correctAnswer;
+        try {
+          if (typeof row.correctAnswer === 'string') {
+            correctAnswer = JSON.parse(row.correctAnswer);
+          }
+        } catch (e) {}
+        
         quiz.questions.push({
           id: row.question_id,
           question: row.question || '',
+          questionType: row.questionType || 'mcq',
           options: options,
-          correctAnswer: row.correctAnswer || 0
+          correctAnswer: correctAnswer,
+          points: row.points || 1
         });
       }
     });
@@ -157,7 +213,9 @@ export async function GET(
         quizzesBySlide[quiz.slideId] = {
           id: quiz.id,
           slideId: quiz.slideId,
-          questions: quiz.questions
+          questions: quiz.questions,
+          totalQuestions: quiz.questions.length,
+          totalPoints: quiz.questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0)
         };
       }
     });
@@ -178,7 +236,7 @@ export async function GET(
        FROM course_assignments 
        WHERE course_id = ?`,
       [id]
-    );
+    ) as any[];
     const assignments = assignmentRows as any[];
 
     // Group assignments by slideId

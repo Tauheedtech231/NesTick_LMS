@@ -1,4 +1,3 @@
-// app/lms/Student_Portal/profile/page.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -7,24 +6,21 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   HiUser,
- 
   HiAcademicCap,
-  
   HiCheckCircle,
   HiBookOpen,
   HiOutlineAcademicCap as HiAward,
- 
   HiPencil,
   HiCamera,
- 
   HiRefresh,
   HiChartBar,
- 
-  
   HiSave,
   HiX,
   HiEye,
-  HiEyeOff
+  HiEyeOff,
+  HiKey,
+  HiLockClosed,
+  HiAtSymbol
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
 
@@ -50,6 +46,7 @@ interface StudentProfile {
   education: string;
   experience: string;
   profileImage: string;
+  username: string;
   lastLogin: string;
   stats: {
     totalEnrollments: number;
@@ -78,6 +75,26 @@ export default function StudentProfilePage() {
   const [editForm, setEditForm] = useState<Partial<StudentProfile>>({});
   const [showCnic, setShowCnic] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  // Password/Username change states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [usernameForm, setUsernameForm] = useState({
+    newUsername: ''
+  });
+  const [changingUsername, setChangingUsername] = useState(false);
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
 
   // Fix hydration
   useEffect(() => {
@@ -157,11 +174,12 @@ export default function StudentProfilePage() {
     fileInputRef.current?.click();
   };
 
+  // Real-time profile picture update
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Preview
+    // Show preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result as string);
@@ -192,6 +210,7 @@ export default function StudentProfilePage() {
         // Update profile with new image URL
         const updatedProfile = { ...profile, profileImage: result.data.url };
         setProfile(updatedProfile as StudentProfile);
+        setPreviewImage(result.data.url);
         
         // Update localStorage
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -207,6 +226,116 @@ export default function StudentProfilePage() {
       setPreviewImage(profile?.profileImage || null);
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Change Username
+  const handleChangeUsername = async () => {
+    if (!usernameForm.newUsername.trim()) {
+      setError('Please enter a username');
+      return;
+    }
+
+    if (usernameForm.newUsername.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+
+    setChangingUsername(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/students/profile/update-username', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          newUsername: usernameForm.newUsername
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update username');
+      }
+
+      if (result.success) {
+        // Update profile
+        const updatedProfile = { ...profile, username: result.data.username };
+        setProfile(updatedProfile as StudentProfile);
+        
+        // Update localStorage
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        currentUser.username = result.data.username;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        showSuccess('Username updated successfully!');
+        setShowUsernameModal(false);
+        setUsernameForm({ newUsername: '' });
+      }
+    } catch (error: any) {
+      console.error('Error updating username:', error);
+      setError(error.message || 'Failed to update username');
+    } finally {
+      setChangingUsername(false);
+    }
+  };
+
+  // Change Password
+  const handleChangePassword = async () => {
+    // Validate
+    if (!passwordForm.currentPassword) {
+      setError('Please enter current password');
+      return;
+    }
+    if (!passwordForm.newPassword) {
+      setError('Please enter new password');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/students/profile/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to change password');
+      }
+
+      if (result.success) {
+        showSuccess('Password changed successfully!');
+        setShowPasswordModal(false);
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      setError(error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -354,7 +483,7 @@ export default function StudentProfilePage() {
         </div>
       )}
 
-      {/* Header - Updated with Brand Colors */}
+      {/* Header */}
       <div className="mb-6">
         <div 
           className="rounded-xl p-6 text-white"
@@ -440,7 +569,19 @@ export default function StudentProfilePage() {
 
             <div className="pt-16 pb-6 px-6 text-center">
               <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
-              <p className="text-sm text-gray-500 mb-4">{profile.email}</p>
+              <p className="text-sm text-gray-500 mb-2">{profile.email}</p>
+              
+              {/* ✅ Username Display */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <HiAtSymbol className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">@{profile.username || 'Not set'}</span>
+                <button
+                  onClick={() => setShowUsernameModal(true)}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  Change
+                </button>
+              </div>
 
               <div className="flex justify-center gap-2 mb-4">
                 <span 
@@ -481,10 +622,20 @@ export default function StudentProfilePage() {
                   </div>
                 </div>
               </div>
+              
+              {/* ✅ Change Password Button */}
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="mt-4 w-full py-2 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-colors"
+                style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}
+              >
+                <HiKey className="w-4 h-4" />
+                Change Password
+              </button>
             </div>
           </div>
 
-          {/* Stats Cards - Updated with Brand Colors */}
+          {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-3 mt-6">
             <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
               <HiBookOpen className="w-5 h-5 mx-auto mb-1" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
@@ -543,12 +694,12 @@ export default function StudentProfilePage() {
                       Full Name
                     </label>
                     <input
-  type="text"
-  name="name"
-  value={editForm.name || ''}
-  onChange={handleInputChange}
-  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
-/>
+                      type="text"
+                      name="name"
+                      value={editForm.name || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
 
                   <div>
@@ -556,12 +707,12 @@ export default function StudentProfilePage() {
                       Phone Number
                     </label>
                     <input
-  type="tel"
-  name="phone"
-  value={editForm.phone || ''}
-  onChange={handleInputChange}
-  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
-/>
+                      type="tel"
+                      name="phone"
+                      value={editForm.phone || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
 
                   <div>
@@ -569,13 +720,12 @@ export default function StudentProfilePage() {
                       Address
                     </label>
                     <input
-  type="text"
-  name="address"
-  value={editForm.address || ''}
-  onChange={handleInputChange}
-  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
-  style={{ boxShadow: `0 0 0 2px ${BRAND_COLORS.darkRoyalBlue}` }}
-/>
+                      type="text"
+                      name="address"
+                      value={editForm.address || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
 
                   <div>
@@ -586,7 +736,7 @@ export default function StudentProfilePage() {
                       name="education"
                       value={editForm.education || ''}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[${BRAND_COLORS.darkRoyalBlue}]`}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select Education</option>
                       <option value="Matric">Matric</option>
@@ -602,14 +752,13 @@ export default function StudentProfilePage() {
                       Experience
                     </label>
                     <input
-  type="text"
-  name="experience"
-  value={editForm.experience || ''}
-  onChange={handleInputChange}
-  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
-  style={{ boxShadow: `0 0 0 2px ${BRAND_COLORS.darkRoyalBlue}` }}
-  placeholder="e.g., 2 years in construction"
-/>
+                      type="text"
+                      name="experience"
+                      value={editForm.experience || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., 2 years in construction"
+                    />
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4">
@@ -703,7 +852,7 @@ export default function StudentProfilePage() {
             </div>
           </div>
 
-          {/* Quick Links - Updated with Brand Colors */}
+          {/* Quick Links */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
             <Link
               href="/lms/Student_Portal/my-courses"
@@ -732,6 +881,163 @@ export default function StudentProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Change Username Modal */}
+      {showUsernameModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Change Username</h3>
+              <button onClick={() => setShowUsernameModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <HiX className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Current Username
+              </label>
+              <p className="text-gray-900 font-medium">@{profile?.username}</p>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Username
+              </label>
+              <input
+                type="text"
+                value={usernameForm.newUsername}
+                onChange={(e) => setUsernameForm({ newUsername: e.target.value })}
+                placeholder="Enter new username"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Username must be at least 3 characters</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUsernameModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangeUsername}
+                disabled={changingUsername}
+                className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: BRAND_COLORS.deepRed }}
+              >
+                {changingUsername ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Save'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <HiX className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword.current ? "text" : "password"}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword.current ? <HiEyeOff className="w-4 h-4 text-gray-400" /> : <HiEye className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword.new ? "text" : "password"}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword.new ? <HiEyeOff className="w-4 h-4 text-gray-400" /> : <HiEye className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword.confirm ? "text" : "password"}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    {showPassword.confirm ? <HiEyeOff className="w-4 h-4 text-gray-400" /> : <HiEye className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: BRAND_COLORS.deepRed }}
+              >
+                {changingPassword ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Change Password'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

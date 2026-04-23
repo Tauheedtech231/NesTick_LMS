@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
               <h3 style="color: #1E3A8A;">📚 Your Courses</h3>
               ${coursesListHtml}
               <div style="background-color: #B11217; color: white; padding: 12px; border-radius: 8px; margin-top: 15px; text-align: center;">
-                <strong>Total Amount: PKR ${totalAmount.toLocaleString()}</strong>
+      
               </div>
             </div>
             

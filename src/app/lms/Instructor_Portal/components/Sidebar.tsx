@@ -19,8 +19,8 @@ const navItems = [
   { href: '/lms/Instructor_Portal/dashboard', icon: HiHome, label: 'Dashboard' },
   { href: '/lms/Instructor_Portal/courses', icon: HiBookOpen, label: 'Courses' },
   { href: '/lms/Instructor_Portal/quizzes', icon: HiQuestionMarkCircle, label: 'Mock Quizzes' },
-  // ✅ NEW: Quiz Submissions Tab
-
+  // ✅ NEW: Assessment Hub (Quiz & Assignment Submissions)
+  { href: '/lms/Instructor_Portal/assessments', icon: HiDocumentReport, label: 'Assessment Hub' },
   { href: '/lms/Instructor_Portal/students', icon: HiClipboardList, label: 'Students' },
   { href: '/lms/Instructor_Portal/profile', icon: HiUser, label: 'Profile' },
 ];

@@ -1,4 +1,3 @@
-// app/lms/Student_Portal/courses/[id]/page.tsx
 'use client';
 /* eslint-disable */
 import { useParams, useRouter } from 'next/navigation';
@@ -27,11 +26,13 @@ import {
   HiViewList,
   HiLockClosed,
   HiLockOpen,
-  HiX
+  HiX,
+  HiRewind
 } from 'react-icons/hi';
 import { IoMdRadioButtonOff } from 'react-icons/io';
 import { Loader2 } from 'lucide-react';
 import StudentAdvancedQuiz from '../../components/StudentAdvancedQuiz';
+import SimpleQuiz from '../../components/SimpleQuiz';
 
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
@@ -155,6 +156,8 @@ interface SlidePerformance {
   quizAttempted: boolean;
   quizScore?: number;
   quizPassed?: boolean;
+  hasVideo: boolean;
+  videoCompleted: boolean;
   hasAssignment: boolean;
   assignmentSubmitted: boolean;
 }
@@ -186,6 +189,7 @@ interface VideoProgress {
   lastPosition: number;
   completed: boolean;
   updatedAt: string;
+  duration: number;
 }
 
 export default function StudentCourseDetailPage() {
@@ -205,12 +209,13 @@ export default function StudentCourseDetailPage() {
   const [completedSlides, setCompletedSlides] = useState<Set<string>>(new Set());
   const [completedContent, setCompletedContent] = useState<Set<string>>(new Set());
   const [quizAttempts, setQuizAttempts] = useState<Map<string, QuizAttempt>>(new Map());
+  const [advancedQuizAttempts, setAdvancedQuizAttempts] = useState<Set<string>>(new Set());
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Quiz states
+  // Simple quiz states
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswer[]>([]);
   
@@ -227,12 +232,11 @@ export default function StudentCourseDetailPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedSlide, setSelectedSlide] = useState<Slide | null>(null);
 
-  // Video player states - NO POPUP, inline player
+  // Video player states
   const [activeVideo, setActiveVideo] = useState<{ slideId: string; fileId: string; file: SlideFile } | null>(null);
   const [videoProgress, setVideoProgress] = useState<Record<string, VideoProgress>>({});
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showViewButton, setShowViewButton] = useState<Record<string, boolean>>({});
-  const [maxAllowedPosition, setMaxAllowedPosition] = useState<Record<string, number>>({});
 
   // Load video progress from localStorage
   useEffect(() => {
@@ -242,16 +246,6 @@ export default function StudentCourseDetailPage() {
         const progress = JSON.parse(savedProgress);
         setVideoProgress(progress);
         
-        // Track max allowed position for each video
-        const maxPos: Record<string, number> = {};
-        Object.keys(progress).forEach(key => {
-          if (progress[key].lastPosition > 0) {
-            maxPos[key] = progress[key].lastPosition;
-          }
-        });
-        setMaxAllowedPosition(maxPos);
-        
-        // Determine which videos should show VIEW button (completed ones)
         const completedVideos: Record<string, boolean> = {};
         Object.keys(progress).forEach(key => {
           if (progress[key].completed) {
@@ -266,7 +260,7 @@ export default function StudentCourseDetailPage() {
   }, []);
 
   // Save video progress to localStorage
-  const saveVideoProgress = (fileId: string, slideId: string, progress: number, position: number, completed: boolean) => {
+  const saveVideoProgress = (fileId: string, slideId: string, progress: number, position: number, completed: boolean, duration: number) => {
     const key = `${slideId}_${fileId}`;
     const newProgress = {
       ...videoProgress,
@@ -276,117 +270,135 @@ export default function StudentCourseDetailPage() {
         progress,
         lastPosition: position,
         completed,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        duration: duration
       }
     };
     setVideoProgress(newProgress);
     localStorage.setItem('videoProgress', JSON.stringify(newProgress));
     
-    // Update max allowed position (the furthest they've watched)
-    if (position > (maxAllowedPosition[key] || 0)) {
-      setMaxAllowedPosition(prev => ({ ...prev, [key]: position }));
-    }
-    
     if (completed && !showViewButton[key]) {
       setShowViewButton(prev => ({ ...prev, [key]: true }));
+      markContentViewed(slideId, fileId);
     }
   };
 
-  // Handle video time update - prevent forward seeking BEYOND watched position
-// Handle video time update - ONLY prevent manual seeking, allow normal playback
-const handleVideoTimeUpdate = () => {
-  if (!videoRef.current || !activeVideo) return;
-  
-  const currentTime = videoRef.current.currentTime;
-  const duration = videoRef.current.duration;
-  const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
-  const savedProgress = videoProgress[key];
-  const lastSavedPosition = savedProgress?.lastPosition || 0;
-  
-  // CRITICAL: Allow normal playback - DO NOT reset currentTime automatically
-  // Only track the furthest position they've reached naturally
-  if (currentTime > lastSavedPosition) {
-    // Update max position as they watch normally
-    const progressPercent = (currentTime / duration) * 100;
-    const completed = progressPercent >= 95;
+  // ✅ Handle video time update - track progress, allow backward, block forward
+  const handleVideoTimeUpdate = () => {
+    if (!videoRef.current || !activeVideo) return;
     
-    // Save progress every 3 seconds
-    if (Math.floor(currentTime) % 3 === 0 || completed) {
-      saveVideoProgress(activeVideo.fileId, activeVideo.slideId, progressPercent, currentTime, completed);
+    const currentTime = videoRef.current.currentTime;
+    const duration = videoRef.current.duration;
+    const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+    const savedProgress = videoProgress[key];
+    const lastSavedPosition = savedProgress?.lastPosition || 0;
+    
+    // ✅ ONLY track forward progress naturally (no forced seeking)
+    if (currentTime > lastSavedPosition) {
+      const progressPercent = (currentTime / duration) * 100;
+      const completed = progressPercent >= 95;
       
-      if (completed && !completedContent.has(key)) {
-        markContentViewed(activeVideo.slideId, activeVideo.fileId);
-        setQuizFeedback({
-          show: true,
-          message: '✅ Video completed!',
-          type: 'success'
-        });
-        setTimeout(() => setQuizFeedback(null), 2000);
-        setActiveVideo(null);
+      // Save progress every 3 seconds
+      if (Math.floor(currentTime) % 3 === 0 || completed) {
+        saveVideoProgress(activeVideo.fileId, activeVideo.slideId, progressPercent, currentTime, completed, duration);
+        
+        if (completed && !completedContent.has(key)) {
+          setQuizFeedback({
+            show: true,
+            message: '✅ Video completed!',
+            type: 'success'
+          });
+          setTimeout(() => setQuizFeedback(null), 2000);
+          setActiveVideo(null);
+        }
       }
     }
-  }
-  
-  // Progress bar update for UI
-  const progressPercent = (currentTime / duration) * 100;
-  if (Math.floor(currentTime) % 2 === 0) {
+    
+    // Update progress for UI display
+    const progressPercent = (currentTime / duration) * 100;
     setVideoProgress(prev => ({
       ...prev,
       [key]: {
         ...prev[key],
         progress: progressPercent,
-        lastPosition: currentTime
+        lastPosition: currentTime,
+        duration: duration
       }
     }));
-  }
-};
+  };
 
-// Handle seeking - THIS is where we prevent forward seeking
-const handleVideoSeeking = () => {
-  if (!videoRef.current || !activeVideo) return;
-  
-  const currentTime = videoRef.current.currentTime;
-  const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
-  const savedProgress = videoProgress[key];
-  const maxAllowedPosition = savedProgress?.lastPosition || 0;
-  
-  // If user tries to seek forward beyond watched position, prevent it
-  if (currentTime > maxAllowedPosition + 1 && maxAllowedPosition > 0) {
-    videoRef.current.currentTime = maxAllowedPosition;
+  // ✅ Handle seeking - BLOCK forward seeking, ALLOW backward
+  const handleVideoSeeking = () => {
+    if (!videoRef.current || !activeVideo) return;
+    
+    const currentTime = videoRef.current.currentTime;
+    const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
+    const savedProgress = videoProgress[key];
+    const maxAllowedPosition = savedProgress?.lastPosition || 0;
+    
+    // ✅ If user tries to seek forward beyond watched position, block it
+    if (currentTime > maxAllowedPosition + 0.5 && maxAllowedPosition > 0) {
+      videoRef.current.currentTime = maxAllowedPosition;
+      setQuizFeedback({
+        show: true,
+        message: '⚠️ You cannot skip forward. Only backward seeking is allowed.',
+        type: 'error'
+      });
+      setTimeout(() => setQuizFeedback(null), 2000);
+    }
+    // ✅ Allow backward seeking (rewind) anytime - no restriction
+  };
+
+  // ✅ Handle backward button click (rewind 10 seconds)
+  const handleBackward = () => {
+    if (!videoRef.current || !activeVideo) return;
+    const newTime = Math.max(0, videoRef.current.currentTime - 10);
+    videoRef.current.currentTime = newTime;
     setQuizFeedback({
       show: true,
-      message: '⚠️ You cannot skip forward. Please watch the video sequentially.',
-      type: 'error'
+      message: '⏪ Rewound 10 seconds',
+      type: 'success'
     });
-    setTimeout(() => setQuizFeedback(null), 2000);
-  }
-  // Allow seeking backward (rewind) anytime
-};
+    setTimeout(() => setQuizFeedback(null), 1000);
+  };
 
-  // Handle video loaded - restore last position
-  const handleVideoLoaded = () => {
+  const handleVideoLoadedMetadata = () => {
     if (!videoRef.current || !activeVideo) return;
     
     const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
     const savedProgress = videoProgress[key];
+    const duration = videoRef.current.duration;
     
     if (savedProgress && savedProgress.lastPosition > 0 && !savedProgress.completed) {
-      videoRef.current.currentTime = savedProgress.lastPosition;
-      setQuizFeedback({
-        show: true,
-        message: `▶️ Resuming from ${Math.floor(savedProgress.lastPosition / 60)}:${Math.floor(savedProgress.lastPosition % 60).toString().padStart(2, '0')}`,
-        type: 'success'
-      });
-      setTimeout(() => setQuizFeedback(null), 2000);
+      if (savedProgress.lastPosition < duration - 5) {
+        videoRef.current.currentTime = savedProgress.lastPosition;
+        setQuizFeedback({
+          show: true,
+          message: `▶️ Resuming from ${Math.floor(savedProgress.lastPosition / 60)}:${Math.floor(savedProgress.lastPosition % 60).toString().padStart(2, '0')}`,
+          type: 'success'
+        });
+        setTimeout(() => setQuizFeedback(null), 2000);
+      }
+    }
+    
+    // Update duration in progress
+    if (savedProgress) {
+      setVideoProgress(prev => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          duration: duration
+        }
+      }));
     }
   };
 
-  // Handle video ended
   const handleVideoEnded = () => {
     if (!activeVideo) return;
     
     const key = `${activeVideo.slideId}_${activeVideo.fileId}`;
-    saveVideoProgress(activeVideo.fileId, activeVideo.slideId, 100, videoRef.current?.duration || 0, true);
+    const duration = videoRef.current?.duration || 0;
+    saveVideoProgress(activeVideo.fileId, activeVideo.slideId, 100, duration, true, duration);
     markContentViewed(activeVideo.slideId, activeVideo.fileId);
     
     setQuizFeedback({
@@ -395,14 +407,10 @@ const handleVideoSeeking = () => {
       type: 'success'
     });
     setTimeout(() => setQuizFeedback(null), 2000);
-    
-    // Close video player
     setActiveVideo(null);
   };
 
-  // Handle "Watch Video" button click - NO POPUP, inline
   const handleWatchVideo = (slideId: string, file: SlideFile) => {
-    // If already playing same video, close it
     if (activeVideo?.fileId === file.id) {
       if (videoRef.current) videoRef.current.pause();
       setActiveVideo(null);
@@ -411,7 +419,6 @@ const handleVideoSeeking = () => {
     }
   };
 
-  // Handle "VIEW" button click (original view functionality)
   const handleViewClick = async (slideId: string, fileId: string) => {
     await markContentViewed(slideId, fileId);
     
@@ -423,7 +430,6 @@ const handleVideoSeeking = () => {
     setTimeout(() => setQuizFeedback(null), 2000);
   };
 
-  // Close video player
   const closeVideoPlayer = () => {
     if (videoRef.current) {
       videoRef.current.pause();
@@ -451,7 +457,6 @@ const handleVideoSeeking = () => {
     }
   }, [router]);
 
-  // Fetch enrollment ID and validate course access
   const fetchAndValidateEnrollment = async () => {
     if (!user?.email) return null;
 
@@ -484,7 +489,6 @@ const handleVideoSeeking = () => {
     }
   };
 
-  // Load course data from API
   const loadCourseData = async (showRefreshing = false) => {
     if (!user?.email) return;
 
@@ -549,15 +553,19 @@ const handleVideoSeeking = () => {
           setCompletedContent(new Set(data.progress.completedContent || []));
         }
         
+        // Track simple quiz attempts
         const attemptsMap = new Map();
+        const advancedSet = new Set<string>();
         Object.entries(data.quizAttempts || {}).forEach(([quizId, attempt]) => {
           const attemptData = attempt as any;
           const slideId = attemptData.slideId;
           if (slideId) {
             attemptsMap.set(slideId, attemptData);
+            advancedSet.add(slideId);
           }
         });
         setQuizAttempts(attemptsMap);
+        setAdvancedQuizAttempts(advancedSet);
         
         const submissionsMap = new Map();
         Object.entries(data.assignmentSubmissions || {}).forEach(([assignmentId, sub]) => {
@@ -592,7 +600,6 @@ const handleVideoSeeking = () => {
     }
   }, [user, courseId]);
 
-  // Track content view
   const trackContentView = async (slideId: string, fileId: string, completed: boolean, durationWatched: number = 0) => {
     if (!user?.email || !enrollmentId) return;
 
@@ -635,9 +642,14 @@ const handleVideoSeeking = () => {
     }
   };
 
-  // Auto-complete slide
+  // ✅ Updated: Auto-complete slide based on content (video + quiz logic)
   const autoCompleteSlide = async (slideId: string) => {
     if (!user?.email || !enrollmentId) return;
+    if (completedSlides.has(slideId)) return;
+
+    // Check if slide can be completed
+    const canComplete = canMarkSlideComplete(slideId);
+    if (!canComplete) return;
 
     try {
       const response = await fetch('/api/students/slide/auto-complete', {
@@ -668,7 +680,6 @@ const handleVideoSeeking = () => {
     }
   };
 
-  // Mark content as viewed
   const markContentViewed = async (slideId: string, fileId: string) => {
     if (!user) return;
 
@@ -682,44 +693,74 @@ const handleVideoSeeking = () => {
     setCompletedContent(prev => new Set([...prev, contentKey]));
     await trackContentView(slideId, fileId, true, 30);
 
+    // Check if all content for this slide is viewed
     const slideFiles = slideContents.get(slideId) || [];
-    const allViewed = slideFiles.every(f => 
-      completedContent.has(`${slideId}_${f.id}`) || f.id === fileId
-    );
-    
-    if (allViewed) {
-      await autoCompleteSlide(slideId);
-    }
-  };
-
-  // Check if slide can be marked complete
-  const canMarkSlideComplete = (slideId: string): boolean => {
-    const slideFiles = slideContents.get(slideId) || [];
-    const quiz = quizzes.get(slideId);
-    const quizAttempt = quiz ? quizAttempts.get(slideId) : null;
-    const slideAssignments = assignments.filter(a => a.slideId === slideId);
-    
     const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
       completedContent.has(`${slideId}_${f.id}`)
     );
     
-    const quizAttempted = quiz ? !!quizAttempt : true;
-    const allAssignmentsSubmitted = slideAssignments.length === 0 || 
-      slideAssignments.every(a => assignmentSubmissions.has(a.id));
-    
-    return allContentViewed && quizAttempted && allAssignmentsSubmitted;
+    if (allContentViewed) {
+      // Check if quiz is also completed
+      const quizCompleted = isQuizCompleted(slideId);
+      if (quizCompleted) {
+        await autoCompleteSlide(slideId);
+      }
+    }
   };
 
-  // Mark slide as complete
+  // ✅ Helper: Check if quiz is completed for a slide
+  const isQuizCompleted = (slideId: string): boolean => {
+    const simpleQuiz = quizzes.get(slideId);
+    const simpleQuizAttempted = simpleQuiz ? quizAttempts.get(slideId) !== null : true;
+    const advancedQuizAttempted = advancedQuizAttempts.has(slideId);
+    
+    return (!simpleQuiz && !advancedQuizAttempted) || 
+           (simpleQuiz && simpleQuizAttempted) || 
+           (advancedQuizAttempted);
+  };
+
+  // ✅ Helper: Check if video is completed for a slide
+  const isVideoCompleted = (slideId: string): boolean => {
+    const slideFiles = slideContents.get(slideId) || [];
+    const videoFiles = slideFiles.filter(f => f.type.includes('video'));
+    
+    if (videoFiles.length === 0) return true;
+    
+    return videoFiles.every(f => 
+      completedContent.has(`${slideId}_${f.id}`)
+    );
+  };
+
+  // ✅ UPDATED: Check if slide can be marked complete (smart logic)
+  const canMarkSlideComplete = (slideId: string): boolean => {
+    const slideFiles = slideContents.get(slideId) || [];
+    const hasVideo = slideFiles.some(f => f.type.includes('video'));
+    const hasQuiz = quizzes.get(slideId) !== undefined;
+    const hasAdvancedQuiz = advancedQuizAttempts.has(slideId);
+    
+    const videoCompleted = !hasVideo || isVideoCompleted(slideId);
+    const quizCompleted = !hasQuiz || isQuizCompleted(slideId);
+    const assignmentsCompleted = true; // Add assignment logic if needed
+    
+    return videoCompleted && quizCompleted && assignmentsCompleted;
+  };
+
+  // ✅ UPDATED: Mark slide as complete
   const markSlideComplete = async (slideId: string) => {
     if (!user || markingComplete[slideId]) return;
     
-    if (!canMarkSlideComplete(slideId)) {
-      setQuizFeedback({
-        show: true,
-        message: 'Complete all content, quiz, and assignments first',
-        type: 'error'
-      });
+    const slideFiles = slideContents.get(slideId) || [];
+    const hasVideo = slideFiles.some(f => f.type.includes('video'));
+    const hasQuiz = quizzes.get(slideId) !== undefined;
+    
+    const videoCompleted = !hasVideo || isVideoCompleted(slideId);
+    const quizCompleted = !hasQuiz || isQuizCompleted(slideId);
+    
+    if (!videoCompleted || !quizCompleted) {
+      let message = 'Complete all requirements first:';
+      if (hasVideo && !videoCompleted) message += '\n• Watch the video completely';
+      if (hasQuiz && !quizCompleted) message += '\n• Attempt the quiz';
+      setQuizFeedback({ show: true, message, type: 'error' });
       setTimeout(() => setQuizFeedback(null), 3000);
       return;
     }
@@ -742,7 +783,6 @@ const handleVideoSeeking = () => {
 
       if (result.success && result.data?.slideCompleted) {
         setCompletedSlides(prev => new Set([...prev, slideId]));
-        
         setQuizFeedback({
           show: true,
           message: `✓ Lesson completed!`,
@@ -765,7 +805,229 @@ const handleVideoSeeking = () => {
     }
   };
 
-  // Handle quiz submission
+  // ✅ Updated: Handle simple quiz submission
+  const handleSimpleQuizSubmit = async (slideId: string, answers: QuizAnswer[], score: number, passed: boolean) => {
+    if (!user || !enrollmentId) return;
+
+    const quiz = quizzes.get(slideId);
+    if (!quiz) return;
+
+    const quizId = slideId;
+
+    try {
+      const response = await fetch('/api/students/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId,
+          studentEmail: user.email,
+          courseId,
+          slideId,
+          quizId,
+          answers,
+          score,
+          passed
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit quiz');
+      }
+
+      if (result.success) {
+        const attempt: QuizAttempt = {
+          quizId,
+          slideId,
+          courseId,
+          answers,
+          score,
+          passed,
+          attemptedAt: new Date().toISOString()
+        };
+
+        setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
+
+        setQuizFeedback({
+          show: true,
+          message: passed ? `🎉 Quiz passed! Score: ${score}%` : `Quiz submitted. Score: ${score}%`,
+          type: passed ? 'success' : 'error'
+        });
+        setTimeout(() => setQuizFeedback(null), 4000);
+
+        // Check if video is also completed
+        const videoCompleted = isVideoCompleted(slideId);
+        if (videoCompleted) {
+          await autoCompleteSlide(slideId);
+        }
+        
+        await loadCourseData();
+      }
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      setQuizFeedback({
+        show: true,
+        message: error.message || 'Failed to submit quiz',
+        type: 'error'
+      });
+      setTimeout(() => setQuizFeedback(null), 3000);
+    }
+  };
+
+  // ✅ Handle advanced quiz completion
+  const handleAdvancedQuizComplete = async (score: number, total: number, passed: boolean) => {
+    console.log('Advanced Quiz completed:', { score, total, passed });
+    await loadCourseData();
+    
+    // Find which slide this quiz belongs to
+    // This will be handled in the component
+  };
+
+  const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => {
+    if (!user || !enrollmentId) return;
+    
+    if (assignmentFiles.length === 0) {
+      setAssignmentFeedback({
+        show: true,
+        message: 'Please upload at least one file',
+        type: 'error'
+      });
+      setTimeout(() => setAssignmentFeedback(null), 3000);
+      return;
+    }
+
+    setUploadingAssignment(true);
+
+    try {
+      const uploadedFiles = [];
+      
+      for (const file of assignmentFiles) {
+        const cloudinaryFormData = new FormData();
+        cloudinaryFormData.append('file', file);
+        cloudinaryFormData.append('type', 'assignment_submission');
+
+        const response = await fetch('/api/upload/cloudinary', {
+          method: 'POST',
+          body: cloudinaryFormData,
+        });
+
+        if (!response.ok) continue;
+
+        const result = await response.json();
+
+        if (result.success) {
+          uploadedFiles.push({
+            id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            url: result.data.secure_url,
+            publicId: result.data.public_id,
+            uploadedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      if (uploadedFiles.length === 0) {
+        throw new Error('Failed to upload any files');
+      }
+
+      const submitFormData = new FormData();
+      submitFormData.append('enrollmentId', enrollmentId);
+      submitFormData.append('studentEmail', user.email);
+      submitFormData.append('studentName', user.name || 'Student');
+      submitFormData.append('courseId', courseId);
+      submitFormData.append('slideId', slideId);
+      submitFormData.append('assignmentId', assignmentId);
+      submitFormData.append('files', JSON.stringify(uploadedFiles));
+
+      const response = await fetch('/api/students/assignment/submit', {
+        method: 'POST',
+        body: submitFormData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit');
+      }
+
+      if (result.success) {
+        const submission: AssignmentSubmission = {
+          assignmentId,
+          courseId,
+          studentEmail: user.email,
+          studentName: user.name || 'Student',
+          files: uploadedFiles,
+          submittedAt: new Date().toISOString(),
+          status: 'submitted'
+        };
+
+        setAssignmentSubmissions(new Map(assignmentSubmissions.set(assignmentId, submission)));
+
+        setAssignmentFeedback({
+          show: true,
+          message: '✓ Assignment submitted successfully!',
+          type: 'success'
+        });
+        setTimeout(() => setAssignmentFeedback(null), 3000);
+        
+        setActiveAssignment(null);
+        setAssignmentFiles([]);
+        
+        const videoCompleted = isVideoCompleted(slideId);
+        const quizCompleted = isQuizCompleted(slideId);
+        
+        if (videoCompleted && quizCompleted) {
+          await autoCompleteSlide(slideId);
+        }
+      }
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      setAssignmentFeedback({
+        show: true,
+        message: error.message || 'Failed to submit assignment',
+        type: 'error'
+      });
+      setTimeout(() => setAssignmentFeedback(null), 3000);
+    } finally {
+      setUploadingAssignment(false);
+    }
+  };
+
+  const initializeQuiz = (slideId: string, quiz: Quiz) => {
+    setActiveQuiz(slideId);
+    
+    const initialAnswers: QuizAnswer[] = quiz.questions.map((q, index) => {
+      if (q.questionType === 'text' || !q.options || q.options.length === 0) {
+        return { questionIndex: index, textAnswer: '' };
+      } else {
+        return { questionIndex: index, selectedOption: -1 };
+      }
+    });
+    
+    setQuizAnswers(initialAnswers);
+  };
+
+  const updateQuizAnswer = (questionIndex: number, question: QuizQuestion, value: any) => {
+    const updatedAnswers = [...quizAnswers];
+    
+    if (question.questionType === 'text' || !question.options || question.options.length === 0) {
+      updatedAnswers[questionIndex] = {
+        questionIndex,
+        textAnswer: value
+      };
+    } else {
+      updatedAnswers[questionIndex] = {
+        questionIndex,
+        selectedOption: parseInt(value)
+      };
+    }
+    
+    setQuizAnswers(updatedAnswers);
+  };
+
   const handleQuizSubmit = async (slideId: string) => {
     const quiz = quizzes.get(slideId);
     if (!quiz || !user || !enrollmentId) return;
@@ -872,12 +1134,8 @@ const handleVideoSeeking = () => {
         });
         setTimeout(() => setQuizFeedback(null), 4000);
 
-        const slideFiles = slideContents.get(slideId) || [];
-        const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
-          completedContent.has(`${slideId}_${f.id}`)
-        );
-        
-        if (allContentViewed) {
+        const videoCompleted = isVideoCompleted(slideId);
+        if (videoCompleted) {
           await autoCompleteSlide(slideId);
         }
       }
@@ -895,128 +1153,18 @@ const handleVideoSeeking = () => {
     setQuizAnswers([]);
   };
 
-  // Handle assignment submission
-  const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => {
-    if (!user || !enrollmentId) return;
-    
-    if (assignmentFiles.length === 0) {
-      setAssignmentFeedback({
-        show: true,
-        message: 'Please upload at least one file',
-        type: 'error'
-      });
-      setTimeout(() => setAssignmentFeedback(null), 3000);
-      return;
-    }
-
-    setUploadingAssignment(true);
-
-    try {
-      const uploadedFiles = [];
-      
-      for (const file of assignmentFiles) {
-        const cloudinaryFormData = new FormData();
-        cloudinaryFormData.append('file', file);
-        cloudinaryFormData.append('type', 'assignment_submission');
-
-        const response = await fetch('/api/upload/cloudinary', {
-          method: 'POST',
-          body: cloudinaryFormData,
-        });
-
-        if (!response.ok) continue;
-
-        const result = await response.json();
-
-        if (result.success) {
-          uploadedFiles.push({
-            id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            url: result.data.secure_url,
-            publicId: result.data.public_id,
-            uploadedAt: new Date().toISOString()
-          });
-        }
-      }
-
-      if (uploadedFiles.length === 0) {
-        throw new Error('Failed to upload any files');
-      }
-
-      const submitFormData = new FormData();
-      submitFormData.append('enrollmentId', enrollmentId);
-      submitFormData.append('studentEmail', user.email);
-      submitFormData.append('studentName', user.name || 'Student');
-      submitFormData.append('courseId', courseId);
-      submitFormData.append('slideId', slideId);
-      submitFormData.append('assignmentId', assignmentId);
-      submitFormData.append('files', JSON.stringify(uploadedFiles));
-
-      const response = await fetch('/api/students/assignment/submit', {
-        method: 'POST',
-        body: submitFormData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit');
-      }
-
-      if (result.success) {
-        const submission: AssignmentSubmission = {
-          assignmentId,
-          courseId,
-          studentEmail: user.email,
-          studentName: user.name || 'Student',
-          files: uploadedFiles,
-          submittedAt: new Date().toISOString(),
-          status: 'submitted'
-        };
-
-        setAssignmentSubmissions(new Map(assignmentSubmissions.set(assignmentId, submission)));
-
-        setAssignmentFeedback({
-          show: true,
-          message: '✓ Assignment submitted successfully!',
-          type: 'success'
-        });
-        setTimeout(() => setAssignmentFeedback(null), 3000);
-        
-        setActiveAssignment(null);
-        setAssignmentFiles([]);
-        
-        const slideFiles = slideContents.get(slideId) || [];
-        const allContentViewed = slideFiles.length === 0 || slideFiles.every(f => 
-          completedContent.has(`${slideId}_${f.id}`)
-        );
-        const quiz = quizzes.get(slideId);
-        const quizAttempted = quiz ? quizAttempts.has(slideId) : true;
-        
-        if (allContentViewed && quizAttempted) {
-          await autoCompleteSlide(slideId);
-        }
-      }
-    } catch (error: any) {
-      console.error('Submission error:', error);
-      setAssignmentFeedback({
-        show: true,
-        message: error.message || 'Failed to submit assignment',
-        type: 'error'
-      });
-      setTimeout(() => setAssignmentFeedback(null), 3000);
-    } finally {
-      setUploadingAssignment(false);
-    }
-  };
-
-  // Calculate slide performance
   const getSlidePerformance = (): SlidePerformance[] => {
     return slides.map(slide => {
-      const quiz = quizzes.get(slide.id);
-      const attempt = quiz ? quizAttempts.get(slide.id) : null;
+      const slideFiles = slideContents.get(slide.id) || [];
+      const hasVideo = slideFiles.some(f => f.type.includes('video'));
+      const simpleQuiz = quizzes.get(slide.id);
+      const hasQuiz = simpleQuiz !== undefined;
+      const simpleAttempt = hasQuiz ? quizAttempts.get(slide.id) : null;
+      const advancedAttempted = advancedQuizAttempts.has(slide.id);
+      const quizAttempted = (!hasQuiz && !advancedAttempted) || 
+                            (hasQuiz && simpleAttempt !== null) || 
+                            (advancedAttempted);
+      const videoCompleted = !hasVideo || isVideoCompleted(slide.id);
       const slideAssignments = assignments.filter(a => a.slideId === slide.id);
       
       return {
@@ -1024,43 +1172,39 @@ const handleVideoSeeking = () => {
         title: slide.title,
         slideNumber: slide.slideNumber,
         completed: completedSlides.has(slide.id),
-        hasQuiz: !!quiz,
-        quizAttempted: !!attempt,
-        quizScore: attempt?.score,
-        quizPassed: attempt?.passed,
+        hasQuiz: hasQuiz,
+        quizAttempted: quizAttempted,
+        quizScore: simpleAttempt?.score,
+        quizPassed: simpleAttempt?.passed,
+        hasVideo: hasVideo,
+        videoCompleted: videoCompleted,
         hasAssignment: slideAssignments.length > 0,
         assignmentSubmitted: slideAssignments.some(a => assignmentSubmissions.has(a.id))
       };
     });
   };
 
-  // Calculate overall performance
+  // Updated: Only completion rate
   const getOverallPerformance = () => {
     const performance = getSlidePerformance();
     const totalSlides = performance.length;
     const completedSlidesCount = performance.filter(p => p.completed).length;
-    const slidesWithQuiz = performance.filter(p => p.hasQuiz);
-    const passedQuizzes = slidesWithQuiz.filter(p => p.quizPassed).length;
-    const slidesWithAssignment = performance.filter(p => p.hasAssignment);
-    const submittedAssignments = slidesWithAssignment.filter(p => p.assignmentSubmitted).length;
     
     const completionRate = totalSlides > 0 ? Math.round((completedSlidesCount / totalSlides) * 100) : 0;
-    const quizPassRate = slidesWithQuiz.length > 0 ? Math.round((passedQuizzes / slidesWithQuiz.length) * 100) : 0;
-    const assignmentRate = slidesWithAssignment.length > 0 ? Math.round((submittedAssignments / slidesWithAssignment.length) * 100) : 0;
     
     let performanceLevel = 'Needs Improvement';
     let performanceColor = BRAND_COLORS.deepRed;
     let performanceIcon = HiTrendingDown;
     
-    if (completionRate >= 80 && quizPassRate >= 80 && assignmentRate >= 80) {
+    if (completionRate >= 80) {
       performanceLevel = 'Excellent';
       performanceColor = '#10B981';
       performanceIcon = HiTrendingUp;
-    } else if (completionRate >= 60 && quizPassRate >= 60 && assignmentRate >= 60) {
+    } else if (completionRate >= 60) {
       performanceLevel = 'Good';
       performanceColor = BRAND_COLORS.teal;
       performanceIcon = HiTrendingUp;
-    } else if (completionRate >= 40 && quizPassRate >= 40 && assignmentRate >= 40) {
+    } else if (completionRate >= 40) {
       performanceLevel = 'Average';
       performanceColor = BRAND_COLORS.darkRoyalBlue;
       performanceIcon = HiChartBar;
@@ -1068,17 +1212,11 @@ const handleVideoSeeking = () => {
     
     return {
       completionRate,
-      quizPassRate,
-      assignmentRate,
       performanceLevel,
       performanceColor,
       performanceIcon,
       completedSlides: completedSlidesCount,
-      totalSlides,
-      passedQuizzes,
-      totalQuizzes: slidesWithQuiz.length,
-      submittedAssignments,
-      totalAssignments: slidesWithAssignment.length
+      totalSlides
     };
   };
 
@@ -1119,38 +1257,6 @@ const handleVideoSeeking = () => {
     }
   };
 
-  const initializeQuiz = (slideId: string, quiz: Quiz) => {
-    setActiveQuiz(slideId);
-    
-    const initialAnswers: QuizAnswer[] = quiz.questions.map((q, index) => {
-      if (q.questionType === 'text' || !q.options || q.options.length === 0) {
-        return { questionIndex: index, textAnswer: '' };
-      } else {
-        return { questionIndex: index, selectedOption: -1 };
-      }
-    });
-    
-    setQuizAnswers(initialAnswers);
-  };
-
-  const updateQuizAnswer = (questionIndex: number, question: QuizQuestion, value: any) => {
-    const updatedAnswers = [...quizAnswers];
-    
-    if (question.questionType === 'text' || !question.options || question.options.length === 0) {
-      updatedAnswers[questionIndex] = {
-        questionIndex,
-        textAnswer: value
-      };
-    } else {
-      updatedAnswers[questionIndex] = {
-        questionIndex,
-        selectedOption: parseInt(value)
-      };
-    }
-    
-    setQuizAnswers(updatedAnswers);
-  };
-
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
   };
@@ -1179,6 +1285,22 @@ const handleVideoSeeking = () => {
     }
   };
 
+  // Get video progress text
+  const getVideoProgressText = (slideId: string, fileId: string): string => {
+    const key = `${slideId}_${fileId}`;
+    const progress = videoProgress[key];
+    if (!progress) return 'Not started';
+    
+    const watched = Math.floor(progress.lastPosition);
+    const remaining = Math.floor(progress.duration - progress.lastPosition);
+    
+    if (progress.completed) return '✅ Completed';
+    if (watched > 0) {
+      return `📺 Watched: ${Math.floor(watched / 60)}:${(watched % 60).toString().padStart(2, '0')} • Remaining: ${Math.floor(remaining / 60)}:${(remaining % 60).toString().padStart(2, '0')}`;
+    }
+    return 'Not started';
+  };
+
   // Render slide grid view
   const renderSlideGrid = () => {
     if (slides.length === 0) {
@@ -1196,10 +1318,18 @@ const handleVideoSeeking = () => {
           const StatusIcon = status.icon;
           const isSelected = selectedSlide?.id === slide.id;
           const slideFiles = slideContents.get(slide.id) || [];
-          const quiz = quizzes.get(slide.id);
-          const attempt = quiz ? quizAttempts.get(slide.id) : null;
+          const hasVideo = slideFiles.some(f => f.type.includes('video'));
+          const simpleQuiz = quizzes.get(slide.id);
+          const hasValidQuiz = simpleQuiz && simpleQuiz.questions && simpleQuiz.questions.length > 0;
+          const attempt = hasValidQuiz ? quizAttempts.get(slide.id) : null;
+          const advancedAttempted = advancedQuizAttempts.has(slide.id);
           const hasAssignment = assignments.some(a => a.slideId === slide.id);
           const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
+          const videoCompleted = hasVideo ? isVideoCompleted(slide.id) : true;
+          const quizCompleted = (!hasValidQuiz && !advancedAttempted) || 
+                                (hasValidQuiz && attempt !== null) || 
+                                (advancedAttempted);
+          const slideComplete = videoCompleted && quizCompleted;
           
           return (
             <div
@@ -1226,6 +1356,29 @@ const handleVideoSeeking = () => {
               </div>
 
               <div className="p-4">
+                {/* Requirements summary */}
+                <div className="mb-3 text-xs space-y-1">
+                  {hasVideo && (
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${videoCompleted ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                      <span className={videoCompleted ? 'text-green-600' : 'text-gray-500'}>
+                        {videoCompleted ? '✓ Video watched' : 'Video pending'}
+                      </span>
+                    </div>
+                  )}
+                  {(hasValidQuiz || advancedAttempted) && (
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${quizCompleted ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                      <span className={quizCompleted ? 'text-green-600' : 'text-gray-500'}>
+                        {quizCompleted ? '✓ Quiz completed' : 'Quiz pending'}
+                      </span>
+                    </div>
+                  )}
+                 {slideComplete && !(status as any).completed && (
+                    <div className="text-green-600 text-xs mt-1">✓ Ready to complete!</div>
+                  )}
+                </div>
+
                 {slideFiles.length > 0 && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
@@ -1245,10 +1398,10 @@ const handleVideoSeeking = () => {
                   </div>
                 )}
 
-                {quiz && (
+                {hasValidQuiz && (
                   <div className="mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Quiz</span>
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Quiz ({simpleQuiz.questions.length} Qs)</span>
                       {attempt && (
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           attempt.passed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
@@ -1258,9 +1411,9 @@ const handleVideoSeeking = () => {
                   </div>
                 )}
 
-                {hasAssignment && (
+                {advancedAttempted && (
                   <div className="mb-3">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Assignment</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Advanced Quiz Completed</span>
                   </div>
                 )}
 
@@ -1302,13 +1455,20 @@ const handleVideoSeeking = () => {
           const isCompleted = completedSlides.has(slide.id);
           const isExpanded = expandedSlides.has(slide.id);
           const slideFiles = slideContents.get(slide.id) || [];
-          const quiz = quizzes.get(slide.id);
-          const attempt = quiz ? quizAttempts.get(slide.id) : null;
+          const hasVideo = slideFiles.some(f => f.type.includes('video'));
+          const simpleQuiz = quizzes.get(slide.id);
+          const hasValidSimpleQuiz = simpleQuiz && simpleQuiz.questions && simpleQuiz.questions.length > 0;
+          const simpleAttempt = hasValidSimpleQuiz ? quizAttempts.get(slide.id) : null;
+          const advancedAttempted = advancedQuizAttempts.has(slide.id);
           const slideAssignments = assignments.filter(a => a.slideId === slide.id);
           const hasAssignment = slideAssignments.length > 0;
           const canComplete = canMarkSlideComplete(slide.id);
           const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
           const isMarking = markingComplete[slide.id];
+          const videoCompleted = hasVideo ? isVideoCompleted(slide.id) : true;
+          const quizCompleted = (!hasValidSimpleQuiz && !advancedAttempted) || 
+                                (hasValidSimpleQuiz && simpleAttempt !== null) || 
+                                (advancedAttempted);
 
           return (
             <div key={slide.id} className={`border rounded-lg overflow-hidden ${isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}`}>
@@ -1326,16 +1486,22 @@ const handleVideoSeeking = () => {
                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                       <span>{slideFiles.length} file(s)</span>
                       {slideFiles.length > 0 && <span className="text-blue-600">{completedFilesCount}/{slideFiles.length} viewed</span>}
-                      {quiz && <span>• 1 quiz</span>}
+                      {hasValidSimpleQuiz && <span>• Quiz ({simpleQuiz.questions.length} questions)</span>}
+                      {advancedAttempted && <span>• Advanced Quiz Done</span>}
                       {hasAssignment && <span>• {slideAssignments.length} assignment(s)</span>}
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {quiz && attempt && (
-                    <span className={`text-xs px-2 py-1 rounded-full ${attempt.passed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      Quiz: {attempt.score}%
+                  {(hasValidSimpleQuiz && simpleAttempt) && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${simpleAttempt.passed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      Quiz: {simpleAttempt.score}%
+                    </span>
+                  )}
+                  {advancedAttempted && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                      Advanced Quiz Done
                     </span>
                   )}
                   <button className="p-1 hover:bg-gray-200 rounded-full">
@@ -1346,7 +1512,7 @@ const handleVideoSeeking = () => {
 
               {isExpanded && (
                 <div className="p-4 space-y-4">
-                  {/* Files Section */}
+                  {/* Files Section with enhanced video player */}
                   {slideFiles.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
@@ -1359,28 +1525,18 @@ const handleVideoSeeking = () => {
                           const videoProgressData = videoProgress[key];
                           const progressPercent = videoProgressData?.progress || 0;
                           const isVideoPlaying = activeVideo?.fileId === file.id;
+                          const videoProgressText = getVideoProgressText(slide.id, file.id);
                           
                           return (
                             <div key={file.id} className="flex flex-col space-y-2">
                               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center gap-3 flex-1">
                                   {getFileIcon(file.type)}
-                                  <div>
+                                  <div className="flex-1">
                                     <p className="text-sm text-gray-700">{file.name}</p>
                                     <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
-                                    {isVideo && videoProgressData && !isContentViewed && progressPercent < 95 && (
-                                      <div className="mt-1 w-32">
-                                        <div className="flex justify-between text-xs mb-0.5">
-                                          <span className="text-gray-500">Progress</span>
-                                          <span className="font-medium">{Math.round(progressPercent)}%</span>
-                                        </div>
-                                        <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-                                          <div className="h-full rounded-full transition-all duration-300" style={{ 
-                                            width: `${progressPercent}%`,
-                                            backgroundColor: BRAND_COLORS.deepRed
-                                          }} />
-                                        </div>
-                                      </div>
+                                    {isVideo && (
+                                      <p className="text-xs text-blue-600 mt-1">{videoProgressText}</p>
                                     )}
                                   </div>
                                 </div>
@@ -1450,7 +1606,7 @@ const handleVideoSeeking = () => {
                                 </div>
                               </div>
                               
-                              {/* Inline Video Player - NO POPUP */}
+                              {/* Enhanced Inline Video Player with progress display and backward button */}
                               {isVideo && isVideoPlaying && (
                                 <div className="mt-2 p-3 bg-black rounded-lg">
                                   <div className="flex justify-between items-center mb-2">
@@ -1462,22 +1618,55 @@ const handleVideoSeeking = () => {
                                       <HiX className="w-5 h-5" />
                                     </button>
                                   </div>
+                                  
+                                  {/* Video Progress Display */}
+                                  {videoProgressData && (
+                                    <div className="mb-2 text-center">
+                                      <p className="text-white text-xs">
+                                        {videoProgressData.completed 
+                                          ? '✅ Video completed!' 
+                                          : `📺 Progress: ${Math.round(videoProgressData.progress)}%`}
+                                      </p>
+                                      <p className="text-gray-400 text-xs mt-1">
+                                        {videoProgressData.lastPosition > 0 && !videoProgressData.completed && (
+                                          <>
+                                            Watched: {Math.floor(videoProgressData.lastPosition / 60)}:{(Math.floor(videoProgressData.lastPosition) % 60).toString().padStart(2, '0')} / 
+                                            Total: {Math.floor(videoProgressData.duration / 60)}:{(Math.floor(videoProgressData.duration) % 60).toString().padStart(2, '0')}
+                                          </>
+                                        )}
+                                      </p>
+                                    </div>
+                                  )}
+                                  
                                   <video
                                     ref={videoRef}
                                     src={file.url}
                                     controls
-                                    controlsList="nodownload noplaybackrate"
+                                    controlsList="nodownload noplaybackrate nofullscreen"
                                     disablePictureInPicture
                                     onTimeUpdate={handleVideoTimeUpdate}
-                                    onLoadedMetadata={handleVideoLoaded}
+                                    onLoadedMetadata={handleVideoLoadedMetadata}
+                                    onSeeking={handleVideoSeeking}
                                     onEnded={handleVideoEnded}
                                     className="w-full rounded-lg"
                                     style={{ maxHeight: '400px' }}
                                   >
                                     Your browser does not support the video tag.
                                   </video>
-                                  <div className="mt-2 text-center text-xs text-gray-400">
-                                    <p>⚠️ You cannot skip forward. Watch sequentially to complete.</p>
+                                  
+                                  {/* Backward Button and Info */}
+                                  <div className="mt-3 flex items-center justify-between">
+                                    <button
+                                      onClick={handleBackward}
+                                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition-all cursor-pointer flex items-center gap-2"
+                                    >
+                                      <HiRewind className="w-4 h-4" />
+                                      Backward 10 sec
+                                    </button>
+                                    <div className="text-center text-xs text-gray-400">
+                                      <p>⚠️ You cannot skip forward. Only backward seeking is allowed.</p>
+                                      <p>Watch sequentially to complete the video.</p>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -1488,81 +1677,35 @@ const handleVideoSeeking = () => {
                     </div>
                   )}
 
-                  {/* Quiz Section */}
-                  {quiz && (
-                    <div className={slideFiles.length > 0 ? 'border-t pt-4' : ''}>
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">Quiz</h4>
-                      
-                      {attempt ? (
-                        <div className={`p-4 rounded-lg ${attempt.passed ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-                          <div className="flex items-center gap-3">
-                            {attempt.passed ? <HiOutlineCheckCircle className="w-6 h-6 text-green-600" /> : <HiOutlineXCircle className="w-6 h-6 text-yellow-600" />}
-                            <div>
-                              <p className={`text-sm font-medium ${attempt.passed ? 'text-green-700' : 'text-yellow-700'}`}>
-                                Score: {attempt.score}% - {attempt.passed ? 'Passed' : 'Failed'}
-                              </p>
-                              <p className="text-xs text-gray-500">Attempted on {formatDate(attempt.attemptedAt)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : activeQuiz === slide.id ? (
-                        <div className="space-y-4">
-                          {quiz.questions.map((q, idx) => {
-                            const isTextQuestion = q.questionType === 'text' || !q.options || q.options.length === 0;
-                            return (
-                              <div key={q.id} className="border border-gray-200 rounded-lg p-4">
-                                <p className="text-sm font-medium mb-3">Question {idx + 1}: {q.question}</p>
-                                {isTextQuestion ? (
-                                  <textarea
-                                    value={quizAnswers[idx]?.textAnswer || ''}
-                                    onChange={(e) => updateQuizAnswer(idx, q, e.target.value)}
-                                    rows={4}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                    placeholder="Type your answer here..."
-                                  />
-                                ) : (
-                                  <div className="space-y-2">
-                                    {q.options.map((opt, optIdx) => (
-                                      <label key={optIdx} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
-                                        <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600 cursor-pointer" />
-                                        <span>{opt}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                          <div className="flex gap-2">
-                            <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Submit Quiz</button>
-                            <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 cursor-pointer">Start Quiz</button>
-                      )}
-                    </div>
+                  {/* ✅ Simple Quiz Component - Only if has questions */}
+                  {hasValidSimpleQuiz && (
+                    <SimpleQuiz
+                      quiz={simpleQuiz}
+                      slideId={slide.id}
+                      courseId={courseId}
+                      enrollmentId={enrollmentId}
+                      studentEmail={user?.email || ''}
+                      attempt={simpleAttempt}
+                      onQuizSubmit={handleSimpleQuizSubmit}
+                      onCancel={() => setActiveQuiz(null)}
+                      formatDate={formatDate}
+                    />
                   )}
-                                    {/* True/False & Fill in Blanks Quiz Section */}
-                                 {/* True/False & Fill in Blanks Quiz Section */}
-                  {selectedSlide && (
-                    <div className="mt-4">
-                      <StudentAdvancedQuiz
-                        slideId={slide.id}
-                        courseId={courseId}
-                        enrollmentId={enrollmentId}
-                        studentEmail={user?.email || ''}
-                        onQuizComplete={(score, total, passed) => {
-                          console.log('Advanced Quiz completed:', { score, total, passed });
-                          loadCourseData();
-                        }}
-                      />
-                    </div>
-                  )}
+
+                  {/* ✅ Advanced Quiz Component - Always show */}
+                  <div className="mt-4">
+                    <StudentAdvancedQuiz
+                      slideId={slide.id}
+                      courseId={courseId}
+                      enrollmentId={enrollmentId}
+                      studentEmail={user?.email || ''}
+                      onQuizComplete={handleAdvancedQuizComplete}
+                    />
+                  </div>
 
                   {/* Assignments Section */}
                   {hasAssignment && (
-                    <div className={(slideFiles.length > 0 || quiz) ? 'border-t pt-4' : ''}>
+                    <div className={(slideFiles.length > 0 || hasValidSimpleQuiz) ? 'border-t pt-4' : ''}>
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Assignments</h4>
                       {slideAssignments.map((assignment) => {
                         const submission = assignmentSubmissions.get(assignment.id);
@@ -1750,21 +1893,22 @@ const handleVideoSeeking = () => {
           </div>
         </div>
 
-        {/* Performance Summary */}
+        {/* ✅ Performance Summary - Only Completion */}
         <div className="mt-4 bg-gray-50 rounded-lg p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <PerformanceIcon className="w-5 h-5" style={{ color: overallPerformance.performanceColor }} />
-              <span className="text-sm font-medium text-gray-700">Performance</span>
+              <span className="text-sm font-medium text-gray-700">Course Progress</span>
             </div>
             <span className="text-sm font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: `${overallPerformance.performanceColor}20`, color: overallPerformance.performanceColor }}>
-              {overallPerformance.performanceLevel}
+              {overallPerformance.completionRate}% Complete
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <div><p className="text-xs text-gray-500">Completion</p><p className="text-sm font-semibold">{overallPerformance.completionRate}%</p></div>
-            <div><p className="text-xs text-gray-500">Quiz Pass</p><p className="text-sm font-semibold">{overallPerformance.quizPassRate}%</p></div>
-            <div><p className="text-xs text-gray-500">Assignment</p><p className="text-sm font-semibold">{overallPerformance.assignmentRate}%</p></div>
+          <div className="mt-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Lessons Completed</span>
+              <span className="font-semibold">{overallPerformance.completedSlides}/{overallPerformance.totalSlides}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1784,8 +1928,8 @@ const handleVideoSeeking = () => {
               <tr className="border-b border-gray-200">
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Lesson</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Status</th>
+                <th className="text-left py-2 text-xs font-medium text-gray-500">Video</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Quiz</th>
-                <th className="text-left py-2 text-xs font-medium text-gray-500">Score</th>
                 <th className="text-left py-2 text-xs font-medium text-gray-500">Assignment</th>
               </tr>
             </thead>
@@ -1794,9 +1938,41 @@ const handleVideoSeeking = () => {
                 <tr key={perf.slideId} className="border-b border-gray-100">
                   <td className="py-3"><p className="text-sm font-medium text-gray-900">Lesson {perf.slideNumber}: {perf.title}</p></td>
                   <td className="py-3">{perf.completed ? <span className="flex items-center gap-1 text-xs text-green-600"><HiCheckCircle className="w-4 h-4" />Completed</span> : <span className="text-xs text-gray-400">In Progress</span>}</td>
-                  <td className="py-3">{perf.hasQuiz ? (perf.quizAttempted ? <span className={`text-xs ${perf.quizPassed ? 'text-green-600' : 'text-yellow-600'}`}>{perf.quizPassed ? 'Passed' : 'Failed'}</span> : <span className="text-xs text-gray-400">Not Attempted</span>) : <span className="text-xs text-gray-400">—</span>}</td>
-                  <td className="py-3">{perf.quizScore ? <span className={`text-sm font-medium ${perf.quizScore >= 70 ? 'text-green-600' : 'text-yellow-600'}`}>{perf.quizScore}%</span> : <span className="text-xs text-gray-400">—</span>}</td>
-                  <td className="py-3">{perf.hasAssignment ? (perf.assignmentSubmitted ? <span className="text-xs text-green-600">Submitted</span> : <span className="text-xs text-yellow-600">Pending</span>) : <span className="text-xs text-gray-400">—</span>}</td>
+                  <td className="py-3">
+                    {perf.hasVideo ? (
+                      perf.videoCompleted ? (
+                        <span className="text-xs text-green-600">✓ Watched</span>
+                      ) : (
+                        <span className="text-xs text-yellow-600">Pending</span>
+                      )
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-3">
+                    {perf.hasQuiz ? (
+                      perf.quizAttempted ? (
+                        <span className={`text-xs ${perf.quizPassed ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {perf.quizPassed ? 'Passed' : 'Failed'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Not Attempted</span>
+                      )
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-3">
+                    {perf.hasAssignment ? (
+                      perf.assignmentSubmitted ? (
+                        <span className="text-xs text-green-600">Submitted</span>
+                      ) : (
+                        <span className="text-xs text-yellow-600">Pending</span>
+                      )
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1804,7 +1980,6 @@ const handleVideoSeeking = () => {
         </div>
       )}
 
-      {/* Lessons Section */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Course Lessons</h2>
@@ -1814,313 +1989,6 @@ const handleVideoSeeking = () => {
         </div>
         
         {viewMode === 'grid' ? renderSlideGrid() : renderSlideList()}
-        
-        {viewMode === 'grid' && selectedSlide && (
-          <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4 cursor-pointer" onClick={() => toggleSlideExpansion(selectedSlide.id)}>
-              Lesson {selectedSlide.slideNumber}: {selectedSlide.title}
-              {expandedSlides.has(selectedSlide.id) ? <HiChevronUp className="inline ml-2" /> : <HiChevronDown className="inline ml-2" />}
-            </h3>
-            {expandedSlides.has(selectedSlide.id) && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                {slides.map(slide => {
-                  if (slide.id === selectedSlide.id) {
-                    const isCompleted = completedSlides.has(slide.id);
-                    const slideFiles = slideContents.get(slide.id) || [];
-                    const quiz = quizzes.get(slide.id);
-                    const attempt = quiz ? quizAttempts.get(slide.id) : null;
-                    const slideAssignments = assignments.filter(a => a.slideId === slide.id);
-                    const hasAssignment = slideAssignments.length > 0;
-                    const canComplete = canMarkSlideComplete(slide.id);
-                    const completedFilesCount = slideFiles.filter(f => completedContent.has(`${slide.id}_${f.id}`)).length;
-                    const isMarking = markingComplete[slide.id];
-
-                    return (
-                      <div key={slide.id} className="space-y-4">
-                        {/* Files */}
-                        {slideFiles.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Materials</h4>
-                            <div className="space-y-2">
-                              {slideFiles.map((file) => {
-                                const isContentViewed = completedContent.has(`${slide.id}_${file.id}`);
-                                const isVideo = file.type.includes('video');
-                                const key = `${slide.id}_${file.id}`;
-                                const showView = showViewButton[key] || isContentViewed;
-                                const videoProgressData = videoProgress[key];
-                                const isVideoPlaying = activeVideo?.fileId === file.id;
-                                
-                                return (
-                                  <div key={file.id} className="flex flex-col space-y-2">
-                                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                                      <div className="flex items-center gap-3 flex-1">
-                                        {getFileIcon(file.type)}
-                                        <div>
-                                          <p className="text-sm text-gray-700">{file.name}</p>
-                                          <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
-                                          {isVideo && videoProgressData && !isContentViewed && (
-                                            <div className="mt-1 w-32">
-                                              <div className="flex justify-between text-xs mb-0.5">
-                                                <span className="text-gray-500">Progress</span>
-                                                <span className="font-medium">{Math.round(videoProgressData.progress)}%</span>
-                                              </div>
-                                              <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-                                                <div className="h-full rounded-full transition-all duration-300" style={{ 
-                                                  width: `${videoProgressData.progress}%`,
-                                                  backgroundColor: BRAND_COLORS.deepRed
-                                                }} />
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="flex items-center gap-2">
-                                        {isVideo ? (
-                                          <>
-                                            {!showView ? (
-                                              <button
-                                                onClick={() => handleWatchVideo(slide.id, file)}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-2"
-                                              >
-                                                <HiPlay className="w-4 h-4" />
-                                                {isVideoPlaying ? 'Close Video' : 'Watch Video'}
-                                              </button>
-                                            ) : (
-                                              <button
-                                                onClick={() => handleViewClick(slide.id, file.id)}
-                                                disabled={trackingContent[key] || isContentViewed}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                                                  isContentViewed 
-                                                    ? 'bg-green-100 text-green-700 cursor-default'
-                                                    : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                                } disabled:opacity-50`}
-                                              >
-                                                {trackingContent[key] ? (
-                                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                                ) : isContentViewed ? (
-                                                  <>
-                                                    <HiCheckCircle className="w-4 h-4" />
-                                                    Viewed
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <HiEye className="w-4 h-4" />
-                                                    View
-                                                  </>
-                                                )}
-                                              </button>
-                                            )}
-                                          </>
-                                        ) : (
-                                          <button
-                                            onClick={() => handleViewClick(slide.id, file.id)}
-                                            disabled={trackingContent[key] || isContentViewed}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                                              isContentViewed 
-                                                ? 'bg-green-100 text-green-700 cursor-default'
-                                                : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                            } disabled:opacity-50`}
-                                          >
-                                            {trackingContent[key] ? (
-                                              <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : isContentViewed ? (
-                                              <>
-                                                <HiCheckCircle className="w-4 h-4" />
-                                                Viewed
-                                              </>
-                                            ) : (
-                                              <>
-                                                <HiEye className="w-4 h-4" />
-                                                View
-                                              </>
-                                            )}
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Inline Video Player - NO POPUP */}
-                                    {isVideo && isVideoPlaying && (
-                                      <div className="mt-2 p-3 bg-black rounded-lg">
-                                        <div className="flex justify-between items-center mb-2">
-                                          <span className="text-white text-sm">Now Playing: {file.name}</span>
-                                          <button 
-                                            onClick={closeVideoPlayer}
-                                            className="text-white hover:text-gray-300 cursor-pointer"
-                                          >
-                                            <HiX className="w-5 h-5" />
-                                          </button>
-                                        </div>
-                                        <video
-                                          ref={videoRef}
-                                          src={file.url}
-                                          controls
-                                          controlsList="nodownload noplaybackrate"
-                                          disablePictureInPicture
-                                          onTimeUpdate={handleVideoTimeUpdate}
-                                          onLoadedMetadata={handleVideoLoaded}
-                                          onEnded={handleVideoEnded}
-                                          className="w-full rounded-lg"
-                                          style={{ maxHeight: '400px' }}
-                                        >
-                                          Your browser does not support the video tag.
-                                        </video>
-                                        <div className="mt-2 text-center text-xs text-gray-400">
-                                          <p>⚠️ You cannot skip forward. Watch sequentially to complete.</p>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Quiz */}
-                        {quiz && (
-                          <div className={slideFiles.length > 0 ? 'border-t pt-4' : ''}>
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">Quiz</h4>
-                            
-                            {attempt ? (
-                              <div className={`p-4 rounded-lg ${attempt.passed ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-                                <div className="flex items-center gap-3">
-                                  {attempt.passed ? <HiOutlineCheckCircle className="w-6 h-6 text-green-600" /> : <HiOutlineXCircle className="w-6 h-6 text-yellow-600" />}
-                                  <div>
-                                    <p className={`text-sm font-medium ${attempt.passed ? 'text-green-700' : 'text-yellow-700'}`}>
-                                      Score: {attempt.score}% - {attempt.passed ? 'Passed' : 'Failed'}
-                                    </p>
-                                    <p className="text-xs text-gray-500">Attempted on {formatDate(attempt.attemptedAt)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : activeQuiz === slide.id ? (
-                              <div className="space-y-4">
-                                {quiz.questions.map((q, idx) => {
-                                  const isTextQuestion = q.questionType === 'text' || !q.options || q.options.length === 0;
-                                  return (
-                                    <div key={q.id} className="border border-gray-200 rounded-lg p-4">
-                                      <p className="text-sm font-medium mb-3">Question {idx + 1}: {q.question}</p>
-                                      {isTextQuestion ? (
-                                        <textarea
-                                          value={quizAnswers[idx]?.textAnswer || ''}
-                                          onChange={(e) => updateQuizAnswer(idx, q, e.target.value)}
-                                          rows={4}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                          placeholder="Type your answer here..."
-                                        />
-                                      ) : (
-                                        <div className="space-y-2">
-                                          {q.options.map((opt, optIdx) => (
-                                            <label key={optIdx} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 cursor-pointer">
-                                              <input type="radio" name={`q-${q.id}`} checked={quizAnswers[idx]?.selectedOption === optIdx} onChange={() => updateQuizAnswer(idx, q, optIdx)} className="w-4 h-4 text-blue-600 cursor-pointer" />
-                                              <span>{opt}</span>
-                                            </label>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                                <div className="flex gap-2">
-                                  <button onClick={() => handleQuizSubmit(slide.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Submit Quiz</button>
-                                  <button onClick={() => { setActiveQuiz(null); setQuizAnswers([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button onClick={() => initializeQuiz(slide.id, quiz)} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 cursor-pointer">Start Quiz</button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Assignments */}
-                        {hasAssignment && (
-                          <div className={(slideFiles.length > 0 || quiz) ? 'border-t pt-4' : ''}>
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">Assignments</h4>
-                            {slideAssignments.map((assignment) => {
-                              const submission = assignmentSubmissions.get(assignment.id);
-                              return (
-                                <div key={assignment.id} className="space-y-3">
-                                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                    <h5 className="font-medium">{assignment.title}</h5>
-                                    <p className="text-sm text-gray-600 mt-1">{assignment.description}</p>
-                                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                                      <span>Due: {formatDate(assignment.dueDate)}</span>
-                                      <span>Total: {assignment.totalMarks}</span>
-                                      <span>Passing: {assignment.passingMarks}</span>
-                                    </div>
-                                    {assignment.file && (
-                                      <div className="mt-3 p-2 bg-white rounded-lg border">
-                                        <p className="text-xs font-medium text-gray-500 mb-1">Assignment File:</p>
-                                        <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
-                                          <HiPaperClip className="w-4 h-4" />
-                                          {assignment.file.name}
-                                          <HiEye className="w-4 h-4 ml-1" />
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {submission ? (
-                                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                      <div className="flex items-center gap-3">
-                                        <HiCheckCircle className="w-6 h-6 text-green-600" />
-                                        <div>
-                                          <p className="text-sm font-medium text-green-700">Submitted</p>
-                                          <p className="text-xs text-gray-500">{formatDate(submission.submittedAt)}</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : activeAssignment === assignment.id ? (
-                                    <div className="border border-gray-200 rounded-lg p-4">
-                                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                                        <input type="file" multiple onChange={(e) => setAssignmentFiles(Array.from(e.target.files || []))} className="hidden" id={`assignment-${assignment.id}`} />
-                                        <label htmlFor={`assignment-${assignment.id}`} className="cursor-pointer block text-center">
-                                          <HiDocumentText className="w-8 h-8 mx-auto text-gray-400" />
-                                          <p className="text-sm text-gray-600 mt-2">Click to upload files</p>
-                                          {assignmentFiles.map((file, idx) => <p key={idx} className="text-xs text-green-600 mt-1">{file.name}</p>)}
-                                        </label>
-                                      </div>
-                                      <div className="flex gap-2 mt-4">
-                                        <button onClick={() => handleAssignmentSubmit(assignment.id, slide.id)} disabled={uploadingAssignment || assignmentFiles.length === 0} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 cursor-pointer">
-                                          {uploadingAssignment ? 'Uploading...' : 'Submit'}
-                                        </button>
-                                        <button onClick={() => { setActiveAssignment(null); setAssignmentFiles([]); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <button onClick={() => setActiveAssignment(assignment.id)} className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 cursor-pointer">Start Assignment</button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Complete Lesson Button */}
-                        {canComplete && !isCompleted && (
-                          <button 
-                            onClick={() => markSlideComplete(slide.id)} 
-                            disabled={isMarking}
-                            className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            {isMarking ? (
-                              <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                            ) : (
-                              <HiCheckCircle className="w-4 h-4 inline mr-2" />
-                            )}
-                            {isMarking ? 'Completing...' : 'Mark Lesson as Complete'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

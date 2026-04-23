@@ -4,7 +4,7 @@ import { getConnection } from '@/lib/db';
 import PDFDocument from 'pdfkit';
 import { Buffer } from 'buffer';
 import { v2 as cloudinary } from 'cloudinary';
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dfp9qc0gu',
