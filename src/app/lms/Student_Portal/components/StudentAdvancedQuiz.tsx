@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, CheckCircle, XCircle, Trophy } from 'lucide-react';
 /* eslint-disable */
+
 interface AdvancedQuestion {
   id: string;
   type: 'true_false' | 'fill_blanks';
@@ -27,7 +28,7 @@ interface StudentAdvancedQuizProps {
   courseId: string;
   enrollmentId: string;
   studentEmail: string;
-  onQuizComplete?: (score: number, totalPoints: number, passed: boolean) => void;
+  onQuizComplete?: (slideId: string, score: number, totalPoints: number, passed: boolean) => void;  // ✅ Added slideId
 }
 
 export default function StudentAdvancedQuiz({ 
@@ -188,7 +189,11 @@ export default function StudentAdvancedQuiz({
           passed: result.data.passed,
           answers: result.data.answers
         });
-        onQuizComplete?.(result.data.score, result.data.total, result.data.passed);
+        
+        // ✅ FIXED: Call onQuizComplete with slideId
+        if (onQuizComplete) {
+          onQuizComplete(slideId, result.data.score, result.data.total, result.data.passed);
+        }
       } else {
         setError(result.error || 'Failed to submit quiz');
       }

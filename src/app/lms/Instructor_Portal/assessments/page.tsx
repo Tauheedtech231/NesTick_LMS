@@ -11,17 +11,13 @@ import {
   HiUser,
   HiAcademicCap,
   HiSearch,
-  HiFilter,
   HiDownload,
   HiEye,
   HiX,
   HiCheck,
   HiStar,
   HiChartBar,
-  HiTrendingUp,
-  HiTrendingDown,
-  HiCalendar,
-  HiBookOpen
+  HiCalendar
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
 
@@ -190,6 +186,7 @@ export default function AssessmentHubPage() {
     try {
       const simpleRes = await fetch(`/api/instructor/simple-quiz-attempts?courseId=${courseId}`);
       const simpleData = await simpleRes.json();
+      console.log('Simple quiz attempts:', simpleData);
       
       const advancedRes = await fetch(`/api/instructor/course-quizzes-results?courseId=${courseId}`);
       const advancedData = await advancedRes.json();
@@ -351,15 +348,13 @@ export default function AssessmentHubPage() {
     );
   };
 
-  // ✅ Fixed: Get user answer display
+  // ✅ Get user answer display
   const getUserAnswerDisplay = (answer: any): string => {
     // For simple quiz format (selectedOption)
     if (answer.selectedOption !== undefined && answer.selectedOption !== -1) {
-      // Module 1 quiz: 5+5 = 10
-      if (answer.selectedOption === 0) return '10';
-      if (answer.selectedOption === 1) return '12';
-      if (answer.selectedOption === 2) return '2';
-      if (answer.selectedOption === 3) return '3';
+      if (answer.options && answer.options[answer.selectedOption]) {
+        return answer.options[answer.selectedOption];
+      }
       return String(answer.selectedOption);
     }
     
@@ -379,49 +374,72 @@ export default function AssessmentHubPage() {
     return 'No answer';
   };
 
- const getCorrectAnswerDisplay = (answer: any): string => {
-  // Check for correctAnswer in different formats
-  if (answer.correctAnswer !== undefined && answer.correctAnswer !== null) {
-    if (typeof answer.correctAnswer === 'boolean') {
-      return answer.correctAnswer ? 'True' : 'False';
-    }
-    // For simple quiz, correctAnswer is the index (0,1,2,3)
-    if (typeof answer.correctAnswer === 'number') {
-      if (answer.correctAnswer === 0) return '10';
-      if (answer.correctAnswer === 1) return '12';
-      if (answer.correctAnswer === 2) return '2';
-      if (answer.correctAnswer === 3) return '3';
+  // ✅ Get correct answer display - CORRECTED
+  const getCorrectAnswerDisplay = (answer: any): string => {
+    // Check if answer has correctAnswer field
+    if (answer.correctAnswer !== undefined && answer.correctAnswer !== null) {
+      // If options exist and correctAnswer is index
+      if (answer.options && answer.options[answer.correctAnswer]) {
+        return answer.options[answer.correctAnswer];
+      }
+      // If correctAnswer is a number
+      if (typeof answer.correctAnswer === 'number') {
+        return String(answer.correctAnswer);
+      }
+      // If correctAnswer is a string
+      if (typeof answer.correctAnswer === 'string') {
+        return answer.correctAnswer;
+      }
+      // If correctAnswer is boolean
+      if (typeof answer.correctAnswer === 'boolean') {
+        return answer.correctAnswer ? 'True' : 'False';
+      }
       return String(answer.correctAnswer);
     }
-    // For advanced quiz with options array
-    if (answer.options && answer.options[answer.correctAnswer]) {
-      return answer.options[answer.correctAnswer];
+    
+    // Check for correct_option
+    if (answer.correct_option !== undefined && answer.correct_option !== null) {
+      if (answer.options && answer.options[answer.correct_option]) {
+        return answer.options[answer.correct_option];
+      }
+      return String(answer.correct_option);
     }
-    // If correctAnswer is a string
-    if (typeof answer.correctAnswer === 'string') {
-      return answer.correctAnswer;
+    
+    // Check for isCorrect flag
+    if (answer.isCorrect !== undefined) {
+      return answer.isCorrect ? 'Correct' : 'Incorrect';
     }
-    return String(answer.correctAnswer);
-  }
-  
-  // Check for isCorrect flag (some formats have this)
-  if (answer.isCorrect !== undefined) {
-    return answer.isCorrect ? 'Correct' : 'Incorrect';
-  }
-  
-  return 'Not specified';
-};
+    
+    // For text questions
+    if (answer.textAnswer !== undefined || answer.needsGrading === true) {
+      return 'Any answer accepted';
+    }
+    
+    return 'Not specified';
+  };
 
-  // ✅ Fixed: Get question text
+  // ✅ Get question text
   const getQuestionText = (answer: any, idx: number, quizTitle?: string): string => {
     if (answer.question) return answer.question;
-    if (quizTitle === 'Module 1' || quizTitle?.includes('Module 1')) {
-      return '5 + 5 = ?';
-    }
+    if (answer.questionText) return answer.questionText;
     return `Question ${idx + 1}`;
   };
 
-  // ✅ Fixed: Parse answers array safely
+  // ✅ Check if answer is correct
+  const isAnswerCorrect = (answer: any): boolean => {
+    // Text question - always correct
+    if (answer.textAnswer !== undefined || answer.needsGrading === true) {
+      return true;
+    }
+    
+    const userAnswer = getUserAnswerDisplay(answer).toLowerCase();
+    const correctAnswer = getCorrectAnswerDisplay(answer).toLowerCase();
+    
+    if (userAnswer === 'no answer') return false;
+    return userAnswer === correctAnswer;
+  };
+
+  // ✅ Parse answers array safely
   const parseAnswersArray = (answers: any): any[] => {
     if (!answers) return [];
     
@@ -467,13 +485,6 @@ export default function AssessmentHubPage() {
     return matchesSearch && matchesCourse && matchesStatus;
   });
 
-  const filteredQuizzes = quizzes.filter(q => {
-    const matchesSearch = q.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          q.student_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          q.quiz_title?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -503,30 +514,30 @@ export default function AssessmentHubPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - No Icons */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm text-gray-500">Pending Grading</p><p className="text-2xl font-bold text-gray-900">{stats.pendingGrading}</p></div>
-            <div className="p-3 bg-blue-100 rounded-lg"><HiClock className="w-6 h-6 text-blue-600" /></div>
+          <div>
+            <p className="text-sm text-gray-500">Pending Grading</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.pendingGrading}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm text-gray-500">Graded Assignments</p><p className="text-2xl font-bold text-gray-900">{stats.graded}</p></div>
-            <div className="p-3 bg-green-100 rounded-lg"><HiCheckCircle className="w-6 h-6 text-green-600" /></div>
+          <div>
+            <p className="text-sm text-gray-500">Graded Assignments</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.graded}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm text-gray-500">Avg Assignment Score</p><p className="text-2xl font-bold text-purple-600">{stats.avgScore}%</p></div>
-            <div className="p-3 bg-purple-100 rounded-lg"><HiStar className="w-6 h-6 text-purple-600" /></div>
+          <div>
+            <p className="text-sm text-gray-500">Avg Assignment Score</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.avgScore}%</p>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-teal-500">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm text-gray-500">Quiz Attempts</p><p className="text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p></div>
-            <div className="p-3 bg-teal-100 rounded-lg"><HiAcademicCap className="w-6 h-6 text-teal-600" /></div>
+          <div>
+            <p className="text-sm text-gray-500">Quiz Attempts</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalQuizzes}</p>
           </div>
         </div>
       </div>
@@ -643,7 +654,9 @@ export default function AssessmentHubPage() {
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Score</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Percentage</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Completed At</th><th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Action</th></tr></thead>
+                      <thead className="bg-gray-50">
+                        <tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Score</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Percentage</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Completed At</th><th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Action</th> </tr>
+                      </thead>
                       <tbody className="divide-y divide-gray-100">
                         {quiz.attempts && quiz.attempts.map((attempt, attemptIdx) => (
                           <tr key={`${quiz.quiz_id}-attempt-${attempt.id || attemptIdx}`} className="hover:bg-gray-50">
@@ -694,7 +707,7 @@ export default function AssessmentHubPage() {
         </div>
       )}
 
-      {/* Quiz Details Modal - Fixed */}
+      {/* Quiz Details Modal - FIXED */}
       {showQuizModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
@@ -705,7 +718,7 @@ export default function AssessmentHubPage() {
             <div className="p-6 overflow-auto max-h-[calc(90vh-100px)]">
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <p className="text-sm text-gray-500">Student</p><p className="font-medium">{selectedQuiz.student_name}</p>
-                <p className="text-sm text-gray-500 mt-2">Quiz</p><p className="font-medium">{selectedQuiz.quiz_title || 'Quiz'}</p>
+                <p className="text-sm text-gray-500 mt-2">Quiz</p><p className="font-medium">{selectedQuiz.quiz_title || selectedQuiz.slide_title || 'Quiz'}</p>
                 <div className="mt-4 flex gap-4">
                   <div><p className="text-sm text-gray-500">Score</p><p className="text-xl font-bold">{selectedQuiz.score}/{selectedQuiz.total_possible}</p></div>
                   <div><p className="text-sm text-gray-500">Percentage</p><p className="text-xl font-bold" style={{ color: selectedQuiz.passed ? '#10B981' : '#EF4444' }}>{selectedQuiz.percentage}%</p></div>
@@ -717,35 +730,48 @@ export default function AssessmentHubPage() {
                 const answersArray = parseAnswersArray(selectedQuiz.answers);
                 const quizTitle = selectedQuiz.quiz_title || selectedQuiz.slide_title;
                 
-                return answersArray.length > 0 ? (
-                  answersArray.map((answer, idx) => {
-                    const userAnswer = getUserAnswerDisplay(answer);
-                    const correctAnswer = getCorrectAnswerDisplay(answer);
-                    const questionText = getQuestionText(answer, idx, quizTitle);
-                    const isCorrect = userAnswer !== 'No answer' && 
-                      (userAnswer.toLowerCase() === correctAnswer.toLowerCase() || 
-                       String(userAnswer) === String(correctAnswer));
-                    
-                    return (
-                      <div key={idx} className="border rounded-lg p-4 mb-3">
-                        <p className="font-medium text-sm mb-2">Question {idx + 1}</p>
-                        <p className="text-sm text-gray-700 mb-2">{questionText}</p>
-                        <div className={`rounded p-2 ${isCorrect ? 'bg-green-50' : userAnswer !== 'No answer' ? 'bg-red-50' : 'bg-gray-50'}`}>
-                          <p className="text-xs text-gray-500">Student's Answer:</p>
-                          <p className={`text-sm font-medium ${isCorrect ? 'text-green-700' : userAnswer !== 'No answer' ? 'text-red-700' : 'text-gray-500'}`}>
-                            {userAnswer}
-                          </p>
-                        </div>
-                        <div className="bg-green-50 rounded p-2 mt-2">
-                          <p className="text-xs text-green-600">Correct Answer:</p>
+                if (answersArray.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No answers data available</p>
+                    </div>
+                  );
+                }
+                
+                return answersArray.map((answer, idx) => {
+                  const userAnswer = getUserAnswerDisplay(answer);
+                  const correctAnswer = getCorrectAnswerDisplay(answer);
+                  const questionText = getQuestionText(answer, idx, quizTitle);
+                  const isCorrect = isAnswerCorrect(answer);
+                  
+                  return (
+                    <div key={idx} className={`border rounded-lg p-4 mb-3 ${isCorrect ? 'border-green-200' : 'border-red-200'}`}>
+                      <p className="font-medium text-sm mb-2">Question {idx + 1}</p>
+                      <p className="text-sm text-gray-700 mb-3">{questionText}</p>
+                      
+                      <div className={`rounded-lg p-3 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <p className="text-xs text-gray-500 mb-1">Student's Answer:</p>
+                        <p className={`text-sm font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                          {userAnswer}
+                        </p>
+                      </div>
+                      
+                      {!isCorrect && correctAnswer !== 'Any answer accepted' && (
+                        <div className="bg-green-50 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-green-600 mb-1">Correct Answer:</p>
                           <p className="text-sm text-green-700">{correctAnswer}</p>
                         </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-gray-500"><p>No answers data available</p></div>
-                );
+                      )}
+                      
+                      {correctAnswer === 'Any answer accepted' && (
+                        <div className="bg-green-50 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-green-600 mb-1">Note:</p>
+                          <p className="text-sm text-green-700">This is a text question - any answer is accepted</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
               })()}
             </div>
           </div>

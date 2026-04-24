@@ -709,15 +709,18 @@ export default function StudentCourseDetailPage() {
   };
 
   // ✅ Helper: Check if quiz is completed for a slide
-  const isQuizCompleted = (slideId: string): boolean => {
-    const simpleQuiz = quizzes.get(slideId);
-    const simpleQuizAttempted = simpleQuiz ? quizAttempts.get(slideId) !== null : true;
-    const advancedQuizAttempted = advancedQuizAttempts.has(slideId);
-    
-    return (!simpleQuiz && !advancedQuizAttempted) || 
-           (simpleQuiz && simpleQuizAttempted) || 
-           (advancedQuizAttempted);
-  };
+const isQuizCompleted = (slideId: string): boolean => {
+  const simpleQuiz = quizzes.get(slideId);
+  
+  // Agar quiz hai to attempt check karo
+  if (simpleQuiz) {
+    const attempt = quizAttempts.get(slideId);
+    return attempt !== undefined && attempt !== null;
+  }
+  
+  // Advanced quiz check
+  return advancedQuizAttempts.has(slideId);
+};
 
   // ✅ Helper: Check if video is completed for a slide
   const isVideoCompleted = (slideId: string): boolean => {
@@ -806,84 +809,96 @@ export default function StudentCourseDetailPage() {
   };
 
   // ✅ Updated: Handle simple quiz submission
-  const handleSimpleQuizSubmit = async (slideId: string, answers: QuizAnswer[], score: number, passed: boolean) => {
-    if (!user || !enrollmentId) return;
+const handleSimpleQuizSubmit = async (slideId: string, answers: QuizAnswer[], score: number, passed: boolean) => {
+  if (!user || !enrollmentId) return;
 
-    const quiz = quizzes.get(slideId);
-    if (!quiz) return;
+  const quiz = quizzes.get(slideId);
+  if (!quiz) return;
 
-    const quizId = slideId;
+  // ✅ REAL QUIZ ID from course_quizzes table (not slideId)
+  const realQuizId = quiz.quizId;
 
-    try {
-      const response = await fetch('/api/students/quiz/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enrollmentId,
-          studentEmail: user.email,
-          courseId,
-          slideId,
-          quizId,
-          answers,
-          score,
-          passed
-        })
-      });
+  console.log('📤 Simple Quiz Submit with REAL IDs:', {
+    enrollmentId,
+    studentEmail: user.email,
+    courseId,
+    slideId,
+    quizId: realQuizId,        // ✅ Real UUID
+    answersCount: answers.length,
+    score,
+    passed
+  });
 
-      const result = await response.json();
+  try {
+    const response = await fetch('/api/students/quiz/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enrollmentId,
+        studentEmail: user.email,
+        courseId,
+        slideId,
+        quizId: realQuizId,      // ✅ Real quiz_id from course_quizzes
+        answers,
+        score,
+        passed
+      })
+    });
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit quiz');
-      }
+    const result = await response.json();
 
-      if (result.success) {
-        const attempt: QuizAttempt = {
-          quizId,
-          slideId,
-          courseId,
-          answers,
-          score,
-          passed,
-          attemptedAt: new Date().toISOString()
-        };
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to submit quiz');
+    }
 
-        setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
+    if (result.success) {
+      const attempt: QuizAttempt = {
+        quizId: realQuizId,      // ✅ Store real quiz_id
+        slideId,
+        courseId,
+        answers,
+        score,
+        passed,
+        attemptedAt: new Date().toISOString()
+      };
 
-        setQuizFeedback({
-          show: true,
-          message: passed ? `🎉 Quiz passed! Score: ${score}%` : `Quiz submitted. Score: ${score}%`,
-          type: passed ? 'success' : 'error'
-        });
-        setTimeout(() => setQuizFeedback(null), 4000);
+      setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
 
-        // Check if video is also completed
-        const videoCompleted = isVideoCompleted(slideId);
-        if (videoCompleted) {
-          await autoCompleteSlide(slideId);
-        }
-        
-        await loadCourseData();
-      }
-    } catch (error: any) {
-      console.error('Error submitting quiz:', error);
       setQuizFeedback({
         show: true,
-        message: error.message || 'Failed to submit quiz',
-        type: 'error'
+        message: passed ? `🎉 Quiz passed! Score: ${score}%` : `Quiz submitted. Score: ${score}%`,
+        type: passed ? 'success' : 'error'
       });
-      setTimeout(() => setQuizFeedback(null), 3000);
+      setTimeout(() => setQuizFeedback(null), 4000);
+
+      // Check if video is also completed
+      const videoCompleted = isVideoCompleted(slideId);
+      if (videoCompleted) {
+        await autoCompleteSlide(slideId);
+      }
+      
+      await loadCourseData();
     }
-  };
+  } catch (error: any) {
+    console.error('Error submitting quiz:', error);
+    setQuizFeedback({
+      show: true,
+      message: error.message || 'Failed to submit quiz',
+      type: 'error'
+    });
+    setTimeout(() => setQuizFeedback(null), 3000);
+  }
+};
 
   // ✅ Handle advanced quiz completion
-  const handleAdvancedQuizComplete = async (score: number, total: number, passed: boolean) => {
-    console.log('Advanced Quiz completed:', { score, total, passed });
-    await loadCourseData();
-    
-    // Find which slide this quiz belongs to
-    // This will be handled in the component
-  };
-
+const handleAdvancedQuizComplete = async (slideId: string, score: number, total: number, passed: boolean) => {
+  console.log('Advanced Quiz completed for slide:', slideId, { score, total, passed });
+  
+  // ✅ Add to advancedQuizAttempts Set
+  setAdvancedQuizAttempts(prev => new Set([...prev, slideId]));
+  
+  await loadCourseData();
+};
   const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => {
     if (!user || !enrollmentId) return;
     
@@ -1028,130 +1043,147 @@ export default function StudentCourseDetailPage() {
     setQuizAnswers(updatedAnswers);
   };
 
-  const handleQuizSubmit = async (slideId: string) => {
-    const quiz = quizzes.get(slideId);
-    if (!quiz || !user || !enrollmentId) return;
+const handleQuizSubmit = async (slideId: string) => {
+  const quiz = quizzes.get(slideId);
+  if (!quiz || !user || !enrollmentId) return;
 
-    let isValid = true;
-    let errorMessage = '';
+  // ✅ REAL QUIZ ID from course_quizzes table
+  const realQuizId = quiz.quizId;
 
-    quiz.questions.forEach((q, index) => {
-      const answer = quizAnswers[index];
-      
-      if (q.questionType === 'text' || !q.options || q.options.length === 0) {
-        if (!answer?.textAnswer?.trim()) {
-          isValid = false;
-          errorMessage = `Please answer question ${index + 1}`;
-        }
-      } else {
-        if (answer?.selectedOption === undefined || answer.selectedOption === -1) {
-          isValid = false;
-          errorMessage = `Please answer question ${index + 1}`;
-        }
-      }
-    });
+  let isValid = true;
+  let errorMessage = '';
 
-    if (!isValid) {
-      setQuizFeedback({
-        show: true,
-        message: errorMessage,
-        type: 'error'
-      });
-      setTimeout(() => setQuizFeedback(null), 3000);
-      return;
-    }
-
-    const quizId = slideId;
-
-    if (quizAttempts.has(slideId)) {
-      setQuizFeedback({
-        show: true,
-        message: 'You have already attempted this quiz. No retakes allowed.',
-        type: 'error'
-      });
-      setTimeout(() => setQuizFeedback(null), 3000);
-      setActiveQuiz(null);
-      setQuizAnswers([]);
-      return;
-    }
-
-    let correctCount = 0;
-    let mcqCount = 0;
+  quiz.questions.forEach((q, index) => {
+    const answer = quizAnswers[index];
     
-    quiz.questions.forEach((q, index) => {
-      const answer = quizAnswers[index];
-      
-      if (q.options && q.options.length > 0 && answer?.selectedOption !== undefined) {
-        mcqCount++;
-        if (answer.selectedOption === q.correctAnswer) {
-          correctCount++;
-        }
+    if (q.questionType === 'text' || !q.options || q.options.length === 0) {
+      if (!answer?.textAnswer?.trim()) {
+        isValid = false;
+        errorMessage = `Please answer question ${index + 1}`;
       }
-    });
-    
-    const score = mcqCount > 0 ? Math.round((correctCount / mcqCount) * 100) : 0;
-    const passed = score >= 70;
-
-    try {
-      const response = await fetch('/api/students/quiz/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enrollmentId,
-          studentEmail: user.email,
-          courseId,
-          slideId,
-          quizId,
-          answers: quizAnswers,
-          score,
-          passed
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit quiz');
+    } else {
+      if (answer?.selectedOption === undefined || answer.selectedOption === -1) {
+        isValid = false;
+        errorMessage = `Please answer question ${index + 1}`;
       }
-
-      if (result.success) {
-        const attempt: QuizAttempt = {
-          quizId,
-          slideId,
-          courseId,
-          answers: quizAnswers,
-          score,
-          passed,
-          attemptedAt: new Date().toISOString()
-        };
-
-        setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
-
-        setQuizFeedback({
-          show: true,
-          message: passed ? `🎉 Quiz submitted! Score: ${score}%` : `Quiz submitted. Score: ${score}%`,
-          type: passed ? 'success' : 'error'
-        });
-        setTimeout(() => setQuizFeedback(null), 4000);
-
-        const videoCompleted = isVideoCompleted(slideId);
-        if (videoCompleted) {
-          await autoCompleteSlide(slideId);
-        }
-      }
-    } catch (error: any) {
-      console.error('Error submitting quiz:', error);
-      setQuizFeedback({
-        show: true,
-        message: error.message || 'Failed to submit quiz',
-        type: 'error'
-      });
-      setTimeout(() => setQuizFeedback(null), 3000);
     }
+  });
 
+  if (!isValid) {
+    setQuizFeedback({
+      show: true,
+      message: errorMessage,
+      type: 'error'
+    });
+    setTimeout(() => setQuizFeedback(null), 3000);
+    return;
+  }
+
+  // Check if already attempted using real quiz_id
+  if (quizAttempts.has(slideId)) {
+    setQuizFeedback({
+      show: true,
+      message: 'You have already attempted this quiz. No retakes allowed.',
+      type: 'error'
+    });
+    setTimeout(() => setQuizFeedback(null), 3000);
     setActiveQuiz(null);
     setQuizAnswers([]);
-  };
+    return;
+  }
+
+  // Calculate score
+  let correctCount = 0;
+  let mcqCount = 0;
+  
+  quiz.questions.forEach((q, index) => {
+    const answer = quizAnswers[index];
+    
+    if (q.options && q.options.length > 0 && answer?.selectedOption !== undefined) {
+      mcqCount++;
+      if (answer.selectedOption === q.correctAnswer) {
+        correctCount++;
+      }
+    }
+  });
+  
+  const score = mcqCount > 0 ? Math.round((correctCount / mcqCount) * 100) : 0;
+  const passed = score >= 70;
+
+  console.log('📤 Submitting quiz with REAL IDs:', {
+    enrollmentId,
+    studentEmail: user.email,
+    courseId,
+    slideId,
+    quizId: realQuizId,        // ✅ Real UUID, not slideId
+    answersCount: quizAnswers.length,
+    score,
+    passed
+  });
+
+  try {
+    const response = await fetch('/api/students/quiz/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enrollmentId,
+        studentEmail: user.email,
+        courseId,
+        slideId,
+        quizId: realQuizId,      // ✅ Real quiz_id from course_quizzes
+        answers: quizAnswers,
+        score,
+        passed
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to submit quiz');
+    }
+
+    if (result.success) {
+      const attempt: QuizAttempt = {
+        quizId: realQuizId,      // ✅ Store real quiz_id
+        slideId,
+        courseId,
+        answers: quizAnswers,
+        score,
+        passed,
+        attemptedAt: new Date().toISOString()
+      };
+
+      setQuizAttempts(new Map(quizAttempts.set(slideId, attempt)));
+
+      setQuizFeedback({
+        show: true,
+        message: passed ? `🎉 Quiz passed! Score: ${score}%` : `Quiz submitted. Score: ${score}%`,
+        type: passed ? 'success' : 'error'
+      });
+      setTimeout(() => setQuizFeedback(null), 4000);
+
+      const videoCompleted = isVideoCompleted(slideId);
+      if (videoCompleted) {
+        await autoCompleteSlide(slideId);
+      }
+      
+      // Refresh course data
+      await loadCourseData();
+    }
+  } catch (error: any) {
+    console.error('Error submitting quiz:', error);
+    setQuizFeedback({
+      show: true,
+      message: error.message || 'Failed to submit quiz',
+      type: 'error'
+    });
+    setTimeout(() => setQuizFeedback(null), 3000);
+  }
+
+  setActiveQuiz(null);
+  setQuizAnswers([]);
+};
 
   const getSlidePerformance = (): SlidePerformance[] => {
     return slides.map(slide => {

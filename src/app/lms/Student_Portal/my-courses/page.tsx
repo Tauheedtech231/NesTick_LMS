@@ -1,9 +1,8 @@
-// app/lms/Student_Portal/my-courses/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { HiClock, HiUser, HiOutlineRefresh, HiXCircle, HiSearch, HiBookOpen, HiAcademicCap } from 'react-icons/hi';
+import { HiClock, HiOutlineRefresh, HiXCircle, HiSearch, HiBookOpen, HiAcademicCap, HiCalendar, HiCheckCircle } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
 /* eslint-disable */
 
@@ -22,7 +21,6 @@ type Enrollment = {
 type Course = {
   id: string;
   title: string;
-  instructor: string;
   description: string;
   category: string;
   enrolledDate: string;
@@ -36,6 +34,7 @@ type Course = {
   enrollmentId: number;
   status: string;
   payment_status: string;
+  order_status?: 'pending' | 'processing' | 'completed' | 'cancelled';
 };
 
 const BRAND_COLORS = {
@@ -57,6 +56,7 @@ export default function MyCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
 
   // Load user from localStorage
   useEffect(() => {
@@ -94,7 +94,6 @@ export default function MyCoursesPage() {
     try {
       console.log('🔍 Fetching enrolled courses for:', user.email);
       
-      // ✅ Single API call to get enrollments
       const response = await fetch(`/api/students/enrollments?email=${encodeURIComponent(user.email)}`);
       const result = await response.json();
 
@@ -107,11 +106,9 @@ export default function MyCoursesPage() {
       if (result.success && result.data) {
         console.log('📊 Enrollments found:', result.data.length);
         
-        // ✅ Transform enrollments to Course format
         const transformedCourses: Course[] = result.data.map((enrollment: Enrollment) => ({
           id: enrollment.course_id,
           title: enrollment.course_title,
-          instructor: 'Course Instructor', // Default instructor name
           description: enrollment.course_title,
           category: 'Professional Development',
           enrolledDate: enrollment.enrollment_date,
@@ -124,14 +121,18 @@ export default function MyCoursesPage() {
           level: 'All Levels',
           enrollmentId: enrollment.id,
           status: enrollment.status,
-          payment_status: enrollment.payment_status
+          payment_status: enrollment.payment_status,
+          order_status: getOrderStatus(enrollment.status, enrollment.payment_status)
         }));
         
-        setCourses(transformedCourses);
-        setFilteredCourses(transformedCourses);
+        const sortedCourses = transformedCourses.sort((a, b) => 
+          new Date(b.enrolledDate).getTime() - new Date(a.enrolledDate).getTime()
+        );
         
-        // Save to localStorage as backup
-        localStorage.setItem('studentCourses', JSON.stringify(transformedCourses));
+        setCourses(sortedCourses);
+        setFilteredCourses(sortedCourses);
+        
+        localStorage.setItem('studentCourses', JSON.stringify(sortedCourses));
       } else {
         setCourses([]);
         setFilteredCourses([]);
@@ -141,7 +142,6 @@ export default function MyCoursesPage() {
       console.error('Error fetching enrolled courses:', error);
       setError(error.message || 'Failed to load courses');
       
-      // Try to load from localStorage as fallback
       try {
         const studentCoursesStr = localStorage.getItem('studentCourses');
         if (studentCoursesStr) {
@@ -158,6 +158,29 @@ export default function MyCoursesPage() {
     }
   };
 
+  const getOrderStatus = (status: string, paymentStatus: string): 'pending' | 'processing' | 'completed' | 'cancelled' => {
+    if (status === 'cancelled') return 'cancelled';
+    if (paymentStatus === 'verified') return 'completed';
+    if (paymentStatus === 'pending') return 'pending';
+    if (status === 'active') return 'completed';
+    return 'processing';
+  };
+
+  const getStatusBadge = (orderStatus: string) => {
+    switch (orderStatus) {
+      case 'completed':
+        return { bg: 'bg-green-100', text: 'text-green-700', label: 'Active', Icon: HiCheckCircle };
+      case 'pending':
+        return { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending', Icon: HiClock };
+      case 'processing':
+        return { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Processing', Icon: HiCalendar };
+      case 'cancelled':
+        return { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled', Icon: HiXCircle };
+      default:
+        return { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Unknown', Icon: HiClock };
+    }
+  };
+
   useEffect(() => {
     if (user?.email) {
       fetchEnrolledCourses();
@@ -165,7 +188,7 @@ export default function MyCoursesPage() {
   }, [user]);
 
   useEffect(() => {
-    let filtered = courses;
+    let filtered = [...courses];
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -175,8 +198,15 @@ export default function MyCoursesPage() {
       );
     }
 
+    if (sortBy === 'date') {
+      filtered.sort((a, b) => new Date(b.enrolledDate).getTime() - new Date(a.enrolledDate).getTime());
+    } else if (sortBy === 'status') {
+      const statusOrder = { completed: 0, processing: 1, pending: 2, cancelled: 3 };
+      filtered.sort((a, b) => statusOrder[a.order_status || 'pending'] - statusOrder[b.order_status || 'pending']);
+    }
+
     setFilteredCourses(filtered);
-  }, [searchTerm, courses]);
+  }, [searchTerm, courses, sortBy]);
 
   const handleRefresh = () => {
     if (user?.email) {
@@ -254,7 +284,6 @@ export default function MyCoursesPage() {
               )}
             </div>
             
-            {/* Search Stats */}
             {searchTerm && filteredCourses.length > 0 && (
               <div className="absolute left-0 right-0 -bottom-8 text-sm text-gray-500">
                 Found {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} matching "{searchTerm}"
@@ -262,15 +291,28 @@ export default function MyCoursesPage() {
             )}
           </div>
 
-          {/* Refresh Button */}
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="absolute top-6 right-6 p-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <HiOutlineRefresh className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+          {/* Sort Dropdown & Refresh Button */}
+          <div className="flex justify-end items-center gap-3 mt-6 max-w-xl mx-auto">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'status')}
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              >
+                <option value="date">Enrollment Date</option>
+                <option value="status">Order Status</option>
+              </select>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 bg-white shadow-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              title="Refresh"
+            >
+              <HiOutlineRefresh className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -319,74 +361,80 @@ export default function MyCoursesPage() {
           </div>
         )}
 
-        {/* Course grid */}
-        {filteredCourses.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {filteredCourses.map((course) => (
-              <Link
-                key={course.id}
-                href={`/lms/Student_Portal/my-courses/${course.id}`}
-                className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+     {/* Course grid */}
+{filteredCourses.length > 0 && (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+    {filteredCourses.map((course) => {
+      const statusBadge = getStatusBadge(course.order_status || 'pending');
+      const StatusIcon = statusBadge.Icon;
+      
+      return (
+        <Link
+          key={course.id}
+          href={`/lms/Student_Portal/my-courses/${course.id}`}
+          className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+        >
+          <div className="p-4 sm:p-5">
+            {/* Category Badge & Status */}
+            <div className="flex justify-between items-start mb-2 sm:mb-3">
+              <span
+                className="text-xs font-semibold px-2 py-1 rounded"
+                style={{
+                  backgroundColor: `${BRAND_COLORS.teal}20`,
+                  color: BRAND_COLORS.teal,
+                }}
               >
-                <div className="p-4 sm:p-5">
-                  {/* Category Badge */}
-                  <div className="mb-2 sm:mb-3">
-                    <span
-                      className="text-xs font-semibold px-2 py-1 rounded"
-                      style={{
-                        backgroundColor: `${BRAND_COLORS.teal}20`,
-                        color: BRAND_COLORS.teal,
-                      }}
-                    >
-                      {course.category}
-                    </span>
-                  </div>
+                {course.category}
+              </span>
+              <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${statusBadge.bg} ${statusBadge.text}`}>
+                <StatusIcon className="w-3 h-3" />
+                {statusBadge.label}
+              </span>
+            </div>
 
-                  {/* Title */}
-                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
-                    {course.title}
-                  </h3>
+            {/* Title */}
+            <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
+              {course.title}
+            </h3>
 
-                  {/* Description */}
-                  <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                    {course.description}
-                  </p>
+            {/* Description */}
+            <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+              {course.description}
+            </p>
 
-                  {/* Duration & Level */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 flex items-center gap-1">
-                      <HiClock className="w-3 h-3" />
-                      {course.duration}
-                    </span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                      {course.level}
-                    </span>
-                  </div>
+            {/* Duration & Level */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 flex items-center gap-1">
+                <HiClock className="w-3 h-3" />
+                {course.duration}
+              </span>
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                {course.level}
+              </span>
+            </div>
 
-                  {/* Instructor */}
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                    <HiUser className="w-3 h-3 text-gray-400" />
-                    <span className="truncate">{course.instructor}</span>
-                  </div>
-                  
-                  {/* Enrollment Date */}
-                  <div className="text-xs text-gray-400">
-                    Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}
-                  </div>
-
-                  {/* Status Badge (if needed) */}
-                  {course.status && (
-                    <div className="mt-2">
-                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                        Active
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </Link>
-            ))}
+            {/* Enrollment Date */}
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <HiCalendar className="w-3 h-3 text-gray-400" />
+              <span>Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}</span>
+            </div>
+            
+            {/* Payment Status - Human Readable */}
+            <div className="text-xs text-gray-400 mt-1">
+              Payment Status: {
+                course.payment_status === 'verified' 
+                  ? 'Completed' 
+                  : course.payment_status === 'pending' 
+                    ? 'Awaiting Verification' 
+                    : 'Payment Failed'
+              }
+            </div>
           </div>
-        )}
+        </Link>
+      );
+    })}
+  </div>
+)}
       </div>
     </div>
   );

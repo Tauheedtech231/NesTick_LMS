@@ -1,170 +1,241 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { getConnection } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-/* eslint-disable */
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const student_email = searchParams.get('student_email');
-    const video_id = searchParams.get('video_id');
 
-    console.log('📊 GET video progress:', { student_email, video_id });
-
-    if (!student_email || !video_id) {
-      return NextResponse.json({
-        success: true,
-        data: { current_position: 0, max_position: 0, total_duration: 0, is_completed: false }
-      });
-    }
-
-    try {
-      const result: any = await query(
-        `SELECT current_position, max_position, total_duration, is_completed 
-         FROM video_watch_progress 
-         WHERE student_email = ? AND video_id = ?`,
-        [student_email, video_id]
-      );
-
-      console.log('📊 Query result:', result);
-
-      // Check if result is array and has data
-      if (result && Array.isArray(result) && result.length > 0) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            current_position: result[0].current_position || 0,
-            max_position: result[0].max_position || 0,
-            total_duration: result[0].total_duration || 0,
-            is_completed: result[0].is_completed === 1
-          }
-        });
-      }
-    } catch (err) {
-      console.log('Query error:', err);
-    }
-
-    // Default return when no data found
-    return NextResponse.json({
-      success: true,
-      data: {
-        current_position: 0,
-        max_position: 0,
-        total_duration: 0,
-        is_completed: false
-      }
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error fetching video progress:', error);
-    return NextResponse.json({
-      success: true,
-      data: {
-        current_position: 0,
-        max_position: 0,
-        total_duration: 0,
-        is_completed: false
-      }
-    });
-  }
-}
-
+// ============ POST - Save Video Progress ============
 export async function POST(request: NextRequest) {
+  let connection;
   try {
     const body = await request.json();
-    const {
-      student_email,
-      enrollment_id,
-      video_id,
-      slide_id,
-      course_id,
-      current_position,
-      total_duration
+    const { 
+      enrollmentId, 
+      studentEmail, 
+      courseId, 
+      slideId, 
+      videoId, 
+      currentPosition,
+      totalDuration,
+      isCompleted 
     } = body;
 
-    console.log('📊 POST video progress:', { student_email, video_id, current_position, total_duration });
+    console.log('=========================================');
+    console.log('📥 VIDEO PROGRESS POST REQUEST:');
+    console.log('   enrollmentId:', enrollmentId);
+    console.log('   studentEmail:', studentEmail);
+    console.log('   courseId:', courseId);
+    console.log('   slideId:', slideId);
+    console.log('   videoId:', videoId);
+    console.log('   currentPosition:', currentPosition);
+    console.log('   totalDuration:', totalDuration);
+    console.log('   isCompleted:', isCompleted);
+    console.log('=========================================');
 
-    if (!student_email || !video_id || !enrollment_id) {
+    if (!enrollmentId || !studentEmail || !courseId || !slideId || !videoId) {
+      console.error('❌ Missing required fields');
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const isCompleted = (current_position / total_duration) >= 0.95;
-    const completedAt = isCompleted ? new Date() : null;
+    connection = await getConnection();
+    console.log('✅ Database connected');
 
-    try {
-      // Check if record exists
-      const existing: any = await query(
-        `SELECT id FROM video_watch_progress WHERE student_email = ? AND video_id = ?`,
-        [student_email, video_id]
-      );
-
-      console.log('📊 Existing record:', existing);
-
-      if (existing && Array.isArray(existing) && existing.length > 0) {
-        // Update existing record
-        await query(
-          `UPDATE video_watch_progress 
-           SET current_position = ?,
-               max_position = GREATEST(max_position, ?),
-               total_duration = ?,
-               is_completed = ?,
-               completed_at = ?,
-               last_watched_at = NOW()
-           WHERE student_email = ? AND video_id = ?`,
-          [
-            current_position,
-            current_position,
-            total_duration,
-            isCompleted ? 1 : 0,
-            completedAt,
-            student_email,
-            video_id
-          ]
-        );
-        console.log('📊 Record updated');
-      } else {
-        // Insert new record
-        await query(
-          `INSERT INTO video_watch_progress 
-           (id, student_email, enrollment_id, video_id, slide_id, course_id, 
-            current_position, max_position, total_duration, is_completed, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            uuidv4(),
-            student_email,
-            enrollment_id,
-            video_id,
-            slide_id,
-            course_id,
-            current_position,
-            current_position,
-            total_duration,
-            isCompleted ? 1 : 0,
-            completedAt
-          ]
-        );
-        console.log('📊 New record inserted');
-      }
-    } catch (dbError) {
-      console.error('❌ Database error:', dbError);
-      // Don't throw, just log
+    // Check if enrollment exists
+    const [enrollmentCheck] = await connection.execute(
+      `SELECT id FROM enrollments WHERE id = ?`,
+      [enrollmentId]
+    ) as any[];
+    
+    console.log('📋 Enrollment exists?', enrollmentCheck.length > 0 ? 'YES' : 'NO');
+    if (enrollmentCheck.length === 0) {
+      console.error('❌ Enrollment not found:', enrollmentId);
     }
+
+    // Check if progress exists
+    const [existingRows] = await connection.execute(
+      `SELECT id, current_position, is_completed FROM video_watch_progress 
+       WHERE enrollment_id = ? AND video_id = ?`,
+      [enrollmentId, videoId]
+    ) as any[];
+
+    console.log('📋 Existing progress record?', existingRows.length > 0 ? 'YES' : 'NO');
+    if (existingRows.length > 0) {
+      console.log('   Existing record:', existingRows[0]);
+    }
+
+    let result;
+    
+    if (existingRows && existingRows.length > 0) {
+      // UPDATE existing record
+      const currentMax = existingRows[0].current_position || 0;
+      const newPosition = currentPosition || 0;
+      const updatePosition = newPosition > currentMax ? newPosition : currentMax;
+      
+      console.log('🔄 Updating existing record...');
+      console.log('   currentMax:', currentMax);
+      console.log('   newPosition:', newPosition);
+      console.log('   updatePosition:', updatePosition);
+      
+      await connection.execute(
+        `UPDATE video_watch_progress 
+         SET current_position = ?, total_duration = ?, is_completed = ?, 
+             last_watched_at = NOW()
+         WHERE id = ?`,
+        [updatePosition, totalDuration || 0, isCompleted || false, existingRows[0].id]
+      );
+      
+      result = { id: existingRows[0].id, isCompleted: isCompleted || false };
+      console.log('✅ Record UPDATED successfully:', result);
+    } else {
+      // INSERT new record
+      const newId = uuidv4();
+      console.log('🆕 Inserting new record...');
+      console.log('   newId:', newId);
+      
+      await connection.execute(
+        `INSERT INTO video_watch_progress 
+         (id, student_email, enrollment_id, video_id, slide_id, course_id, 
+          current_position, total_duration, is_completed, last_watched_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [newId, studentEmail, enrollmentId, videoId, slideId, courseId,
+         currentPosition || 0, totalDuration || 0, isCompleted || false]
+      );
+      
+      result = { id: newId, isCompleted: isCompleted || false };
+      console.log('✅ Record INSERTED successfully:', result);
+    }
+
+    // Verify the record was saved
+    const [verifyRecord] = await connection.execute(
+      `SELECT id, current_position, is_completed FROM video_watch_progress WHERE id = ?`,
+      [result.id]
+    ) as any[];
+    
+    console.log('📋 Verification after save:', verifyRecord.length > 0 ? 'RECORD EXISTS' : 'RECORD NOT FOUND');
+    console.log('=========================================');
 
     return NextResponse.json({
       success: true,
-      data: {
-        is_completed: isCompleted,
-        current_position
-      }
+      data: result
     });
 
   } catch (error: any) {
-    console.error('❌ Error saving video progress:', error);
+    console.error('=========================================');
+    console.error('❌ ERROR saving video progress:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ SQL:', error.sql);
+    console.error('=========================================');
+    
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to save video progress' },
+      { 
+        success: false, 
+        error: error.message || 'Failed to save video progress',
+        details: error.code || 'Unknown error'
+      },
       { status: 500 }
     );
+  } finally {
+    if (connection) {
+      connection.release();
+      console.log('🔌 Database connection released');
+    }
+  }
+}
+
+// ============ GET - Fetch Video Progress ============
+export async function GET(request: NextRequest) {
+  let connection;
+  try {
+    const { searchParams } = new URL(request.url);
+    const enrollmentId = searchParams.get('enrollmentId');
+    const courseId = searchParams.get('courseId');
+
+    console.log('=========================================');
+    console.log('📥 VIDEO PROGRESS GET REQUEST:');
+    console.log('   enrollmentId:', enrollmentId);
+    console.log('   courseId:', courseId);
+    console.log('=========================================');
+
+    if (!enrollmentId) {
+      return NextResponse.json(
+        { success: false, error: 'Enrollment ID is required' },
+        { status: 400 }
+      );
+    }
+
+    connection = await getConnection();
+    console.log('✅ Database connected');
+
+    let query = `
+      SELECT 
+        id,
+        video_id as videoId,
+        slide_id as slideId,
+        course_id as courseId,
+        current_position as currentPosition,
+        total_duration as totalDuration,
+        is_completed as isCompleted,
+        last_watched_at as lastWatchedAt
+      FROM video_watch_progress 
+      WHERE enrollment_id = ?
+    `;
+    
+    const params = [enrollmentId];
+    
+    if (courseId) {
+      query += ` AND course_id = ?`;
+      params.push(courseId);
+    }
+    
+    query += ` ORDER BY last_watched_at DESC`;
+
+    console.log('📋 Query:', query);
+    console.log('📋 Params:', params);
+
+    const [progress] = await connection.execute(query, params) as any[];
+
+    console.log('📋 Progress records found:', progress.length);
+    if (progress.length > 0) {
+      console.log('   First record:', progress[0]);
+    }
+
+    const progressMap: Record<string, any> = {};
+    progress.forEach((p: any) => {
+      const key = `${p.slideId}_${p.videoId}`;
+      progressMap[key] = {
+        videoId: p.videoId,
+        slideId: p.slideId,
+        currentPosition: p.currentPosition,
+        totalDuration: p.totalDuration,
+        isCompleted: p.isCompleted === 1,
+        lastWatchedAt: p.lastWatchedAt
+      };
+    });
+
+    console.log('📋 Progress map keys:', Object.keys(progressMap));
+    console.log('=========================================');
+
+    return NextResponse.json({
+      success: true,
+      data: progressMap
+    });
+
+  } catch (error: any) {
+    console.error('=========================================');
+    console.error('❌ Error fetching video progress:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('=========================================');
+    
+    return NextResponse.json(
+      { success: false, data: {}, error: error.message },
+      { status: 500 }
+    );
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 }

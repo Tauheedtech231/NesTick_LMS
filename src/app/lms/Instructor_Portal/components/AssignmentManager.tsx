@@ -1,8 +1,9 @@
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit3, Save, X, Loader2, CheckCircle, AlertCircle, Calendar, Award, FileText, Upload } from 'lucide-react'
+import { Plus, X, Edit3, Trash2, Upload, Calendar, Award, FileText, Loader2, BookOpen } from 'lucide-react'
 
 interface Assignment {
   id: string;
@@ -22,398 +23,445 @@ interface Assignment {
     uploadedAt: string;
   };
   status: 'published' | 'draft';
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AssignmentManagerProps {
   slideId: string;
   courseId: string;
-  onAssignmentsChange?: (assignments: Assignment[]) => void;
+  assignments: Assignment[];
+  onAssignmentsChange: (assignments: Assignment[]) => void;
+  onShowSuccess?: (message: string) => void;
+  onShowError?: (message: string) => void;
 }
 
 const CLOUDINARY_CLOUD_NAME = 'dfp9qc0gu'
 const CLOUDINARY_UPLOAD_PRESET = 'lms_upload'
 
-export default function AssignmentManager({ slideId, courseId, onAssignmentsChange }: AssignmentManagerProps) {
-  const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [uploadingFile, setUploadingFile] = useState(false)
-  const [formData, setFormData] = useState<Partial<Assignment>>({
+const getFileIcon = (fileType: string) => {
+  if (fileType.includes('video')) return <FileText className="w-5 h-5 text-blue-500" />;
+  if (fileType.includes('image')) return <FileText className="w-5 h-5 text-green-500" />;
+  if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+  return <FileText className="w-5 h-5 text-gray-500" />;
+};
+
+export default function AssignmentManager({ 
+  slideId, 
+  courseId, 
+  assignments, 
+  onAssignmentsChange,
+  onShowSuccess,
+  onShowError
+}: AssignmentManagerProps) {
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  const [currentAssignment, setCurrentAssignment] = useState<Partial<Assignment>>({
     title: '',
     description: '',
     dueDate: '',
     totalMarks: 100,
     passingMarks: 70,
     status: 'draft'
-  })
-  const [assignmentFile, setAssignmentFile] = useState<Assignment['file'] | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  });
+  
+  const [assignmentFile, setAssignmentFile] = useState<{
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    publicId: string;
+    uploadedAt: string;
+  } | null>(null);
 
-  // Fetch assignments
+  // Fetch assignments from database
   const fetchAssignments = async () => {
-    setLoading(true)
+    if (!slideId || !courseId) return;
+    
+    setLoading(true);
     try {
-      const response = await fetch(`/api/instructors/slide/assignments?slideId=${slideId}&courseId=${courseId}`)
-      const data = await response.json()
-      if (data.success) {
-        setAssignments(data.data || [])
-        onAssignmentsChange?.(data.data || [])
+      const response = await fetch(`/api/instructors/assignments?slideId=${slideId}&courseId=${courseId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        onAssignmentsChange(result.data);
+      } else {
+        console.error('Failed to fetch assignments:', result.error);
       }
-    } catch (error) {
-      console.error('Error fetching assignments:', error)
-      showMessage('error', 'Failed to load assignments')
+    } catch (error: any) {
+      console.error('Error fetching assignments:', error);
+      onShowError?.(error.message || 'Failed to fetch assignments');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
+  // Load assignments when slideId changes
   useEffect(() => {
-    if (slideId) {
-      fetchAssignments()
+    if (slideId && courseId) {
+      fetchAssignments();
     }
-  }, [slideId])
+  }, [slideId, courseId]);
 
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-    setTimeout(() => setMessage(null), 3000)
-  }
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
 
-  // Upload file to Cloudinary
-  const uploadFile = async (file: File): Promise<Assignment['file'] | null> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
-    formData.append('folder', `lms/courses/${courseId}/assignments`)
+    setUploadingFile(true);
 
-    const resourceType = file.type.startsWith('video/') ? 'video' : 
-                        file.type.startsWith('image/') ? 'image' : 'raw'
-
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, {
-      method: 'POST',
-      body: formData
-    })
-
-    if (!response.ok) throw new Error('Upload failed')
-
-    const result = await response.json()
-    return {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: result.secure_url,
-      publicId: result.public_id,
-      uploadedAt: new Date().toISOString()
-    }
-  }
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingFile(true)
     try {
-      const uploaded = await uploadFile(file)
-      setAssignmentFile(uploaded)
-      showMessage('success', 'File uploaded successfully!')
-    } catch (error) {
-      showMessage('error', 'Failed to upload file')
-    } finally {
-      setUploadingFile(false)
-    }
-  }
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      formData.append('folder', `lms/courses/${courseId}/assignments`);
 
-  // Save assignment
-  const handleSave = async () => {
-    if (!formData.title?.trim()) {
-      showMessage('error', 'Please enter assignment title')
-      return
-    }
-    if (!formData.description?.trim()) {
-      showMessage('error', 'Please enter assignment description')
-      return
-    }
-    if (!formData.dueDate) {
-      showMessage('error', 'Please select due date')
-      return
-    }
+      const resourceType = file.type.startsWith('video/') ? 'video' : 
+                          file.type.startsWith('image/') ? 'image' : 'raw';
 
-    setSaving(true)
-    try {
-      const payload = {
-        slideId,
-        courseId,
-        title: formData.title,
-        description: formData.description,
-        dueDate: formData.dueDate,
-        totalMarks: formData.totalMarks,
-        passingMarks: formData.passingMarks,
-        status: formData.status,
-        file: assignmentFile
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
       }
 
-      let response
+      const result = await response.json();
+      
+      setAssignmentFile({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: result.secure_url,
+        publicId: result.public_id,
+        uploadedAt: new Date().toISOString()
+      });
+      
+      onShowSuccess?.('Assignment file uploaded successfully!');
+    } catch (error) {
+      console.error('Assignment file upload error:', error);
+      onShowError?.('Failed to upload assignment file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  // ============ CREATE Assignment ============
+  const handleSave = async () => {
+    if (!currentAssignment.title?.trim()) {
+      onShowError?.('Please enter assignment title');
+      return;
+    }
+
+    if (!currentAssignment.description?.trim()) {
+      onShowError?.('Please enter assignment description');
+      return;
+    }
+
+    if (!currentAssignment.dueDate) {
+      onShowError?.('Please select due date');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const requestBody = {
+        slideId: slideId,
+        courseId: courseId,
+        title: currentAssignment.title.trim(),
+        description: currentAssignment.description.trim(),
+        dueDate: currentAssignment.dueDate,
+        totalMarks: currentAssignment.totalMarks || 100,
+        passingMarks: currentAssignment.passingMarks || 70,
+        file: assignmentFile || null,
+        status: currentAssignment.status || 'draft'
+      };
+
+      let response;
+      let result;
+
       if (editingId) {
-        response = await fetch(`/api/instructors/assignment/${editingId}`, {
+        // UPDATE
+        response = await fetch(`/api/instructors/assignments/update/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
+          body: JSON.stringify(requestBody)
+        });
+        result = await response.json();
+        
+        if (result.success) {
+          onShowSuccess?.('Assignment updated successfully!');
+          await fetchAssignments();
+          resetForm();
+        } else {
+          throw new Error(result.error);
+        }
       } else {
-        response = await fetch('/api/instructors/assignment/add', {
+        // CREATE
+        response = await fetch('/api/instructors/assignments/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
+          body: JSON.stringify(requestBody)
+        });
+        result = await response.json();
+        
+        if (result.success) {
+          onShowSuccess?.('Assignment added successfully!');
+          await fetchAssignments();
+          resetForm();
+        } else {
+          throw new Error(result.error);
+        }
       }
-
-      const data = await response.json()
-      if (data.success) {
-        showMessage('success', editingId ? 'Assignment updated!' : 'Assignment added!')
-        resetForm()
-        fetchAssignments()
-      } else {
-        throw new Error(data.error)
-      }
+      
     } catch (error: any) {
-      showMessage('error', error.message || 'Failed to save assignment')
+      console.error('Error saving assignment:', error);
+      onShowError?.(error.message || 'Failed to save assignment');
     } finally {
-      setSaving(false)
+      setSubmitting(false);
     }
-  }
+  };
 
-  // Delete assignment
-  const handleDelete = async (assignmentId: string) => {
-    if (!confirm('Are you sure you want to delete this assignment?')) return
-
-    try {
-      const response = await fetch(`/api/instructors/assignment/${assignmentId}`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
-      if (data.success) {
-        showMessage('success', 'Assignment deleted!')
-        fetchAssignments()
-      } else {
-        throw new Error(data.error)
-      }
-    } catch (error: any) {
-      showMessage('error', error.message || 'Failed to delete assignment')
-    }
-  }
-
-  // Edit assignment
+  // ============ EDIT Assignment ============
   const handleEdit = (assignment: Assignment) => {
-    setEditingId(assignment.id)
-    setFormData({
+    setEditingId(assignment.id);
+    setCurrentAssignment({
       title: assignment.title,
       description: assignment.description,
-      dueDate: assignment.dueDate,
+      dueDate: assignment.dueDate.split('T')[0] + 'T' + (assignment.dueDate.split('T')[1] || '23:59'),
       totalMarks: assignment.totalMarks,
       passingMarks: assignment.passingMarks,
       status: assignment.status
-    })
-    setAssignmentFile(assignment.file || null)
-    setShowForm(true)
-  }
+    });
+    if (assignment.file) {
+      setAssignmentFile(assignment.file);
+    }
+    setShowForm(true);
+  };
+
+  // ============ DELETE Assignment ============
+  const handleDelete = async (assignmentId: string) => {
+    if (!confirm('Are you sure you want to delete this assignment?')) {
+      return;
+    }
+
+    setDeletingId(assignmentId);
+
+    try {
+      const response = await fetch(`/api/instructors/assignments/delete/${assignmentId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        onShowSuccess?.('Assignment deleted successfully!');
+        await fetchAssignments();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error: any) {
+      console.error('Error deleting assignment:', error);
+      onShowError?.(error.message || 'Failed to delete assignment');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const resetForm = () => {
-    setShowForm(false)
-    setEditingId(null)
-    setFormData({
+    setCurrentAssignment({
       title: '',
       description: '',
       dueDate: '',
       totalMarks: 100,
       passingMarks: 70,
       status: 'draft'
-    })
-    setAssignmentFile(null)
-  }
+    });
+    setAssignmentFile(null);
+    setShowForm(false);
+    setEditingId(null);
+  };
 
-  const getFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) return <FileText className="w-4 h-4 text-red-500" />
-    if (fileType.includes('word')) return <FileText className="w-4 h-4 text-blue-500" />
-    return <FileText className="w-4 h-4 text-gray-500" />
-  }
+  const slideAssignments = assignments.filter(a => a.slideId === slideId);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-        <span className="ml-2 text-gray-600">Loading assignments...</span>
+      <div className="bg-white rounded-lg border border-softGrey p-6 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: '#1E3A8A' }} />
+        <p className="text-sm mt-2">Loading assignments...</p>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      {/* Header */}
+    <div className="bg-white rounded-lg border border-softGrey p-6">
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Assignments</h3>
-          <p className="text-xs text-gray-500 mt-1">{assignments.length} assignment(s)</p>
-        </div>
-        <button
-          onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+        <h3 className="text-lg font-semibold" style={{ color: '#0B1C3D' }}>
+          Assignments for this Slide ({slideAssignments.length})
+        </h3>
+        <button 
+          onClick={() => setShowForm(true)} 
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}
         >
-          <Plus className="w-4 h-4" />
-          Add Assignment
+          <Plus className="w-4 h-4" /> Add Assignment
         </button>
       </div>
 
-      {/* Message */}
-      {message && (
-        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          {message.text}
-        </div>
-      )}
-
-      {/* Add/Edit Form */}
+      {/* Assignment Form */}
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+        <div className="bg-lightGrey rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="font-medium text-gray-900">{editingId ? 'Edit Assignment' : 'New Assignment'}</h4>
-            <button onClick={resetForm} className="p-1 text-gray-400 hover:text-gray-600">
+            <h4 className="font-medium text-darkGrey">{editingId ? 'Edit Assignment' : 'New Assignment'}</h4>
+            <button onClick={resetForm} className="p-1 text-darkGrey/60 hover:text-darkGrey rounded cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           </div>
-
+          
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Final Project"
+              <label className="block text-sm font-medium text-darkGrey mb-2">Assignment Title *</label>
+              <input 
+                type="text" 
+                value={currentAssignment.title} 
+                onChange={(e) => setCurrentAssignment({ ...currentAssignment, title: e.target.value })} 
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" 
+                placeholder="e.g., Final Project" 
               />
             </div>
-
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Describe the assignment..."
+              <label className="block text-sm font-medium text-darkGrey mb-2">Description *</label>
+              <textarea 
+                value={currentAssignment.description} 
+                onChange={(e) => setCurrentAssignment({ ...currentAssignment, description: e.target.value })} 
+                rows={4} 
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" 
+                placeholder="Describe the assignment..." 
               />
             </div>
-
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-              <input
-                type="datetime-local"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <label className="block text-sm font-medium text-darkGrey mb-2">Due Date *</label>
+              <input 
+                type="datetime-local" 
+                value={currentAssignment.dueDate} 
+                onChange={(e) => setCurrentAssignment({ ...currentAssignment, dueDate: e.target.value })} 
+                className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" 
               />
             </div>
-
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Total Marks</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.totalMarks}
-                  onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <label className="block text-sm font-medium text-darkGrey mb-2">Total Marks</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={currentAssignment.totalMarks} 
+                  onChange={(e) => setCurrentAssignment({ ...currentAssignment, totalMarks: parseInt(e.target.value) })} 
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Passing Marks</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.passingMarks}
-                  onChange={(e) => setFormData({ ...formData, passingMarks: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <label className="block text-sm font-medium text-darkGrey mb-2">Passing Marks</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={currentAssignment.passingMarks} 
+                  onChange={(e) => setCurrentAssignment({ ...currentAssignment, passingMarks: parseInt(e.target.value) })} 
+                  className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" 
                 />
               </div>
             </div>
-
-            {/* File Upload */}
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assignment File (Optional)</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white">
+              <label className="block text-sm font-medium text-darkGrey mb-2">Assignment File (Optional)</label>
+              <div className="border-2 border-dashed border-softGrey rounded-lg p-4 text-center bg-white">
                 {assignmentFile ? (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {getFileIcon(assignmentFile.type)}
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{assignmentFile.name}</p>
-                        <p className="text-xs text-gray-500">{(assignmentFile.size / 1024).toFixed(2)} KB</p>
+                        <p className="text-sm font-medium">{assignmentFile.name}</p>
+                        <p className="text-xs text-darkGrey/60">{(assignmentFile.size / 1024).toFixed(2)} KB</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setAssignmentFile(null)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
-                    >
+                    <button onClick={() => setAssignmentFile(null)} className="p-1 text-red-600 hover:bg-red-50 rounded">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <>
-                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600 mb-2">Upload assignment instructions or template</p>
-                    <label className="inline-block cursor-pointer">
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.txt"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        disabled={uploadingFile}
+                    <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: '#E5E7EB' }} />
+                    <p className="text-sm text-darkGrey/70 mb-2">Upload assignment instructions</p>
+                    <label className="inline-block relative">
+                      <input 
+                        type="file" 
+                        accept=".pdf,.doc,.docx,.txt" 
+                        onChange={(e) => { 
+                          if (e.target.files && e.target.files[0]) 
+                            handleFileUpload(e.target.files[0]); 
+                        }} 
+                        className="hidden" 
                       />
-                      <span className={`px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium inline-flex items-center gap-2 ${uploadingFile ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-                        {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                        {uploadingFile ? 'Uploading...' : 'Browse Files'}
+                      <span 
+                        className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer inline-flex items-center gap-2"
+                        style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}
+                      >
+                        {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Browse Files'}
                       </span>
                     </label>
                   </>
                 )}
               </div>
             </div>
-
-            {/* Status */}
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={formData.status === 'draft'}
-                    onChange={() => setFormData({ ...formData, status: 'draft' })}
-                    className="w-4 h-4 text-red-600"
+                  <input 
+                    type="radio" 
+                    checked={currentAssignment.status === 'draft'} 
+                    onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'draft' })} 
+                    className="w-4 h-4" 
+                    style={{ accentColor: '#B11217' }}
                   />
-                  <span className="text-sm">Draft</span>
+                  <span>Draft</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={formData.status === 'published'}
-                    onChange={() => setFormData({ ...formData, status: 'published' })}
-                    className="w-4 h-4 text-red-600"
+                  <input 
+                    type="radio" 
+                    checked={currentAssignment.status === 'published'} 
+                    onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'published' })} 
+                    className="w-4 h-4" 
+                    style={{ accentColor: '#B11217' }}
                   />
-                  <span className="text-sm">Published</span>
+                  <span>Published</span>
                 </label>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2">
-              <button onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={resetForm} 
+                className="px-4 py-2 border border-softGrey text-darkGrey rounded-lg text-sm font-medium hover:bg-lightGrey"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? 'Saving...' : (editingId ? 'Update' : 'Save')}
+              <button 
+                onClick={handleSave} 
+                disabled={submitting} 
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                style={{ backgroundColor: '#B11217' }}
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Update' : 'Save')}
               </button>
             </div>
           </div>
@@ -421,49 +469,77 @@ export default function AssignmentManager({ slideId, courseId, onAssignmentsChan
       )}
 
       {/* Assignments List */}
-      {assignments.length === 0 && !showForm ? (
-        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-          <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500">No assignments yet. Click &quot;Add Assignment&quot; to create one.</p>
-        </div>
-      ) : (
+      {slideAssignments.length > 0 ? (
         <div className="space-y-3">
-          {assignments.map((assignment) => (
-            <div key={assignment.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-gray-900">{assignment.title}</h4>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${assignment.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {assignment.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{assignment.description}</p>
-                  <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                    <span className="flex items-center gap-1"><Award className="w-3 h-3" /> Total: {assignment.totalMarks} marks</span>
-                    <span className="flex items-center gap-1"><Award className="w-3 h-3" /> Passing: {assignment.passingMarks} marks</span>
-                  </div>
-                  {assignment.file && (
-                    <a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:underline">
-                      <FileText className="w-3 h-3" />
-                      {assignment.file.name}
-                    </a>
-                  )}
+          {slideAssignments.map((assignment) => (
+            <div key={assignment.id} className="border border-softGrey rounded-lg p-4 hover:bg-lightGrey/50">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="font-medium">{assignment.title}</h4>
+                  <p className="text-sm text-darkGrey/70 mt-1">{assignment.description}</p>
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleEdit(assignment)} className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleEdit(assignment)} 
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Edit assignment"
+                  >
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(assignment.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-                    <Trash2 className="w-4 h-4" />
+                  <button 
+                    onClick={() => handleDelete(assignment.id)} 
+                    disabled={deletingId === assignment.id}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded disabled:opacity-50 transition-colors"
+                    title="Delete assignment"
+                  >
+                    {deletingId === assignment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
+              
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                  <Calendar className="w-3 h-3" />
+                  Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-darkGrey/60">
+                  <Award className="w-3 h-3" />
+                  Total: {assignment.totalMarks} marks
+                </div>
+                <div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    assignment.status === 'published' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {assignment.status}
+                  </span>
+                </div>
+              </div>
+              
+              {assignment.file && (
+                <div className="mt-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <a 
+                    href={assignment.file.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    {assignment.file.name}
+                  </a>
+                </div>
+              )}
             </div>
           ))}
         </div>
+      ) : !showForm && (
+        <div className="text-center py-8 border-2 border-dashed border-softGrey rounded-lg">
+          <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: '#E5E7EB' }} />
+          <p className="text-darkGrey/70">No assignments yet</p>
+          <p className="text-xs text-darkGrey/50 mt-1">Click "Add Assignment" to create one</p>
+        </div>
       )}
     </div>
-  )
+  );
 }

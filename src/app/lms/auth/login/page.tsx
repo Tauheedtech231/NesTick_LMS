@@ -113,6 +113,7 @@ const validateStudentLogin = async (email: string, password: string) => {
 
     if (!response.ok) {
       if (response.status === 401) {
+        
         return {
           success: false,
           error: 'Invalid email or password'
@@ -368,7 +369,7 @@ function LoginContent() {
 
   const handleForgotPassword = () => {
     sessionStorage.setItem('resetEmail', formData.email);
-    router.push(`/lms/auth/forgot-password?type=instructor&email=${encodeURIComponent(formData.email)}`);
+    router.push(`/lms/auth/forgot-password`);
   };
 
   return (
@@ -533,7 +534,12 @@ function LoginContent() {
                   </button>
                 </div>
               </form>
-
+            <button
+                onClick={handleForgotPassword}
+                className="w-full mt-4 py-2 px-4 rounded-lg text-sm text-red-600 hover:text-red-800 underline font-medium"
+              >
+                Forgot password?
+              </button>
               {/* Help Text */}
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">

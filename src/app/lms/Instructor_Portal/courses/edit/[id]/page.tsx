@@ -48,6 +48,8 @@ import {
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import TrueFalseFillBlanksManager from '../../../components/TrueFalseFillBlanksManager'
+import QuizManager from '../../../components/QuizManager'
+import AssignmentManager from '../../../components/AssignmentManager'
 /* eslint-disable */
 
 const BRAND_COLORS = {
@@ -1985,127 +1987,19 @@ const [tfFillQuestions, setTfFillQuestions] = useState<Record<string, any[]>>({}
                   </div>
 
                   {/* Quiz Content */}
-                  <div className="bg-white rounded-lg border border-softGrey p-6">
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: BRAND_COLORS.darkNavy }}>Quiz Questions</h3>
-
-                    {/* Add Question Form */}
-                    <div className="bg-lightGrey rounded-lg p-4 mb-6">
-                      <h4 className="font-medium text-darkGrey mb-3">Add New Question</h4>
-                      
-                      <div className="space-y-4">
-                        {/* Question Type */}
-                        <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question Type</label>
-                          <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" checked={currentQuizQuestion.questionType === QuestionType.MCQ} onChange={() => handleQuestionTypeChange(QuestionType.MCQ)} className="w-4 h-4 text-darkRoyalBlue" />
-                              <span className="text-sm text-darkGrey">Multiple Choice</span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" checked={currentQuizQuestion.questionType === QuestionType.TEXT} onChange={() => handleQuestionTypeChange(QuestionType.TEXT)} className="w-4 h-4 text-darkRoyalBlue" />
-                              <span className="text-sm text-darkGrey">Text Answer</span>
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Question */}
-                        <div>
-                          <label className="block text-xs font-medium text-darkGrey/70 mb-1">Question</label>
-                          <textarea
-                            value={currentQuizQuestion.question}
-                            onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, question: e.target.value })}
-                            rows={2}
-                            className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm cursor-text"
-                            placeholder="Enter your question here..."
-                          />
-                        </div>
-
-                        {/* MCQ Options */}
-                        {currentQuizQuestion.questionType === QuestionType.MCQ && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-darkGrey/70 mb-1">Options</label>
-                              <div className="space-y-2">
-                                {currentQuizQuestion.options.map((option, index) => (
-                                  <div key={index} className="flex items-center gap-2">
-                                    <span className="w-6 text-sm font-medium text-darkGrey/70">{String.fromCharCode(65 + index)}.</span>
-                                    <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)} className="flex-1 px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm cursor-text" placeholder={`Option ${index + 1}`} />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-xs font-medium text-darkGrey/70 mb-1">Correct Answer</label>
-                              <select
-                                value={currentQuizQuestion.correctAnswer}
-                                onChange={(e) => setCurrentQuizQuestion({ ...currentQuizQuestion, correctAnswer: parseInt(e.target.value) })}
-                                className="w-full px-3 py-2 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue text-sm bg-white cursor-pointer"
-                              >
-                                {currentQuizQuestion.options.map((_, index) => (
-                                  <option key={index} value={index}>Option {String.fromCharCode(65 + index)}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Text Answer Info */}
-                        {currentQuizQuestion.questionType === QuestionType.TEXT && (
-                          <div className="p-3 bg-blue-50 rounded-lg">
-                            <p className="text-xs text-blue-700">Text Answer Question: Students will write their answer in a text box.</p>
-                          </div>
-                        )}
-
-                        <button onClick={() => handleAddQuestion(selectedSlideId)} className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors cursor-pointer" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
-                          Add Question
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Questions List */}
-                    {quizQuestions[selectedSlideId] && quizQuestions[selectedSlideId].length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-darkGrey mb-3">Questions ({quizQuestions[selectedSlideId].length})</h4>
-                        <div className="space-y-3">
-                          {quizQuestions[selectedSlideId].map((q, qIndex) => (
-                            <div key={q.id} className="border border-softGrey rounded-lg p-3">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${q.questionType === QuestionType.MCQ ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                                      {q.questionType === QuestionType.MCQ ? 'MCQ' : 'Text Answer'}
-                                    </span>
-                                    <p className="font-medium text-sm text-darkGrey">Q{qIndex + 1}: {q.question}</p>
-                                  </div>
-                                </div>
-                                <button onClick={() => handleRemoveQuestion(selectedSlideId, q.id)} className="p-1 text-brightRed hover:bg-brightRed/5 rounded ml-2 cursor-pointer">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                              
-                              {q.questionType === QuestionType.MCQ ? (
-                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                  {q.options.map((opt, optIndex) => (
-                                    <div key={optIndex} className="flex items-center gap-2">
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${optIndex === q.correctAnswer ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                        {String.fromCharCode(65 + optIndex)}
-                                      </span>
-                                      <span className="text-xs text-darkGrey/70">{opt}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="mt-2 p-2 bg-lightGrey rounded-lg">
-                                  <p className="text-xs text-darkGrey/70">Text answer question - students will write response</p>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <QuizManager 
+  slideId={selectedSlideId}
+  courseId={courseId}
+  questions={quizQuestions[selectedSlideId] || []}
+  onQuestionsChange={(newQuestions) => {
+    setQuizQuestions(prev => ({
+      ...prev,
+      [selectedSlideId]: newQuestions
+    }))
+  }}
+  onShowSuccess={showSuccess}
+  onShowError={showError}
+/>
                   {selectedSlideId && (
                     <div className="mt-6">
                       <TrueFalseFillBlanksManager 
@@ -2122,111 +2016,14 @@ const [tfFillQuestions, setTfFillQuestions] = useState<Record<string, any[]>>({}
                   )}
 
                   {/* Assignments */}
-                  <div className="bg-white rounded-lg border border-softGrey p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold" style={{ color: BRAND_COLORS.darkNavy }}>Assignments for this Slide</h3>
-                      <button onClick={() => openAssignmentFormForSlide(selectedSlideId)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue, color: BRAND_COLORS.white }}>
-                        <Plus className="w-4 h-4" /> Add Assignment
-                      </button>
-                    </div>
-
-                    {/* Assignment Form */}
-                    {showAssignmentForm && selectedAssignmentSlide === selectedSlideId && (
-                      <div className="bg-lightGrey rounded-lg p-4 mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium text-darkGrey">{editingAssignment ? 'Edit Assignment' : 'New Assignment'}</h4>
-                          <button onClick={resetAssignmentForm} className="p-1 text-darkGrey/60 hover:text-darkGrey rounded cursor-pointer"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">Assignment Title *</label>
-                            <input type="text" value={currentAssignment.title} onChange={(e) => setCurrentAssignment({ ...currentAssignment, title: e.target.value })} className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" placeholder="e.g., Final Project" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">Description *</label>
-                            <textarea value={currentAssignment.description} onChange={(e) => setCurrentAssignment({ ...currentAssignment, description: e.target.value })} rows={4} className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" placeholder="Describe the assignment..." />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">Due Date *</label>
-                            <input type="datetime-local" value={currentAssignment.dueDate} onChange={(e) => setCurrentAssignment({ ...currentAssignment, dueDate: e.target.value })} className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-darkGrey mb-2">Total Marks</label>
-                              <input type="number" min="1" value={currentAssignment.totalMarks} onChange={(e) => setCurrentAssignment({ ...currentAssignment, totalMarks: parseInt(e.target.value) })} className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-darkGrey mb-2">Passing Marks</label>
-                              <input type="number" min="1" value={currentAssignment.passingMarks} onChange={(e) => setCurrentAssignment({ ...currentAssignment, passingMarks: parseInt(e.target.value) })} className="w-full px-4 py-2.5 border border-softGrey rounded-lg focus:outline-none focus:border-darkRoyalBlue bg-white cursor-text" />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">Assignment File (Optional)</label>
-                            <div className="border-2 border-dashed border-softGrey rounded-lg p-4 text-center bg-white">
-                              {assignmentFile ? (
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    {getFileIcon(assignmentFile.type)}
-                                    <div><p className="text-sm font-medium">{assignmentFile.name}</p><p className="text-xs text-darkGrey/60">{(assignmentFile.size / 1024).toFixed(2)} KB</p></div>
-                                  </div>
-                                  <button onClick={() => setAssignmentFile(null)} className="p-1 text-brightRed hover:bg-brightRed/5 rounded"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                              ) : (
-                                <>
-                                  <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: BRAND_COLORS.softGrey }} />
-                                  <p className="text-sm text-darkGrey/70 mb-2">Upload assignment instructions</p>
-                                  <label className="inline-block relative">
-                                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => { if (e.target.files && e.target.files[0]) handleAssignmentFileUpload(e.target.files[0]); }} className="hidden" />
-                                    <span className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer inline-flex items-center gap-2" style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue, color: BRAND_COLORS.white }}>
-                                      {uploadingAssignment ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Browse Files'}
-                                    </span>
-                                  </label>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-darkGrey mb-2">Status</label>
-                            <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer"><input type="radio" checked={currentAssignment.status === 'draft'} onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'draft' })} className="w-4 h-4 text-deepRed" /><span>Draft</span></label>
-                              <label className="flex items-center gap-2 cursor-pointer"><input type="radio" checked={currentAssignment.status === 'published'} onChange={() => setCurrentAssignment({ ...currentAssignment, status: 'published' })} className="w-4 h-4 text-deepRed" /><span>Published</span></label>
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-3">
-                            <button onClick={resetAssignmentForm} className="px-4 py-2 border border-softGrey text-darkGrey rounded-lg text-sm font-medium hover:bg-lightGrey">Cancel</button>
-                            <button onClick={handleSaveAssignment} disabled={submittingAssignment} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: BRAND_COLORS.deepRed }}>
-                              {submittingAssignment ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingAssignment ? 'Update' : 'Save')}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Assignments List */}
-                    {assignments.filter(a => a.slideId === selectedSlideId).length > 0 ? (
-                      <div className="space-y-3">
-                        {assignments.filter(a => a.slideId === selectedSlideId).map((assignment) => (
-                          <div key={assignment.id} className="border border-softGrey rounded-lg p-4 hover:bg-lightGrey/50">
-                            <div className="flex items-start justify-between mb-2">
-                              <div><h4 className="font-medium">{assignment.title}</h4><p className="text-sm text-darkGrey/70 mt-1">{assignment.description}</p></div>
-                              <div className="flex gap-2">
-                                <button onClick={() => handleEditAssignment(assignment)} className="p-1 text-darkRoyalBlue hover:bg-darkRoyalBlue/5 rounded"><Edit3 className="w-4 h-4" /></button>
-                                <button onClick={() => handleRemoveAssignment(assignment.id)} className="p-1 text-brightRed hover:bg-brightRed/5 rounded"><Trash2 className="w-4 h-4" /></button>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 mt-3">
-                              <div className="flex items-center gap-2 text-xs text-darkGrey/60"><Calendar className="w-3 h-3" />Due: {new Date(assignment.dueDate).toLocaleDateString()}</div>
-                              <div className="flex items-center gap-2 text-xs text-darkGrey/60"><Award className="w-3 h-3" />Total: {assignment.totalMarks} marks</div>
-                              <div><span className={`px-2 py-1 rounded-full text-xs ${assignment.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{assignment.status}</span></div>
-                            </div>
-                            {assignment.file && <div className="mt-3 flex items-center gap-2"><FileText className="w-4 h-4 text-darkRoyalBlue" /><a href={assignment.file.url} target="_blank" rel="noopener noreferrer" className="text-darkRoyalBlue hover:underline">{assignment.file.name}</a></div>}
-                          </div>
-                        ))}
-                      </div>
-                    ) : !showAssignmentForm && (
-                      <div className="text-center py-8 border-2 border-dashed border-softGrey rounded-lg"><BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: BRAND_COLORS.softGrey }} /><p>No assignments yet</p></div>
-                    )}
-                  </div>
+                 <AssignmentManager
+  slideId={selectedSlideId}
+  courseId={courseId}
+  assignments={assignments}
+  onAssignmentsChange={setAssignments}
+  onShowSuccess={showSuccess}
+  onShowError={showError}
+/>
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border border-softGrey p-12 text-center"><HelpCircle className="w-12 h-12 mx-auto mb-3" /><h3>Select a Slide</h3><p>Choose a slide to add content</p></div>
