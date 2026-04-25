@@ -16,6 +16,11 @@ type Enrollment = {
   enrollment_date: string;
   status: string;
   payment_status: string;
+  course_image?: string;
+  course_duration?: string;
+  course_level?: string;
+  course_category?: string;
+  course_description?: string;
 };
 
 type Course = {
@@ -48,6 +53,9 @@ const BRAND_COLORS = {
   teal: '#1FB6CB'
 };
 
+// Default Cloudinary image
+const DEFAULT_COURSE_IMAGE = 'https://res.cloudinary.com/dfp9qc0gu/image/upload/v1745412345/lms/course_images/default_course.png';
+
 export default function MyCoursesPage() {
   const [user, setUser] = useState<any>(null);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -58,7 +66,6 @@ export default function MyCoursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
 
-  // Load user from localStorage
   useEffect(() => {
     try {
       const currentUserStr = localStorage.getItem('currentUser');
@@ -80,7 +87,6 @@ export default function MyCoursesPage() {
     }
   }, []);
 
-  // Fetch enrolled courses from API
   const fetchEnrolledCourses = async (showRefreshing = false) => {
     if (!user?.email) return;
 
@@ -109,16 +115,16 @@ export default function MyCoursesPage() {
         const transformedCourses: Course[] = result.data.map((enrollment: Enrollment) => ({
           id: enrollment.course_id,
           title: enrollment.course_title,
-          description: enrollment.course_title,
-          category: 'Professional Development',
+          description: enrollment.course_description || enrollment.course_title,
+          category: enrollment.course_category || 'Professional Development',
           enrolledDate: enrollment.enrollment_date,
           modules: [],
           totalModules: 0,
           completedModules: 0,
           lastAccessed: undefined,
-          image: '',
-          duration: 'Self-paced',
-          level: 'All Levels',
+          image: enrollment.course_image || DEFAULT_COURSE_IMAGE,
+          duration: enrollment.course_duration || 'Self-paced',
+          level: enrollment.course_level || 'All Levels',
           enrollmentId: enrollment.id,
           status: enrollment.status,
           payment_status: enrollment.payment_status,
@@ -361,80 +367,98 @@ export default function MyCoursesPage() {
           </div>
         )}
 
-     {/* Course grid */}
-{filteredCourses.length > 0 && (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-    {filteredCourses.map((course) => {
-      const statusBadge = getStatusBadge(course.order_status || 'pending');
-      const StatusIcon = statusBadge.Icon;
-      
-      return (
-        <Link
-          key={course.id}
-          href={`/lms/Student_Portal/my-courses/${course.id}`}
-          className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-        >
-          <div className="p-4 sm:p-5">
-            {/* Category Badge & Status */}
-            <div className="flex justify-between items-start mb-2 sm:mb-3">
-              <span
-                className="text-xs font-semibold px-2 py-1 rounded"
-                style={{
-                  backgroundColor: `${BRAND_COLORS.teal}20`,
-                  color: BRAND_COLORS.teal,
-                }}
-              >
-                {course.category}
-              </span>
-              <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${statusBadge.bg} ${statusBadge.text}`}>
-                <StatusIcon className="w-3 h-3" />
-                {statusBadge.label}
-              </span>
-            </div>
+        {/* Course grid with Images */}
+        {filteredCourses.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {filteredCourses.map((course) => {
+              const statusBadge = getStatusBadge(course.order_status || 'pending');
+              const StatusIcon = statusBadge.Icon;
+              
+              return (
+                <Link
+                  key={course.id}
+                  href={`/lms/Student_Portal/my-courses/${course.id}`}
+                  className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                >
+                  {/* Course Image Section */}
+                  <div className="relative h-40 sm:h-44 bg-gray-100 overflow-hidden">
+                    <img
+                      src={course.image || DEFAULT_COURSE_IMAGE}
+                      alt={course.title}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = DEFAULT_COURSE_IMAGE;
+                      }}
+                    />
+                    
+                    {/* Status Badge - Top Right */}
+                    <div className="absolute top-3 right-3">
+                      <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${statusBadge.bg} ${statusBadge.text} shadow-sm`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {statusBadge.label}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* Title */}
-            <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
-              {course.title}
-            </h3>
+                  {/* Content Section */}
+                  <div className="p-4 sm:p-5">
+                    {/* Category Badge */}
+                    <div className="mb-2">
+                      <span
+                        className="text-xs font-semibold px-2 py-1 rounded"
+                        style={{
+                          backgroundColor: `${BRAND_COLORS.teal}15`,
+                          color: BRAND_COLORS.teal,
+                        }}
+                      >
+                        {course.category}
+                      </span>
+                    </div>
 
-            {/* Description */}
-            <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-              {course.description}
-            </p>
+                    {/* Title */}
+                    <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2">
+                      {course.title}
+                    </h3>
 
-            {/* Duration & Level */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 flex items-center gap-1">
-                <HiClock className="w-3 h-3" />
-                {course.duration}
-              </span>
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                {course.level}
-              </span>
-            </div>
+                    {/* Description */}
+                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                      {course.description}
+                    </p>
 
-            {/* Enrollment Date */}
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <HiCalendar className="w-3 h-3 text-gray-400" />
-              <span>Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}</span>
-            </div>
-            
-            {/* Payment Status - Human Readable */}
-            <div className="text-xs text-gray-400 mt-1">
-              Payment Status: {
-                course.payment_status === 'verified' 
-                  ? 'Completed' 
-                  : course.payment_status === 'pending' 
-                    ? 'Awaiting Verification' 
-                    : 'Payment Failed'
-              }
-            </div>
+                    {/* Duration & Level */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 flex items-center gap-1">
+                        <HiClock className="w-3 h-3" />
+                        {course.duration}
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                        {course.level}
+                      </span>
+                    </div>
+
+                    {/* Enrollment Date */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <HiCalendar className="w-3 h-3 text-gray-400" />
+                      <span>Enrolled: {new Date(course.enrolledDate).toLocaleDateString()}</span>
+                    </div>
+                    
+                    {/* Payment Status */}
+                    <div className="text-xs text-gray-400 mt-1">
+                      Payment: {
+                        course.payment_status === 'verified' 
+                          ? 'Completed' 
+                          : course.payment_status === 'pending' 
+                            ? 'Awaiting Verification' 
+                            : 'Payment Failed'
+                      }
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-        </Link>
-      );
-    })}
-  </div>
-)}
+        )}
       </div>
     </div>
   );

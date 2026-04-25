@@ -25,7 +25,12 @@ import {
   HiTrash,
   HiShoppingBag,
   HiCurrencyRupee,
-  HiUser
+  HiUser,
+  HiTag,
+  HiGift,
+  HiEye,
+  HiOutlineGift,
+  HiInformationCircle
 } from "react-icons/hi";
 import { FaCartPlus } from "react-icons/fa";
 import { MdKeyboardArrowDown } from 'react-icons/md';
@@ -74,6 +79,20 @@ interface Course {
   numericPrice?: number;
 }
 
+// Bundle Interface
+interface Bundle {
+  id: string;
+  title: string;
+  description: string;
+  original_price: number;
+  discounted_price: number;
+  discount_percentage: number;
+  total_courses: number;
+  courses: Course[];
+  status: 'active' | 'inactive';
+  created_at: string;
+}
+
 // Cart item interface
 interface CartItem {
   id: string;
@@ -81,6 +100,32 @@ interface CartItem {
   course_title: string;
   course_price: number;
   added_at: string;
+  is_bundle_item?: boolean;
+  bundle_name?: string;
+  bundle_discounted_price?: number;
+}
+
+// Combined item for display
+interface DisplayItem {
+  type: 'course' | 'bundle';
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  originalPrice?: string;
+  discount?: number;
+  totalCourses?: number;
+  image?: string | null;
+  category: string;
+  duration?: string;
+  level?: string;
+  icon?: any;
+  color?: string | null;
+  data: Course | Bundle;
+  badge: string;
+  badgeColor: string;
+  isInCart?: boolean;
+  numericPrice?: number;
 }
 
 // Email Popup Props
@@ -154,7 +199,6 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100000] flex items-center justify-center p-4"
     >
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -162,8 +206,6 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-
-      {/* Popup */}
       <motion.div
         initial={{ scale: 0.9, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -171,7 +213,6 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden z-[100001]"
       >
-        {/* Header with gradient */}
         <div className="bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6 text-center">
           <motion.div
             initial={{ scale: 0 }}
@@ -185,7 +226,7 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
             {savedEmail ? 'Confirm Your Email' : 'Enter Your Email'}
           </h3>
           <p className="text-sm text-blue-100">
-            To add <span className="font-semibold">"{courseTitle}"</span> to cart
+            To add <span className="font-semibold">"{courseTitle}"</span> to bag
           </p>
           {savedEmail && (
             <p className="text-xs text-blue-200 mt-2">
@@ -193,8 +234,6 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
             </p>
           )}
         </div>
-
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -237,7 +276,6 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
               </motion.p>
             )}
           </div>
-
           <div className="flex gap-3">
             <button
               type="button"
@@ -255,11 +293,9 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: Ema
                   : 'bg-gray-300 cursor-not-allowed'
                 }`}
             >
-              {savedEmail ? 'Confirm & Add to Cart' : 'Confirm'}
+              {savedEmail ? 'Confirm & Add to Bag' : 'Confirm'}
             </button>
           </div>
-
-          {/* Privacy note */}
           <p className="text-xs text-gray-400 text-center mt-4">
             We'll save this email for future use. No spam, ever.
           </p>
@@ -315,7 +351,6 @@ const fadeInDownVariants = {
   transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] }
 };
 
-// Transition settings
 const getTransition = (delay: number = 0) => ({
   duration: 0.5,
   ease: [0.4, 0, 0.2, 1] as Easing,
@@ -333,22 +368,15 @@ export default function CoursesPage() {
   const router = useRouter();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
-  const [displayCourses, setDisplayCourses] = useState<Course[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [allBundles, setAllBundles] = useState<Bundle[]>([]);
+  const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({});
-  const [showFeatures, setShowFeatures] = useState(false);
-  
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   
   // Email popup state
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedItem, setSelectedItem] = useState<DisplayItem | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
   
   // Cart states with API
@@ -362,7 +390,7 @@ export default function CoursesPage() {
   // Cart sidebar state
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Load saved email from localStorage on component mount
+  // Load saved email from localStorage
   useEffect(() => {
     const savedEmail = localStorage.getItem('userEmail');
     if (savedEmail) {
@@ -370,7 +398,7 @@ export default function CoursesPage() {
     }
   }, []);
 
-  // Save email to localStorage whenever it changes
+  // Save email to localStorage
   useEffect(() => {
     if (userEmail) {
       localStorage.setItem('userEmail', userEmail);
@@ -379,6 +407,7 @@ export default function CoursesPage() {
 
   useEffect(() => {
     fetchCourses();
+    fetchBundles();
   }, []);
 
   useEffect(() => {
@@ -387,33 +416,63 @@ export default function CoursesPage() {
     }
   }, [userEmail]);
 
-  // Filter courses based on search query
+  // Combine courses and bundles into display items - ONLY 1 BUNDLE + 5 COURSES = 6 TOTAL
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredCourses(displayCourses);
-    } else {
-      const filtered = displayCourses.filter(course => 
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (course.description && course.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredCourses(filtered);
+    const items: DisplayItem[] = [];
+    
+    // Add ONLY 1 bundle (first active bundle)
+    if (allBundles.length > 0) {
+      const bundle = allBundles[0];
+      items.push({
+        type: 'bundle',
+        id: bundle.id,
+        title: bundle.title,
+        description: bundle.description,
+        price: formatCurrency(bundle.discounted_price),
+        originalPrice: formatCurrency(bundle.original_price),
+        discount: bundle.discount_percentage,
+        totalCourses: bundle.total_courses,
+        category: 'Bundle',
+        data: bundle,
+        badge: `SAVE ${bundle.discount_percentage}%`,
+        badgeColor: 'from-yellow-500 to-orange-500',
+        isInCart: false
+      });
     }
-  }, [searchQuery, displayCourses]);
+    
+    // Add ONLY 5 courses
+    const coursesToShow = allCourses.slice(0, 5);
+    coursesToShow.forEach(course => {
+      items.push({
+        type: 'course',
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        originalPrice: course.originalPrice || undefined,
+        image: course.image,
+        category: course.category,
+        duration: course.duration,
+        level: course.level,
+        icon: course.icon,
+        color: course.color,
+        data: course,
+        badge: 'Instructor Led',
+        badgeColor: 'from-[#1E3A8A] to-[#1E3A8A]',
+        isInCart: inCartStatus[course.id],
+        numericPrice: course.numericPrice
+      });
+    });
+    
+    setDisplayItems(items);
+  }, [allCourses, allBundles, inCartStatus]);
 
   const fetchCourses = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
       const response = await fetch('/api/instructors/course');
       const result = await response.json();
       
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch courses');
-      }
-      
-      if (result.success && result.data) {
+      if (response.ok && result.success && result.data) {
         const coursesWithIcons = result.data.map((course: any) => {
           let numericPrice = 0;
           if (course.price) {
@@ -451,20 +510,25 @@ export default function CoursesPage() {
         });
         
         const publishedCourses = coursesWithIcons.filter((course: Course) => course.isPublished);
-        const firstSixCourses = publishedCourses.slice(0, 6);
-        
         setAllCourses(publishedCourses);
-        setDisplayCourses(firstSixCourses);
-        setFilteredCourses(firstSixCourses);
-      } else {
-        throw new Error('Invalid response format');
       }
-      
-      setTimeout(() => setShowFeatures(true), 500);
-      
     } catch (err) {
       console.error('Error loading courses:', err);
       setError(err instanceof Error ? err.message : 'Failed to load courses');
+    }
+  };
+
+  const fetchBundles = async () => {
+    try {
+      const response = await fetch('/api/admin/bundles');
+      const result = await response.json();
+      
+      if (result.success) {
+        const activeBundles = result.data.filter((b: Bundle) => b.status === 'active');
+        setAllBundles(activeBundles);
+      }
+    } catch (err) {
+      console.error('Error loading bundles:', err);
     } finally {
       setLoading(false);
     }
@@ -501,7 +565,10 @@ export default function CoursesPage() {
             course_id: item.course_id,
             course_title: item.course_title,
             course_price: isNaN(price) ? 0 : price,
-            added_at: item.added_at
+            added_at: item.added_at,
+            is_bundle_item: item.is_bundle_item,
+            bundle_name: item.bundle_name,
+            bundle_discounted_price: item.bundle_discounted_price
           };
         });
         
@@ -520,37 +587,26 @@ export default function CoursesPage() {
     }
   };
 
-  // Handle click outside search
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchFocused(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    inputRef.current?.focus();
-  };
-
-  const handleImageError = (courseId: string) => {
-    setImageErrors(prev => ({ ...prev, [courseId]: true }));
+  const handleImageError = (itemId: string) => {
+    setImageErrors(prev => ({ ...prev, [itemId]: true }));
   };
 
   const retryFetch = () => {
+    setLoading(true);
     fetchCourses();
+    fetchBundles();
   };
 
   // Open email popup for add to cart
-  const handleAddToCartClick = (course: Course) => {
+  const handleAddToCartClick = (item: DisplayItem) => {
     if (userEmail) {
-      addToCart(course, userEmail);
+      if (item.type === 'course') {
+        addToCart(item.data as Course, userEmail);
+      } else {
+        addBundleToCart(item.data as Bundle, userEmail);
+      }
     } else {
-      setSelectedCourse(course);
+      setSelectedItem(item);
       setIsEmailPopupOpen(true);
     }
   };
@@ -559,13 +615,17 @@ export default function CoursesPage() {
   const handleEmailConfirm = async (email: string) => {
     setIsEmailPopupOpen(false);
     
-    if (!selectedCourse) return;
+    if (!selectedItem) return;
     
     setUserEmail(email);
-    await addToCart(selectedCourse, email);
+    if (selectedItem.type === 'course') {
+      await addToCart(selectedItem.data as Course, email);
+    } else {
+      await addBundleToCart(selectedItem.data as Bundle, email);
+    }
   };
 
-  // Add to cart API call
+  // Add to cart API call for single course
   const addToCart = async (course: Course, email: string) => {
     setCartLoading(prev => ({ ...prev, [course.id]: true }));
     setCartMessage(null);
@@ -576,7 +636,9 @@ export default function CoursesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentEmail: email,
-          courseId: course.id
+          courseId: course.id,
+          courseTitle: course.title,
+          coursePrice: course.numericPrice || 0
         })
       });
 
@@ -588,56 +650,85 @@ export default function CoursesPage() {
         
         setCartMessage({
           type: 'success',
-          text: 'Course added to cart successfully!'
+          text: `"${course.title}" added to bag!`
         });
         
         setTimeout(() => setCartMessage(null), 3000);
+      } else if (result.error === 'Course already in cart') {
+        setInCartStatus(prev => ({ ...prev, [course.id]: true }));
+        setCartMessage({
+          type: 'error',
+          text: 'Course is already in your cart'
+        });
       } else {
-        // Handle already enrolled case
-        if (result.alreadyEnrolled) {
-          let message = `${result.error}\n\n`;
-          
-          if (result.enrolledCoursesCount > 0 && result.allEnrolledCourses) {
-            message += `📚 You are already enrolled in ${result.enrolledCoursesCount} course(s):\n`;
-            message += `━━━━━━━━━━━━━━━━━━━━\n`;
-            result.allEnrolledCourses.forEach((enrolledCourse: any, idx: number) => {
-              message += `${idx + 1}. ${enrolledCourse.title}\n`;
-              message += `   Enrollment ID: ${enrolledCourse.enrollmentId}\n`;
-              message += `   Status: ${enrolledCourse.paymentStatus === 'verified' ? '✅ Active' : '⏳ Pending'}\n`;
-              message += `━━━━━━━━━━━━━━━━━━━━\n`;
-            });
-            message += `\n💡 Tip: Go to Dashboard to access your enrolled courses.`;
-          }
-          
-          alert(message);
-          
-          if (result.enrollmentStatus === 'pending') {
-            const confirm = window.confirm('Do you want to continue with your pending enrollment?');
-            if (confirm) {
-              router.push(`/cartEnrollment?enrollment_id=${result.enrollmentId}`);
-            }
-          } else if (result.enrollmentStatus === 'active') {
-            router.push('/dashboard');
-          }
-        } else if (result.error === 'Course already in cart') {
-          setInCartStatus(prev => ({ ...prev, [course.id]: true }));
-          setCartMessage({
-            type: 'error',
-            text: 'Course is already in your cart'
-          });
-        } else {
-          throw new Error(result.error || 'Failed to add to cart');
-        }
+        throw new Error(result.error || 'Failed to add to bag');
       }
     } catch (error: any) {
       console.error('Error adding to cart:', error);
       setCartMessage({
         type: 'error',
-        text: error.message || 'Failed to add to cart'
+        text: error.message || 'Failed to add to bag'
       });
     } finally {
       setCartLoading(prev => ({ ...prev, [course.id]: false }));
-      setSelectedCourse(null);
+      setSelectedItem(null);
+    }
+  };
+
+  // Add bundle to cart (adds all courses in bundle)
+  const addBundleToCart = async (bundle: Bundle, email: string) => {
+    setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: true }));
+    setCartMessage(null);
+
+    try {
+      let addedCount = 0;
+      
+      for (const course of (bundle.courses || [])) {
+        const response = await fetch('/api/student/cart/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentEmail: email,
+            courseId: course.id,
+            courseTitle: course.title,
+            coursePrice: 0,
+            isBundleItem: true,
+            bundleId: bundle.id,
+            bundleName: bundle.title,
+            bundleDiscountedPrice: bundle.discounted_price
+          })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          addedCount++;
+          setInCartStatus(prev => ({ ...prev, [course.id]: true }));
+        }
+      }
+      
+      if (addedCount > 0) {
+        await fetchCartCount();
+        setCartMessage({
+          type: 'success',
+          text: `🎉 Bundle "${bundle.title}" added! You only pay ${formatCurrency(bundle.discounted_price)} for ${addedCount} courses! (Save ${bundle.discount_percentage}%)`
+        });
+      } else {
+        setCartMessage({
+          type: 'error',
+          text: 'Failed to add bundle to bag'
+        });
+      }
+      
+      setTimeout(() => setCartMessage(null), 5000);
+    } catch (error: any) {
+      console.error('Error adding bundle to cart:', error);
+      setCartMessage({
+        type: 'error',
+        text: error.message || 'Failed to add bundle to bag'
+      });
+    } finally {
+      setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: false }));
+      setSelectedItem(null);
     }
   };
 
@@ -698,12 +789,12 @@ export default function CoursesPage() {
   // Format currency safely
   const formatCurrency = (amount: number) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
-      return 'Rs0';
+      return 'Rs 0';
     }
     
     const numAmount = Number(amount);
     if (isNaN(numAmount) || numAmount === 0) {
-      return 'Rs0';
+      return 'Rs 0';
     }
     
     return new Intl.NumberFormat('en-PK', {
@@ -733,13 +824,37 @@ export default function CoursesPage() {
 
   // Calculate cart total safely
   const cartTotal = cartItems.reduce((sum, item) => {
-    const price = typeof item.course_price === 'number' ? item.course_price : 0;
+    let price = typeof item.course_price === 'number' ? item.course_price : 0;
     let finalPrice = price;
     if (finalPrice > 100000) {
       finalPrice = finalPrice / 100;
     }
     return sum + (isNaN(finalPrice) ? 0 : finalPrice);
   }, 0);
+
+  // Group cart items by bundle to show bundle savings
+  const getBundleSavingsInfo = () => {
+    const bundleGroups: { [key: string]: { bundleName: string, discountedPrice: number, items: CartItem[], originalTotal: number } } = {};
+    
+    cartItems.forEach(item => {
+      if (item.is_bundle_item && item.bundle_name) {
+        if (!bundleGroups[item.bundle_name]) {
+          bundleGroups[item.bundle_name] = {
+            bundleName: item.bundle_name,
+            discountedPrice: item.bundle_discounted_price || 0,
+            items: [],
+            originalTotal: 0
+          };
+        }
+        bundleGroups[item.bundle_name].items.push(item);
+        bundleGroups[item.bundle_name].originalTotal += item.course_price;
+      }
+    });
+    
+    return bundleGroups;
+  };
+
+  const bundleGroups = getBundleSavingsInfo();
 
   if (loading) {
     return (
@@ -764,7 +879,7 @@ export default function CoursesPage() {
             transition={{ delay: 0.3 }}
             className="mt-4 text-gray-600"
           >
-            Loading courses...
+            Loading courses and bundles...
           </motion.p>
         </motion.div>
       </div>
@@ -776,7 +891,7 @@ export default function CoursesPage() {
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Courses</h3>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Content</h3>
           <p className="text-gray-500 mb-4">{error}</p>
           <button
             onClick={retryFetch}
@@ -793,15 +908,15 @@ export default function CoursesPage() {
     <div className="min-h-screen bg-white">
       {/* Email Popup */}
       <AnimatePresence mode="wait">
-        {isEmailPopupOpen && selectedCourse && (
+        {isEmailPopupOpen && selectedItem && (
           <EmailPopup
             isOpen={isEmailPopupOpen}
             onClose={() => {
               setIsEmailPopupOpen(false);
-              setSelectedCourse(null);
+              setSelectedItem(null);
             }}
             onConfirm={handleEmailConfirm}
-            courseTitle={selectedCourse.title}
+            courseTitle={selectedItem.title}
             savedEmail={userEmail}
           />
         )}
@@ -814,16 +929,16 @@ export default function CoursesPage() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[100001] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 ${
+            className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[100001] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 max-w-sm ${
               cartMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
             }`}
           >
             {cartMessage.type === 'success' ? (
-              <HiCheckCircle className="w-5 h-5 text-green-500" />
+              <HiCheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
             ) : (
-              <HiExclamation className="w-5 h-5 text-red-500" />
+              <HiExclamation className="w-5 h-5 text-red-500 flex-shrink-0" />
             )}
-            <span className="font-medium">{cartMessage.text}</span>
+            <span className="font-medium text-sm">{cartMessage.text}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -850,158 +965,226 @@ export default function CoursesPage() {
         </motion.button>
       </div>
 
-      {/* Learning Plan Sidebar */}
-      <AnimatePresence>
-        {isCartOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99998] cursor-pointer"
-            />
+   <AnimatePresence>
+  {isCartOpen && (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setIsCartOpen(false)}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99998] cursor-pointer"
+      />
 
-            <motion.div
-              variants={slideInRightVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto z-[99999]"
-            >
-              <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                      <HiAcademicCap className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Selected Courses</h2>
-                      <p className="text-sm text-white/80">
-                        {cartCount} {cartCount === 1 ? 'Course Selected' : 'Courses Selected'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <HiX className="w-5 h-5 text-white" />
-                  </button>
-                </div>
-                
-                {/* ✅ Show User Email in Sidebar */}
-                {userEmail && (
-                  <div className="mt-4 pt-4 border-t border-white/20">
-                    <div className="flex items-center gap-2 text-white/80 text-sm">
-                      <HiUser className="w-4 h-4" />
-                      <span className="truncate">{userEmail}</span>
-                    </div>
-                  </div>
-                )}
+      <motion.div
+        variants={slideInRightVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto z-[99999]"
+      >
+        <div className="sticky top-0 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/10 rounded-lg">
+                <HiShoppingBag className="w-6 h-6 text-white" />
               </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Your Learning Bag</h2>
+                <p className="text-sm text-white/80">
+                  {cartCount} {cartCount === 1 ? 'Course Selected' : 'Courses Selected'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsCartOpen(false)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <HiX className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          
+          {userEmail && (
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <HiUser className="w-4 h-4" />
+                <span className="truncate">{userEmail}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
-              <div className="p-6">
-                {cartItems.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <HiAcademicCap className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses selected yet</h3>
-                    <p className="text-gray-500 mb-6">Explore courses and build your learning plan</p>
-                    <button
-                      onClick={() => setIsCartOpen(false)}
-                      className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all cursor-pointer"
+        <div className="p-6">
+          {cartItems.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <HiShoppingBag className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Your bag is empty</h3>
+              <p className="text-gray-500 mb-6">Explore courses and bundles to start learning</p>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="px-6 py-2 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all cursor-pointer"
+              >
+                Browse Courses
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 mb-6">
+                {cartItems.map((item) => {
+                  const course = allCourses.find(c => c.id === item.course_id);
+                  const Icon = course?.icon || HiBookOpen;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
                     >
-                      Browse Courses
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4 mb-6">
-                      {cartItems.map((item) => {
-                        const course = allCourses.find(c => c.id === item.course_id);
-                        const Icon = course?.icon || HiBookOpen;
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
+                        </div>
 
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-white rounded-lg shadow-sm">
-                                <Icon className="w-5 h-5" style={{ color: course?.color || BRAND_COLORS.teal }} />
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
-                                  {item.course_title}
-                                </h3>
-                                <p className="text-xs text-gray-500 mb-2">Selected on {formatDate(item.added_at)}</p>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-[#B11217] text-sm">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                            {item.course_title}
+                          </h3>
+                          
+                          {/* Bundle Badge - Small & Clean */}
+                          {item.is_bundle_item && item.bundle_name && (
+                            <div className="mb-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                                <HiGift className="w-3 h-3" />
+                                {item.bundle_name}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-gray-400 mb-2">Added on {formatDate(item.added_at)}</p>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              {item.is_bundle_item && item.bundle_discounted_price ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-green-600 text-sm">
+                                    {formatCurrency(item.bundle_discounted_price)}
+                                  </span>
+                                  <span className="text-xs text-gray-400 line-through">
                                     {formatCurrency(item.course_price)}
                                   </span>
-                                  <button
-                                    onClick={() => handleRemoveFromCart(item.id, item.course_id)}
-                                    disabled={removingFromCart === item.id}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                  >
-                                    {removingFromCart === item.id ? (
-                                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <HiTrash className="w-4 h-4" />
-                                    )}
-                                  </button>
                                 </div>
-                              </div>
+                              ) : (
+                                <span className="font-bold text-[#B11217] text-sm">
+                                  {formatCurrency(item.course_price)}
+                                </span>
+                              )}
                             </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
+                            <button
+                              onClick={() => handleRemoveFromCart(item.id, item.course_id)}
+                              disabled={removingFromCart === item.id}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              {removingFromCart === item.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <HiTrash className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
 
-                    <div className="border-t border-gray-200 pt-6">
-                      <div className="space-y-3 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Total Fee</span>
-                          <span className="font-semibold text-gray-900">{formatCurrency(cartTotal)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Courses Selected</span>
-                          <span className="font-semibold text-gray-900">{cartCount}</span>
+                          {/* User-friendly bundle message - Clean text line */}
+                          {item.is_bundle_item && item.bundle_name && (
+                            <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                              <span>✨</span> You pay bundle price: {formatCurrency(item.bundle_discounted_price || 0)}
+                            </p>
+                          )}
                         </div>
                       </div>
-
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => {
-                            setIsCartOpen(false);
-                            router.push('/cartEnrollment');
-                          }}
-                          className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105 cursor-pointer"
-                        >
-                          Continue Enrollment
-                        </button>
-                        <button
-                          onClick={() => setIsCartOpen(false)}
-                          className="w-full py-3 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-lg font-medium hover:bg-[#1E3A8A] hover:text-white transition-all cursor-pointer"
-                        >
-                          Continue Browsing
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+                    </motion.div>
+                  );
+                })}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+
+              {/* Bundle Savings Summary - Clean */}
+              {Object.keys(bundleGroups).length > 0 && (
+                <div className="mb-6 border-t border-gray-100 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <HiGift className="w-4 h-4 text-green-600" />
+                    <h4 className="font-semibold text-gray-800 text-sm">Bundle Savings</h4>
+                  </div>
+                  {Object.values(bundleGroups).map((bundle, idx) => (
+                    <div key={idx} className="mb-3 pb-3 border-b border-gray-100 last:border-0">
+                      <p className="text-sm font-medium text-gray-700">{bundle.bundleName}</p>
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-gray-500">Regular price:</span>
+                        <span className="text-gray-500 line-through">{formatCurrency(bundle.originalTotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-600">You pay:</span>
+                        <span className="text-green-600 font-bold">{formatCurrency(bundle.discountedPrice)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs mt-1">
+                        <span className="text-green-600">You save:</span>
+                        <span className="text-green-600 font-semibold">
+                          {formatCurrency(bundle.originalTotal - bundle.discountedPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-6">
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(cartTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-base pt-2 border-t border-gray-200">
+                    <span className="font-bold text-gray-900">Total Amount</span>
+                    <span className="font-bold text-[#B11217] text-lg">{formatCurrency(cartTotal)}</span>
+                  </div>
+                </div>
+
+                {/* Clean user-friendly message - No yellow card */}
+                <div className="mb-4">
+  <p className="text-xs text-gray-600 text-center flex items-center justify-center gap-1">
+    <span className="text-red-500">•</span>
+   If You add courses from bundle then you only pay the bundle price which is much lower than the sum of individual course prices. So, you get more value for your money!.And Prices are Mention on Bundles
+    <span className="text-red-500">•</span>
+  </p>
+</div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setIsCartOpen(false);
+                      router.push('/cartEnrollment');
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105 cursor-pointer"
+                  >
+                    Proceed to Enrollment
+                  </button>
+                  <button
+                    onClick={() => setIsCartOpen(false)}
+                    className="w-full py-3 border-2 border-[#1E3A8A] text-[#1E3A8A] rounded-lg font-medium hover:bg-[#1E3A8A] hover:text-white transition-all cursor-pointer"
+                  >
+                    Continue Browsing
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -1015,7 +1198,7 @@ export default function CoursesPage() {
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#0B1C3D] to-[#1E3A8A] rounded-full shadow-lg">
             <HiStar className="w-4 h-4 mr-2 text-yellow-400" />
             <span className="text-sm font-medium text-white">
-              {displayCourses.length} Featured Courses Available
+              {displayItems.length} Featured Items ({allBundles.length} Bundles, {allCourses.length} Courses)
             </span>
             <HiStar className="w-4 h-4 ml-2 text-yellow-400" />
           </div>
@@ -1029,202 +1212,108 @@ export default function CoursesPage() {
           transition={{ delay: 0.1 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl md:text-4xl lg:text-4xl font-bold text-[#0B1C3D] mb-3">
-            Explore Our <span className="text-[#B11217]">Courses</span>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#0B1C3D] mb-3">
+            Explore Our <span className="text-[#B11217]">Courses & Bundles</span>
           </h1>
           <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
-            Choose from our selection of expert-led courses designed to help you succeed
+            Choose from our selection of expert-led courses and discounted bundles designed to help you succeed
           </p>
         </motion.div>
 
-        {/* Rounded Search Input */}
-        <motion.div
-          variants={fadeInUpVariants}
-          initial="initial"
-          animate="animate"
-          transition={{ delay: 0.2 }}
-          className="max-w-2xl mx-auto mb-12"
-          ref={searchRef}
-        >
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <HiSearch className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search courses by title, category, or description..."
-              className="w-full pl-12 pr-12 py-4 border-2 border-gray-200 rounded-full focus:outline-none focus:border-[#B11217] focus:ring-2 focus:ring-[#B11217]/20 transition-all duration-300 text-gray-700 placeholder-gray-400 bg-white shadow-sm hover:shadow-md"
-            />
-            {searchQuery && (
-              <button
-                onClick={clearSearch}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer"
-              >
-                <HiX className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
-              </button>
-            )}
-          </div>
-
-          {/* Search Results Count */}
-          {searchQuery && (
-            <div className="mt-3 text-center">
-              <p className="text-sm text-gray-500">
-                Found {filteredCourses.length} {filteredCourses.length === 1 ? 'course' : 'courses'} matching "{searchQuery}"
-              </p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Courses Grid */}
+        {/* Items Grid - 6 cards total (1 bundle + 5 courses) */}
         <motion.div 
           variants={staggerContainerVariants}
           initial="initial"
           animate="animate"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          {filteredCourses.length > 0 ? (
-            filteredCourses.map((course, index) => {
-              const Icon = course.icon;
-              const isInCart = inCartStatus[course.id];
-              const isLoading = cartLoading[course.id];
+          {displayItems.length > 0 ? (
+            displayItems.map((item, index) => {
+              const isInCart = item.type === 'course' ? inCartStatus[item.id] : false;
+              const isLoading = cartLoading[item.type === 'course' ? item.id : `bundle_${item.id}`];
               
-              return (
-                <motion.div
-                  key={course.id}
-                  variants={fadeInUpVariants}
-                  transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] as Easing, delay: index * 0.05 }}
-                  onMouseEnter={() => setHoveredCard(course.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  className="relative group"
-                >
-                  {/* Featured Badge */}
+              if (item.type === 'bundle') {
+                const bundle = item.data as Bundle;
+                return (
                   <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3 + index * 0.05, ...springTransition }}
-                    className="absolute -top-2 -left-2 z-10"
+                    key={`bundle-${item.id}`}
+                    variants={fadeInUpVariants}
+                    transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] as Easing, delay: index * 0.05 }}
+                    onMouseEnter={() => setHoveredCard(item.id)}
+                    onMouseLeave={() => setHoveredCard(null)}
+                    className="relative group"
                   >
-                    <div className="px-3 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-semibold shadow-lg flex items-center">
-                      <HiStar className="w-3 h-3 mr-1" />
-                      Featured
-                    </div>
-                  </motion.div>
-
-                  {/* Course Card */}
-                  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
-                    {/* Image */}
-                    <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
-                      {course.image && !imageErrors[course.id] ? (
-                        <img
-                          src={course.image}
-                          alt={course.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          onError={() => handleImageError(course.id)}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                          <Icon className="w-16 h-16 text-gray-300" />
-                        </div>
-                      )}
-                      
-                      {/* Category Badge */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                          <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
-                            {course.category}
-                          </span>
-                        </div>
+                    {/* Bundle Badge */}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3 + index * 0.05, ...springTransition }}
+                      className="absolute -top-2 -left-2 z-10"
+                    >
+                      <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${item.badgeColor} text-white text-xs font-semibold shadow-lg flex items-center gap-1`}>
+                        <HiTag className="w-3 h-3" />
+                        {item.badge}
                       </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Content */}
-                    <div className="p-5 flex flex-col flex-grow">
-                      <div className="flex items-start justify-between mb-3 min-h-[3.5rem]">
-                        <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-2 flex-1">
-                          {course.title}
-                        </h3>
-                        <div className="p-2 bg-gray-50 rounded-lg flex-shrink-0 ml-2">
-                          <Icon className="w-5 h-5" style={{ color: course.color || BRAND_COLORS.teal }} />
+                    {/* Bundle Card */}
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
+                      {/* Image / Icon */}
+                      <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0">
+                        <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
+                        <div className="absolute top-3 right-3 z-10">
+                          <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                            <span className="text-xs font-medium text-[#B11217]">
+                              {item.totalCourses} Courses
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="mb-4 min-h-[2.5rem]">
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          {course.description || 'No description available'}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
-                          <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
-                          <span className="truncate">{course.duration || 'Flexible'}</span>
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
-                          <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
-                          <span className="truncate">{course.level || 'All Levels'}</span>
-                        </div>
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
-                          <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
-                          <span>Certificate</span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-gray-100 pt-4 mt-auto">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl font-bold text-[#B11217]">{course.price}</span>
-                              {course.originalPrice && (
-                                <span className="text-xs text-gray-400 line-through">{course.originalPrice}</span>
-                              )}
-                            </div>
-                            {course.savings && (
-                              <p className="text-xs text-green-600 mt-1 font-medium">{course.savings}</p>
-                            )}
+                      {/* Content */}
+                      <div className="p-5 flex flex-col flex-grow">
+                        <div className="flex items-start justify-between mb-3 min-h-[3.5rem]">
+                          <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-2 flex-1">
+                            {item.title}
+                          </h3>
+                          <div className="p-2 bg-yellow-50 rounded-lg flex-shrink-0 ml-2">
+                            <HiGift className="w-5 h-5 text-yellow-500" />
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/courses/${course.id}`}
-                            className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
-                          >
-                            <span>Details</span>
-                            <HiArrowRight className="w-4 h-4 ml-1" />
-                          </Link>
+                        <div className="mb-4 min-h-[2.5rem]">
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {item.description}
+                          </p>
+                        </div>
 
-                          {isInCart ? (
-                            <button
-                              onClick={() => {
-                                const cartItem = cartItems.find(item => item.course_id === course.id);
-                                if (cartItem) {
-                                  handleRemoveFromCart(cartItem.id, course.id);
-                                }
-                              }}
-                              disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
-                              className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
+                        <div className="mb-4 p-3 bg-red-50 rounded-lg">
+                          <span className="text-xs text-gray-400 line-through">{item.originalPrice}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-2xl font-bold text-[#B11217]">{item.price}</span>
+                            <span className="text-xs bg-red-100 px-2 py-0.5 rounded-full text-[#B11217]">{item.discount}% OFF</span>
+                          </div>
+                          <p className="text-xs text-green-600 mt-1">
+                            Save PKR {((bundle.original_price - bundle.discounted_price)).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4 mt-auto">
+                          <div className="flex gap-2">
+                            <Link
+                              href={`/courses`}
+                              className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
                             >
-                              {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <HiTrash className="w-4 h-4 mr-1" />
-                                  <span>Remove</span>
-                                </>
-                              )}
-                            </button>
-                          ) : (
+                              <HiEye className="w-4 h-4 mr-1" />
+                              <span>View Details</span>
+                            </Link>
+
                             <button
-                              onClick={() => handleAddToCartClick(course)}
+                              onClick={() => handleAddToCartClick(item)}
                               disabled={isLoading}
                               className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
                               style={{
-                                backgroundColor: hoveredCard === course.id ? '#1E3A8A' : '#B11217',
+                                backgroundColor: hoveredCard === item.id ? '#1E3A8A' : '#B11217',
                               }}
                             >
                               {isLoading ? (
@@ -1232,17 +1321,159 @@ export default function CoursesPage() {
                               ) : (
                                 <>
                                   <HiShoppingBag className="w-4 h-4 mr-1" />
-                                  <span>Add to Bag</span>
+                                  <span>Add Bundle</span>
                                 </>
                               )}
                             </button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
+                  </motion.div>
+                );
+              } else {
+                const course = item.data as Course;
+                const Icon = course.icon;
+                
+                return (
+                  <motion.div
+                    key={`course-${item.id}`}
+                    variants={fadeInUpVariants}
+                    transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] as Easing, delay: index * 0.05 }}
+                    onMouseEnter={() => setHoveredCard(item.id)}
+                    onMouseLeave={() => setHoveredCard(null)}
+                    className="relative group"
+                  >
+                    {/* Course Card */}
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
+                      {/* Image */}
+                      <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
+                        {course.image && !imageErrors[course.id] ? (
+                          <img
+                            src={course.image}
+                            alt={course.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            onError={() => handleImageError(course.id)}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                            <Icon className="w-16 h-16 text-gray-300" />
+                          </div>
+                        )}
+                        
+                        {/* Category Badge */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                            <span className="text-xs font-medium" style={{ color: course.color || BRAND_COLORS.teal }}>
+                              {course.category}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-5 flex flex-col flex-grow">
+                        <div className="flex items-start justify-between mb-3 min-h-[3.5rem]">
+                          <h3 className="text-lg font-bold text-[#0B1C3D] line-clamp-2 flex-1">
+                            {course.title}
+                          </h3>
+                          <div className="p-2 bg-gray-50 rounded-lg flex-shrink-0 ml-2">
+                            <Icon className="w-5 h-5" style={{ color: course.color || BRAND_COLORS.teal }} />
+                          </div>
+                        </div>
+
+                        <div className="mb-4 min-h-[2.5rem]">
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {course.description || 'No description available'}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+                            <HiClock className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+                            <span className="truncate">{course.duration || 'Flexible'}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+                            <HiAcademicCap className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+                            <span className="truncate">{course.level || 'All Levels'}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg min-h-[2.5rem]">
+                            <HiBadgeCheck className="w-3 h-3 mr-1 text-[#1E3A8A] flex-shrink-0" />
+                            <span>Certificate</span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-4 mt-auto">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-[#B11217]">{course.price}</span>
+                                {course.originalPrice && (
+                                  <span className="text-xs text-gray-400 line-through">{course.originalPrice}</span>
+                                )}
+                              </div>
+                              {course.savings && (
+                                <p className="text-xs text-green-600 mt-1 font-medium">{course.savings}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Link
+                              href={`/courses/${course.id}`}
+                              className="flex-1 py-2.5 px-3 rounded-lg font-medium text-center transition-all duration-300 bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
+                            >
+                              <span>Details</span>
+                              <HiArrowRight className="w-4 h-4 ml-1" />
+                            </Link>
+
+                            {isInCart ? (
+                              <button
+                                onClick={() => {
+                                  const cartItem = cartItems.find(item => item.course_id === course.id);
+                                  if (cartItem) {
+                                    handleRemoveFromCart(cartItem.id, course.id);
+                                  }
+                                }}
+                                disabled={removingFromCart === cartItems.find(item => item.course_id === course.id)?.id}
+                                className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
+                              >
+                                {removingFromCart === cartItems.find(item => item.course_id === course.id)?.id ? (
+                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <>
+                                    <HiTrash className="w-4 h-4 mr-1" />
+                                    <span>Remove</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleAddToCartClick(item)}
+                                disabled={isLoading}
+                                className="flex-1 py-2.5 px-3 rounded-lg font-medium transition-all duration-300 text-white text-sm flex items-center justify-center min-h-[2.75rem] cursor-pointer"
+                                style={{
+                                  backgroundColor: hoveredCard === item.id ? '#1E3A8A' : '#B11217',
+                                }}
+                              >
+                                {isLoading ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <>
+                                    <HiShoppingBag className="w-4 h-4 mr-1" />
+                                    <span>Add to Bag</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              }
             })
           ) : (
             <motion.div
@@ -1250,20 +1481,14 @@ export default function CoursesPage() {
               className="col-span-full text-center py-12"
             >
               <HiBookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No courses found</h3>
-              <p className="text-gray-500 mb-4">No courses match your search "{searchQuery}"</p>
-              <button
-                onClick={clearSearch}
-                className="px-6 py-2 bg-[#B11217] text-white rounded-lg hover:bg-[#8f0e12] transition-colors cursor-pointer"
-              >
-                Clear Search
-              </button>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No content available</h3>
+              <p className="text-gray-500 mb-4">Please check back later for courses and bundles</p>
             </motion.div>
           )}
         </motion.div>
 
-        {/* View All Courses Link */}
-        {allCourses.length > 4 && searchQuery === "" && (
+        {/* Explore All Courses Button */}
+        {allCourses.length > 5 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1272,9 +1497,9 @@ export default function CoursesPage() {
           >
             <Link
               href="/courses"
-              className="inline-flex items-center px-6 py-3 bg-[#1E3A8A] text-white rounded-xl hover:bg-[#0B1C3D] transition-all duration-300 group cursor-pointer"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D] text-white rounded-xl hover:shadow-lg transition-all duration-300 group cursor-pointer"
             >
-              <span>View All {allCourses.length} Courses</span>
+              <span>Explore All {allCourses.length} Courses</span>
               <HiArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
