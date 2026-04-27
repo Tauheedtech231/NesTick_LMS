@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
         cb.id,
         cb.title,
         cb.description,
+        cb.image,
         cb.discount_percentage,
         cb.discounted_price,
         cb.original_price,
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
   let connection;
   try {
     const body = await request.json();
-    const { title, description, discount_percentage, discounted_price, original_price, course_ids, status, created_by } = body;
+    const { title, description, image, discount_percentage, discounted_price, original_price, course_ids, status, created_by } = body;
 
     if (!title || !course_ids || course_ids.length === 0) {
       return NextResponse.json(
@@ -77,12 +78,12 @@ export async function POST(request: NextRequest) {
     connection = await getConnection();
     const bundleId = uuidv4();
 
-    // Insert bundle
+    // Insert bundle with image
     await connection.execute(
       `INSERT INTO course_bundles 
-       (id, title, description, discount_percentage, discounted_price, original_price, total_courses, status, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [bundleId, title, description || '', discount_percentage || 0, discounted_price || 0, original_price || 0, course_ids.length, status || 'active', created_by || 'admin']
+       (id, title, description, image, discount_percentage, discounted_price, original_price, total_courses, status, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [bundleId, title, description || '', image || null, discount_percentage || 0, discounted_price || 0, original_price || 0, course_ids.length, status || 'active', created_by || 'admin']
     );
 
     // Insert bundle courses
@@ -134,7 +135,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, discount_percentage, discounted_price, original_price, course_ids, status } = body;
+    const { title, description, image, discount_percentage, discounted_price, original_price, course_ids, status } = body;
 
     if (!title || !course_ids || course_ids.length === 0) {
       return NextResponse.json(
@@ -158,13 +159,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update bundle
+    // Update bundle with image
     await connection.execute(
       `UPDATE course_bundles 
-       SET title = ?, description = ?, discount_percentage = ?, discounted_price = ?, 
+       SET title = ?, description = ?, image = ?, discount_percentage = ?, discounted_price = ?, 
            original_price = ?, total_courses = ?, status = ?, updated_at = NOW()
        WHERE id = ?`,
-      [title, description || '', discount_percentage || 0, discounted_price || 0, original_price || 0, course_ids.length, status || 'active', bundleId]
+      [title, description || '', image || null, discount_percentage || 0, discounted_price || 0, original_price || 0, course_ids.length, status || 'active', bundleId]
     );
 
     // Delete existing bundle courses

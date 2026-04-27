@@ -81,6 +81,7 @@ interface Course {
 
 // Bundle Interface
 interface Bundle {
+  image: string | Blob | undefined;
   id: string;
   title: string;
   description: string;
@@ -1250,25 +1251,35 @@ export default function CoursesPage() {
                       transition={{ delay: 0.3 + index * 0.05, ...springTransition }}
                       className="absolute -top-2 -left-2 z-10"
                     >
-                      <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${item.badgeColor} text-white text-xs font-semibold shadow-lg flex items-center gap-1`}>
-                        <HiTag className="w-3 h-3" />
-                        {item.badge}
-                      </div>
+                     
                     </motion.div>
 
                     {/* Bundle Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 h-full flex flex-col">
                       {/* Image / Icon */}
-                      <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex items-center justify-center flex-shrink-0">
-                        <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                            <span className="text-xs font-medium text-[#B11217]">
-                              {item.totalCourses} Courses
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex-shrink-0">
+                {bundle.image ? (
+                  <img
+                    src={bundle.image}
+                    alt={bundle.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dfp9qc0gu/image/upload/v1745412345/lms/course_images/default_course.png';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
+                  </div>
+                )}
+                <div className="absolute top-3 right-3 z-10">
+                  <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                    <span className="text-xs font-medium text-[#B11217]">
+                      {item.totalCourses} Courses
+                    </span>
+                  </div>
+                </div>
+              </div>
 
                       {/* Content */}
                       <div className="p-5 flex flex-col flex-grow">
@@ -1291,7 +1302,7 @@ export default function CoursesPage() {
                           <span className="text-xs text-gray-400 line-through">{item.originalPrice}</span>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-2xl font-bold text-[#B11217]">{item.price}</span>
-                            <span className="text-xs bg-red-100 px-2 py-0.5 rounded-full text-[#B11217]">{item.discount}% OFF</span>
+                            <span className="text-xs bg-red-100 px-2 py-0.5 rounded-full text-[#B11217]"></span>
                           </div>
                           <p className="text-xs text-green-600 mt-1">
                             Save PKR {((bundle.original_price - bundle.discounted_price)).toLocaleString()}

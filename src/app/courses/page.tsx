@@ -27,7 +27,8 @@ import {
   HiUserGroup,
   HiTag,
   HiGift,
-  HiEye
+  HiEye,
+  HiOutlineGift
 } from "react-icons/hi";
 import { FaCartPlus } from "react-icons/fa";
 import { MdKeyboardArrowDown } from 'react-icons/md';
@@ -723,17 +724,31 @@ export default function CoursesPage() {
               return (
                 <div key={`bundle-${item.id}`} className="relative group bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                   <div className="absolute -top-2 -left-2 z-10">
-                    <div className={`px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-gradient-to-r ${item.badgeColor} text-white text-[10px] md:text-xs font-semibold shadow-lg flex items-center gap-1`}>
-                      <HiTag className="w-2 h-2 md:w-3 md:h-3" />
-                      {item.badge}
-                    </div>
+                  
                   </div>
-                  <div className="relative h-40 md:h-48 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex items-center justify-center">
-                    <HiGift className="w-16 h-16 md:w-20 md:h-20 text-yellow-500 opacity-50" />
-                    <div className="absolute top-2 right-2 md:top-3 md:right-3 px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-white/90">
-                      <span className="text-[10px] md:text-xs font-medium text-[#B11217]">{bundle.total_courses} Courses</span>
-                    </div>
+                <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex-shrink-0">
+                {bundle.image ? (
+                  <img
+                    src={bundle.image}
+                    alt={bundle.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dfp9qc0gu/image/upload/v1745412345/lms/course_images/default_course.png';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
                   </div>
+                )}
+                <div className="absolute top-3 right-3 z-10">
+                  <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                    <span className="text-xs font-medium text-[#B11217]">
+                      {item.totalCourses} Courses
+                    </span>
+                  </div>
+                </div>
+              </div>
                   <div className="p-4 md:p-6 flex flex-col flex-grow">
                     <h3 className="text-lg md:text-xl font-bold text-[#0B1C3D] mb-2 line-clamp-1">{item.title}</h3>
                     <p className="text-xs md:text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
@@ -741,7 +756,7 @@ export default function CoursesPage() {
                       <span className="text-[10px] md:text-xs text-gray-400 line-through">{item.originalPrice}</span>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xl md:text-2xl font-bold text-[#B11217]">{item.price}</span>
-                        <span className="text-[10px] md:text-xs bg-red-100 px-1.5 md:px-2 py-0.5 rounded-full text-[#B11217]">{item.discount}% OFF</span>
+                        <span className="text-[10px] md:text-xs bg-red-100 px-1.5 md:px-2 py-0.5 rounded-full text-[#B11217]"></span>
                       </div>
                       <p className="text-[10px] md:text-xs text-green-600 mt-1">Save PKR {(item.originalPriceNumeric - item.discountedPriceNumeric).toLocaleString()}</p>
                     </div>
@@ -769,10 +784,7 @@ export default function CoursesPage() {
               return (
                 <div key={`course-${item.id}`} className="relative group bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                   <div className="absolute -top-2 -left-2 z-10">
-                    <div className={`px-2 md:px-3 py-0.5 md:py-1 rounded-full bg-gradient-to-r ${item.badgeColor} text-white text-[10px] md:text-xs font-semibold shadow-lg flex items-center gap-1`}>
-                      <HiAcademicCap className="w-2 h-2 md:w-3 md:h-3" />
-                      {item.badge}
-                    </div>
+                  
                   </div>
                   <div className="relative h-40 md:h-56 overflow-hidden bg-gray-100">
                     {course.image && !imageErrors[course.id] ? 

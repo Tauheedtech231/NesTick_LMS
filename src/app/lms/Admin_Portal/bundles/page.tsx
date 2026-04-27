@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   HiPlus, 
   HiPencil, 
@@ -14,7 +14,9 @@ import {
   HiBookOpen,
   HiTag,
   HiAcademicCap,
-  HiEye
+  HiEye,
+  HiUpload,
+  HiPhotograph
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
 
@@ -32,6 +34,10 @@ const BRAND_COLORS = {
   purple: '#8B5CF6'
 };
 
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = 'dfp9qc0gu';
+const CLOUDINARY_UPLOAD_PRESET = 'lms_upload';
+
 interface Course {
   id: string;
   title: string;
@@ -46,6 +52,7 @@ interface Bundle {
   id: string;
   title: string;
   description: string;
+  image?: string;
   discount_percentage: number;
   discounted_price: number;
   original_price: number;
@@ -69,6 +76,7 @@ export default function BundlesPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    image: '',
     discount_percentage: 0,
     discounted_price: 0,
     original_price: 0,
@@ -77,6 +85,11 @@ export default function BundlesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Image upload states
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch bundles and courses
   const fetchData = async (showRefresh = false) => {
@@ -117,18 +130,89 @@ export default function BundlesPage() {
     fetchData();
   }, []);
 
+  // Upload image to Cloudinary
+  const uploadImageToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', 'lms/bundles');
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const result = await response.json();
+    return result.secure_url;
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      // Show preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Cloudinary
+      const imageUrl = await uploadImageToCloudinary(file);
+      setFormData(prev => ({ ...prev, image: imageUrl }));
+      
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      setError(error.message || 'Failed to upload image');
+      setImagePreview('');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
+    setImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleCreateBundle = () => {
     setModalMode('create');
     setSelectedBundle(null);
     setFormData({
       title: '',
       description: '',
+      image: '',
       discount_percentage: 0,
       discounted_price: 0,
       original_price: 0,
       selectedCourses: [],
       status: 'active'
     });
+    setImagePreview('');
     setError('');
     setShowModal(true);
   };
@@ -139,12 +223,14 @@ export default function BundlesPage() {
     setFormData({
       title: bundle.title,
       description: bundle.description || '',
+      image: bundle.image || '',
       discount_percentage: bundle.discount_percentage,
       discounted_price: bundle.discounted_price,
       original_price: bundle.original_price,
       selectedCourses: bundle.courses?.map(c => c.id) || [],
       status: bundle.status
     });
+    setImagePreview(bundle.image || '');
     setError('');
     setShowModal(true);
   };
@@ -161,6 +247,7 @@ export default function BundlesPage() {
     setShowModal(true);
   };
 
+  // ✅ Updated: Support float values for discount percentage
   const calculatePrices = (discountPercent: number, selectedCourseIds: string[]) => {
     const selectedCourseObjects = allCourses.filter(c => selectedCourseIds.includes(c.id));
     
@@ -196,13 +283,17 @@ export default function BundlesPage() {
     });
   };
 
-  const handleDiscountChange = (percent: number) => {
-    const discountPercent = isNaN(percent) ? 0 : Math.min(100, Math.max(0, percent));
-    const prices = calculatePrices(discountPercent, formData.selectedCourses);
+  // ✅ Updated: Allow float values for discount percentage
+  const handleDiscountChange = (value: string) => {
+    let percent = parseFloat(value);
+    if (isNaN(percent)) percent = 0;
+    percent = Math.min(100, Math.max(0, percent));
+    
+    const prices = calculatePrices(percent, formData.selectedCourses);
     
     setFormData(prev => ({
       ...prev,
-      discount_percentage: discountPercent,
+      discount_percentage: percent,
       discounted_price: prices.discounted_price,
       original_price: prices.original_price
     }));
@@ -238,6 +329,7 @@ export default function BundlesPage() {
         body = {
           title: formData.title,
           description: formData.description,
+          image: formData.image,
           discount_percentage: formData.discount_percentage,
           discounted_price: formData.discounted_price,
           original_price: formData.original_price,
@@ -253,6 +345,7 @@ export default function BundlesPage() {
         body = {
           title: formData.title,
           description: formData.description,
+          image: formData.image,
           discount_percentage: formData.discount_percentage,
           discounted_price: formData.discounted_price,
           original_price: formData.original_price,
@@ -385,9 +478,9 @@ export default function BundlesPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Bundle Title</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Bundle</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Courses</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Original Price</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Original</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Discount</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Bundle Price</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
@@ -398,11 +491,24 @@ export default function BundlesPage() {
                 {filteredBundles.map((bundle) => (
                   <tr key={bundle.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{bundle.title}</p>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-xs">
-                          {bundle.description || 'No description'}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {bundle.image ? (
+                          <img 
+                            src={bundle.image} 
+                            alt={bundle.title}
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <HiPackage className="w-5 h-5 text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">{bundle.title}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-xs">
+                            {bundle.description || 'No description'}
+                          </p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -499,6 +605,18 @@ export default function BundlesPage() {
                 </div>
               ) : modalMode === 'view' && selectedBundle ? (
                 <div>
+                  {/* Bundle Image in View Mode */}
+                  {selectedBundle.image && (
+                    <div className="mb-4">
+                      <div className="rounded-lg overflow-hidden">
+                        <img 
+                          src={selectedBundle.image} 
+                          alt={selectedBundle.title}
+                          className="w-full h-48 object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-gray-500">Bundle Name</h4>
                     <p className="text-gray-900 font-medium">{selectedBundle.title}</p>
@@ -545,6 +663,62 @@ export default function BundlesPage() {
                 <div>
                   {error && <p className="text-red-600 text-sm mb-4 p-3 bg-red-50 rounded-lg">{error}</p>}
                   
+                  {/* Bundle Image Upload */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bundle Image</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                        {imagePreview ? (
+                          <img 
+                            src={imagePreview} 
+                            alt="Bundle preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : formData.image ? (
+                          <img 
+                            src={formData.image} 
+                            alt="Bundle preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <HiPhotograph className="w-8 h-8 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                          id="bundle-image"
+                        />
+                        <label
+                          htmlFor="bundle-image"
+                          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          {uploadingImage ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <HiUpload className="w-4 h-4" />
+                          )}
+                          {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                        </label>
+                        {(imagePreview || formData.image) && (
+                          <button
+                            onClick={handleRemoveImage}
+                            className="ml-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Recommended size: 400x400px. Max size: 5MB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Bundle Title *</label>
                     <input
@@ -568,12 +742,13 @@ export default function BundlesPage() {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount Percentage</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount Percentage (%)</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="number"
+                        step="0.01"
                         value={formData.discount_percentage}
-                        onChange={(e) => handleDiscountChange(parseInt(e.target.value) || 0)}
+                        onChange={(e) => handleDiscountChange(e.target.value)}
                         min="0"
                         max="100"
                         className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
@@ -583,6 +758,7 @@ export default function BundlesPage() {
                         <span className="text-sm text-green-600">Save PKR {getSaveAmount().toLocaleString()}</span>
                       )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">You can use decimal values (e.g., 15.5%)</p>
                   </div>
                   
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg">
