@@ -168,7 +168,6 @@ export default function AssessmentHubPage() {
 
       const assignmentsRes = await fetch('/api/instructor/assignment-submissions');
       const assignmentsData = await assignmentsRes.json();
-      console.log("The ASSIGNMENT DATA",assignmentsData.data)
       if (assignmentsData.success) {
         setAssignments(assignmentsData.data);
       }
@@ -187,7 +186,6 @@ export default function AssessmentHubPage() {
     try {
       const simpleRes = await fetch(`/api/instructor/simple-quiz-attempts?courseId=${courseId}`);
       const simpleData = await simpleRes.json();
-      console.log('Simple quiz attempts:', simpleData);
       
       const advancedRes = await fetch(`/api/instructor/course-quizzes-results?courseId=${courseId}`);
       const advancedData = await advancedRes.json();
@@ -322,6 +320,17 @@ export default function AssessmentHubPage() {
     }
   };
 
+  // ✅ FIXED: Handle file download - Direct Cloudinary URL
+  const handleFileDownload = (file: any) => {
+    if (!file?.url) {
+      alert('File URL not available');
+      return;
+    }
+    
+    // Open in new tab for viewing/downloading
+    window.open(file.url, '_blank');
+  };
+
   const getStatusBadge = (status: string, score?: number, passingMarks?: number) => {
     if (status === 'graded') {
       const passed = score && passingMarks && score >= passingMarks;
@@ -349,9 +358,7 @@ export default function AssessmentHubPage() {
     );
   };
 
-  // ✅ Get user answer display
   const getUserAnswerDisplay = (answer: any): string => {
-    // For simple quiz format (selectedOption)
     if (answer.selectedOption !== undefined && answer.selectedOption !== -1) {
       if (answer.options && answer.options[answer.selectedOption]) {
         return answer.options[answer.selectedOption];
@@ -359,7 +366,6 @@ export default function AssessmentHubPage() {
       return String(answer.selectedOption);
     }
     
-    // For advanced quiz format
     if (answer.userAnswer !== undefined && answer.userAnswer !== null && answer.userAnswer !== '') {
       return String(answer.userAnswer);
     }
@@ -375,30 +381,23 @@ export default function AssessmentHubPage() {
     return 'No answer';
   };
 
-  // ✅ Get correct answer display - CORRECTED
   const getCorrectAnswerDisplay = (answer: any): string => {
-    // Check if answer has correctAnswer field
     if (answer.correctAnswer !== undefined && answer.correctAnswer !== null) {
-      // If options exist and correctAnswer is index
       if (answer.options && answer.options[answer.correctAnswer]) {
         return answer.options[answer.correctAnswer];
       }
-      // If correctAnswer is a number
       if (typeof answer.correctAnswer === 'number') {
         return String(answer.correctAnswer);
       }
-      // If correctAnswer is a string
       if (typeof answer.correctAnswer === 'string') {
         return answer.correctAnswer;
       }
-      // If correctAnswer is boolean
       if (typeof answer.correctAnswer === 'boolean') {
         return answer.correctAnswer ? 'True' : 'False';
       }
       return String(answer.correctAnswer);
     }
     
-    // Check for correct_option
     if (answer.correct_option !== undefined && answer.correct_option !== null) {
       if (answer.options && answer.options[answer.correct_option]) {
         return answer.options[answer.correct_option];
@@ -406,12 +405,10 @@ export default function AssessmentHubPage() {
       return String(answer.correct_option);
     }
     
-    // Check for isCorrect flag
     if (answer.isCorrect !== undefined) {
       return answer.isCorrect ? 'Correct' : 'Incorrect';
     }
     
-    // For text questions
     if (answer.textAnswer !== undefined || answer.needsGrading === true) {
       return 'Any answer accepted';
     }
@@ -419,16 +416,13 @@ export default function AssessmentHubPage() {
     return 'Not specified';
   };
 
-  // ✅ Get question text
   const getQuestionText = (answer: any, idx: number, quizTitle?: string): string => {
     if (answer.question) return answer.question;
     if (answer.questionText) return answer.questionText;
     return `Question ${idx + 1}`;
   };
 
-  // ✅ Check if answer is correct
   const isAnswerCorrect = (answer: any): boolean => {
-    // Text question - always correct
     if (answer.textAnswer !== undefined || answer.needsGrading === true) {
       return true;
     }
@@ -440,7 +434,6 @@ export default function AssessmentHubPage() {
     return userAnswer === correctAnswer;
   };
 
-  // ✅ Parse answers array safely
   const parseAnswersArray = (answers: any): any[] => {
     if (!answers) return [];
     
@@ -515,7 +508,7 @@ export default function AssessmentHubPage() {
         </div>
       </div>
 
-      {/* Stats Cards - No Icons */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
           <div>
@@ -584,7 +577,15 @@ export default function AssessmentHubPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assignment</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th><th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th></tr>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assignment</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredAssignments.length === 0 ? (
@@ -656,7 +657,14 @@ export default function AssessmentHubPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
-                        <tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Score</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Percentage</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Completed At</th><th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Action</th> </tr>
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Score</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Percentage</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Completed At</th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Action</th>
+                        </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {quiz.attempts && quiz.attempts.map((attempt, attemptIdx) => (
@@ -683,94 +691,101 @@ export default function AssessmentHubPage() {
         </>
       )}
 
-{showGradingModal && selectedSubmission && (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700">
-        <h3 className="text-lg font-semibold text-white">Grade Assignment</h3>
-        <button onClick={() => setShowGradingModal(false)} className="p-1 hover:bg-white/20 rounded-lg">
-          <HiX className="w-5 h-5 text-white" />
-        </button>
-      </div>
-      <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] space-y-4">
-        {/* Student Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-sm text-gray-500">Student</p>
-          <p className="font-medium">{selectedSubmission.student_name}</p>
-          <p className="text-sm text-gray-500 mt-2">Assignment</p>
-          <p className="font-medium">{selectedSubmission.assignment_title}</p>
-          <p className="text-sm text-gray-500 mt-2">Course</p>
-          <p className="font-medium">{selectedSubmission.course_title}</p>
-        </div>
-        
-        {/* ✅ FIXED: Files with download link */}
-        {selectedSubmission.files && selectedSubmission.files.length > 0 && (
-          <div className="border rounded-lg p-4">
-            <h4 className="font-medium mb-2">Submitted Files</h4>
-            {selectedSubmission.files.map((file, idx) => {
-              // ✅ Force download using Cloudinary fl_attachment flag
-              const downloadUrl = file.url?.replace('/upload/', '/upload/fl_attachment/');
-              return (
-                <a 
-                  key={idx} 
-                  href={downloadUrl || file.url}
-                  download={file.name}
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center gap-2 text-blue-600 hover:underline py-1"
+      {/* Grading Modal - FIXED Downloads */}
+      {showGradingModal && selectedSubmission && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700">
+              <h3 className="text-lg font-semibold text-white">Grade Assignment</h3>
+              <button onClick={() => setShowGradingModal(false)} className="p-1 hover:bg-white/20 rounded-lg">
+                <HiX className="w-5 h-5 text-white" />
+              </button>
+            </div>
+            <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] space-y-4">
+              {/* Student Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-500">Student</p>
+                <p className="font-medium">{selectedSubmission.student_name}</p>
+                <p className="text-sm text-gray-500 mt-2">Assignment</p>
+                <p className="font-medium">{selectedSubmission.assignment_title}</p>
+                <p className="text-sm text-gray-500 mt-2">Course</p>
+                <p className="font-medium">{selectedSubmission.course_title}</p>
+              </div>
+              
+              {/* ✅ FIXED: Files with proper download - No binary data */}
+              {selectedSubmission.files && selectedSubmission.files.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Submitted Files</h4>
+                  <div className="space-y-2">
+                    {selectedSubmission.files.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <HiDocumentText className="w-5 h-5 text-blue-500" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">{file.name}</p>
+                            <p className="text-xs text-gray-400">
+                              {file.size ? `${(file.size / 1024).toFixed(2)} KB` : 'Size unknown'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleFileDownload(file)}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                        >
+                          <HiDownload className="w-4 h-4" />
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Grade Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Score (out of {selectedSubmission.total_marks})</label>
+                <input 
+                  type="number" 
+                  value={gradeScore} 
+                  onChange={(e) => setGradeScore(Number(e.target.value))} 
+                  min="0" 
+                  max={selectedSubmission.total_marks} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+              </div>
+              
+              {/* Feedback */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+                <textarea 
+                  value={gradeFeedback} 
+                  onChange={(e) => setGradeFeedback(e.target.value)} 
+                  rows={4} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Provide feedback to the student..." 
+                />
+              </div>
+              
+              {/* Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => setShowGradingModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleGradeSubmission} 
+                  disabled={submittingGrade} 
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <HiDownload className="w-4 h-4" />
-                  {file.name}
-                </a>
-              );
-            })}
+                  {submittingGrade ? <Loader2 className="w-4 h-4 animate-spin" /> : <HiCheck className="w-4 h-4" />}
+                  {submittingGrade ? 'Saving...' : 'Submit Grade'}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-        
-        {/* Grade Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Score (out of {selectedSubmission.total_marks})</label>
-          <input 
-            type="number" 
-            value={gradeScore} 
-            onChange={(e) => setGradeScore(Number(e.target.value))} 
-            min="0" 
-            max={selectedSubmission.total_marks} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-          />
         </div>
-        
-        {/* Feedback */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
-          <textarea 
-            value={gradeFeedback} 
-            onChange={(e) => setGradeFeedback(e.target.value)} 
-            rows={4} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-            placeholder="Provide feedback to the student..." 
-          />
-        </div>
-        
-        {/* Buttons */}
-        <div className="flex gap-3 pt-4">
-          <button onClick={() => setShowGradingModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-            Cancel
-          </button>
-          <button 
-            onClick={handleGradeSubmission} 
-            disabled={submittingGrade} 
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {submittingGrade ? <Loader2 className="w-4 h-4 animate-spin" /> : <HiCheck className="w-4 h-4" />}
-            {submittingGrade ? 'Saving...' : 'Submit Grade'}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-      {/* Quiz Details Modal - FIXED */}
+      )}
+      
+      {/* Quiz Details Modal */}
       {showQuizModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
@@ -808,28 +823,28 @@ export default function AssessmentHubPage() {
                   const isCorrect = isAnswerCorrect(answer);
                   
                   return (
-                    <div key={idx} className={`border rounded-lg p-4 mb-3 ${isCorrect ? 'border-green-200' : 'border-red-200'}`}>
-                      <p className="font-medium text-sm mb-2">Question {idx + 1}</p>
+                    <div key={idx} className={`border rounded-lg p-4 mb-3 ${isCorrect ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
+                      <p className="font-semibold text-sm mb-2">Question {idx + 1}</p>
                       <p className="text-sm text-gray-700 mb-3">{questionText}</p>
                       
-                      <div className={`rounded-lg p-3 ${isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className="rounded-lg p-3 bg-white">
                         <p className="text-xs text-gray-500 mb-1">Student's Answer:</p>
                         <p className={`text-sm font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
                           {userAnswer}
                         </p>
                       </div>
                       
-                      {!isCorrect && correctAnswer !== 'Any answer accepted' && (
-                        <div className="bg-green-50 rounded-lg p-3 mt-2">
+                      {!isCorrect && correctAnswer !== 'Any answer accepted' && correctAnswer !== 'Not specified' && (
+                        <div className="rounded-lg p-3 mt-2 bg-green-50">
                           <p className="text-xs text-green-600 mb-1">Correct Answer:</p>
                           <p className="text-sm text-green-700">{correctAnswer}</p>
                         </div>
                       )}
                       
                       {correctAnswer === 'Any answer accepted' && (
-                        <div className="bg-green-50 rounded-lg p-3 mt-2">
-                          <p className="text-xs text-green-600 mb-1">Note:</p>
-                          <p className="text-sm text-green-700">This is a text question - any answer is accepted</p>
+                        <div className="rounded-lg p-3 mt-2 bg-blue-50">
+                          <p className="text-xs text-blue-600 mb-1">Note:</p>
+                          <p className="text-sm text-blue-700">This is a text question - any answer is accepted</p>
                         </div>
                       )}
                     </div>

@@ -27,6 +27,7 @@ import {
 
 // Types
 type PaymentStudent = {
+  isBundleItem: boolean;
   id: string;
   enrollmentId: string;
   studentId: string;
@@ -683,7 +684,7 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Student</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Course</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Amount</th>
+              
                     <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-white">Actions</th>
                   </tr>
@@ -699,11 +700,7 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">{student.course}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm font-bold text-indigo-600">
-                            PKR {(Number(student.amount) || 0).toLocaleString()}
-                          </span>
-                        </td>
+                       
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white shadow-sm`}
                             style={{ 
@@ -944,180 +941,186 @@ export default function AdminDashboard() {
         </div>
 
         {/* Screenshot Modal */}
-        {showScreenshotModal && selectedStudentDetails && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-              <div className="p-4 border-b border-indigo-100 flex justify-between items-center bg-gradient-to-r from-indigo-600 to-purple-600">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Student Details - {selectedStudentDetails.name}
-                  </h3>
-                </div>
-                <button 
-                  onClick={() => setShowScreenshotModal(false)} 
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-white" />
-                </button>
+      {showScreenshotModal && selectedStudentDetails && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="p-4 border-b border-indigo-100 flex justify-between items-center bg-gradient-to-r from-indigo-600 to-purple-600">
+        <div>
+          <h3 className="text-lg font-semibold text-white">
+            Student Details - {selectedStudentDetails.name}
+          </h3>
+        </div>
+        <button 
+          onClick={() => setShowScreenshotModal(false)} 
+          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5 text-white" />
+        </button>
+      </div>
+      <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] bg-gray-50">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Student Info */}
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <User className="w-5 h-5 text-indigo-600" />
+                Personal Information
+              </h4>
+              <div className="space-y-3">
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Name:</span> <span className="font-medium">{selectedStudentDetails.name}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Email:</span> <span className="font-medium">{selectedStudentDetails.email}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Phone:</span> <span className="font-medium">{selectedStudentDetails.phone}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">CNIC:</span> <span className="font-medium">{selectedStudentDetails.cnic}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Address:</span> <span className="font-medium">{selectedStudentDetails.address}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Education:</span> <span className="font-medium">{selectedStudentDetails.education}</span></p>
               </div>
-              <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] bg-gray-50">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Student Info */}
-                  <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
-                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <User className="w-5 h-5 text-indigo-600" />
-                        Personal Information
-                      </h4>
-                      <div className="space-y-3">
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Name:</span> <span className="font-medium">{selectedStudentDetails.name}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Email:</span> <span className="font-medium">{selectedStudentDetails.email}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Phone:</span> <span className="font-medium">{selectedStudentDetails.phone}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">CNIC:</span> <span className="font-medium">{selectedStudentDetails.cnic}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Address:</span> <span className="font-medium">{selectedStudentDetails.address}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Education:</span> <span className="font-medium">{selectedStudentDetails.education}</span></p>
-                      </div>
-                    </div>
+            </div>
 
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
-                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-indigo-600" />
-                        Course & Payment
-                      </h4>
-                      <div className="space-y-3">
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Course:</span> <span className="font-medium">{selectedStudentDetails.course}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Amount:</span> <span className="font-bold text-indigo-600">PKR {(selectedStudentDetails.amount || 0).toLocaleString()}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Method:</span> <span className="font-medium">{selectedStudentDetails.paymentMethod}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Transaction:</span> <span className="font-mono text-sm">{selectedStudentDetails.transactionId}</span></p>
-                        <p><span className="text-sm text-gray-500 w-24 inline-block">Status:</span> 
-                          <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium text-white ${
-                            selectedStudentDetails.status === 'verified' ? 'bg-emerald-600' : 
-                            selectedStudentDetails.status === 'pending' ? 'bg-amber-600' : 'bg-red-600'
-                          }`}>
-                            {selectedStudentDetails.status}
-                          </span>
-                        </p>
-                        {selectedStudentDetails.status === 'verified' && selectedStudentDetails.credentialsSent && (
-                          <div className="mt-3 pt-2 border-t border-indigo-100">
-                            <p className="text-sm text-green-600 flex items-center gap-1">
-                              <CheckCircle className="w-4 h-4" />
-                              ✓ Payment Verified
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Documents */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
-                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-indigo-600" />
-                        Documents
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedStudentDetails.cnicFrontUrl && (
-                          <a href={selectedStudentDetails.cnicFrontUrl} target="_blank" rel="noopener noreferrer" 
-                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
-                            <FileText className="w-4 h-4" /> View CNIC Front
-                          </a>
-                        )}
-                        {selectedStudentDetails.cnicBackUrl && (
-                          <a href={selectedStudentDetails.cnicBackUrl} target="_blank" rel="noopener noreferrer" 
-                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
-                            <FileText className="w-4 h-4" /> View CNIC Back
-                          </a>
-                        )}
-                        {selectedStudentDetails.educationalDocUrl && (
-                          <a href={selectedStudentDetails.educationalDocUrl} target="_blank" rel="noopener noreferrer" 
-                             className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
-                            <FileText className="w-4 h-4" /> View Educational Document
-                          </a>
-                        )}
-                      </div>
-                    </div>
+            {/* ✅ Course & Payment - Simple Fix */}
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
+                Course & Payment
+              </h4>
+              <div className="space-y-3">
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Course:</span> <span className="font-medium">{selectedStudentDetails.course}</span></p>
+                
+                {/* ✅ Agar amount 0 hai to bundle message dikhao, warna amount show karo */}
+                {(selectedStudentDetails.amount === 0 || selectedStudentDetails.isBundleItem) ? (
+                  <p>
+                    <span className="text-sm text-gray-500 w-24 inline-block">Amount:</span> 
+                    <span className="font-medium text-green-600">This Course buy through a bundle</span>
+                  </p>
+                ) : (
+                  <p><span className="text-sm text-gray-500 w-24 inline-block">Amount:</span> <span className="font-bold text-indigo-600">PKR {(selectedStudentDetails.amount || 0).toLocaleString()}</span></p>
+                )}
+                
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Method:</span> <span className="font-medium">{selectedStudentDetails.paymentMethod}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Transaction:</span> <span className="font-mono text-sm">{selectedStudentDetails.transactionId}</span></p>
+                <p><span className="text-sm text-gray-500 w-24 inline-block">Status:</span> 
+                  <span className={`ml-2 inline-flex px-2 py-1 rounded-full text-xs font-medium text-white ${
+                    selectedStudentDetails.status === 'verified' ? 'bg-emerald-600' : 
+                    selectedStudentDetails.status === 'pending' ? 'bg-amber-600' : 'bg-red-600'
+                  }`}>
+                    {selectedStudentDetails.status}
+                  </span>
+                </p>
+                {selectedStudentDetails.status === 'verified' && selectedStudentDetails.credentialsSent && (
+                  <div className="mt-3 pt-2 border-t border-indigo-100">
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      ✓ Payment Verified
+                    </p>
                   </div>
+                )}
+              </div>
+            </div>
 
-                  {/* Payment Slip */}
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                      Payment Slip
-                    </h4>
-                    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
-                      <img 
-                        src={selectedStudentDetails.screenshotUrl} 
-                        alt="Payment Slip" 
-                        className="w-full h-auto"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load'
-                        }}
-                      />
-                    </div>
-                    
-                    {selectedStudentDetails.status === 'pending' && (
-                      <div className="mt-6 space-y-3">
-                        <button
-                          onClick={() => sendCredentialsToStudent(selectedStudentDetails)}
-                          disabled={isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId}
-                          className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          {isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Send className="w-4 h-4" />
-                          )}
-                          Verify & Send Credentials
-                        </button>
-                        
-                        <button
-                          onClick={() => handleRejectPayment(selectedStudentDetails.enrollmentId, selectedStudentDetails.studentId)}
-                          className="w-full py-3 border-2 border-red-600 text-red-600 rounded-xl hover:bg-red-50 font-medium"
-                        >
-                          Reject Payment
-                        </button>
-                      </div>
-                    )}
-                    
-                    {selectedStudentDetails.status === 'verified' && (
-                      <div className="mt-6 space-y-3">
-                        <div className="p-4 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 text-center">
-                          <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-600" />
-                          <p className="text-emerald-800 font-medium">Payment Verified</p>
-                          <p className="text-sm text-emerald-600 mt-1">
-                            Amount: PKR {(selectedStudentDetails.amount || 0).toLocaleString()}
-                          </p>
-                        </div>
-                        {selectedStudentDetails.credentialsSent && (
-                          <button
-                            onClick={() => resendCredentialsEmail(selectedStudentDetails)}
-                            disabled={isResendingEmail === selectedStudentDetails.email}
-                            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                          >
-                            {isResendingEmail === selectedStudentDetails.email ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              'Resend Credentials'
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    
-                    {selectedStudentDetails.status === 'rejected' && (
-                      <div className="mt-6 p-6 bg-gradient-to-br from-red-50 to-white rounded-xl border border-red-200 text-center">
-                        <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-600" />
-                        <p className="text-red-800 font-medium">Payment Rejected</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* Documents */}
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-indigo-100">
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-600" />
+                Documents
+              </h4>
+              <div className="space-y-2">
+                {selectedStudentDetails.cnicFrontUrl && (
+                  <a href={selectedStudentDetails.cnicFrontUrl} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                    <FileText className="w-4 h-4" /> View CNIC Front
+                  </a>
+                )}
+                {selectedStudentDetails.cnicBackUrl && (
+                  <a href={selectedStudentDetails.cnicBackUrl} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                    <FileText className="w-4 h-4" /> View CNIC Back
+                  </a>
+                )}
+                {selectedStudentDetails.educationalDocUrl && (
+                  <a href={selectedStudentDetails.educationalDocUrl} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-2 text-sm text-indigo-600 hover:underline p-2 bg-indigo-50 rounded-lg">
+                    <FileText className="w-4 h-4" /> View Educational Document
+                  </a>
+                )}
               </div>
             </div>
           </div>
-        )}
+
+          {/* Payment Slip */}
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              Payment Slip
+            </h4>
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-indigo-100">
+              <img 
+                src={selectedStudentDetails.screenshotUrl} 
+                alt="Payment Slip" 
+                className="w-full h-auto"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/500x300?text=Image+Failed+to+Load'
+                }}
+              />
+            </div>
+            
+            {selectedStudentDetails.status === 'pending' && (
+              <div className="mt-6 space-y-3">
+                <button
+                  onClick={() => sendCredentialsToStudent(selectedStudentDetails)}
+                  disabled={isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSendingCredentials === selectedStudentDetails.enrollmentId || isVerifying === selectedStudentDetails.enrollmentId ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  Verify & Send Credentials
+                </button>
+                
+                <button
+                  onClick={() => handleRejectPayment(selectedStudentDetails.enrollmentId, selectedStudentDetails.studentId)}
+                  className="w-full py-3 border-2 border-red-600 text-red-600 rounded-xl hover:bg-red-50 font-medium"
+                >
+                  Reject Payment
+                </button>
+              </div>
+            )}
+            
+            {selectedStudentDetails.status === 'verified' && (
+              <div className="mt-6 space-y-3">
+                <div className="p-4 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 text-center">
+                  <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-600" />
+                  <p className="text-emerald-800 font-medium">Payment Verified</p>
+                </div>
+                <button
+                  onClick={() => resendCredentialsEmail(selectedStudentDetails)}
+                  disabled={isResendingEmail === selectedStudentDetails.email}
+                  className="w-full py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isResendingEmail === selectedStudentDetails.email ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Resend Credentials'
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {selectedStudentDetails.status === 'rejected' && (
+              <div className="mt-6 p-6 bg-gradient-to-br from-red-50 to-white rounded-xl border border-red-200 text-center">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-600" />
+                <p className="text-red-800 font-medium">Payment Rejected</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   )

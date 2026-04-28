@@ -457,9 +457,7 @@ export default function EnrollmentPaymentPage() {
                 {courses.map((course, idx) => (
                   <div key={course.id || idx} className="flex justify-between py-2 border-b border-gray-100">
                     <span>{idx + 1}. {course.course_title}</span>
-                    <span className="font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
-                      Rs. {course.course_price.toLocaleString()}
-                    </span>
+                   
                   </div>
                 ))}
                 <div className="flex justify-between mt-3 pt-2 border-t font-bold">

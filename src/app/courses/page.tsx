@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, Easing } from "framer-motion";
 import type { Bundle, Course } from './types';
+import { CartItem } from '@/lib/types';
 import { 
   HiClock, 
   HiAcademicCap, 
@@ -68,16 +69,6 @@ const Z_INDEX = {
 };
 
 // Interfaces
-interface CartItem {
-  id: string;
-  course_id: string;
-  course_title: string;
-  course_price: number;
-  created_at: string;
-  is_bundle_item?: boolean;
-  bundle_name?: string;
-}
-
 // Extended Bundle type with optional image
 interface ExtendedBundle extends Bundle {
   image?: string;
@@ -309,7 +300,17 @@ export default function CoursesPage() {
           let price = item.course_price;
           if (typeof price === 'string') price = parseFloat(price.replace(/,/g, '')) || 0;
           if (price > 100000) price = price / 100;
-          return { id: item.id, course_id: item.course_id, course_title: item.course_title, course_price: price, created_at: item.created_at };
+          return { 
+            id: item.id, 
+            course_id: item.course_id, 
+            course_title: item.course_title, 
+            course_price: price, 
+            created_at: item.created_at,
+            is_bundle_item: item.is_bundle_item,
+            bundle_name: item.bundle_name,
+            bundle_id: item.bundle_id,
+            bundle_discounted_price: item.bundle_discounted_price
+          };
         });
         setCartItems(processedItems);
         const inCartMap: {[key: string]: boolean} = {};
@@ -393,7 +394,6 @@ export default function CoursesPage() {
   const toggleFeature = (featureId: string) => setOpenFeature(openFeature === featureId ? null : featureId);
   const retryFetch = () => { fetchCourses(); fetchBundles(); };
 
-  // FIXED: Handle bundle view details - navigate to bundle detail page
   const handleViewBundleDetails = (bundleId: string) => {
     router.push(`/courses/bundles/${bundleId}`);
   };
@@ -405,6 +405,7 @@ export default function CoursesPage() {
     else setIsEmailPopupOpen(true);
   };
 
+  // ✅ UPDATED: Bundle add to cart - Add as SINGLE item (not individual courses)
   const handleAddBundleToCart = async (bundle: ExtendedBundle) => {
     setSelectedBundleForCart(bundle);
     setSelectedCourse(null);
@@ -415,7 +416,16 @@ export default function CoursesPage() {
   const addToCart = async (course: Course, email: string) => {
     setCartLoading(prev => ({ ...prev, [course.id]: true }));
     try {
-      const response = await fetch('/api/student/cart/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentEmail: email, courseId: course.id, courseTitle: course.title, coursePrice: course.numericPrice || 0 }) });
+      const response = await fetch('/api/student/cart/add', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          studentEmail: email, 
+          courseId: course.id, 
+          courseTitle: course.title, 
+          coursePrice: course.numericPrice || 0 
+        }) 
+      });
       const result = await response.json();
       if (result.success) {
         setInCartStatus(prev => ({ ...prev, [course.id]: true }));
@@ -426,30 +436,57 @@ export default function CoursesPage() {
         setInCartStatus(prev => ({ ...prev, [course.id]: true }));
         setCartMessage({ type: 'error', text: 'Course is already in your cart' });
       } else throw new Error(result.error);
-    } catch (error: any) { setCartMessage({ type: 'error', text: error.message || 'Failed to add to bag' }); } finally { setCartLoading(prev => ({ ...prev, [course.id]: false })); }
+    } catch (error: any) { setCartMessage({ type: 'error', text: error.message || 'Failed to add to bag' }); } 
+    finally { setCartLoading(prev => ({ ...prev, [course.id]: false })); }
   };
 
+  // ✅ UPDATED: Add bundle as a SINGLE item to cart (not individual courses)
   const addBundleToCart = async (bundle: ExtendedBundle, email: string) => {
     setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: true }));
     try {
-      let addedCount = 0;
-      for (const course of (bundle.courses || [])) {
-        const response = await fetch('/api/student/cart/add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentEmail: email, courseId: course.id, courseTitle: course.title, coursePrice: 0, isBundleItem: true, bundleId: bundle.id, bundleName: bundle.title, bundleDiscountedPrice: bundle.discounted_price })
-        });
-        const result = await response.json();
-        if (result.success) { addedCount++; setInCartStatus(prev => ({ ...prev, [course.id]: true })); }
-      }
-      if (addedCount > 0) {
+      const response = await fetch('/api/student/cart/add-bundle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentEmail: email,
+          bundleId: bundle.id,
+          bundleTitle: bundle.title,
+          bundlePrice: bundle.discounted_price,
+          bundleOriginalPrice: bundle.original_price,
+          bundleDiscountPercentage: bundle.discount_percentage,
+          coursesInBundle: bundle.courses || []
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
         await fetchCartCount();
         setBundleAddedMessage({ bundleId: bundle.id, discountedPrice: bundle.discounted_price });
-        setCartMessage({ type: 'success', text: `Bundle "${bundle.title}" added! You pay only ${formatCurrency(bundle.discounted_price)} for ${addedCount} courses!` });
+        setCartMessage({ 
+          type: 'success', 
+          text: `🎉 Bundle "${bundle.title}" added! You pay only ${formatCurrency(bundle.discounted_price)} for ${bundle.total_courses} courses!` 
+        });
+        
+        // Mark all courses in bundle as "in cart" for UI
+        if (bundle.courses) {
+          const inCartMap = { ...inCartStatus };
+          bundle.courses.forEach(course => {
+            inCartMap[course.id] = true;
+          });
+          setInCartStatus(inCartMap);
+        }
+        
         setTimeout(() => setBundleAddedMessage(null), 5000);
-      } else setCartMessage({ type: 'error', text: 'Failed to add bundle to bag' });
+      } else {
+        setCartMessage({ type: 'error', text: result.error || 'Failed to add bundle to bag' });
+      }
       setTimeout(() => setCartMessage(null), 4000);
-    } catch (error: any) { setCartMessage({ type: 'error', text: error.message || 'Failed to add bundle to bag' }); } finally { setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: false })); }
+    } catch (error: any) { 
+      setCartMessage({ type: 'error', text: error.message || 'Failed to add bundle to bag' }); 
+    } finally { 
+      setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: false })); 
+    }
   };
 
   const handleRemoveFromCart = async (cartId: string, courseId: string) => {
@@ -465,7 +502,8 @@ export default function CoursesPage() {
         setCartMessage({ type: 'success', text: 'Item removed from cart' });
         setTimeout(() => setCartMessage(null), 3000);
       } else throw new Error(result.error);
-    } catch (error: any) { setCartMessage({ type: 'error', text: error.message || 'Failed to remove item' }); } finally { setRemovingFromCart(null); }
+    } catch (error: any) { setCartMessage({ type: 'error', text: error.message || 'Failed to remove item' }); } 
+    finally { setRemovingFromCart(null); }
   };
 
   const handleEmailConfirm = async (email: string) => {
@@ -478,34 +516,69 @@ export default function CoursesPage() {
   };
 
   // Format currency correctly for bundles
-// FIXED: Format currency correctly - NO automatic division
-const formatCurrency = (amount: number) => {
-  if (isNaN(amount) || amount === null || amount === undefined) {
-    return 'Rs 0';
-  }
+  const formatCurrency = (amount: number) => {
+    if (isNaN(amount) || amount === null || amount === undefined) {
+      return 'Rs 0';
+    }
+    let finalAmount = Number(amount);
+    if (finalAmount > 1000000) {
+      finalAmount = finalAmount / 100;
+    }
+    return new Intl.NumberFormat('en-PK', { 
+      style: 'currency', 
+      currency: 'PKR', 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    }).format(finalAmount).replace('PKR', 'Rs');
+  };
   
-  let finalAmount = Number(amount);
-  
-  // ONLY divide if amount is > 1,000,000 (1 million)
-  // This indicates it's stored in paisa/cents
-  if (finalAmount > 1000000) {
-    finalAmount = finalAmount / 100;
-  }
-  
-  // Format as PKR currency
-  return new Intl.NumberFormat('en-PK', { 
-    style: 'currency', 
-    currency: 'PKR', 
-    minimumFractionDigits: 0, 
-    maximumFractionDigits: 0 
-  }).format(finalAmount).replace('PKR', 'Rs');
-};
   const formatDate = (dateString: string) => {
-    try { const date = new Date(dateString); return isNaN(date.getTime()) ? 'Recently added' : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return 'Recently added'; }
+    try { const date = new Date(dateString); return isNaN(date.getTime()) ? 'Recently added' : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } 
+    catch { return 'Recently added'; }
   };
 
-  // Calculate cart total
-  const cartTotal = cartItems.reduce((sum, item) => sum + (isNaN(Number(item.course_price)) ? 0 : Number(item.course_price)), 0);
+  // Calculate cart total (only individual courses, bundle items have price 0)
+  const cartTotal = cartItems.reduce((sum, item) => {
+    if (item.is_bundle_item) return sum;
+    return sum + (isNaN(Number(item.course_price)) ? 0 : Number(item.course_price));
+  }, 0);
+
+  // Get bundle items for display
+  const getBundleItems = () => {
+    return cartItems.filter(item => item.is_bundle_item === true);
+  };
+
+  // Get individual course items
+  const getIndividualCourses = () => {
+    return cartItems.filter(item => !item.is_bundle_item);
+  };
+
+  // Navigation to enrollment page with proper params
+  const handleProceedToEnrollment = () => {
+    const bundleItems = getBundleItems();
+    const individualCourses = getIndividualCourses();
+    
+    let url = '/cartEnrollment';
+    const params = new URLSearchParams();
+    
+    // Add bundle ID if present
+    if (bundleItems.length > 0 && bundleItems[0].bundle_id) {
+      params.append('bundleId', bundleItems[0].bundle_id);
+    }
+    
+    // Add individual course IDs if present
+    if (individualCourses.length > 0) {
+      const courseIds = individualCourses.map(item => item.course_id).join(',');
+      params.append('courseIds', courseIds);
+    }
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+    
+    setShowCartSidebar(false);
+    router.push(url);
+  };
 
   // Combine all items (bundles + courses) into one array for unified grid display
   const getAllItems = () => {
@@ -609,7 +682,7 @@ const formatCurrency = (amount: number) => {
         </motion.button>
       </div>
 
-      {/* Cart Sidebar Component */}
+      {/* Cart Sidebar - Updated to show bundle as single item */}
       <CartSidebar
         isOpen={showCartSidebar}
         onClose={() => setShowCartSidebar(false)}
@@ -619,6 +692,7 @@ const formatCurrency = (amount: number) => {
         onRemoveFromCart={handleRemoveFromCart}
         formatCurrency={formatCurrency}
         bundleAddedMessage={bundleAddedMessage}
+        onProceedToEnrollment={handleProceedToEnrollment}
       />
 
       {/* Hero Section */}
@@ -776,7 +850,7 @@ const formatCurrency = (amount: number) => {
                       >
                         {cartLoading[`bundle_${bundle.id}`] ? 
                           <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 
-                          <><HiShoppingBag className="w-3 h-3 md:w-4 md:h-4" /> Add Bundle</>
+                          <><HiShoppingBag className="w-3 h-3 md:w-4 md:h-4" /> Add to Bag</>
                         }
                       </button>
                     </div>
@@ -822,7 +896,7 @@ const formatCurrency = (amount: number) => {
                         </Link>
                         {item.isInCart ? 
                           <button 
-                            onClick={() => { const cartItem = cartItems.find(i => i.course_id === course.id); if (cartItem) handleRemoveFromCart(cartItem.id, course.id); }} 
+                            onClick={() => { const cartItem = cartItems.find(i => i.course_id === course.id && !i.is_bundle_item); if (cartItem) handleRemoveFromCart(cartItem.id, course.id); }} 
                             className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium bg-red-50 text-red-600 hover:bg-red-100 text-xs md:text-sm cursor-pointer"
                           >
                             Remove

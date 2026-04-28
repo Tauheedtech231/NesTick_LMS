@@ -24,7 +24,8 @@ import {
   Printer,
   X,
   Eye,
-  Save
+  Save,
+  Gift
 } from "lucide-react";
 
 // Import voucher generation utilities
@@ -47,6 +48,21 @@ interface Course {
   course_id: string;
   course_title: string;
   course_price: number;
+  is_bundle_item?: boolean;
+  bundle_name?: string;
+  bundle_id?: string;
+  bundle_discounted_price?: number;
+}
+
+interface BundleInfo {
+  id: string;
+  title: string;
+  description: string;
+  discounted_price: number;
+  original_price: number;
+  discount_percentage: number;
+  total_courses: number;
+  courses: Array<{id: string; title: string; price: number}>;
 }
 
 interface UploadedDocument {
@@ -80,12 +96,9 @@ const BANK_DETAILS = {
   easyPaisa: "0315-7654321"
 };
 
-// CNIC Formatting function (only for text/number fields)
+// CNIC Formatting function
 const formatCNIC = (value: string): string => {
-  // Remove all non-digits
   const digits = value.replace(/\D/g, '');
-  
-  // Format as 12345-1234567-1
   if (digits.length <= 5) {
     return digits;
   } else if (digits.length <= 12) {
@@ -95,7 +108,6 @@ const formatCNIC = (value: string): string => {
   }
 };
 
-// Validate CNIC (only for text/number fields)
 const validateCNIC = (value: string): boolean => {
   const cleanValue = value.replace(/-/g, '');
   return /^[0-9]{13}$/.test(cleanValue);
@@ -170,15 +182,13 @@ const DynamicFileInput = ({ field, value, error, onFileUpload, isUploading, uplo
 const CartEnrollmentPage: React.FC = () => {
   const router = useRouter();
   const voucherRef = useRef<HTMLDivElement>(null);
-  
-  // File input refs
   const paymentSlipInputRef = useRef<HTMLInputElement>(null);
-  
-  // Ref to prevent duplicate enrollment creation
   const isCreatingEnrollment = useRef(false);
   
   const [currentStep, setCurrentStep] = useState(1);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [bundleInfo, setBundleInfo] = useState<BundleInfo | null>(null);
+  const [isBundleEnrollment, setIsBundleEnrollment] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
   const [userEmail, setUserEmail] = useState("");
   const [enrollmentId, setEnrollmentId] = useState("");
@@ -207,7 +217,48 @@ const CartEnrollmentPage: React.FC = () => {
   const [isPublicPortal, setIsPublicPortal] = useState(false);
   const [publicEnrollmentId, setPublicEnrollmentId] = useState("");
 
-  // Load saved form data from sessionStorage (temporary, clears on tab close)
+  // ✅ Fetch bundle details and convert to courses array
+  const fetchBundleDetails = async (bundleId: string) => {
+    try {
+      const response = await fetch(`/api/admin/bundles/${bundleId}`);
+      const result = await response.json();
+         console.log("the data",result.data)
+      if (result.success && result.data) {
+        const bundle = result.data;
+        setBundleInfo({
+          id: bundle.id,
+          title: bundle.title,
+          description: bundle.description || '',
+          discounted_price: bundle.discounted_price || 0,
+          original_price: bundle.original_price || 0,
+          discount_percentage: bundle.discount_percentage || 0,
+          total_courses: bundle.total_courses || 0,
+          courses: bundle.courses || []
+        });
+        
+        // ✅ Convert bundle courses to enrollment courses array
+        const bundleCourses = (bundle.courses || []).map((course: any) => ({
+          id: course.id,
+          course_id: course.id,
+          course_title: course.title,
+          course_price: 0, // Individual price 0 - bundle price will be totalAmount
+          price: 0
+        }));
+        
+        setCourses(bundleCourses);
+        setTotalAmount(bundle.discounted_price || 0);
+        setIsBundleEnrollment(true);
+        console.log('✅ Bundle loaded:', bundle.title, 'Courses:', bundleCourses.length);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error fetching bundle:', error);
+      return false;
+    }
+  };
+
+  // Load saved form data
   useEffect(() => {
     const savedFormData = sessionStorage.getItem("enrollment_form_data");
     if (savedFormData) {
@@ -216,6 +267,8 @@ const CartEnrollmentPage: React.FC = () => {
         if (parsed.dynamicFormData) setDynamicFormData(parsed.dynamicFormData);
         if (parsed.uploadedFileUrls) setUploadedFileUrls(parsed.uploadedFileUrls);
         if (parsed.courses) setCourses(parsed.courses);
+        if (parsed.bundleInfo) setBundleInfo(parsed.bundleInfo);
+        if (parsed.isBundleEnrollment) setIsBundleEnrollment(parsed.isBundleEnrollment);
         if (parsed.totalAmount) setTotalAmount(parsed.totalAmount);
         if (parsed.voucherNumber) setVoucherNumber(parsed.voucherNumber);
         if (parsed.voucherDownloaded) setVoucherDownloaded(parsed.voucherDownloaded);
@@ -223,19 +276,21 @@ const CartEnrollmentPage: React.FC = () => {
         if (parsed.enrollmentCreated) setEnrollmentCreated(parsed.enrollmentCreated);
         if (parsed.enrollmentId) setEnrollmentId(parsed.enrollmentId);
         if (parsed.paymentId) setPaymentId(parsed.paymentId);
-        console.log("✅ Loaded saved form data from sessionStorage");
+        console.log("✅ Loaded saved form data");
       } catch (e) {
         console.error("Error loading saved form data:", e);
       }
     }
   }, []);
 
-  // Save form data to sessionStorage (temporary, clears on tab close)
+  // Save form data
   useEffect(() => {
     const formDataToSave = {
       dynamicFormData,
       uploadedFileUrls,
       courses,
+      bundleInfo,
+      isBundleEnrollment,
       totalAmount,
       voucherNumber,
       voucherDownloaded,
@@ -246,12 +301,10 @@ const CartEnrollmentPage: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
     sessionStorage.setItem("enrollment_form_data", JSON.stringify(formDataToSave));
-  }, [dynamicFormData, uploadedFileUrls, courses, totalAmount, voucherNumber, voucherDownloaded, currentStep, enrollmentCreated, enrollmentId, paymentId]);
+  }, [dynamicFormData, uploadedFileUrls, courses, bundleInfo, isBundleEnrollment, totalAmount, voucherNumber, voucherDownloaded, currentStep, enrollmentCreated, enrollmentId, paymentId]);
 
-  // Clear saved form data
   const clearSavedFormData = () => {
     sessionStorage.removeItem("enrollment_form_data");
-    console.log("🗑️ Cleared saved form data");
   };
 
   // Fetch dynamic form fields
@@ -288,15 +341,22 @@ const CartEnrollmentPage: React.FC = () => {
     }
   };
 
+  // ✅ Read URL params - supports both bundleId and regular cart
   useEffect(() => {
     const savedEmail = localStorage.getItem("userEmail");
     const urlParams = new URLSearchParams(window.location.search);
     const enrollmentIdParam = urlParams.get('enrollment_id');
+    const bundleIdParam = urlParams.get('bundleId');
+    const courseIdsParam = urlParams.get('courseIds');
     
     if (enrollmentIdParam) {
       setIsPublicPortal(true);
       setPublicEnrollmentId(enrollmentIdParam);
       setCurrentStep(3);
+    } else if (bundleIdParam) {
+      // ✅ Bundle enrollment from URL
+      setUserEmail(savedEmail || "");
+      fetchBundleDetails(bundleIdParam);
     } else if (savedEmail) {
       setUserEmail(savedEmail);
       fetchCartCourses(savedEmail);
@@ -305,24 +365,34 @@ const CartEnrollmentPage: React.FC = () => {
     }
   }, []);
 
+  // ✅ Fetch cart courses - handles both individual and bundle items
   const fetchCartCourses = async (email: string) => {
     try {
       const res = await fetch(`/api/student/cart?email=${encodeURIComponent(email)}`);
       const data = await res.json();
       
       if (data.success) {
-        const uniqueCourses = data.data.items.filter(
-          (course: Course, index: number, self: Course[]) =>
-            index === self.findIndex((c) => c.id === course.id)
-        );
-        setCourses(uniqueCourses);
-        const total = uniqueCourses.reduce((sum: number, item: Course) => {
-          const raw = item.course_price;
-          if (raw === null || raw === undefined) return sum;
-          const price = Number(raw);
-          return isNaN(price) ? sum : sum + price;
-        }, 0);
-        setTotalAmount(total);
+        // Check if there's a bundle item in cart
+        const bundleItem = data.data.items.find((item: any) => item.is_bundle_item === true);
+        
+        if (bundleItem && bundleItem.bundle_id) {
+          // ✅ Bundle item found - fetch bundle details
+          await fetchBundleDetails(bundleItem.bundle_id);
+        } else {
+          // ✅ Individual courses only
+          const individualCourses = data.data.items.filter(
+            (item: any) => !item.is_bundle_item
+          );
+          setCourses(individualCourses);
+          const total = individualCourses.reduce((sum: number, item: Course) => {
+            const raw = item.course_price;
+            if (raw === null || raw === undefined) return sum;
+            const price = Number(raw);
+            return isNaN(price) ? sum : sum + price;
+          }, 0);
+          setTotalAmount(total);
+          setIsBundleEnrollment(false);
+        }
       }
     } catch (error) {
       console.error("Error fetching cart:", error);
@@ -361,7 +431,6 @@ const CartEnrollmentPage: React.FC = () => {
     if (uploaded) {
       setUploadedFileUrls(prev => ({ ...prev, [fieldName]: uploaded }));
       setDynamicFormData(prev => ({ ...prev, [fieldName]: uploaded.url }));
-      // Clear any error for this file field
       setFormErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[fieldName];
@@ -375,15 +444,12 @@ const CartEnrollmentPage: React.FC = () => {
     paymentSlipInputRef.current?.click();
   };
 
-  // Handle field change with CNIC formatting (only for text/number fields, not file fields)
   const handleDynamicFieldChange = (name: string, value: any, fieldType: string) => {
     let formattedValue = value;
     let error = "";
     
-    // Only apply CNIC formatting to text/input fields, NOT file fields
     if (fieldType !== 'file') {
       const fieldNameLower = name.toLowerCase();
-      // Check if this is a CNIC text field (not a file upload field)
       const isCNICTextField = (fieldNameLower.includes('cnic') || fieldNameLower.includes('nic')) && 
                               !fieldNameLower.includes('image') && 
                               !fieldNameLower.includes('front') && 
@@ -399,7 +465,6 @@ const CartEnrollmentPage: React.FC = () => {
     
     setDynamicFormData(prev => ({ ...prev, [name]: formattedValue }));
     
-    // Update error state
     if (error) {
       setFormErrors(prev => ({ ...prev, [name]: error }));
     } else {
@@ -411,7 +476,6 @@ const CartEnrollmentPage: React.FC = () => {
     }
   };
 
-  // Validate only CNIC text fields before proceeding
   const validateAllFields = (): boolean => {
     const newErrors: Record<string, string> = {};
     let isValid = true;
@@ -422,7 +486,6 @@ const CartEnrollmentPage: React.FC = () => {
         isValid = false;
       }
       
-      // Validate CNIC only for text/number fields, NOT for file uploads
       if (field.type !== 'file') {
         const value = dynamicFormData[field.name];
         if (value) {
@@ -442,7 +505,6 @@ const CartEnrollmentPage: React.FC = () => {
       }
     });
     
-    // Check file fields
     const fileFields = formFields.filter(f => f.type === 'file');
     fileFields.forEach(field => {
       if (field.required && !uploadedFileUrls[field.name]) {
@@ -460,17 +522,16 @@ const CartEnrollmentPage: React.FC = () => {
       dynamicFields: dynamicFormData,
       uploadedFiles: uploadedFileUrls,
       courses,
+      bundleInfo,
+      isBundleEnrollment,
       totalAmount,
       generatedAt: new Date().toISOString(),
       status: 'pending_payment'
     };
-    
     sessionStorage.setItem("pendingEnrollment", JSON.stringify(enrollmentData));
-    return;
   };
 
   const handleSubmitDetails = async () => {
-    // Validate all fields
     if (!validateAllFields()) {
       alert("Please correct the errors in the form before proceeding.");
       return;
@@ -491,7 +552,7 @@ const CartEnrollmentPage: React.FC = () => {
     }
   };
 
-  // Save to database with payment ID
+  // ✅ Save to database - uses old API with courses array
   const saveToDatabaseAndSendEmail = async (): Promise<boolean> => {
     if (isCreatingEnrollment.current) {
       console.log('⏳ Enrollment creation already in progress...');
@@ -506,13 +567,20 @@ const CartEnrollmentPage: React.FC = () => {
       
       const enrollmentData = JSON.parse(pendingData);
       
+      // ✅ Prepare courses array (already has bundle courses converted)
+      const coursesToSend = enrollmentData.courses.map((course: any) => ({
+        course_id: course.course_id,
+        course_title: course.course_title,
+        course_price: course.course_price || 0
+      }));
+      
       const response = await fetch("/api/enrollment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dynamicFields: enrollmentData.dynamicFields,
           uploadedFiles: enrollmentData.uploadedFiles,
-          courses: enrollmentData.courses,
+          courses: coursesToSend,
           totalAmount: enrollmentData.totalAmount,
           voucherNumber: voucherNumber,
           sendEmail: true
@@ -523,7 +591,6 @@ const CartEnrollmentPage: React.FC = () => {
       console.log("📥 Enrollment response:", data);
       
       if (data.success) {
-        // Store PAYMENT ID and ENROLLMENT IDs
         const newPaymentId = data.data.paymentId;
         const enrollmentIds = data.data.enrollmentIds;
         const primaryEnrollmentId = data.data.primaryEnrollmentId;
@@ -566,12 +633,10 @@ const CartEnrollmentPage: React.FC = () => {
     setIsGeneratingVoucher(true);
     
     try {
-      // Check if enrollment already exists
       const existingEnrollmentId = sessionStorage.getItem("enrollmentId");
       let currentEnrollmentId = enrollmentId;
       let currentPaymentId = paymentId;
       
-      // If enrollment not created yet, create it first
       if (!existingEnrollmentId || !enrollmentCreated) {
         const enrollmentCreated_success = await saveToDatabaseAndSendEmail();
         
@@ -595,7 +660,6 @@ const CartEnrollmentPage: React.FC = () => {
         currentPaymentId = sessionStorage.getItem("paymentId") || paymentId;
       }
       
-      // Generate voucher PDF
       const dataUrl = await toPng(voucherRef.current, {
         quality: 1.0,
         pixelRatio: 2,
@@ -616,8 +680,6 @@ const CartEnrollmentPage: React.FC = () => {
       pdf.save(`payment-voucher-${voucherNumber}.pdf`);
 
       setVoucherDownloaded(true);
-      
-      // Clear cart after successful voucher generation
       await clearCartAfterVoucher();
       
       alert(`✅ Voucher downloaded successfully!\n\n💳 Payment ID: ${currentPaymentId}\n📌 Use this Payment ID for payment.\n\n📧 Confirmation email sent to ${userEmail}`);
@@ -704,6 +766,8 @@ const CartEnrollmentPage: React.FC = () => {
       setDynamicFormData(initialData);
       setUploadedFileUrls({});
       setCourses([]);
+      setBundleInfo(null);
+      setIsBundleEnrollment(false);
       setTotalAmount(0);
       setVoucherNumber("");
       setVoucherDownloaded(false);
@@ -756,13 +820,11 @@ const CartEnrollmentPage: React.FC = () => {
 
   const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 
-  // Render dynamic field with CNIC formatting
   const renderDynamicField = (field: FormField) => {
     const value = dynamicFormData[field.name] || '';
     const error = formErrors[field.name];
     const fieldNameLower = field.name.toLowerCase();
     
-    // Check if this is a CNIC text field (not a file upload)
     const isCNICTextField = (fieldNameLower.includes('cnic') || fieldNameLower.includes('nic')) && 
                             field.type !== 'file' &&
                             !fieldNameLower.includes('image') && 
@@ -783,7 +845,6 @@ const CartEnrollmentPage: React.FC = () => {
       );
     }
     
-    // Set placeholder for CNIC text field
     let placeholder = field.placeholder || `Enter ${field.label}`;
     if (isCNICTextField) {
       placeholder = "e.g., 12345-1234567-1";
@@ -964,23 +1025,69 @@ const CartEnrollmentPage: React.FC = () => {
                 )}
               </div>
               
-              {/* Selected Courses Summary */}
+              {/* ✅ Selected Items Summary - Bundle Name Show Hoga */}
               <div className="mt-8 p-4 bg-gray-50 rounded-lg">
                 <h3 className="font-semibold mb-3" style={{ color: BRAND_COLORS.darkNavy }}>
-                  Selected Courses
+                  {isBundleEnrollment && bundleInfo ? "Selected Bundle" : "Selected Courses"}
                 </h3>
-                {courses.map((course) => (
+                
+                {/* ✅ Bundle Display - Bundle Name Lazmi Show Hoga */}
+                {isBundleEnrollment && bundleInfo && (
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center py-3 border-b border-green-200 bg-green-50 -mx-4 px-4 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Gift size={20} className="text-green-600" />
+                        <div>
+                          <span className="font-bold text-green-700 text-lg">{bundleInfo.title}</span>
+                          <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full ml-2">
+                            {bundleInfo.discount_percentage}% OFF
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-green-700 text-xl">
+                          Rs. {(bundleInfo.discounted_price || 0).toLocaleString()}
+                        </span>
+                        {bundleInfo.original_price > bundleInfo.discounted_price && (
+                          <span className="text-xs text-gray-400 line-through ml-2 block">
+                            Rs. {(bundleInfo.original_price || 0).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 ml-2">
+                      🎁 Bundle includes {bundleInfo.total_courses} courses: 
+                      <span className="text-gray-600 ml-1">
+                        {bundleInfo.courses.map((c, idx) => (
+                          <span key={c.id}>
+                            {c.title}{idx < bundleInfo.courses.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </span>
+                    </p>
+                  </div>
+                )}
+                
+                {/* Individual Courses Display */}
+                {!isBundleEnrollment && courses.map((course) => (
                   <div key={course.id} className="flex justify-between py-2 border-b last:border-0">
                     <span>{course.course_title}</span>
                     <span className="font-semibold" style={{ color: BRAND_COLORS.deepRed }}>
-                      Rs. {course.course_price.toLocaleString()}
+                      Rs. {(course.course_price || 0).toLocaleString()}
                     </span>
                   </div>
                 ))}
+                
                 <div className="flex justify-between mt-3 pt-2 border-t font-bold">
                   <span>Total Amount</span>
-                  <span style={{ color: BRAND_COLORS.deepRed }}>Rs. {totalAmount.toLocaleString()}</span>
+                  <span style={{ color: BRAND_COLORS.deepRed }}>Rs. {(totalAmount || 0).toLocaleString()}</span>
                 </div>
+                
+                {isBundleEnrollment && bundleInfo && bundleInfo.original_price > bundleInfo.discounted_price && (
+                  <p className="text-xs text-green-600 mt-2 text-right">
+                    ✨ You save Rs. {((bundleInfo.original_price || 0) - (bundleInfo.discounted_price || 0)).toLocaleString()} with this bundle!
+                  </p>
+                )}
               </div>
               
               <div className="flex justify-between mt-6">
@@ -1075,10 +1182,14 @@ const CartEnrollmentPage: React.FC = () => {
                       <div className="space-y-2 text-sm">
                         <div>
                           <div className="text-gray-500">Amount Payable</div>
-                          <div className="font-bold text-2xl" style={{ color: BRAND_COLORS.deepRed }}>Rs. {totalAmount.toLocaleString()}</div>
+                          <div className="font-bold text-2xl" style={{ color: BRAND_COLORS.deepRed }}>Rs. {(totalAmount || 0).toLocaleString()}</div>
                         </div>
                         <div><div className="text-gray-500">Due Date</div><div className="font-medium">{expiryDate.toLocaleDateString('en-PK')}</div></div>
-                        <div><div className="text-gray-500">Courses Enrolled</div><div className="font-medium">{courses.length} course(s)</div></div>
+                        <div><div className="text-gray-500">Items Enrolled</div><div className="font-medium">
+                          {isBundleEnrollment && bundleInfo 
+                            ? `${bundleInfo.title} (Bundle - ${bundleInfo.total_courses} courses)`
+                            : `${courses.length} course(s)`}
+                        </div></div>
                         <div><div className="text-gray-500">Payment Status</div><div className="inline-block px-2 py-1 rounded-full font-semibold" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>PENDING PAYMENT</div></div>
                       </div>
                     </div>
@@ -1145,7 +1256,7 @@ const CartEnrollmentPage: React.FC = () => {
               
               <div className="max-w-md mx-auto mb-6 p-4 bg-gray-50 rounded-lg">
                 <div className="space-y-2">
-                  <p className="flex justify-between"><span>Total Amount:</span><span className="font-bold text-xl text-red-600">Rs. {totalAmount.toLocaleString()}</span></p>
+                  <p className="flex justify-between"><span>Total Amount:</span><span className="font-bold text-xl text-red-600">Rs. {(totalAmount || 0).toLocaleString()}</span></p>
                   <p className="flex justify-between text-sm"><span>Payment ID:</span><span className="font-mono text-xs font-bold text-red-600">{paymentId || 'Will be generated after download'}</span></p>
                   <p className="flex justify-between text-sm"><span>Enrollment ID:</span><span className="font-mono text-xs">{enrollmentId}</span></p>
                 </div>

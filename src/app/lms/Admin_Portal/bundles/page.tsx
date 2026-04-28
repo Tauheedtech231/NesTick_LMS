@@ -77,9 +77,8 @@ export default function BundlesPage() {
     title: '',
     description: '',
     image: '',
-    discount_percentage: 0,
-    discounted_price: 0,
     original_price: 0,
+    discounted_price: 0,
     selectedCourses: [] as string[],
     status: 'active' as 'active' | 'inactive'
   });
@@ -206,9 +205,8 @@ export default function BundlesPage() {
       title: '',
       description: '',
       image: '',
-      discount_percentage: 0,
-      discounted_price: 0,
       original_price: 0,
+      discounted_price: 0,
       selectedCourses: [],
       status: 'active'
     });
@@ -224,9 +222,8 @@ export default function BundlesPage() {
       title: bundle.title,
       description: bundle.description || '',
       image: bundle.image || '',
-      discount_percentage: bundle.discount_percentage,
-      discounted_price: bundle.discounted_price,
       original_price: bundle.original_price,
+      discounted_price: bundle.discounted_price,
       selectedCourses: bundle.courses?.map(c => c.id) || [],
       status: bundle.status
     });
@@ -247,55 +244,25 @@ export default function BundlesPage() {
     setShowModal(true);
   };
 
-  // ✅ Updated: Support float values for discount percentage
-  const calculatePrices = (discountPercent: number, selectedCourseIds: string[]) => {
-    const selectedCourseObjects = allCourses.filter(c => selectedCourseIds.includes(c.id));
-    
-    let originalTotal = 0;
-    for (const course of selectedCourseObjects) {
-      const price = typeof course.price === 'number' ? course.price : Number(course.price) || 0;
-      originalTotal += price;
-    }
-    
-    const discountAmount = originalTotal * (discountPercent / 100);
-    const discountedPrice = originalTotal - discountAmount;
-    
-    return {
-      original_price: Math.round(originalTotal),
-      discounted_price: Math.round(discountedPrice)
-    };
+  // Calculate savings (auto)
+  const getSavingsAmount = () => {
+    const save = formData.original_price - formData.discounted_price;
+    return isNaN(save) || save < 0 ? 0 : save;
+  };
+
+  // Calculate discount percentage (auto)
+  const getDiscountPercentage = () => {
+    if (formData.original_price <= 0) return 0;
+    const discount = (getSavingsAmount() / formData.original_price) * 100;
+    return Math.round(discount);
   };
 
   const handleCourseSelection = (courseId: string) => {
-    setFormData(prev => {
-      const selected = prev.selectedCourses.includes(courseId)
-        ? prev.selectedCourses.filter(id => id !== courseId)
-        : [...prev.selectedCourses, courseId];
-      
-      const prices = calculatePrices(prev.discount_percentage, selected);
-      
-      return {
-        ...prev,
-        selectedCourses: selected,
-        original_price: prices.original_price,
-        discounted_price: prices.discounted_price
-      };
-    });
-  };
-
-  // ✅ Updated: Allow float values for discount percentage
-  const handleDiscountChange = (value: string) => {
-    let percent = parseFloat(value);
-    if (isNaN(percent)) percent = 0;
-    percent = Math.min(100, Math.max(0, percent));
-    
-    const prices = calculatePrices(percent, formData.selectedCourses);
-    
     setFormData(prev => ({
       ...prev,
-      discount_percentage: percent,
-      discounted_price: prices.discounted_price,
-      original_price: prices.original_price
+      selectedCourses: prev.selectedCourses.includes(courseId)
+        ? prev.selectedCourses.filter(id => id !== courseId)
+        : [...prev.selectedCourses, courseId]
     }));
   };
 
@@ -315,6 +282,21 @@ export default function BundlesPage() {
       return;
     }
 
+    if (modalMode !== 'delete' && formData.original_price <= 0) {
+      setError('Total original price must be greater than 0');
+      return;
+    }
+
+    if (modalMode !== 'delete' && formData.discounted_price <= 0) {
+      setError('Discounted price must be greater than 0');
+      return;
+    }
+
+    if (modalMode !== 'delete' && formData.discounted_price > formData.original_price) {
+      setError('Discounted price cannot be greater than original price');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     
@@ -330,9 +312,9 @@ export default function BundlesPage() {
           title: formData.title,
           description: formData.description,
           image: formData.image,
-          discount_percentage: formData.discount_percentage,
-          discounted_price: formData.discounted_price,
           original_price: formData.original_price,
+          discounted_price: formData.discounted_price,
+          discount_percentage: getDiscountPercentage(),
           course_ids: formData.selectedCourses,
           status: formData.status,
           created_by: 'admin'
@@ -346,9 +328,9 @@ export default function BundlesPage() {
           title: formData.title,
           description: formData.description,
           image: formData.image,
-          discount_percentage: formData.discount_percentage,
-          discounted_price: formData.discounted_price,
           original_price: formData.original_price,
+          discounted_price: formData.discounted_price,
+          discount_percentage: getDiscountPercentage(),
           course_ids: formData.selectedCourses,
           status: formData.status,
           created_by: 'admin'
@@ -381,11 +363,6 @@ export default function BundlesPage() {
       return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"><HiCheck className="w-3 h-3 mr-1" /> Active</span>;
     }
     return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"><HiX className="w-3 h-3 mr-1" /> Inactive</span>;
-  };
-
-  const getSaveAmount = () => {
-    const save = formData.original_price - formData.discounted_price;
-    return isNaN(save) ? 0 : save;
   };
 
   const filteredBundles = bundles.filter(bundle =>
@@ -525,7 +502,7 @@ export default function BundlesPage() {
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100" style={{ color: BRAND_COLORS.deepRed }}>
                         <HiTag className="w-3 h-3 mr-1" />
-                        {bundle.discount_percentage}% OFF
+                        Save PKR {(bundle.original_price - bundle.discounted_price).toLocaleString()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -636,8 +613,8 @@ export default function BundlesPage() {
                     </div>
                   </div>
                   <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-500">Discount</h4>
-                    <p>{selectedBundle.discount_percentage}% OFF (Save PKR {(selectedBundle.original_price - selectedBundle.discounted_price).toLocaleString()})</p>
+                    <h4 className="text-sm font-medium text-gray-500">You Save</h4>
+                    <p className="text-green-600 font-semibold">PKR {(selectedBundle.original_price - selectedBundle.discounted_price).toLocaleString()}</p>
                   </div>
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-gray-500 mb-2">Courses ({selectedBundle.total_courses})</h4>
@@ -648,7 +625,6 @@ export default function BundlesPage() {
                             <HiBookOpen className="w-4 h-4 text-gray-500" />
                             <span className="text-sm">{course.title}</span>
                           </div>
-                          <span className="text-sm font-medium">PKR {course.price?.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -741,36 +717,48 @@ export default function BundlesPage() {
                     />
                   </div>
                   
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount Percentage (%)</label>
-                    <div className="flex items-center gap-3">
+                  {/* Manual Price Inputs - NEW */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Original Price (PKR) *</label>
                       <input
                         type="number"
                         step="0.01"
-                        value={formData.discount_percentage}
-                        onChange={(e) => handleDiscountChange(e.target.value)}
-                        min="0"
-                        max="100"
-                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        value={formData.original_price}
+                        onChange={(e) => setFormData({ ...formData, original_price: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        placeholder="e.g., 50000.00"
                       />
-                      <span className="text-gray-600">% OFF</span>
-                      {formData.discount_percentage > 0 && formData.original_price > 0 && (
-                        <span className="text-sm text-green-600">Save PKR {getSaveAmount().toLocaleString()}</span>
-                      )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">You can use decimal values (e.g., 15.5%)</p>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Discounted Price (PKR) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.discounted_price}
+                        onChange={(e) => setFormData({ ...formData, discounted_price: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                        placeholder="e.g., 35000.00"
+                      />
+                    </div>
                   </div>
                   
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Original Total:</span>
-                      <span className="text-sm">PKR {formData.original_price.toLocaleString()}</span>
+                  {/* Auto-calculated Savings */}
+                  {formData.original_price > 0 && formData.discounted_price > 0 && (
+                    <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-green-700">💰 You Save:</span>
+                        <span className="text-lg font-bold text-green-700">
+                          PKR {getSavingsAmount().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-green-600">Discount:</span>
+                        <span className="text-sm font-semibold text-green-600">{getDiscountPercentage()}% OFF</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-sm font-medium" style={{ color: BRAND_COLORS.deepRed }}>Bundle Price:</span>
-                      <span className="text-lg font-bold" style={{ color: BRAND_COLORS.deepRed }}>PKR {formData.discounted_price.toLocaleString()}</span>
-                    </div>
-                  </div>
+                  )}
                   
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Select Courses *</label>
@@ -789,7 +777,7 @@ export default function BundlesPage() {
                               />
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-gray-800">{course.title}</p>
-                                <p className="text-xs text-gray-500">PKR {course.price?.toLocaleString()}</p>
+                                <p className="text-xs text-gray-400">Course ID: {course.id.substring(0, 8)}...</p>
                               </div>
                             </div>
                           </label>
@@ -797,6 +785,7 @@ export default function BundlesPage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{formData.selectedCourses.length} courses selected</p>
+                    <p className="text-xs text-gray-400 mt-1">Note: Courses are for reference only. Price is manually set above.</p>
                   </div>
                   
                   <div className="mb-4">

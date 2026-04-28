@@ -1,5 +1,19 @@
 export type PaymentStatus = 'PAID' | 'PENDING' | 'FAILED';
 
+// Cart Item type - used across all cart-related components
+export interface CartItem {
+  id: string;
+  course_id: string;
+  course_title: string;
+  course_price: number;
+  created_at: string;
+  is_bundle_item?: boolean;
+  bundle_name?: string;
+  bundle_id?: string;
+  bundle_original_price?: number;
+  bundle_discounted_price?: number;
+}
+
 export interface Course {
   id: string;
   title: string;

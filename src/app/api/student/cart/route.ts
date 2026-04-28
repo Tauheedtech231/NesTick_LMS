@@ -18,17 +18,47 @@ export async function GET(request: NextRequest) {
 
     connection = await getConnection();
 
+    // ✅ Updated query to include bundle fields
     const [rows] = await connection.execute(
-      `SELECT id, course_id, course_title, course_price, created_at
+      `SELECT 
+        id, 
+        course_id, 
+        course_title, 
+        course_price, 
+        created_at,
+        is_bundle_item,
+        bundle_id,
+        bundle_name,
+        bundle_discounted_price,
+        bundle_original_price,
+        bundle_discount_percentage
        FROM cart_bucket
        WHERE student_email = ?
        ORDER BY created_at DESC`,
       [studentEmail]
     );
 
-    // Calculate total
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = rows as any[];
+    // Process items to handle bundle pricing correctly
+    const items = (rows as any[]).map((item) => {
+      const isBundle = item.is_bundle_item === 1 || item.is_bundle_item === true;
+      
+      return {
+        id: item.id,
+        course_id: item.course_id,
+        course_title: item.course_title,
+        // ✅ For bundle items, use bundle_discounted_price instead of course_price
+        course_price: isBundle ? (item.bundle_discounted_price || 0) : (Number(item.course_price) || 0),
+        created_at: item.created_at,
+        is_bundle_item: isBundle,
+        bundle_id: item.bundle_id,
+        bundle_name: item.bundle_name,
+        bundle_discounted_price: item.bundle_discounted_price,
+        bundle_original_price: item.bundle_original_price,
+        bundle_discount_percentage: item.bundle_discount_percentage
+      };
+    });
+
+    // Calculate total (bundle items already have their discounted price)
     const total = items.reduce((sum, item) => sum + (Number(item.course_price) || 0), 0);
 
     return NextResponse.json({
