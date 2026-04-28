@@ -168,6 +168,7 @@ export default function AssessmentHubPage() {
 
       const assignmentsRes = await fetch('/api/instructor/assignment-submissions');
       const assignmentsData = await assignmentsRes.json();
+      console.log("The ASSIGNMENT DATA",assignmentsData.data)
       if (assignmentsData.success) {
         setAssignments(assignmentsData.data);
       }
@@ -682,31 +683,93 @@ export default function AssessmentHubPage() {
         </>
       )}
 
-      {/* Grading Modal */}
-      {showGradingModal && selectedSubmission && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700">
-              <h3 className="text-lg font-semibold text-white">Grade Assignment</h3>
-              <button onClick={() => setShowGradingModal(false)} className="p-1 hover:bg-white/20 rounded-lg"><HiX className="w-5 h-5 text-white" /></button>
-            </div>
-            <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4"><p className="text-sm text-gray-500">Student</p><p className="font-medium">{selectedSubmission.student_name}</p><p className="text-sm text-gray-500 mt-2">Assignment</p><p className="font-medium">{selectedSubmission.assignment_title}</p><p className="text-sm text-gray-500 mt-2">Course</p><p className="font-medium">{selectedSubmission.course_title}</p></div>
-              {selectedSubmission.files && selectedSubmission.files.length > 0 && (<div className="border rounded-lg p-4"><h4 className="font-medium mb-2">Submitted Files</h4>{selectedSubmission.files.map((file, idx) => (<a key={idx} href={file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline py-1"><HiDocumentText className="w-4 h-4" />{file.name}</a>))}</div>)}
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Score (out of {selectedSubmission.total_marks})</label><input type="number" value={gradeScore} onChange={(e) => setGradeScore(Number(e.target.value))} min="0" max={selectedSubmission.total_marks} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label><textarea value={gradeFeedback} onChange={(e) => setGradeFeedback(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Provide feedback to the student..." /></div>
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setShowGradingModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={handleGradeSubmission} disabled={submittingGrade} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {submittingGrade ? <Loader2 className="w-4 h-4 animate-spin" /> : <HiCheck className="w-4 h-4" />}
-                  {submittingGrade ? 'Saving...' : 'Submit Grade'}
-                </button>
-              </div>
-            </div>
-          </div>
+{showGradingModal && selectedSubmission && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700">
+        <h3 className="text-lg font-semibold text-white">Grade Assignment</h3>
+        <button onClick={() => setShowGradingModal(false)} className="p-1 hover:bg-white/20 rounded-lg">
+          <HiX className="w-5 h-5 text-white" />
+        </button>
+      </div>
+      <div className="p-6 overflow-auto max-h-[calc(90vh-100px)] space-y-4">
+        {/* Student Info */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm text-gray-500">Student</p>
+          <p className="font-medium">{selectedSubmission.student_name}</p>
+          <p className="text-sm text-gray-500 mt-2">Assignment</p>
+          <p className="font-medium">{selectedSubmission.assignment_title}</p>
+          <p className="text-sm text-gray-500 mt-2">Course</p>
+          <p className="font-medium">{selectedSubmission.course_title}</p>
         </div>
-      )}
-
+        
+        {/* ✅ FIXED: Files with download link */}
+        {selectedSubmission.files && selectedSubmission.files.length > 0 && (
+          <div className="border rounded-lg p-4">
+            <h4 className="font-medium mb-2">Submitted Files</h4>
+            {selectedSubmission.files.map((file, idx) => {
+              // ✅ Force download using Cloudinary fl_attachment flag
+              const downloadUrl = file.url?.replace('/upload/', '/upload/fl_attachment/');
+              return (
+                <a 
+                  key={idx} 
+                  href={downloadUrl || file.url}
+                  download={file.name}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-2 text-blue-600 hover:underline py-1"
+                >
+                  <HiDownload className="w-4 h-4" />
+                  {file.name}
+                </a>
+              );
+            })}
+          </div>
+        )}
+        
+        {/* Grade Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Score (out of {selectedSubmission.total_marks})</label>
+          <input 
+            type="number" 
+            value={gradeScore} 
+            onChange={(e) => setGradeScore(Number(e.target.value))} 
+            min="0" 
+            max={selectedSubmission.total_marks} 
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          />
+        </div>
+        
+        {/* Feedback */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+          <textarea 
+            value={gradeFeedback} 
+            onChange={(e) => setGradeFeedback(e.target.value)} 
+            rows={4} 
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            placeholder="Provide feedback to the student..." 
+          />
+        </div>
+        
+        {/* Buttons */}
+        <div className="flex gap-3 pt-4">
+          <button onClick={() => setShowGradingModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button 
+            onClick={handleGradeSubmission} 
+            disabled={submittingGrade} 
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {submittingGrade ? <Loader2 className="w-4 h-4 animate-spin" /> : <HiCheck className="w-4 h-4" />}
+            {submittingGrade ? 'Saving...' : 'Submit Grade'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       {/* Quiz Details Modal - FIXED */}
       {showQuizModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">

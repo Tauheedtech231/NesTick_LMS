@@ -37,7 +37,6 @@ import { useRouter } from "next/navigation";
 import CoursesTab from "@/components/stats";
 import { GraduationCap } from "lucide-react";
 import CartSidebar from './CartSidebar';
-import BundleDetailsModal from './BundleDetailsModal';
 
 /* eslint-disable */
 
@@ -138,14 +137,14 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: any
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4 cursor-pointer"
       style={{ zIndex: Z_INDEX.MODAL }}
     >
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
         onClick={onClose}
       />
       <motion.div
@@ -166,14 +165,14 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: any
         </div>
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 cursor-pointer">Email Address</label>
             <div className="relative">
               <input
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
                 placeholder="your@email.com"
-                className={`w-full px-4 py-3 rounded-xl border-2 transition-all outline-none ${
+                className={`w-full px-4 py-3 rounded-xl border-2 transition-all outline-none cursor-text ${
                   error ? 'border-red-300 bg-red-50' : isValid ? 'border-green-300 bg-green-50' : 'border-gray-200'
                 }`}
                 autoFocus={!savedEmail}
@@ -184,13 +183,13 @@ const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: any
             {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 cursor-pointer">
               Cancel
             </button>
             <button
               type="submit"
               disabled={!isValid}
-              className={`flex-1 px-4 py-3 rounded-xl font-medium text-white transition-all ${
+              className={`flex-1 px-4 py-3 rounded-xl font-medium text-white transition-all cursor-pointer ${
                 isValid ? 'bg-gradient-to-r from-[#B11217] to-[#8f0e12] hover:shadow-lg' : 'bg-gray-300 cursor-not-allowed'
               }`}
             >
@@ -249,9 +248,6 @@ export default function CoursesPage() {
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedBundleForCart, setSelectedBundleForCart] = useState<ExtendedBundle | null>(null);
-  const [selectedBundleForModal, setSelectedBundleForModal] = useState<ExtendedBundle | null>(null);
-  const [isBundleModalOpen, setIsBundleModalOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'courses'>('overview');
   const [userEmail, setUserEmail] = useState<string>('');
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -397,9 +393,9 @@ export default function CoursesPage() {
   const toggleFeature = (featureId: string) => setOpenFeature(openFeature === featureId ? null : featureId);
   const retryFetch = () => { fetchCourses(); fetchBundles(); };
 
-  const handleViewBundleDetails = (bundle: ExtendedBundle) => {
-    setSelectedBundleForModal(bundle);
-    setIsBundleModalOpen(true);
+  // FIXED: Handle bundle view details - navigate to bundle detail page
+  const handleViewBundleDetails = (bundleId: string) => {
+    router.push(`/courses/bundles/${bundleId}`);
   };
 
   const handleAddToCartClick = (course: Course) => {
@@ -414,7 +410,6 @@ export default function CoursesPage() {
     setSelectedCourse(null);
     if (userEmail) await addBundleToCart(bundle, userEmail);
     else setIsEmailPopupOpen(true);
-    setIsBundleModalOpen(false);
   };
 
   const addToCart = async (course: Course, email: string) => {
@@ -482,13 +477,29 @@ export default function CoursesPage() {
     setSelectedBundleForCart(null); setSelectedCourse(null);
   };
 
-  const formatCurrency = (amount: number) => {
-    if (isNaN(amount) || amount === null) return 'Rs 0';
-    let finalAmount = Number(amount);
-    if (finalAmount > 100000) finalAmount = finalAmount / 100;
-    return new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(finalAmount).replace('PKR', 'Rs');
-  };
-
+  // Format currency correctly for bundles
+// FIXED: Format currency correctly - NO automatic division
+const formatCurrency = (amount: number) => {
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return 'Rs 0';
+  }
+  
+  let finalAmount = Number(amount);
+  
+  // ONLY divide if amount is > 1,000,000 (1 million)
+  // This indicates it's stored in paisa/cents
+  if (finalAmount > 1000000) {
+    finalAmount = finalAmount / 100;
+  }
+  
+  // Format as PKR currency
+  return new Intl.NumberFormat('en-PK', { 
+    style: 'currency', 
+    currency: 'PKR', 
+    minimumFractionDigits: 0, 
+    maximumFractionDigits: 0 
+  }).format(finalAmount).replace('PKR', 'Rs');
+};
   const formatDate = (dateString: string) => {
     try { const date = new Date(dateString); return isNaN(date.getTime()) ? 'Recently added' : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return 'Recently added'; }
   };
@@ -502,21 +513,25 @@ export default function CoursesPage() {
     
     // Add bundles with type flag
     filteredBundles.forEach(bundle => {
+      const discountedPriceNum = bundle.discounted_price;
+      const originalPriceNum = bundle.original_price;
+      const savingsAmount = originalPriceNum - discountedPriceNum;
+      
       items.push({
         type: 'bundle',
         id: bundle.id,
         title: bundle.title,
         description: bundle.description,
-        image: bundle.image || null, // Use null if image doesn't exist
+        image: bundle.image || null,
         category: 'Bundle',
-        price: formatCurrency(bundle.discounted_price),
-        originalPrice: formatCurrency(bundle.original_price),
+        price: formatCurrency(discountedPriceNum),
+        priceRaw: discountedPriceNum,
+        originalPrice: formatCurrency(originalPriceNum),
+        originalPriceRaw: originalPriceNum,
         discount: bundle.discount_percentage,
-        originalPriceNumeric: bundle.original_price,
-        discountedPriceNumeric: bundle.discounted_price,
+        savingsAmount: savingsAmount,
         totalCourses: bundle.total_courses,
         data: bundle,
-        // Bundle specific
         isBundle: true,
         badge: `SAVE ${bundle.discount_percentage}%`,
         badgeColor: 'from-yellow-500 to-orange-500'
@@ -563,7 +578,7 @@ export default function CoursesPage() {
 
   if (error) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-4"><HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Content</h3><p className="text-gray-500 mb-4">{error}</p><button onClick={retryFetch} className="px-6 py-2 bg-[#B11217] text-white rounded-lg">Try Again</button></div>
+      <div className="text-center max-w-md mx-auto px-4"><HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Content</h3><p className="text-gray-500 mb-4">{error}</p><button onClick={retryFetch} className="px-6 py-2 bg-[#B11217] text-white rounded-lg cursor-pointer">Try Again</button></div>
     </div>
   );
 
@@ -579,7 +594,7 @@ export default function CoursesPage() {
       {/* Cart Message Toast */}
       <AnimatePresence>
         {cartMessage && (
-          <motion.div initial={{ opacity: 0, y: 50, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 50, x: '-50%' }} className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[1001]" style={{ backgroundColor: cartMessage.type === 'success' ? '#f0fdf4' : '#fef2f2', color: cartMessage.type === 'success' ? '#166534' : '#991b1b', border: cartMessage.type === 'success' ? '1px solid #86efac' : '1px solid #fecaca' }}>
+          <motion.div initial={{ opacity: 0, y: 50, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 50, x: '-50%' }} className="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[1001] cursor-default" style={{ backgroundColor: cartMessage.type === 'success' ? '#f0fdf4' : '#fef2f2', color: cartMessage.type === 'success' ? '#166534' : '#991b1b', border: cartMessage.type === 'success' ? '1px solid #86efac' : '1px solid #fecaca' }}>
             {cartMessage.type === 'success' ? <HiCheckCircle className="w-5 h-5 text-green-500" /> : <HiExclamation className="w-5 h-5 text-red-500" />}
             <span className="font-medium">{cartMessage.text}</span>
           </motion.div>
@@ -588,9 +603,9 @@ export default function CoursesPage() {
 
       {/* Cart Button */}
       <div className="fixed right-0 top-1/2 -translate-y-1/2 z-[99999]">
-        <motion.button onClick={() => setShowCartSidebar(true)} className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-l-full rounded-r-none shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+        <motion.button onClick={() => setShowCartSidebar(true)} className="relative bg-gradient-to-r from-[#B11217] to-[#8f0e12] text-white p-4 rounded-l-full rounded-r-none shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center cursor-pointer" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
           <HiShoppingBag className="w-6 h-6" />
-          {cartCount > 0 && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-white text-[#B11217] text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg border-2 border-[#B11217]">{cartCount > 99 ? '99+' : cartCount}</motion.span>}
+          {cartCount > 0 && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-2 -right-2 min-w-[24px] h-6 bg-white text-[#B11217] text-xs font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg border-2 border-[#B11217] cursor-default">{cartCount > 99 ? '99+' : cartCount}</motion.span>}
         </motion.button>
       </div>
 
@@ -606,18 +621,7 @@ export default function CoursesPage() {
         bundleAddedMessage={bundleAddedMessage}
       />
 
-      {/* Bundle Details Modal Component */}
-      <BundleDetailsModal
-        bundle={selectedBundleForModal}
-        isOpen={isBundleModalOpen}
-        selectedTab={selectedTab}
-        onTabChange={setSelectedTab}
-        onClose={() => setIsBundleModalOpen(false)}
-        onAddToCart={handleAddBundleToCart}
-        formatCurrency={formatCurrency}
-      />
-
-      {/* Hero Section - No border bottom */}
+      {/* Hero Section */}
       <div className="relative min-h-[550px] md:min-h-[650px] flex items-start justify-center pt-24 md:pt-32 pb-16 md:pb-20 overflow-hidden">
         <div className="absolute inset-0">
           <img src="https://images.pexels.com/photos/34082713/pexels-photo-34082713.jpeg" alt="Hero" className="w-full h-full object-cover" />
@@ -648,11 +652,11 @@ export default function CoursesPage() {
                   onChange={(e) => handleSearch(e.target.value)} 
                   onFocus={() => setIsSearchFocused(true)} 
                   placeholder="Search courses or bundles..." 
-                  className="w-full h-12 md:h-14 pl-10 md:pl-12 pr-10 md:pr-12 rounded-full border-2 border-white/30 bg-white/95 text-gray-800 focus:outline-none focus:border-teal-400 text-sm md:text-base shadow-xl" 
+                  className="w-full h-12 md:h-14 pl-10 md:pl-12 pr-10 md:pr-12 rounded-full border-2 border-white/30 bg-white/95 text-gray-800 focus:outline-none focus:border-teal-400 text-sm md:text-base shadow-xl cursor-text" 
                 />
                 {searchQuery && (
-                  <button onClick={clearSearch} className="absolute right-4 md:right-5 top-1/2 -translate-y-1/2">
-                    <HiX className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                  <button onClick={clearSearch} className="absolute right-4 md:right-5 top-1/2 -translate-y-1/2 cursor-pointer">
+                    <HiX className="w-4 h-4 md:w-5 md:h-5 text-gray-400 hover:text-gray-600" />
                   </button>
                 )}
               </div>
@@ -663,7 +667,7 @@ export default function CoursesPage() {
                       <div className="p-2">
                         <div className="px-3 py-2 text-xs font-semibold text-gray-400">Suggestions</div>
                         {suggestions.map((s) => (
-                          <button key={s} onClick={() => handleSuggestionClick(s)} className="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-xl flex items-center">
+                          <button key={s} onClick={() => handleSuggestionClick(s)} className="w-full text-left px-4 py-2 hover:bg-gray-50 rounded-xl flex items-center cursor-pointer">
                             <HiSearch className="w-4 h-4 mr-3 text-gray-400" />
                             <span>{s}</span>
                           </button>
@@ -675,7 +679,7 @@ export default function CoursesPage() {
                         <div className="px-3 py-2 text-xs font-semibold text-gray-400">Recent</div>
                         <div className="flex flex-wrap gap-2 px-2">
                           {recentSearches.map((s) => (
-                            <button key={s} onClick={() => handleSuggestionClick(s)} className="px-3 md:px-4 py-1.5 md:py-2 bg-white rounded-xl text-xs md:text-sm text-gray-600 hover:shadow-md border border-gray-200">
+                            <button key={s} onClick={() => handleSuggestionClick(s)} className="px-3 md:px-4 py-1.5 md:py-2 bg-white rounded-xl text-xs md:text-sm text-gray-600 hover:shadow-md border border-gray-200 cursor-pointer">
                               <HiRecent className="w-2 h-2 md:w-3 md:h-3 inline mr-1" />
                               {s}
                             </button>
@@ -689,7 +693,7 @@ export default function CoursesPage() {
               <div className="mt-3 md:mt-4 flex flex-wrap justify-center gap-1.5 md:gap-2">
                 <span className="text-xs md:text-sm text-gray-300">Popular:</span>
                 {["Welding", "Safety", "Pipe Fitter", "Electrical", "Bundle"].map((t) => (
-                  <button key={t} onClick={() => handleSuggestionClick(t)} className="px-2 md:px-3 py-0.5 md:py-1 bg-white/10 hover:bg-white/20 rounded-full text-xs text-white">
+                  <button key={t} onClick={() => handleSuggestionClick(t)} className="px-2 md:px-3 py-0.5 md:py-1 bg-white/10 hover:bg-white/20 rounded-full text-xs text-white cursor-pointer">
                     {t}
                   </button>
                 ))}
@@ -697,7 +701,6 @@ export default function CoursesPage() {
             </motion.div>
           </motion.div>
         </div>
-      
       </div>
 
       {/* Main Content */}
@@ -716,39 +719,36 @@ export default function CoursesPage() {
           </p>
         )}
 
-        {/* Unified Grid - Bundles and Courses together in same responsive grid */}
+        {/* Unified Grid - Bundles and Courses together */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {allItems.map((item) => {
             if (item.type === 'bundle') {
               const bundle = item.data;
               return (
-                <div key={`bundle-${item.id}`} className="relative group bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-                  <div className="absolute -top-2 -left-2 z-10">
-                  
+                <div key={`bundle-${item.id}`} className="relative group bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-yellow-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer" onClick={() => handleViewBundleDetails(item.id)}>
+                  <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex-shrink-0">
+                    {bundle.image ? (
+                      <img
+                        src={bundle.image}
+                        alt={bundle.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dfp9qc0gu/image/upload/v1745412345/lms/course_images/default_course.png';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3 z-10">
+                      <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
+                        <span className="text-xs font-medium text-[#B11217]">
+                          {item.totalCourses} Courses
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                <div className="relative h-48 sm:h-56 overflow-hidden bg-gradient-to-r from-yellow-50 to-orange-50 flex-shrink-0">
-                {bundle.image ? (
-                  <img
-                    src={bundle.image}
-                    alt={bundle.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dfp9qc0gu/image/upload/v1745412345/lms/course_images/default_course.png';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <HiOutlineGift className="w-20 h-20 text-yellow-500 opacity-50" />
-                  </div>
-                )}
-                <div className="absolute top-3 right-3 z-10">
-                  <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm">
-                    <span className="text-xs font-medium text-[#B11217]">
-                      {item.totalCourses} Courses
-                    </span>
-                  </div>
-                </div>
-              </div>
                   <div className="p-4 md:p-6 flex flex-col flex-grow">
                     <h3 className="text-lg md:text-xl font-bold text-[#0B1C3D] mb-2 line-clamp-1">{item.title}</h3>
                     <p className="text-xs md:text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
@@ -756,23 +756,27 @@ export default function CoursesPage() {
                       <span className="text-[10px] md:text-xs text-gray-400 line-through">{item.originalPrice}</span>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xl md:text-2xl font-bold text-[#B11217]">{item.price}</span>
-                        <span className="text-[10px] md:text-xs bg-red-100 px-1.5 md:px-2 py-0.5 rounded-full text-[#B11217]"></span>
                       </div>
-                      <p className="text-[10px] md:text-xs text-green-600 mt-1">Save PKR {(item.originalPriceNumeric - item.discountedPriceNumeric).toLocaleString()}</p>
+                      <p className="text-[10px] md:text-xs text-green-600 mt-1">
+                        Save PKR {item.savingsAmount.toLocaleString()}
+                      </p>
                     </div>
                     <div className="flex gap-2 mt-auto">
-                      <button onClick={() => handleViewBundleDetails(bundle)} className="flex-1 py-2 md:py-2.5 px-2 md:px-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs md:text-sm flex items-center justify-center gap-1">
-                        <HiEye className="w-3 h-3 md:w-4 md:h-4" /> View
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleViewBundleDetails(item.id); }} 
+                        className="flex-1 py-2 md:py-2.5 px-2 md:px-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs md:text-sm flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <HiEye className="w-3 h-3 md:w-4 md:h-4" /> View Details
                       </button>
                       <button 
-                        onClick={() => handleAddBundleToCart(bundle)} 
+                        onClick={(e) => { e.stopPropagation(); handleAddBundleToCart(bundle); }} 
                         disabled={cartLoading[`bundle_${bundle.id}`]} 
-                        className="flex-1 py-2 md:py-2.5 px-2 md:px-3 rounded-lg font-medium text-white text-xs md:text-sm flex items-center justify-center gap-1"
+                        className="flex-1 py-2 md:py-2.5 px-2 md:px-3 rounded-lg font-medium text-white text-xs md:text-sm flex items-center justify-center gap-1 cursor-pointer"
                         style={{ backgroundColor: '#B11217' }}
                       >
                         {cartLoading[`bundle_${bundle.id}`] ? 
                           <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 
-                          <><HiShoppingBag className="w-3 h-3 md:w-4 md:h-4" /> Add</>
+                          <><HiShoppingBag className="w-3 h-3 md:w-4 md:h-4" /> Add Bundle</>
                         }
                       </button>
                     </div>
@@ -783,9 +787,6 @@ export default function CoursesPage() {
               const course = item.data;
               return (
                 <div key={`course-${item.id}`} className="relative group bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-                  <div className="absolute -top-2 -left-2 z-10">
-                  
-                  </div>
                   <div className="relative h-40 md:h-56 overflow-hidden bg-gray-100">
                     {course.image && !imageErrors[course.id] ? 
                       <img src={course.image} alt={course.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" onError={() => handleImageError(course.id)} /> : 
@@ -816,20 +817,20 @@ export default function CoursesPage() {
                         {course.originalPrice && <span className="text-[10px] md:text-sm text-gray-400 line-through ml-1 md:ml-2">{course.originalPrice}</span>}
                       </div>
                       <div className="flex gap-2">
-                        <Link href={`/courses/${course.id}`} className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs md:text-sm text-center">
+                        <Link href={`/courses/${course.id}`} className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs md:text-sm text-center cursor-pointer">
                           Details
                         </Link>
                         {item.isInCart ? 
                           <button 
                             onClick={() => { const cartItem = cartItems.find(i => i.course_id === course.id); if (cartItem) handleRemoveFromCart(cartItem.id, course.id); }} 
-                            className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium bg-red-50 text-red-600 hover:bg-red-100 text-xs md:text-sm"
+                            className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium bg-red-50 text-red-600 hover:bg-red-100 text-xs md:text-sm cursor-pointer"
                           >
                             Remove
                           </button> : 
                           <button 
                             onClick={() => handleAddToCartClick(course)} 
                             disabled={cartLoading[course.id]} 
-                            className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium text-white text-xs md:text-sm"
+                            className="flex-1 py-1.5 md:py-2.5 rounded-lg font-medium text-white text-xs md:text-sm cursor-pointer"
                             style={{ backgroundColor: '#B11217' }}
                           >
                             {cartLoading[course.id] ? 
@@ -852,7 +853,7 @@ export default function CoursesPage() {
             <HiBookOpen className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">No results found</h3>
             <p className="text-sm md:text-base text-gray-500 mb-4">Try adjusting your search terms</p>
-            <button onClick={clearSearch} className="px-4 md:px-6 py-1.5 md:py-2 bg-[#1E3A8A] text-white rounded-lg text-sm md:text-base">
+            <button onClick={clearSearch} className="px-4 md:px-6 py-1.5 md:py-2 bg-[#1E3A8A] text-white rounded-lg text-sm md:text-base cursor-pointer">
               Clear Search
             </button>
           </div>
@@ -876,7 +877,7 @@ export default function CoursesPage() {
                 const Icon = feature.icon;
                 return (
                   <div key={feature.id} className="bg-white/10 backdrop-blur-sm rounded-xl md:rounded-2xl overflow-hidden border border-white/20 hover:bg-white/15 transition-all">
-                    <button onClick={() => toggleFeature(feature.id)} className="w-full p-4 md:p-6 text-left">
+                    <button onClick={() => toggleFeature(feature.id)} className="w-full p-4 md:p-6 text-left cursor-pointer">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 md:gap-4">
                           <div className="p-1.5 md:p-2 bg-white/10 rounded-lg md:rounded-xl">
