@@ -918,58 +918,7 @@ const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => 
   setUploadingAssignment(true);
 
   try {
-    const uploadedFiles = [];
-    
-    for (const file of assignmentFiles) {
-      // ✅ File size validation
-      if (file.size > 5 * 1024 * 1024) {
-        setAssignmentFeedback({
-          show: true,
-          message: `${file.name} is too large (max 5MB)`,
-          type: 'error'
-        });
-        continue;
-      }
-
-      const cloudinaryFormData = new FormData();
-      cloudinaryFormData.append('file', file);
-      cloudinaryFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET); // ✅ ADDED
-      cloudinaryFormData.append('folder', `lms/courses/${courseId}/assignments/${assignmentId}`); // ✅ ADDED
-
-      console.log('📤 Uploading:', file.name, 'to Cloudinary');
-
-      const response = await fetch('/api/upload/cloudinary', {
-        method: 'POST',
-        body: cloudinaryFormData,
-      });
-
-      if (!response.ok) {
-        console.error('Upload failed for:', file.name);
-        continue;
-      }
-
-      const result = await response.json();
-      console.log('📦 Cloudinary response:', result);
-
-      if (result.success && result.data?.secure_url) {
-        uploadedFiles.push({
-          id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: result.data.secure_url,
-          publicId: result.data.public_id,
-          uploadedAt: new Date().toISOString()
-        });
-      }
-    }
-
-    if (uploadedFiles.length === 0) {
-      throw new Error('Failed to upload any files');
-    }
-
-    console.log('✅ Uploaded files:', uploadedFiles);
-
+    // ✅ DIRECT SUBMIT - No separate upload API
     const submitFormData = new FormData();
     submitFormData.append('enrollmentId', enrollmentId);
     submitFormData.append('studentEmail', user.email);
@@ -977,7 +926,20 @@ const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => 
     submitFormData.append('courseId', courseId);
     submitFormData.append('slideId', slideId);
     submitFormData.append('assignmentId', assignmentId);
-    submitFormData.append('files', JSON.stringify(uploadedFiles));
+    
+    // ✅ Append files directly
+    for (const file of assignmentFiles) {
+      // 64MB size validation
+      if (file.size > 64 * 1024 * 1024) {
+        setAssignmentFeedback({
+          show: true,
+          message: `${file.name} is too large (max 64MB)`,
+          type: 'error'
+        });
+        continue;
+      }
+      submitFormData.append('files', file);
+    }
 
     const response = await fetch('/api/students/assignment/submit', {
       method: 'POST',
@@ -985,25 +947,12 @@ const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => 
     });
 
     const result = await response.json();
-    console.log('📥 Submission API response:', result);
 
     if (!response.ok) {
       throw new Error(result.error || 'Failed to submit');
     }
 
     if (result.success) {
-      const submission: AssignmentSubmission = {
-        assignmentId,
-        courseId,
-        studentEmail: user.email,
-        studentName: user.name || 'Student',
-        files: uploadedFiles,
-        submittedAt: new Date().toISOString(),
-        status: 'submitted'
-      };
-
-      setAssignmentSubmissions(new Map(assignmentSubmissions.set(assignmentId, submission)));
-
       setAssignmentFeedback({
         show: true,
         message: '✓ Assignment submitted successfully!',
@@ -1021,7 +970,6 @@ const handleAssignmentSubmit = async (assignmentId: string, slideId: string) => 
         await autoCompleteSlide(slideId);
       }
       
-      // Refresh to show submission
       await loadCourseData();
     }
   } catch (error: any) {

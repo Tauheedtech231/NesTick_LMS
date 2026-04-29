@@ -18,6 +18,7 @@ import {
   HiClipboardCheck,
   HiTrendingUp,
   HiCheckCircle,
+  HiClipboardList,  // ✅ NEW: For assignments
 } from 'react-icons/hi';
 import { SiMaterialdesignicons } from 'react-icons/si';
 import { FolderIcon } from 'lucide-react';
@@ -68,6 +69,12 @@ export default function Sidebar() {
       icon: HiCheckCircle,
       path: '/lms/Student_Portal/certificates',
     },
+    // {
+    //   id: 'assignments',      // ✅ NEW TAB
+    //   label: 'Assignments & Grades',
+    //   icon: HiClipboardList,
+    //   path: '/lms/Student_Portal/assignments',
+    // },
     {
       id: 'profile',
       label: 'Profile',
@@ -82,7 +89,7 @@ export default function Sidebar() {
   };
 
   const handleLogoClick = () => {
-    router.push('/'); // Navigate to home page
+    router.push('/');
     setIsMobileMenuOpen(false);
   };
 
@@ -109,12 +116,11 @@ export default function Sidebar() {
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Brand with newlogo.jpg - Desktop */}
+        {/* Brand */}
         <div className="hidden lg:flex items-center justify-center gap-3 p-6 border-b border-white/10">
           <button 
             onClick={handleLogoClick}
             className="flex items-center gap-3 focus:outline-none hover:opacity-80 transition-opacity cursor-pointer"
-            aria-label="Go to home"
           >
             <div className="relative w-10 h-10 flex items-center justify-center">
               {!logoError ? (
@@ -128,24 +134,20 @@ export default function Sidebar() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                // Fallback if image fails to load
                 <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-lg">MH</span>
                 </div>
               )}
             </div>
-            <h1 className="text-lg font-semibold tracking-wide cursor-pointer">
-              Student Portal
-            </h1>
+            <h1 className="text-lg font-semibold tracking-wide">Student Portal</h1>
           </button>
         </div>
 
-        {/* Mobile logo - when menu is open */}
+        {/* Mobile logo */}
         <div className="lg:hidden flex items-center justify-center p-4 border-b border-white/10">
           <button 
             onClick={handleLogoClick}
             className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity cursor-pointer"
-            aria-label="Go to home"
           >
             <div className="relative w-8 h-8 flex items-center justify-center">
               {!logoError ? (
@@ -163,7 +165,7 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-            <span className="text-sm font-medium cursor-pointer">Mansol Hub</span>
+            <span className="text-sm font-medium">Mansol Hub</span>
           </button>
         </div>
 
@@ -190,7 +192,6 @@ export default function Sidebar() {
                   <item.icon className="w-5 h-5" />
                   <span className="text-sm font-medium">{item.label}</span>
                 </div>
-
                 <HiChevronRight
                   className={`w-4 h-4 transition-transform ${
                     isActive ? 'rotate-90' : ''
@@ -203,9 +204,7 @@ export default function Sidebar() {
 
         {/* Footer (desktop only) */}
         <div className="hidden lg:block p-4 border-t border-white/10 text-center">
-          <p className="text-xs text-gray-400">
-            © 2026 Mansol Hub School
-          </p>
+          <p className="text-xs text-gray-400">© 2026 Mansol Hub School</p>
         </div>
       </aside>
 
