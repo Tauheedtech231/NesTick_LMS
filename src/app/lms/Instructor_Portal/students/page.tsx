@@ -6,23 +6,21 @@ import { useRouter } from 'next/navigation';
 
 import {
   HiUserGroup,
- 
   HiCheckCircle,
-
   HiRefresh,
   HiSearch,
-
   HiChevronDown,
   HiChevronUp,
-
   HiMail,
   HiPhone,
-  
   HiBookOpen,
   HiStar,
   HiChartBar,
   HiXCircle,
-  
+  HiDownload,
+  HiCalendar,
+  HiFilter,
+  HiDocumentDownload
 } from 'react-icons/hi';
 import { Loader2 } from 'lucide-react';
 /* eslint-disable */
@@ -34,7 +32,9 @@ const BRAND_COLORS = {
   lightGrey: '#F4F6F8',
   softGrey: '#E5E7EB',
   darkGrey: '#1F2933',
-  teal: '#1FB6CB'
+  teal: '#1FB6CB',
+  emerald: '#10B981',
+  purple: '#8B5CF6'
 };
 
 interface StudentProgress {
@@ -63,6 +63,23 @@ interface SummaryStats {
   earliestEnrollment: string | null;
 }
 
+// Define the export data type
+interface ExportDataRow {
+  'Student Name': string;
+  'Email': string;
+  'Phone': string;
+  'Course': string;
+  'Enrollment Date': string;
+  'Progress (%)': number;
+  'Completed Lessons': string;
+  'Certificate Issued': 'Yes' | 'No';
+  'Certificate Number': string;
+  'Certificate Date': string;
+  'Last Active': string;
+}
+
+type ExportFormat = 'csv' | 'excel' | 'pdf';
+
 export default function InstructorStudentsProgressPage() {
   const router = useRouter();
   const [instructor, setInstructor] = useState<any>(null);
@@ -77,6 +94,14 @@ export default function InstructorStudentsProgressPage() {
   const [certificateFilter, setCertificateFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Export states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [progressRange, setProgressRange] = useState({ min: 0, max: 100 });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Get unique courses for filter
   const courses = [...new Set(students.map(s => s.course_title))];
@@ -144,7 +169,7 @@ export default function InstructorStudentsProgressPage() {
     }
   };
 
-  // Filter students based on search, course, and certificate
+  // Filter students based on search, course, certificate, date range, and progress
   useEffect(() => {
     if (students.length > 0) {
       let filtered = [...students];
@@ -172,14 +197,410 @@ export default function InstructorStudentsProgressPage() {
         );
       }
 
+      // Apply date range filter
+      if (dateFrom) {
+        filtered = filtered.filter(s => new Date(s.enrollment_date) >= new Date(dateFrom));
+      }
+      if (dateTo) {
+        filtered = filtered.filter(s => new Date(s.enrollment_date) <= new Date(dateTo));
+      }
+
+      // Apply progress range filter
+      filtered = filtered.filter(s => 
+        s.progress_percentage >= progressRange.min && s.progress_percentage <= progressRange.max
+      );
+
       setFilteredStudents(filtered);
     }
-  }, [searchTerm, selectedCourse, certificateFilter, students]);
+  }, [searchTerm, selectedCourse, certificateFilter, dateFrom, dateTo, progressRange, students]);
 
   const handleRefresh = () => {
     if (instructor?.id) {
       fetchStudentsProgress(instructor.id, true);
     }
+  };
+
+  // ==================== EXPORT FUNCTIONALITY ====================
+
+  // Helper function to prepare export data
+  const prepareExportData = (): ExportDataRow[] => {
+    return filteredStudents.map(s => ({
+      'Student Name': s.student_name,
+      'Email': s.student_email,
+      'Phone': s.student_phone || 'N/A',
+      'Course': s.course_title,
+      'Enrollment Date': formatDateForExport(s.enrollment_date),
+      'Progress (%)': s.progress_percentage,
+      'Completed Lessons': `${s.completed_slides}/${s.total_slides}`,
+      'Certificate Issued': s.certificate_issued,
+      'Certificate Number': s.certificate_number || 'N/A',
+      'Certificate Date': s.certificate_issue_date ? formatDateForExport(s.certificate_issue_date) : 'N/A',
+      'Last Active': s.last_active ? formatDateForExport(s.last_active) : 'Never'
+    }));
+  };
+
+  const exportToCSV = () => {
+    const exportData = prepareExportData();
+    
+    if (exportData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Get headers as a typed array
+    const headers = Object.keys(exportData[0]) as Array<keyof ExportDataRow>;
+    const csvRows: string[] = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    for (const row of exportData) {
+      const values = headers.map(header => {
+        const value = row[header]?.toString() || '';
+        return `"${value.replace(/"/g, '""')}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `students_progress_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToExcel = () => {
+    const exportData = prepareExportData();
+    
+    if (exportData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(exportData[0]) as Array<keyof ExportDataRow>;
+    const csvRows: string[] = [];
+    
+    csvRows.push(headers.join(','));
+    
+    for (const row of exportData) {
+      const values = headers.map(header => {
+        const value = row[header]?.toString() || '';
+        return `"${value.replace(/"/g, '""')}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `students_progress_${new Date().toISOString().split('T')[0]}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const exportData = prepareExportData();
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to generate PDF');
+      return;
+    }
+
+    // Calculate summary for export
+    const totalStudents = exportData.length;
+    const completedStudents = exportData.filter(s => s['Progress (%)'] === 100).length;
+    const certifiedStudents = exportData.filter(s => s['Certificate Issued'] === 'Yes').length;
+    const avgProgress = exportData.reduce((sum, s) => sum + s['Progress (%)'], 0) / (totalStudents || 1);
+
+    let htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Students Progress Report</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 40px;
+            padding: 20px;
+            background: white;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #1E3A8A;
+          }
+          .header h1 {
+            color: #1E3A8A;
+            font-size: 28px;
+            margin-bottom: 10px;
+          }
+          .header p {
+            color: #6B7280;
+            font-size: 14px;
+          }
+          .summary {
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+          }
+          .summary h3 {
+            color: #1E3A8A;
+            margin-bottom: 15px;
+            font-size: 18px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+          }
+          .summary-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          .summary-item strong {
+            color: #4B5563;
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+          }
+          .summary-item span {
+            color: #1F2937;
+            font-size: 18px;
+            font-weight: bold;
+          }
+          .filters-applied {
+            background: #EFF6FF;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 12px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 11px;
+          }
+          th, td {
+            border: 1px solid #D1D5DB;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+            color: white;
+            font-weight: 600;
+          }
+          tr:nth-child(even) {
+            background-color: #F9FAFB;
+          }
+          .progress-bar-container {
+            width: 100%;
+            background-color: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          .progress-bar {
+            height: 6px;
+            background-color: #10B981;
+            border-radius: 4px;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #9CA3AF;
+            padding-top: 20px;
+            border-top: 1px solid #E5E7EB;
+          }
+          .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+          }
+          .badge-green {
+            background-color: #D1FAE5;
+            color: #065F46;
+          }
+          .badge-gray {
+            background-color: #F3F4F6;
+            color: #4B5563;
+          }
+          @media print {
+            body { margin: 0; padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Students Progress Report</h1>
+          <p>Generated on: ${new Date().toLocaleString()}</p>
+          <p>Instructor: ${instructor?.name || 'N/A'}</p>
+        </div>
+    `;
+
+    // Add summary
+    htmlContent += `
+      <div class="summary">
+        <h3>📊 Summary Statistics</h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <strong>Total Students</strong>
+            <span>${totalStudents}</span>
+          </div>
+          <div class="summary-item">
+            <strong>Completed Courses</strong>
+            <span>${completedStudents}</span>
+          </div>
+          <div class="summary-item">
+            <strong>Certificates Issued</strong>
+            <span>${certifiedStudents}</span>
+          </div>
+          <div class="summary-item">
+            <strong>Average Progress</strong>
+            <span>${avgProgress.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add filters applied
+    const filters = [];
+    if (searchTerm) filters.push(`Search: "${searchTerm}"`);
+    if (selectedCourse !== 'all') filters.push(`Course: ${selectedCourse}`);
+    if (certificateFilter !== 'all') filters.push(`Certificate: ${certificateFilter === 'yes' ? 'Issued' : 'Not Issued'}`);
+    if (dateFrom) filters.push(`From: ${new Date(dateFrom).toLocaleDateString()}`);
+    if (dateTo) filters.push(`To: ${new Date(dateTo).toLocaleDateString()}`);
+    if (progressRange.min > 0 || progressRange.max < 100) filters.push(`Progress: ${progressRange.min}% - ${progressRange.max}%`);
+
+    if (filters.length > 0) {
+      htmlContent += `
+        <div class="filters-applied">
+          <strong>🔍 Filters Applied:</strong> ${filters.join(' | ')}
+        </div>
+      `;
+    }
+
+    // Add table
+    if (exportData.length > 0) {
+      const headers = Object.keys(exportData[0]) as Array<keyof ExportDataRow>;
+      htmlContent += `
+        <table>
+          <thead>
+            <tr>
+              ${headers.map(header => `<th>${header}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      exportData.forEach(row => {
+        htmlContent += `
+          <tr>
+            ${headers.map(header => {
+              let value = row[header]?.toString() || '-';
+              // Add progress bar for Progress column
+              if (header === 'Progress (%)') {
+                const progress = parseFloat(value);
+                value = `${value}% <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%"></div></div>`;
+              }
+              // Add badge for Certificate Issued column
+              if (header === 'Certificate Issued') {
+                const badgeClass = value === 'Yes' ? 'badge-green' : 'badge-gray';
+                value = `<span class="badge ${badgeClass}">${value === 'Yes' ? '✓ Issued' : '✗ Not Issued'}</span>`;
+              }
+              return `<td>${value}</td>`;
+            }).join('')}
+          </tr>
+        `;
+      });
+
+      htmlContent += `
+          </tbody>
+        </table>
+      `;
+    } else {
+      htmlContent += `<p style="text-align: center; padding: 40px;">No data available with current filters.</p>`;
+    }
+
+    htmlContent += `
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} LMS - Students Progress Report</p>
+          <p>This report is system generated and does not require signature</p>
+        </div>
+        <div class="no-print" style="position: fixed; bottom: 20px; right: 20px;">
+          <button onclick="window.print();" style="padding: 10px 20px; background: #1E3A8A; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Print / Save as PDF</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const formatDateForExport = (dateString: string | null): string => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const handleExport = () => {
+    const exportData = prepareExportData();
+    if (exportData.length === 0) {
+      alert('No data to export. Please adjust your filters.');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      if (exportFormat === 'csv') {
+        exportToCSV();
+      } else if (exportFormat === 'excel') {
+        exportToExcel();
+      } else if (exportFormat === 'pdf') {
+        exportToPDF();
+      }
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error generating export. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedCourse('all');
+    setCertificateFilter('all');
+    setDateFrom('');
+    setDateTo('');
+    setProgressRange({ min: 0, max: 100 });
   };
 
   const formatDate = (dateString: string | null) => {
@@ -209,7 +630,6 @@ export default function InstructorStudentsProgressPage() {
     return 'bg-red-600';
   };
 
-  // ✅ FIXED: Safe function to get initials
   const getInitials = (name: string) => {
     if (!name) return '?';
     return name.charAt(0).toUpperCase();
@@ -247,37 +667,47 @@ export default function InstructorStudentsProgressPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       {/* Header */}
-     <div className="mb-6">
-  <div 
-    className="rounded-xl p-6 text-white"
-    style={{ 
-      background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue} 0%, ${BRAND_COLORS.darkNavy} 100%)`
-    }}
-  >
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
+      <div className="mb-6">
         <div 
-          className="p-3 rounded-xl"
-          style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+          className="rounded-xl p-6 text-white"
+          style={{ 
+            background: `linear-gradient(135deg, ${BRAND_COLORS.darkRoyalBlue} 0%, ${BRAND_COLORS.darkNavy} 100%)`
+          }}
         >
-          <HiUserGroup className="w-8 h-8" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Students Progress</h1>
-          <p style={{ color: `${BRAND_COLORS.white}CC` }}>Track your students' learning journey</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div 
+                className="p-3 rounded-xl"
+                style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+              >
+                <HiUserGroup className="w-8 h-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold mb-2">Students Progress</h1>
+                <p style={{ color: `${BRAND_COLORS.white}CC` }}>Track your students' learning journey</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
+                style={{ backgroundColor: BRAND_COLORS.emerald }}
+              >
+                <HiDownload className="w-4 h-4" />
+                Export
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+                style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
+              >
+                <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <button
-        onClick={handleRefresh}
-        disabled={refreshing}
-        className="p-2 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
-        style={{ backgroundColor: `${BRAND_COLORS.white}20` }}
-      >
-        <HiRefresh className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-      </button>
-    </div>
-  </div>
-</div>
 
       {/* Summary Stats Cards */}
       {summary && (
@@ -318,7 +748,7 @@ export default function InstructorStudentsProgressPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
             <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -354,11 +784,62 @@ export default function InstructorStudentsProgressPage() {
             <option value="no">Without Certificate</option>
           </select>
 
-          {/* Results Count */}
-          <div className="flex items-center px-4 py-2 bg-gray-100 rounded-lg">
-            <span className="text-sm text-gray-600">
-              Showing {filteredStudents.length} of {students.length} students
-            </span>
+          {/* Date From */}
+          <div className="relative">
+            <HiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="From Date"
+            />
+          </div>
+
+          {/* Date To */}
+          <div className="relative">
+            <HiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="To Date"
+            />
+          </div>
+
+          {/* Progress Range */}
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Min %"
+              value={progressRange.min}
+              onChange={(e) => setProgressRange(prev => ({ ...prev, min: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) }))}
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              type="number"
+              placeholder="Max %"
+              value={progressRange.max}
+              onChange={(e) => setProgressRange(prev => ({ ...prev, max: Math.min(100, Math.max(0, parseInt(e.target.value) || 100)) }))}
+              className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Results Count & Reset */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="px-4 py-2 bg-gray-100 rounded-lg flex-1 text-center">
+              <span className="text-sm text-gray-600">
+                Showing {filteredStudents.length} of {students.length}
+              </span>
+            </div>
+            <button
+              onClick={resetFilters}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+              title="Reset Filters"
+            >
+              <HiFilter className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -369,6 +850,12 @@ export default function InstructorStudentsProgressPage() {
           <HiUserGroup className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Found</h3>
           <p className="text-gray-500">No students match your current filters.</p>
+          <button
+            onClick={resetFilters}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Clear Filters
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -521,12 +1008,132 @@ export default function InstructorStudentsProgressPage() {
                       )}
                     </div>
                   </div>
-
-                
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-emerald-600 to-teal-600">
+              <div>
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <HiDocumentDownload className="w-5 h-5" />
+                  Export Students Progress
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowExportModal(false)} 
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <HiXCircle className="w-5 h-5 text-white" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-auto max-h-[calc(85vh-100px)] bg-gray-50">
+              {/* Export Info */}
+              <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>📊 Exporting:</strong> {filteredStudents.length} student records
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Based on current filters (search, course, certificate, date range, progress)
+                </p>
+              </div>
+
+              {/* Export Format Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Export Format</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setExportFormat('csv')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      exportFormat === 'csv' 
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
+                    }`}
+                  >
+                    <HiDocumentDownload className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">CSV</span>
+                    <p className="text-xs text-gray-400 mt-1">Excel compatible</p>
+                  </button>
+                  <button
+                    onClick={() => setExportFormat('excel')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      exportFormat === 'excel' 
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
+                    }`}
+                  >
+                    <HiDocumentDownload className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">Excel</span>
+                    <p className="text-xs text-gray-400 mt-1">.xls format</p>
+                  </button>
+                  <button
+                    onClick={() => setExportFormat('pdf')}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      exportFormat === 'pdf' 
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
+                    }`}
+                  >
+                    <HiDocumentDownload className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">PDF</span>
+                    <p className="text-xs text-gray-400 mt-1">Print ready</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Current Filters Summary */}
+              <div className="mb-6 p-3 bg-gray-100 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-2">Current Filters Applied:</p>
+                <div className="space-y-1 text-xs text-gray-600">
+                  {searchTerm && <p>• Search: "{searchTerm}"</p>}
+                  {selectedCourse !== 'all' && <p>• Course: {selectedCourse}</p>}
+                  {certificateFilter !== 'all' && <p>• Certificate: {certificateFilter === 'yes' ? 'Issued' : 'Not Issued'}</p>}
+                  {dateFrom && <p>• From Date: {new Date(dateFrom).toLocaleDateString()}</p>}
+                  {dateTo && <p>• To Date: {new Date(dateTo).toLocaleDateString()}</p>}
+                  {(progressRange.min > 0 || progressRange.max < 100) && (
+                    <p>• Progress Range: {progressRange.min}% - {progressRange.max}%</p>
+                  )}
+                  {!searchTerm && selectedCourse === 'all' && certificateFilter === 'all' && !dateFrom && !dateTo && progressRange.min === 0 && progressRange.max === 100 && (
+                    <p className="text-gray-400">No filters applied - exporting all data</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Export Button */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <HiDownload className="w-4 h-4" />
+                      Export {filteredStudents.length} Records
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
