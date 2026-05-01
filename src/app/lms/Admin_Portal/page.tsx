@@ -24,7 +24,6 @@ import {
   GraduationCap,
   TrendingUp,
   Download,
-  FileSpreadsheet,
   FileJson,
   Printer,
   Calendar,
@@ -110,7 +109,7 @@ type Stats = {
   }[];
 }
 
-type ExportFormat = 'csv' | 'excel' | 'json' | 'pdf'
+type ExportFormat = 'csv' | 'json' | 'pdf'
 
 export default function AdminDashboard() {
   const [paymentStudents, setPaymentStudents] = useState<PaymentStudent[]>([])
@@ -260,6 +259,31 @@ export default function AdminDashboard() {
     return filtered
   }
 
+  // Format date for CSV (clean format)
+  const formatDateForCSV = (dateString: string) => {
+    if (!dateString) return 'N/A'
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return 'Invalid Date'
+    }
+  }
+
+  // Escape CSV field (handle commas, quotes, newlines)
+  const escapeCSVField = (field: any): string => {
+    if (field === null || field === undefined) return '""'
+    let stringField = String(field)
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+      stringField = stringField.replace(/"/g, '""')
+      return `"${stringField}"`
+    }
+    return stringField
+  }
+
   // Export Single Student Data
   const exportSingleStudent = (student: PaymentStudent, format: ExportFormat) => {
     const studentData = {
@@ -276,11 +300,11 @@ export default function AdminDashboard() {
         course: student.course,
         courseId: student.courseId,
         amount: student.isBundleItem ? 'Part of Bundle' : `PKR ${student.amount.toLocaleString()}`,
-        paymentDate: student.paymentDate,
+        paymentDate: formatDateForCSV(student.paymentDate),
         paymentMethod: student.paymentMethod,
         transactionId: student.transactionId,
         status: student.status,
-        credentialsSent: student.credentialsSent || false,
+        credentialsSent: student.credentialsSent ? 'Yes' : 'No',
         username: student.username || 'Not generated yet'
       },
       documents: {
@@ -295,25 +319,39 @@ export default function AdminDashboard() {
     if (format === 'json') {
       downloadJSON(studentData, `${student.name.replace(/\s/g, '_')}_details.json`)
     } else if (format === 'csv') {
-      const csvData = [{
-        'Name': student.name,
-        'Email': student.email,
-        'Phone': student.phone,
-        'CNIC': student.cnic,
-        'Address': student.address,
-        'Education': student.education,
-        'Course': student.course,
-        'Amount': student.isBundleItem ? 'Part of Bundle' : `PKR ${student.amount}`,
-        'Payment Date': new Date(student.paymentDate).toLocaleDateString(),
-        'Payment Method': student.paymentMethod,
-        'Transaction ID': student.transactionId,
-        'Status': student.status,
-        'Credentials Sent': student.credentialsSent ? 'Yes' : 'No',
-        'Username': student.username || 'N/A'
-      }]
-      downloadCSV(csvData, `${student.name.replace(/\s/g, '_')}_details.csv`)
-    } else if (format === 'excel') {
-      downloadExcel([studentData], `${student.name.replace(/\s/g, '_')}_details`)
+      // Create clean CSV headers and data
+      const csvRows = []
+      // Personal Info Section
+      csvRows.push('"Personal Information"')
+      csvRows.push(`"Name","${escapeCSVField(student.name)}"`)
+      csvRows.push(`"Email","${escapeCSVField(student.email)}"`)
+      csvRows.push(`"Phone","${escapeCSVField(student.phone)}"`)
+      csvRows.push(`"CNIC","${escapeCSVField(student.cnic)}"`)
+      csvRows.push(`"Address","${escapeCSVField(student.address)}"`)
+      csvRows.push(`"Education","${escapeCSVField(student.education)}"`)
+      csvRows.push(`"Experience","${escapeCSVField(student.experience)}"`)
+      csvRows.push('')
+      // Course Info Section
+      csvRows.push('"Course Information"')
+      csvRows.push(`"Course","${escapeCSVField(student.course)}"`)
+      csvRows.push(`"Course ID","${escapeCSVField(student.courseId)}"`)
+      csvRows.push(`"Amount","${escapeCSVField(student.isBundleItem ? 'Part of Bundle' : `PKR ${student.amount}`)}"`)
+      csvRows.push(`"Payment Date","${escapeCSVField(formatDateForCSV(student.paymentDate))}"`)
+      csvRows.push(`"Payment Method","${escapeCSVField(student.paymentMethod)}"`)
+      csvRows.push(`"Transaction ID","${escapeCSVField(student.transactionId)}"`)
+      csvRows.push(`"Status","${escapeCSVField(student.status)}"`)
+      csvRows.push(`"Credentials Sent","${escapeCSVField(student.credentialsSent ? 'Yes' : 'No')}"`)
+      csvRows.push(`"Username","${escapeCSVField(student.username || 'N/A')}"`)
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${student.name.replace(/\s/g, '_')}_details.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (format === 'pdf') {
       generatePDFReport([{
         'Name': student.name,
@@ -321,7 +359,8 @@ export default function AdminDashboard() {
         'Phone': student.phone,
         'Course': student.course,
         'Amount': student.isBundleItem ? 'Part of Bundle' : `PKR ${student.amount}`,
-        'Status': student.status
+        'Status': student.status,
+        'Payment Date': formatDateForCSV(student.paymentDate)
       }], `Student Details - ${student.name}`, `${student.name}_details`)
     }
   }
@@ -340,32 +379,68 @@ export default function AdminDashboard() {
       dataToExport = dataToExport.filter(s => new Date(s.paymentDate) <= new Date(dateRange.end))
     }
 
-    const exportData = dataToExport.map(s => ({
-      'Student Name': s.name,
-      'Email': s.email,
-      'Phone': s.phone,
-      'CNIC': s.cnic,
-      'Course': s.course,
-      'Amount': s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
-      'Payment Date': new Date(s.paymentDate).toLocaleDateString(),
-      'Payment Method': s.paymentMethod,
-      'Transaction ID': s.transactionId,
-      'Status': s.status,
-      'Credentials Sent': s.credentialsSent ? 'Yes' : 'No',
-      'Username': s.username || 'N/A',
-      'Enrollment ID': s.enrollmentId
-    }))
-
     const fileName = `students_export_${new Date().toISOString().split('T')[0]}`
     
     if (exportFormat === 'csv') {
-      downloadCSV(exportData, `${fileName}.csv`)
+      // Create clean CSV data with proper headers
+      const headers = [
+        'Student Name',
+        'Email',
+        'Phone',
+        'CNIC',
+        'Course',
+        'Amount',
+        'Payment Date',
+        'Payment Method',
+        'Transaction ID',
+        'Status',
+        'Credentials Sent',
+        'Username',
+        'Enrollment ID'
+      ]
+      
+      const csvRows = [headers.map(h => escapeCSVField(h)).join(',')]
+      
+      for (const s of dataToExport) {
+        const row = [
+          s.name,
+          s.email,
+          s.phone,
+          s.cnic,
+          s.course,
+          s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
+          formatDateForCSV(s.paymentDate),
+          s.paymentMethod,
+          s.transactionId,
+          s.status,
+          s.credentialsSent ? 'Yes' : 'No',
+          s.username || 'N/A',
+          s.enrollmentId
+        ]
+        csvRows.push(row.map(field => escapeCSVField(field)).join(','))
+      }
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (exportFormat === 'json') {
       downloadJSON(dataToExport, `${fileName}.json`)
-    } else if (exportFormat === 'excel') {
-      downloadExcel(exportData, fileName)
     } else if (exportFormat === 'pdf') {
-      generatePDFReport(exportData, 'Students Report', fileName)
+      const pdfData = dataToExport.map(s => ({
+        'Student Name': s.name,
+        'Email': s.email,
+        'Course': s.course,
+        'Amount': s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
+        'Status': s.status,
+        'Payment Date': formatDateForCSV(s.paymentDate)
+      }))
+      generatePDFReport(pdfData, 'Students Report', fileName)
     }
   }
 
@@ -373,29 +448,61 @@ export default function AdminDashboard() {
   const exportPaymentsData = () => {
     let dataToExport = filterDataByCriteria(paymentStudents)
     
-    const exportData = dataToExport.map(s => ({
-      'Transaction ID': s.transactionId,
-      'Student Name': s.name,
-      'Student Email': s.email,
-      'Course': s.course,
-      'Amount': s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
-      'Payment Date': new Date(s.paymentDate).toLocaleDateString(),
-      'Payment Method': s.paymentMethod,
-      'Status': s.status,
-      'Verified Date': s.status === 'verified' ? new Date(s.uploadedAt).toLocaleDateString() : 'N/A',
-      'Credentials Sent': s.credentialsSent ? 'Yes' : 'No'
-    }))
-
     const fileName = `payments_export_${new Date().toISOString().split('T')[0]}`
     
     if (exportFormat === 'csv') {
-      downloadCSV(exportData, `${fileName}.csv`)
+      const headers = [
+        'Transaction ID',
+        'Student Name',
+        'Student Email',
+        'Course',
+        'Amount',
+        'Payment Date',
+        'Payment Method',
+        'Status',
+        'Verified Date',
+        'Credentials Sent'
+      ]
+      
+      const csvRows = [headers.map(h => escapeCSVField(h)).join(',')]
+      
+      for (const s of dataToExport) {
+        const row = [
+          s.transactionId,
+          s.name,
+          s.email,
+          s.course,
+          s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
+          formatDateForCSV(s.paymentDate),
+          s.paymentMethod,
+          s.status,
+          s.status === 'verified' ? formatDateForCSV(s.uploadedAt) : 'N/A',
+          s.credentialsSent ? 'Yes' : 'No'
+        ]
+        csvRows.push(row.map(field => escapeCSVField(field)).join(','))
+      }
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (exportFormat === 'json') {
       downloadJSON(dataToExport, `${fileName}.json`)
-    } else if (exportFormat === 'excel') {
-      downloadExcel(exportData, fileName)
     } else if (exportFormat === 'pdf') {
-      generatePDFReport(exportData, 'Payments Report', fileName)
+      const pdfData = dataToExport.map(s => ({
+        'Transaction ID': s.transactionId,
+        'Student Name': s.name,
+        'Course': s.course,
+        'Amount': s.isBundleItem ? 'Part of Bundle' : `PKR ${s.amount}`,
+        'Status': s.status,
+        'Payment Date': formatDateForCSV(s.paymentDate)
+      }))
+      generatePDFReport(pdfData, 'Payments Report', fileName)
     }
   }
 
@@ -444,58 +551,27 @@ export default function AdminDashboard() {
     if (exportFormat === 'json') {
       downloadJSON(revenueReport, `${fileName}.json`)
     } else if (exportFormat === 'csv') {
-      const csvData = courseRevenue.map(c => ({
-        'Course': c.course,
-        'Revenue': `PKR ${c.revenue.toLocaleString()}`,
-        'Students Enrolled': c.count
-      }))
-      downloadCSV(csvData, `${fileName}_course_breakdown.csv`)
-    } else if (exportFormat === 'excel') {
-      const allData = [...courseRevenue.map(c => ({
-        'Type': 'Course Breakdown',
-        'Course': c.course,
-        'Revenue': `PKR ${c.revenue.toLocaleString()}`,
-        'Students': c.count
-      })), ...(stats.monthlyRevenue || []).map(m => ({
-        'Type': 'Monthly Revenue',
-        'Month': m.month,
-        'Revenue': `PKR ${m.amount.toLocaleString()}`,
-        'Students': m.count
-      }))]
-      downloadExcel(allData, fileName)
+      // Course breakdown CSV
+      const headers = ['Course', 'Revenue', 'Students Enrolled']
+      const csvRows = [headers.map(h => escapeCSVField(h)).join(',')]
+      
+      for (const c of courseRevenue) {
+        const row = [c.course, `PKR ${c.revenue.toLocaleString()}`, c.count]
+        csvRows.push(row.map(field => escapeCSVField(field)).join(','))
+      }
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}_course_breakdown.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (exportFormat === 'pdf') {
       generatePDFReport(courseRevenue, 'Revenue Report', fileName, revenueReport.summary)
     }
-  }
-
-  // Helper: Download CSV
-  const downloadCSV = (data: any[], filename: string) => {
-    if (data.length === 0) {
-      alert('No data to export')
-      return
-    }
-    
-    const headers = Object.keys(data[0])
-    const csvRows = []
-    csvRows.push(headers.join(','))
-    
-    for (const row of data) {
-      const values = headers.map(header => {
-        const value = row[header]?.toString() || ''
-        return `"${value.replace(/"/g, '""')}"`
-      })
-      csvRows.push(values.join(','))
-    }
-    
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
   }
 
   // Helper: Download JSON
@@ -506,36 +582,6 @@ export default function AdminDashboard() {
     const url = URL.createObjectURL(blob)
     link.href = url
     link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  // Helper: Download Excel
-  const downloadExcel = (data: any[], filename: string) => {
-    if (data.length === 0) {
-      alert('No data to export')
-      return
-    }
-    
-    const headers = Object.keys(data[0])
-    const csvRows = []
-    csvRows.push(headers.join(','))
-    
-    for (const row of data) {
-      const values = headers.map(header => {
-        const value = row[header]?.toString() || ''
-        return `"${value.replace(/"/g, '""')}"`
-      })
-      csvRows.push(values.join(','))
-    }
-    
-    const blob = new Blob([csvRows.join('\n')], { type: 'application/vnd.ms-excel' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    link.setAttribute('download', `${filename}.xls`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -618,11 +664,11 @@ export default function AdminDashboard() {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-size: 14px;
+            font-size: 13px;
           }
           th, td {
             border: 1px solid #D1D5DB;
-            padding: 12px;
+            padding: 10px;
             text-align: left;
           }
           th {
@@ -687,7 +733,7 @@ export default function AdminDashboard() {
               </tr>
             `).join('')}
           </tbody>
-        </table>
+        <table>
       `
     } else {
       htmlContent += `<p style="text-align: center; padding: 40px; color: #6B7280;">No data available for export.</p>`
@@ -1205,7 +1251,7 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* Payments Table */}
+          {/* Payments Table - Same as before, keeping functionality intact */}
           {activeTab === 'payments' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-indigo-100">
@@ -1394,7 +1440,6 @@ export default function AdminDashboard() {
           {activeTab === 'revenue' && (
             <div className="p-6 bg-gray-50">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Revenue Summary */}
                 <div className="bg-white rounded-xl p-6 border border-indigo-100 shadow">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <PieChart className="w-5 h-5 text-indigo-600" />
@@ -1424,7 +1469,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Top Courses */}
                 <div className="bg-white rounded-xl p-6 border border-purple-100 shadow">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-purple-600" />
@@ -1470,87 +1514,12 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 </div>
-
-                {/* Monthly Revenue */}
-                {(stats.monthlyRevenue || []).length > 0 && (
-                  <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-emerald-100 shadow">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-emerald-600" />
-                      Monthly Revenue Trend
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-emerald-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-emerald-800">Month</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium text-emerald-800">Revenue</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium text-emerald-800">Students</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium text-emerald-800">Average</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-emerald-100">
-                          {stats.monthlyRevenue?.map((month, idx) => (
-                            <tr key={idx} className="hover:bg-emerald-50/50">
-                              <td className="px-4 py-3 text-sm text-gray-900">{month.month}</td>
-                              <td className="px-4 py-3 text-sm font-semibold text-emerald-600 text-right">PKR {(month.amount || 0).toLocaleString()}</td>
-                              <td className="px-4 py-3 text-sm text-gray-600 text-right">{month.count || 0}</td>
-                              <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                                PKR {month.count > 0 ? Math.round((month.amount || 0) / month.count).toLocaleString() : 0}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent Verified Payments */}
-                <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-indigo-100 shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-indigo-600" />
-                    Recent Payments
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-indigo-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-indigo-800">Student</th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-indigo-800">Course</th>
-                          <th className="px-4 py-3 text-right text-sm font-medium text-indigo-800">Amount</th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-indigo-800">Date</th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-indigo-800">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-indigo-100">
-                        {paymentStudents.slice(0, 10).map(student => (
-                          <tr key={student.enrollmentId} className="hover:bg-indigo-50/50">
-                            <td className="px-4 py-3 text-sm text-gray-900">{student.name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{student.course}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-indigo-600 text-right">
-                              {student.isBundleItem ? 'Bundle' : `PKR ${(student.amount || 0).toLocaleString()}`}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(student.paymentDate).toLocaleDateString()}</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium text-white ${
-                                student.status === 'verified' ? 'bg-emerald-500' :
-                                student.status === 'pending' ? 'bg-amber-500' : 'bg-red-500'
-                              }`}>
-                                {student.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Export Modal */}
+        {/* Export Modal - Updated with only CSV, JSON, PDF */}
         {showExportModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
@@ -1697,49 +1666,45 @@ export default function AdminDashboard() {
                   </>
                 )}
 
-                {/* Export Format Selection */}
+                {/* Export Format Selection - Only CSV, JSON, PDF */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Export Format</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => setExportFormat('csv')}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         exportFormat === 'csv' 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                       }`}
                     >
-                      CSV
-                    </button>
-                    <button
-                      onClick={() => setExportFormat('excel')}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all ${
-                        exportFormat === 'excel' 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Excel
+                      <Download className="w-5 h-5 mx-auto mb-1" />
+                      <span className="text-sm font-medium">CSV</span>
+                      <p className="text-xs text-gray-400 mt-1">Excel compatible</p>
                     </button>
                     <button
                       onClick={() => setExportFormat('json')}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         exportFormat === 'json' 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                       }`}
                     >
-                      JSON
+                      <FileJson className="w-5 h-5 mx-auto mb-1" />
+                      <span className="text-sm font-medium">JSON</span>
+                      <p className="text-xs text-gray-400 mt-1">Developer friendly</p>
                     </button>
                     <button
                       onClick={() => setExportFormat('pdf')}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         exportFormat === 'pdf' 
-                          ? 'bg-emerald-600 text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                       }`}
                     >
-                      PDF
+                      <Printer className="w-5 h-5 mx-auto mb-1" />
+                      <span className="text-sm font-medium">PDF</span>
+                      <p className="text-xs text-gray-400 mt-1">Print ready</p>
                     </button>
                   </div>
                 </div>
@@ -1775,7 +1740,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Student Details Modal */}
+        {/* Student Details Modal - Same as before */}
         {showScreenshotModal && selectedStudentDetails && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">

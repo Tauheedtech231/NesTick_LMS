@@ -17,17 +17,11 @@ import {
   RefreshCw,
   AlertCircle,
   Download,
-  FileText,
-  FileSpreadsheet,
   FileJson,
   Printer,
   Filter,
   X,
   Loader2,
-  Mail,
-  Phone,
-  GraduationCap,
-  Briefcase
 } from 'lucide-react'
 
 // Brand Colors
@@ -45,7 +39,7 @@ const BRAND_COLORS = {
   purple: '#8B5CF6'
 }
 
-type ExportFormat = 'csv' | 'excel' | 'json' | 'pdf'
+type ExportFormat = 'csv' | 'json' | 'pdf'
 
 interface Instructor {
   id: string
@@ -130,43 +124,92 @@ export default function InstructorsPage() {
   const activeInstructors = instructors.filter(i => i.status === 'active').length
   const inactiveInstructors = instructors.filter(i => i.status === 'inactive').length
   const totalStudents = instructors.reduce((sum, i) => sum + (i.total_students || 0), 0)
-  const avgRating = instructors.reduce((sum, i) => {
-    const rating = typeof i.rating === 'string' ? parseFloat(i.rating) : (i.rating || 0)
-    return sum + rating
-  }, 0) / (instructors.length || 1)
 
   // ==================== EXPORT FUNCTIONALITY ====================
 
+  // Escape CSV field
+  const escapeCSVField = (field: any): string => {
+    if (field === null || field === undefined) return ''
+    let stringField = String(field)
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+      stringField = stringField.replace(/"/g, '""')
+      return `"${stringField}"`
+    }
+    return stringField
+  }
+
+  // Format date for export
+  const formatDateForExport = (dateString: string) => {
+    if (!dateString) return 'N/A'
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return 'Invalid Date'
+    }
+  }
+
   // Export Single Instructor
   const exportSingleInstructor = (instructor: Instructor, format: ExportFormat) => {
-    const instructorData = {
-      personalInfo: {
-        name: instructor.name,
-        email: instructor.email,
-        phone: instructor.phone || 'N/A',
-        status: instructor.status,
-        joinedDate: new Date(instructor.created_at).toLocaleDateString()
-      },
-      professionalInfo: {
-        specialization: instructor.specialization || 'N/A',
-        qualification: instructor.qualification || 'N/A',
-        experience: instructor.experience || 'N/A',
-        rating: typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0),
-        totalStudents: instructor.total_students || 0
-      },
-      courseInfo: {
-        assignedCourse: instructor.course_title || 'Not assigned',
-        courseId: instructor.course_id || 'N/A'
-      },
-      exportDate: new Date().toISOString()
-    }
-
     const fileName = `${instructor.name.replace(/\s/g, '_')}_details`
 
     if (format === 'json') {
+      const instructorData = {
+        personalInfo: {
+          name: instructor.name,
+          email: instructor.email,
+          phone: instructor.phone || 'N/A',
+          status: instructor.status,
+          joinedDate: formatDateForExport(instructor.created_at)
+        },
+        professionalInfo: {
+          specialization: instructor.specialization || 'N/A',
+          qualification: instructor.qualification || 'N/A',
+          experience: instructor.experience || 'N/A',
+          rating: typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0),
+          totalStudents: instructor.total_students || 0
+        },
+        courseInfo: {
+          assignedCourse: instructor.course_title || 'Not assigned',
+          courseId: instructor.course_id || 'N/A'
+        },
+        exportDate: new Date().toISOString()
+      }
       downloadJSON(instructorData, `${fileName}.json`)
     } else if (format === 'csv') {
-      const csvData = [{
+      const csvRows = []
+      csvRows.push('"Personal Information"')
+      csvRows.push(`"Name","${escapeCSVField(instructor.name)}"`)
+      csvRows.push(`"Email","${escapeCSVField(instructor.email)}"`)
+      csvRows.push(`"Phone","${escapeCSVField(instructor.phone || 'N/A')}"`)
+      csvRows.push(`"Status","${escapeCSVField(instructor.status)}"`)
+      csvRows.push(`"Joined Date","${escapeCSVField(formatDateForExport(instructor.created_at))}"`)
+      csvRows.push('')
+      csvRows.push('"Professional Information"')
+      csvRows.push(`"Specialization","${escapeCSVField(instructor.specialization || 'N/A')}"`)
+      csvRows.push(`"Qualification","${escapeCSVField(instructor.qualification || 'N/A')}"`)
+      csvRows.push(`"Experience","${escapeCSVField(instructor.experience || 'N/A')}"`)
+      csvRows.push(`"Rating","${escapeCSVField(typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0))}"`)
+      csvRows.push(`"Total Students","${escapeCSVField(instructor.total_students || 0)}"`)
+      csvRows.push('')
+      csvRows.push('"Course Information"')
+      csvRows.push(`"Assigned Course","${escapeCSVField(instructor.course_title || 'Not assigned')}"`)
+      csvRows.push(`"Course ID","${escapeCSVField(instructor.course_id || 'N/A')}"`)
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } else if (format === 'pdf') {
+      const pdfData = [{
         'Name': instructor.name,
         'Email': instructor.email,
         'Phone': instructor.phone || 'N/A',
@@ -177,21 +220,9 @@ export default function InstructorsPage() {
         'Rating': typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0),
         'Total Students': instructor.total_students || 0,
         'Assigned Course': instructor.course_title || 'Not assigned',
-        'Joined Date': new Date(instructor.created_at).toLocaleDateString()
+        'Joined Date': formatDateForExport(instructor.created_at)
       }]
-      downloadCSV(csvData, `${fileName}.csv`)
-    } else if (format === 'excel') {
-      downloadExcel([csvRowToObject(instructor)], fileName)
-    } else if (format === 'pdf') {
-      generatePDFReport([{
-        'Name': instructor.name,
-        'Email': instructor.email,
-        'Phone': instructor.phone || 'N/A',
-        'Status': instructor.status,
-        'Course': instructor.course_title || 'Not assigned',
-        'Students': instructor.total_students || 0,
-        'Rating': typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0)
-      }], `Instructor Details - ${instructor.name}`, fileName)
+      generatePDFReport(pdfData, `Instructor Details - ${instructor.name}`, fileName)
     }
   }
 
@@ -199,7 +230,6 @@ export default function InstructorsPage() {
   const exportAllInstructors = () => {
     let dataToExport = [...instructors]
     
-    // Apply current filters
     if (filterStatus !== 'all') {
       dataToExport = dataToExport.filter(i => i.status === filterStatus)
     }
@@ -211,31 +241,51 @@ export default function InstructorsPage() {
       )
     }
 
-    const exportData = dataToExport.map(i => ({
-      'Name': i.name,
-      'Email': i.email,
-      'Phone': i.phone || 'N/A',
-      'Status': i.status,
-      'Specialization': i.specialization || 'N/A',
-      'Qualification': i.qualification || 'N/A',
-      'Experience': i.experience || 'N/A',
-      'Rating': typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
-      'Total Students': i.total_students || 0,
-      'Assigned Course': i.course_title || 'Not assigned',
-      'Course ID': i.course_id || 'N/A',
-      'Joined Date': new Date(i.created_at).toLocaleDateString()
-    }))
-
     const fileName = `instructors_export_${new Date().toISOString().split('T')[0]}`
     
     if (exportFormat === 'csv') {
-      downloadCSV(exportData, `${fileName}.csv`)
+      const headers = [
+        'Name', 'Email', 'Phone', 'Status', 'Specialization',
+        'Qualification', 'Experience', 'Rating', 'Total Students',
+        'Assigned Course', 'Joined Date'
+      ]
+      
+      const csvRows = [headers.map(h => escapeCSVField(h)).join(',')]
+      
+      for (const i of dataToExport) {
+        const row = [
+          i.name, i.email, i.phone || 'N/A', i.status,
+          i.specialization || 'N/A', i.qualification || 'N/A',
+          i.experience || 'N/A',
+          typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
+          i.total_students || 0, i.course_title || 'Not assigned',
+          formatDateForExport(i.created_at)
+        ]
+        csvRows.push(row.map(field => escapeCSVField(field)).join(','))
+      }
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (exportFormat === 'json') {
       downloadJSON(dataToExport, `${fileName}.json`)
-    } else if (exportFormat === 'excel') {
-      downloadExcel(exportData, fileName)
     } else if (exportFormat === 'pdf') {
-      generatePDFReport(exportData, 'Instructors Report', fileName, {
+      const pdfData = dataToExport.map(i => ({
+        'Name': i.name, 'Email': i.email, 'Phone': i.phone || 'N/A',
+        'Status': i.status, 'Specialization': i.specialization || 'N/A',
+        'Qualification': i.qualification || 'N/A', 'Experience': i.experience || 'N/A',
+        'Rating': typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
+        'Total Students': i.total_students || 0,
+        'Assigned Course': i.course_title || 'Not assigned',
+        'Joined Date': formatDateForExport(i.created_at)
+      }))
+      generatePDFReport(pdfData, 'Instructors Report', fileName, {
         'Total Instructors': dataToExport.length,
         'Active Instructors': dataToExport.filter(i => i.status === 'active').length,
         'Inactive Instructors': dataToExport.filter(i => i.status === 'inactive').length,
@@ -248,32 +298,53 @@ export default function InstructorsPage() {
     }
   }
 
-  // Export Filtered/Current View
+  // Export Filtered Instructors
   const exportFilteredInstructors = () => {
-    const exportData = filteredInstructors.map(i => ({
-      'Name': i.name,
-      'Email': i.email,
-      'Phone': i.phone || 'N/A',
-      'Status': i.status,
-      'Specialization': i.specialization || 'N/A',
-      'Qualification': i.qualification || 'N/A',
-      'Experience': i.experience || 'N/A',
-      'Rating': typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
-      'Total Students': i.total_students || 0,
-      'Assigned Course': i.course_title || 'Not assigned',
-      'Joined Date': new Date(i.created_at).toLocaleDateString()
-    }))
-
     const fileName = `instructors_filtered_${new Date().toISOString().split('T')[0]}`
     
     if (exportFormat === 'csv') {
-      downloadCSV(exportData, `${fileName}.csv`)
+      const headers = [
+        'Name', 'Email', 'Phone', 'Status', 'Specialization',
+        'Qualification', 'Experience', 'Rating', 'Total Students',
+        'Assigned Course', 'Joined Date'
+      ]
+      
+      const csvRows = [headers.map(h => escapeCSVField(h)).join(',')]
+      
+      for (const i of filteredInstructors) {
+        const row = [
+          i.name, i.email, i.phone || 'N/A', i.status,
+          i.specialization || 'N/A', i.qualification || 'N/A',
+          i.experience || 'N/A',
+          typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
+          i.total_students || 0, i.course_title || 'Not assigned',
+          formatDateForExport(i.created_at)
+        ]
+        csvRows.push(row.map(field => escapeCSVField(field)).join(','))
+      }
+      
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.href = url
+      link.setAttribute('download', `${fileName}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } else if (exportFormat === 'json') {
       downloadJSON(filteredInstructors, `${fileName}.json`)
-    } else if (exportFormat === 'excel') {
-      downloadExcel(exportData, fileName)
     } else if (exportFormat === 'pdf') {
-      generatePDFReport(exportData, 'Filtered Instructors Report', fileName, {
+      const pdfData = filteredInstructors.map(i => ({
+        'Name': i.name, 'Email': i.email, 'Phone': i.phone || 'N/A',
+        'Status': i.status, 'Specialization': i.specialization || 'N/A',
+        'Qualification': i.qualification || 'N/A', 'Experience': i.experience || 'N/A',
+        'Rating': typeof i.rating === 'string' ? parseFloat(i.rating).toFixed(1) : (i.rating || 0),
+        'Total Students': i.total_students || 0,
+        'Assigned Course': i.course_title || 'Not assigned',
+        'Joined Date': formatDateForExport(i.created_at)
+      }))
+      generatePDFReport(pdfData, 'Filtered Instructors Report', fileName, {
         'Showing': `${filteredInstructors.length} of ${instructors.length} instructors`,
         'Active': filteredInstructors.filter(i => i.status === 'active').length,
         'Inactive': filteredInstructors.filter(i => i.status === 'inactive').length,
@@ -283,50 +354,7 @@ export default function InstructorsPage() {
     }
   }
 
-  // Helper Functions
-  const csvRowToObject = (instructor: Instructor) => ({
-    'Name': instructor.name,
-    'Email': instructor.email,
-    'Phone': instructor.phone || 'N/A',
-    'Status': instructor.status,
-    'Specialization': instructor.specialization || 'N/A',
-    'Qualification': instructor.qualification || 'N/A',
-    'Experience': instructor.experience || 'N/A',
-    'Rating': typeof instructor.rating === 'string' ? parseFloat(instructor.rating).toFixed(1) : (instructor.rating || 0),
-    'Total Students': instructor.total_students || 0,
-    'Assigned Course': instructor.course_title || 'Not assigned',
-    'Joined Date': new Date(instructor.created_at).toLocaleDateString()
-  })
-
-  const downloadCSV = (data: any[], filename: string) => {
-    if (data.length === 0) {
-      alert('No data to export')
-      return
-    }
-    
-    const headers = Object.keys(data[0])
-    const csvRows = []
-    csvRows.push(headers.join(','))
-    
-    for (const row of data) {
-      const values = headers.map(header => {
-        const value = row[header]?.toString() || ''
-        return `"${value.replace(/"/g, '""')}"`
-      })
-      csvRows.push(values.join(','))
-    }
-    
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
+  // Helper: Download JSON
   const downloadJSON = (data: any, filename: string) => {
     const jsonStr = JSON.stringify(data, null, 2)
     const blob = new Blob([jsonStr], { type: 'application/json' })
@@ -340,35 +368,7 @@ export default function InstructorsPage() {
     URL.revokeObjectURL(url)
   }
 
-  const downloadExcel = (data: any[], filename: string) => {
-    if (data.length === 0) {
-      alert('No data to export')
-      return
-    }
-    
-    const headers = Object.keys(data[0])
-    const csvRows = []
-    csvRows.push(headers.join(','))
-    
-    for (const row of data) {
-      const values = headers.map(header => {
-        const value = row[header]?.toString() || ''
-        return `"${value.replace(/"/g, '""')}"`
-      })
-      csvRows.push(values.join(','))
-    }
-    
-    const blob = new Blob([csvRows.join('\n')], { type: 'application/vnd.ms-excel' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    link.setAttribute('download', `${filename}.xls`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
+  // Helper: Generate PDF Report
   const generatePDFReport = (data: any[], title: string, filename: string, summary?: any) => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
@@ -378,157 +378,60 @@ export default function InstructorsPage() {
 
     const headers = data.length > 0 ? Object.keys(data[0]) : []
     
-    let htmlContent = `
-      <!DOCTYPE html>
+    let htmlContent = `<!DOCTYPE html>
       <html>
       <head>
         <title>${title}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 40px;
-            padding: 20px;
-            background: white;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #1E3A8A;
-          }
-          .header h1 {
-            color: #1E3A8A;
-            font-size: 28px;
-            margin-bottom: 10px;
-          }
-          .header p {
-            color: #6B7280;
-            font-size: 14px;
-          }
-          .summary {
-            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border-left: 4px solid #10B981;
-          }
-          .summary h3 {
-            color: #1E3A8A;
-            margin-bottom: 15px;
-            font-size: 18px;
-          }
-          .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-          }
-          .summary-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-          .summary-item strong {
-            color: #4B5563;
-            display: block;
-            font-size: 12px;
-            margin-bottom: 5px;
-          }
-          .summary-item span {
-            color: #1F2937;
-            font-size: 16px;
-            font-weight: bold;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 12px;
-          }
-          th, td {
-            border: 1px solid #D1D5DB;
-            padding: 10px;
-            text-align: left;
-          }
-          th {
-            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
-            color: white;
-            font-weight: 600;
-          }
-          tr:nth-child(even) {
-            background-color: #F9FAFB;
-          }
-          .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 12px;
-            color: #9CA3AF;
-            padding-top: 20px;
-            border-top: 1px solid #E5E7EB;
-          }
-          @media print {
-            body { margin: 0; padding: 20px; }
-            .no-print { display: none; }
-            th { background: #1E3A8A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          }
+          body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; padding: 20px; background: white; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #1E3A8A; }
+          .header h1 { color: #1E3A8A; font-size: 28px; margin-bottom: 10px; }
+          .header p { color: #6B7280; font-size: 14px; }
+          .summary { background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%); padding: 20px; border-radius: 12px; margin-bottom: 30px; border-left: 4px solid #10B981; }
+          .summary h3 { color: #1E3A8A; margin-bottom: 15px; font-size: 18px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+          .summary-item { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+          .summary-item strong { color: #4B5563; display: block; font-size: 12px; margin-bottom: 5px; }
+          .summary-item span { color: #1F2937; font-size: 16px; font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+          th, td { border: 1px solid #D1D5DB; padding: 10px; text-align: left; }
+          th { background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%); color: white; font-weight: 600; }
+          tr:nth-child(even) { background-color: #F9FAFB; }
+          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #9CA3AF; padding-top: 20px; border-top: 1px solid #E5E7EB; }
+          @media print { body { margin: 0; padding: 20px; } .no-print { display: none; } th { background: #1E3A8A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head>
       <body>
         <div class="header">
           <h1>${title}</h1>
           <p>Generated on: ${new Date().toLocaleString()}</p>
-        </div>
-    `
+        </div>`
 
     if (summary) {
-      htmlContent += `
-        <div class="summary">
-          <h3>📊 Summary Report</h3>
-          <div class="summary-grid">
-            ${Object.entries(summary).map(([key, value]) => `
-              <div class="summary-item">
-                <strong>${key.replace(/([A-Z])/g, ' $1').trim()}</strong>
-                <span>${value}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `
+      htmlContent += `<div class="summary"><h3>📊 Summary Report</h3><div class="summary-grid">`
+      Object.entries(summary).forEach(([key, value]) => {
+        htmlContent += `<div class="summary-item"><strong>${key.replace(/([A-Z])/g, ' $1').trim()}</strong><span>${value}</span></div>`
+      })
+      htmlContent += `</div></div>`
     }
 
     if (data.length > 0) {
-      htmlContent += `
-        </table>
-          <thead>
-            <tr>
-              ${headers.map(header => `<th>${header.replace(/([A-Z])/g, ' $1').trim()}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map(row => `
-              <tr>
-                ${headers.map(header => `<td>${row[header] || '-'}</td>`).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `
+      htmlContent += `<table><thead><tr>${headers.map(header => `<th>${header.replace(/([A-Z])/g, ' $1').trim()}</th>`).join('')}</tr></thead><tbody>`
+      data.forEach(row => {
+        htmlContent += `<tr>${headers.map(header => `<td>${row[header] || '-'}</td>`).join('')}</tr>`
+      })
+      htmlContent += `</tbody></table>`
     } else {
-      htmlContent += `<p style="text-align: center; padding: 40px; color: #6B7280;">No data available for export.</p>`
+      htmlContent += `<p style="text-align: center; padding: 40px;">No data available for export.</p>`
     }
 
-    htmlContent += `
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} LMS Admin - Instructors Report</p>
-        </div>
+    htmlContent += `<div class="footer"><p>© ${new Date().getFullYear()} LMS Admin - Instructors Report</p></div>
         <div class="no-print" style="position: fixed; bottom: 20px; right: 20px;">
           <button onclick="window.print();" style="padding: 10px 20px; background: #1E3A8A; color: white; border: none; border-radius: 8px; cursor: pointer;">🖨️ Print / Save as PDF</button>
         </div>
       </body>
-      </html>
-    `
+      </html>`
 
     printWindow.document.write(htmlContent)
     printWindow.document.close()
@@ -589,13 +492,6 @@ export default function InstructorsPage() {
     return status === 'active' ? BRAND_COLORS.teal : BRAND_COLORS.brightRed
   }
 
-  // Format rating safely
-  const formatRating = (rating: number | string | undefined): string => {
-    if (!rating) return '0.0'
-    const numRating = typeof rating === 'string' ? parseFloat(rating) : rating
-    return isNaN(numRating) ? '0.0' : numRating.toFixed(1)
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -651,7 +547,6 @@ export default function InstructorsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Export Button */}
               <button
                 onClick={() => setShowExportModal(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
@@ -793,14 +688,12 @@ export default function InstructorsPage() {
                       <span className="font-medium">{instructor.name}</span>
                     </div>
                   </td>
-
                   <td className="px-4 py-3">
                     <div className="text-sm">{instructor.email}</div>
                     {instructor.phone && (
                       <div className="text-xs text-darkGrey/70">{instructor.phone}</div>
                     )}
                   </td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Award className="w-4 h-4" style={{ color: BRAND_COLORS.darkRoyalBlue }} />
@@ -810,7 +703,6 @@ export default function InstructorsPage() {
                       {instructor.experience || '—'}
                     </div>
                   </td>
-
                   <td className="px-4 py-3">
                     <span
                       className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -832,7 +724,6 @@ export default function InstructorsPage() {
                       )}
                     </span>
                   </td>
-
                   <td className="px-4 py-3">
                     {instructor.course_title ? (
                       <div className="flex items-center gap-1">
@@ -843,7 +734,6 @@ export default function InstructorsPage() {
                       <span className="text-sm text-darkGrey/50">Not assigned</span>
                     )}
                   </td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
@@ -1004,7 +894,7 @@ export default function InstructorsPage() {
               )}
 
               {/* Current Filters Info */}
-              {(exportType === 'filtered') && (
+              {exportType === 'filtered' && (
                 <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800">
                     <strong>Current Filters:</strong><br />
@@ -1018,46 +908,42 @@ export default function InstructorsPage() {
               {/* Export Format Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Export Format</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setExportFormat('csv')}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`p-3 rounded-xl border-2 transition-all ${
                       exportFormat === 'csv' 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                     }`}
                   >
-                    CSV
-                  </button>
-                  <button
-                    onClick={() => setExportFormat('excel')}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${
-                      exportFormat === 'excel' 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    Excel
+                    <Download className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">CSV</span>
+                    <p className="text-xs text-gray-400 mt-1">Excel compatible</p>
                   </button>
                   <button
                     onClick={() => setExportFormat('json')}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`p-3 rounded-xl border-2 transition-all ${
                       exportFormat === 'json' 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                     }`}
                   >
-                    JSON
+                    <FileJson className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">JSON</span>
+                    <p className="text-xs text-gray-400 mt-1">Developer friendly</p>
                   </button>
                   <button
                     onClick={() => setExportFormat('pdf')}
-                    className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`p-3 rounded-xl border-2 transition-all ${
                       exportFormat === 'pdf' 
-                        ? 'bg-emerald-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
                     }`}
                   >
-                    PDF
+                    <Printer className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-sm font-medium">PDF</span>
+                    <p className="text-xs text-gray-400 mt-1">Print ready</p>
                   </button>
                 </div>
               </div>
