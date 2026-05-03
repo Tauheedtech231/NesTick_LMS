@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: "MANSOL HAB LMS | Skills Development Portal",
   description:
     "Learning Management System for course management, student tracking, payments, performance, and reports for institute administrators.",
+
+  // ✅ Favicon config using your logo
+  icons: {
+    icon: "/newlogo.jpg",
+    shortcut: "/newlogo.jpg",
+    apple: "/newlogo.jpg",
+  },
 };
 
 export default function RootLayout({
