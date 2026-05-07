@@ -39,6 +39,47 @@ import { useRouter } from "next/navigation";
 
 /* eslint-disable */
 
+// Session Storage Keys
+const SESSION_KEYS = {
+  COURSES: 'courses_data_v2',
+  BUNDLES: 'bundles_data_v2',
+  TIMESTAMP: 'courses_timestamp_v2'
+};
+
+// Cache expiry time (30 minutes)
+const CACHE_EXPIRY = 30 * 60 * 1000;
+
+// Helper functions for session storage
+const saveToSessionStorage = (key: string, data: any) => {
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error saving to sessionStorage:', error);
+    }
+  }
+};
+
+const getFromSessionStorage = (key: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const data = sessionStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error reading from sessionStorage:', error);
+      return null;
+    }
+  }
+  return null;
+};
+
+const isCacheValid = (timestamp: string | null): boolean => {
+  if (!timestamp) return false;
+  const cachedTime = parseInt(timestamp, 10);
+  const now = Date.now();
+  return (now - cachedTime) < CACHE_EXPIRY;
+};
+
 // Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
@@ -77,6 +118,7 @@ interface Course {
   instructorName: string;
   createdAt: string;
   numericPrice?: number;
+  iconName?: string | null;
 }
 
 // Bundle Interface
@@ -372,6 +414,7 @@ export default function CoursesPage() {
   const [allBundles, setAllBundles] = useState<Bundle[]>([]);
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({});
   
@@ -406,16 +449,136 @@ export default function CoursesPage() {
     }
   }, [userEmail]);
 
+  // Load data from cache or fetch fresh
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Check cache
+      const cachedCourses = getFromSessionStorage(SESSION_KEYS.COURSES);
+      const cachedBundles = getFromSessionStorage(SESSION_KEYS.BUNDLES);
+      const cacheTimestamp = getFromSessionStorage(SESSION_KEYS.TIMESTAMP);
+      const isCacheValidFlag = isCacheValid(cacheTimestamp);
+      
+      if (isCacheValidFlag && cachedCourses && cachedBundles) {
+        console.log('Loading courses and bundles from session storage cache');
+        const hydratedCourses = (cachedCourses as Course[]).map((course: Course) => ({
+          ...course,
+          icon: getIconComponent(course.iconName || (typeof course.icon === 'string' ? course.icon : null))
+        }));
+        setAllCourses(hydratedCourses);
+        setAllBundles(cachedBundles);
+        setLoading(false);
+        setInitialLoadComplete(true);
+        
+        // Fetch fresh data in background
+        fetchFreshData();
+      } else {
+        console.log('No valid cache found, fetching fresh data');
+        await fetchFreshData();
+      }
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load courses');
+      setLoading(false);
+    }
+  };
+  
+  // Fetch fresh data from API
+  const fetchFreshData = async () => {
+    try {
+      console.log('Fetching fresh courses and bundles from API');
+      
+      // Fetch courses
+      const coursesResponse = await fetch('/api/instructors/course');
+      const coursesResult = await coursesResponse.json();
+      
+      let coursesData: Course[] = [];
+      if (coursesResponse.ok && coursesResult.success && coursesResult.data) {
+        coursesData = coursesResult.data.map((course: any) => {
+          let numericPrice = 0;
+          if (course.price) {
+            const priceStr = String(course.price).replace(/[^0-9]/g, '');
+            if (priceStr) {
+              numericPrice = parseInt(priceStr);
+            }
+          }
+          
+          return {
+            id: course.id,
+            title: course.title,
+            category: course.category || 'Technical Training',
+            description: course.description || '',
+            duration: course.duration || 'Flexible',
+            students: `${course.student_capacity || 0}+ seats`,
+            level: course.level || 'Beginner',
+            highlights: [],
+            price: course.price ? `PKR ${Number(course.price).toLocaleString()}` : 'Contact for price',
+            originalPrice: course.original_price ? `PKR ${Number(course.original_price).toLocaleString()}` : null,
+            savings: course.original_price && course.price ? `Save ${Math.round((1 - Number(course.price)/Number(course.original_price)) * 100)}%` : null,
+            numericPrice: numericPrice,
+            iconName: course.icon || null,
+            icon: getIconComponent(course.icon),
+            color: course.color || BRAND_COLORS.teal,
+            image: course.image,
+            courseImage: course.image,
+            featured: false,
+            rating: 4.5,
+            reviews: 0,
+            isPublished: course.status === 'published',
+            instructorId: course.instructor_id,
+            instructorName: course.instructor_name,
+            createdAt: course.created_at
+          };
+        });
+        
+        const publishedCourses = coursesData.filter((course: Course) => course.isPublished);
+        
+        // Save to cache
+        saveToSessionStorage(SESSION_KEYS.COURSES, publishedCourses);
+        setAllCourses(publishedCourses);
+      }
+      
+      // Fetch bundles
+      const bundlesResponse = await fetch('/api/admin/bundles');
+      const bundlesResult = await bundlesResponse.json();
+      
+      let bundlesData: Bundle[] = [];
+      if (bundlesResult.success) {
+        bundlesData = bundlesResult.data.filter((b: Bundle) => b.status === 'active');
+        
+        // Save to cache
+        saveToSessionStorage(SESSION_KEYS.BUNDLES, bundlesData);
+        setAllBundles(bundlesData);
+      }
+      
+      // Save timestamp
+      saveToSessionStorage(SESSION_KEYS.TIMESTAMP, Date.now().toString());
+      
+      setLoading(false);
+      setInitialLoadComplete(true);
+      
+    } catch (err) {
+      console.error('Error fetching fresh data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load courses');
+      setLoading(false);
+    }
+  };
+  
+  // Manual retry function
+  const retryFetch = () => {
+    fetchFreshData();
+  };
+
   useEffect(() => {
-    fetchCourses();
-    fetchBundles();
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (userEmail) {
+    if (userEmail && initialLoadComplete) {
       fetchCartCount();
     }
-  }, [userEmail]);
+  }, [userEmail, initialLoadComplete]);
 
   // Combine courses and bundles into display items
   useEffect(() => {
@@ -465,73 +628,6 @@ export default function CoursesPage() {
     
     setDisplayItems(items);
   }, [allCourses, allBundles, inCartStatus]);
-
-  const fetchCourses = async () => {
-    try {
-      const response = await fetch('/api/instructors/course');
-      const result = await response.json();
-      
-      if (response.ok && result.success && result.data) {
-        const coursesWithIcons = result.data.map((course: any) => {
-          let numericPrice = 0;
-          if (course.price) {
-            const priceStr = String(course.price).replace(/[^0-9]/g, '');
-            if (priceStr) {
-              numericPrice = parseInt(priceStr);
-            }
-          }
-          
-          return {
-            id: course.id,
-            title: course.title,
-            category: course.category || 'Technical Training',
-            description: course.description || '',
-            duration: course.duration || 'Flexible',
-            students: `${course.student_capacity || 0}+ seats`,
-            level: course.level || 'Beginner',
-            highlights: [],
-            price: course.price ? `PKR ${Number(course.price).toLocaleString()}` : 'Contact for price',
-            originalPrice: course.original_price ? `PKR ${Number(course.original_price).toLocaleString()}` : null,
-            savings: course.original_price && course.price ? `Save ${Math.round((1 - Number(course.price)/Number(course.original_price)) * 100)}%` : null,
-            numericPrice: numericPrice,
-            icon: getIconComponent(course.icon),
-            color: course.color || BRAND_COLORS.teal,
-            image: course.image,
-            courseImage: course.image,
-            featured: false,
-            rating: 4.5,
-            reviews: 0,
-            isPublished: course.status === 'published',
-            instructorId: course.instructor_id,
-            instructorName: course.instructor_name,
-            createdAt: course.created_at
-          };
-        });
-        
-        const publishedCourses = coursesWithIcons.filter((course: Course) => course.isPublished);
-        setAllCourses(publishedCourses);
-      }
-    } catch (err) {
-      console.error('Error loading courses:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load courses');
-    }
-  };
-
-  const fetchBundles = async () => {
-    try {
-      const response = await fetch('/api/admin/bundles');
-      const result = await response.json();
-      
-      if (result.success) {
-        const activeBundles = result.data.filter((b: Bundle) => b.status === 'active');
-        setAllBundles(activeBundles);
-      }
-    } catch (err) {
-      console.error('Error loading bundles:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCartCount = async () => {
     if (!userEmail) return;
@@ -590,13 +686,7 @@ export default function CoursesPage() {
     setImageErrors(prev => ({ ...prev, [itemId]: true }));
   };
 
-  const retryFetch = () => {
-    setLoading(true);
-    fetchCourses();
-    fetchBundles();
-  };
-
-  // ✅ NEW: Handle bundle view details - redirect to bundle details page
+  // Handle bundle view details - redirect to bundle details page
   const handleViewBundleDetails = (bundleId: string) => {
     router.push(`/courses/bundles/${bundleId}`);
   };
@@ -679,7 +769,7 @@ export default function CoursesPage() {
     }
   };
 
-  // ✅ FIXED: Add bundle as a SINGLE item to cart (not individual courses)
+  // Add bundle as a SINGLE item to cart
   const addBundleToCart = async (bundle: Bundle, email: string) => {
     setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: true }));
     setCartMessage(null);
@@ -856,7 +946,7 @@ export default function CoursesPage() {
 
   const bundleGroups = getBundleSavingsInfo();
 
-  // ✅ NEW: Handle proceed to enrollment with bundleId
+  // Handle proceed to enrollment with bundleId
   const handleProceedToEnrollment = () => {
     const bundleItems = cartItems.filter(item => item.is_bundle_item === true);
     const individualCourses = cartItems.filter(item => !item.is_bundle_item);
@@ -865,7 +955,6 @@ export default function CoursesPage() {
     const params = new URLSearchParams();
     
     if (bundleItems.length > 0 && bundleItems[0].bundle_name) {
-      // Find bundle ID from the bundle item
       const bundleId = allBundles.find(b => b.title === bundleItems[0].bundle_name)?.id;
       if (bundleId) {
         params.append('bundleId', bundleId);
@@ -885,7 +974,8 @@ export default function CoursesPage() {
     router.push(url);
   };
 
-  if (loading) {
+  // Show loading only on first load
+  if (loading && !initialLoadComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
         <motion.div 
@@ -915,7 +1005,7 @@ export default function CoursesPage() {
     );
   }
 
-  if (error) {
+  if (error && !initialLoadComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
@@ -1125,7 +1215,6 @@ export default function CoursesPage() {
                                   </button>
                                 </div>
 
-                               
                               </div>
                             </div>
                           </motion.div>
@@ -1133,11 +1222,7 @@ export default function CoursesPage() {
                       })}
                     </div>
 
-                 
-
                     <div className="border-t border-gray-200 pt-6">
-                      
-
                       <div className="mb-4">
                         <p className="text-xs text-gray-600 text-center flex items-center justify-center gap-1">
                           <span className="text-red-500">•</span>
@@ -1316,7 +1401,7 @@ export default function CoursesPage() {
                 );
               } else {
                 const course = item.data as Course;
-                const Icon = course.icon;
+                const Icon = course.icon || HiBookOpen;
                 
                 return (
                   <motion.div

@@ -69,10 +69,52 @@ const Z_INDEX = {
 };
 
 // Interfaces
-// Extended Bundle type with optional image
 interface ExtendedBundle extends Bundle {
   image?: string;
 }
+
+// Session Storage Keys
+const SESSION_KEYS = {
+  COURSES: 'courses_data',
+  BUNDLES: 'bundles_data',
+  TIMESTAMP: 'courses_timestamp'
+};
+
+// Cache expiry time (30 minutes in milliseconds)
+const CACHE_EXPIRY = 30 * 60 * 1000;
+
+// Helper function to check if cache is valid
+const isCacheValid = (timestamp: string | null): boolean => {
+  if (!timestamp) return false;
+  const cachedTime = parseInt(timestamp, 10);
+  const now = Date.now();
+  return (now - cachedTime) < CACHE_EXPIRY;
+};
+
+// Helper function to save data to session storage
+const saveToSessionStorage = (key: string, data: any) => {
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error saving to sessionStorage:', error);
+    }
+  }
+};
+
+// Helper function to get data from session storage
+const getFromSessionStorage = (key: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const data = sessionStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error reading from sessionStorage:', error);
+      return null;
+    }
+  }
+  return null;
+};
 
 // Email Popup Component
 const EmailPopup = ({ isOpen, onClose, onConfirm, courseTitle, savedEmail }: any) => {
@@ -230,6 +272,7 @@ export default function CoursesPage() {
   const [bundles, setBundles] = useState<ExtendedBundle[]>([]);
   const [filteredBundles, setFilteredBundles] = useState<ExtendedBundle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<{[key: string]: boolean}>({});
   const [showFeatures, setShowFeatures] = useState(false);
@@ -281,14 +324,126 @@ export default function CoursesPage() {
     }
   ];
 
+  // Load data from session storage or fetch from API
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Check if we have cached data in session storage
+      const cachedCourses = getFromSessionStorage(SESSION_KEYS.COURSES);
+      const cachedBundles = getFromSessionStorage(SESSION_KEYS.BUNDLES);
+      const cacheTimestamp = getFromSessionStorage(SESSION_KEYS.TIMESTAMP);
+      
+      const isCacheValidFlag = isCacheValid(cacheTimestamp);
+      
+      // If cache exists and is valid, use it immediately
+      if (isCacheValidFlag && cachedCourses && cachedBundles) {
+        console.log('Loading data from session storage cache');
+        setAllCourses(cachedCourses);
+        setFilteredCourses(cachedCourses);
+        setBundles(cachedBundles);
+        setFilteredBundles(cachedBundles);
+        setLoading(false);
+        setInitialLoadComplete(true);
+        setTimeout(() => setShowFeatures(true), 500);
+        
+        // Still fetch fresh data in background to update cache
+        fetchFreshData();
+      } else {
+        // No valid cache, fetch fresh data
+        console.log('No valid cache found, fetching fresh data');
+        await fetchFreshData();
+      }
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load courses');
+      setLoading(false);
+    }
+  };
+
+  // Fetch fresh data from API and update cache
+  const fetchFreshData = async () => {
+    try {
+      console.log('Fetching fresh data from API');
+      
+      // Fetch courses
+      const coursesResponse = await fetch('/api/instructors/course');
+      const coursesResult = await coursesResponse.json();
+      
+      if (!coursesResponse.ok) throw new Error(coursesResult.error || 'Failed to fetch courses');
+      
+      let coursesData: Course[] = [];
+      if (coursesResult.success && coursesResult.data) {
+        coursesData = coursesResult.data.map((course: any) => ({
+          id: course.id, title: course.title, category: course.category || 'Technical Training',
+          description: course.description || '', duration: course.duration || 'Flexible',
+          students: `${course.student_capacity || 0}+ seats`, level: course.level || 'Beginner', highlights: [],
+          price: course.price ? `PKR ${Number(course.price).toLocaleString()}` : 'Contact for price',
+          originalPrice: course.original_price ? `PKR ${Number(course.original_price).toLocaleString()}` : null,
+          savings: course.original_price && course.price ? `Save ${Math.round((1 - Number(course.price)/Number(course.original_price)) * 100)}%` : null,
+          numericPrice: Number(course.price) || 0, icon: getIconComponent(course.icon), color: course.color || BRAND_COLORS.teal,
+          image: course.image, courseImage: course.image, featured: false, rating: 4.5, reviews: 0,
+          isPublished: course.status === 'published', instructorId: course.instructor_id, instructorName: course.instructor_name, createdAt: course.created_at
+        }));
+        
+        const publishedCourses = coursesData.filter((c: Course) => c.isPublished);
+        
+        // Save to session storage
+        saveToSessionStorage(SESSION_KEYS.COURSES, publishedCourses);
+        
+        // Update state
+        setAllCourses(publishedCourses);
+        setFilteredCourses(publishedCourses);
+      }
+      
+      // Fetch bundles
+      const bundlesResponse = await fetch('/api/admin/bundles');
+      const bundlesResult = await bundlesResponse.json();
+      
+      let bundlesData: ExtendedBundle[] = [];
+      if (bundlesResult.success) {
+        bundlesData = bundlesResult.data.filter((b: ExtendedBundle) => b.status === 'active');
+        
+        // Save to session storage
+        saveToSessionStorage(SESSION_KEYS.BUNDLES, bundlesData);
+        
+        // Update state
+        setBundles(bundlesData);
+        setFilteredBundles(bundlesData);
+      }
+      
+      // Save timestamp
+      saveToSessionStorage(SESSION_KEYS.TIMESTAMP, Date.now().toString());
+      
+      setLoading(false);
+      setInitialLoadComplete(true);
+      setTimeout(() => setShowFeatures(true), 500);
+      
+    } catch (err) {
+      console.error('Error fetching fresh data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load courses');
+      setLoading(false);
+    }
+  };
+
+  // Refetch data manually (for retry)
+  const retryFetch = () => {
+    fetchFreshData();
+  };
+
   useEffect(() => {
     const savedEmail = localStorage.getItem('userEmail');
     if (savedEmail) setUserEmail(savedEmail);
+    
+    // Load data on mount
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (userEmail) fetchCartCount();
-  }, [userEmail]);
+    if (userEmail && initialLoadComplete) {
+      fetchCartCount();
+    }
+  }, [userEmail, initialLoadComplete]);
 
   const fetchCartCount = async () => {
     try {
@@ -314,49 +469,16 @@ export default function CoursesPage() {
         });
         setCartItems(processedItems);
         const inCartMap: {[key: string]: boolean} = {};
-        processedItems.forEach((item: CartItem) => { inCartMap[item.course_id] = true; });
+        processedItems.forEach((item: CartItem) => { 
+          if (!item.is_bundle_item) {
+            inCartMap[item.course_id] = true;
+          }
+        });
         setInCartStatus(inCartMap);
       }
     } catch (error) { console.error('Error fetching cart:', error); }
   };
 
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/instructors/course');
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to fetch courses');
-      if (result.success && result.data) {
-        const coursesWithIcons = result.data.map((course: any) => ({
-          id: course.id, title: course.title, category: course.category || 'Technical Training',
-          description: course.description || '', duration: course.duration || 'Flexible',
-          students: `${course.student_capacity || 0}+ seats`, level: course.level || 'Beginner', highlights: [],
-          price: course.price ? `PKR ${Number(course.price).toLocaleString()}` : 'Contact for price',
-          originalPrice: course.original_price ? `PKR ${Number(course.original_price).toLocaleString()}` : null,
-          savings: course.original_price && course.price ? `Save ${Math.round((1 - Number(course.price)/Number(course.original_price)) * 100)}%` : null,
-          numericPrice: Number(course.price) || 0, icon: getIconComponent(course.icon), color: course.color || BRAND_COLORS.teal,
-          image: course.image, courseImage: course.image, featured: false, rating: 4.5, reviews: 0,
-          isPublished: course.status === 'published', instructorId: course.instructor_id, instructorName: course.instructor_name, createdAt: course.created_at
-        }));
-        setAllCourses(coursesWithIcons.filter((c: Course) => c.isPublished));
-      }
-      setTimeout(() => setShowFeatures(true), 500);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load courses'); } finally { setLoading(false); }
-  };
-
-  const fetchBundles = async () => {
-    try {
-      const response = await fetch('/api/admin/bundles');
-      const result = await response.json();
-      if (result.success) {
-        setBundles(result.data.filter((b: ExtendedBundle) => b.status === 'active'));
-        setFilteredBundles(result.data.filter((b: ExtendedBundle) => b.status === 'active'));
-      }
-    } catch (error) { console.error('Error fetching bundles:', error); }
-  };
-
-  useEffect(() => { fetchCourses(); fetchBundles(); }, []);
-  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) setIsSearchFocused(false);
@@ -392,7 +514,6 @@ export default function CoursesPage() {
   const clearSearch = () => { setSearchQuery(""); inputRef.current?.focus(); };
   const handleImageError = (courseId: string) => setImageErrors(prev => ({ ...prev, [courseId]: true }));
   const toggleFeature = (featureId: string) => setOpenFeature(openFeature === featureId ? null : featureId);
-  const retryFetch = () => { fetchCourses(); fetchBundles(); };
 
   const handleViewBundleDetails = (bundleId: string) => {
     router.push(`/courses/bundles/${bundleId}`);
@@ -405,7 +526,6 @@ export default function CoursesPage() {
     else setIsEmailPopupOpen(true);
   };
 
-  // ✅ UPDATED: Bundle add to cart - Add as SINGLE item (not individual courses)
   const handleAddBundleToCart = async (bundle: ExtendedBundle) => {
     setSelectedBundleForCart(bundle);
     setSelectedCourse(null);
@@ -440,7 +560,6 @@ export default function CoursesPage() {
     finally { setCartLoading(prev => ({ ...prev, [course.id]: false })); }
   };
 
-  // ✅ UPDATED: Add bundle as a SINGLE item to cart (not individual courses)
   const addBundleToCart = async (bundle: ExtendedBundle, email: string) => {
     setCartLoading(prev => ({ ...prev, [`bundle_${bundle.id}`]: true }));
     try {
@@ -468,7 +587,6 @@ export default function CoursesPage() {
           text: `🎉 Bundle "${bundle.title}" added! You pay only ${formatCurrency(bundle.discounted_price)} for ${bundle.total_courses} courses!` 
         });
         
-        // Mark all courses in bundle as "in cart" for UI
         if (bundle.courses) {
           const inCartMap = { ...inCartStatus };
           bundle.courses.forEach(course => {
@@ -515,7 +633,6 @@ export default function CoursesPage() {
     setSelectedBundleForCart(null); setSelectedCourse(null);
   };
 
-  // Format currency correctly for bundles
   const formatCurrency = (amount: number) => {
     if (isNaN(amount) || amount === null || amount === undefined) {
       return 'Rs 0';
@@ -537,23 +654,19 @@ export default function CoursesPage() {
     catch { return 'Recently added'; }
   };
 
-  // Calculate cart total (only individual courses, bundle items have price 0)
   const cartTotal = cartItems.reduce((sum, item) => {
     if (item.is_bundle_item) return sum;
     return sum + (isNaN(Number(item.course_price)) ? 0 : Number(item.course_price));
   }, 0);
 
-  // Get bundle items for display
   const getBundleItems = () => {
     return cartItems.filter(item => item.is_bundle_item === true);
   };
 
-  // Get individual course items
   const getIndividualCourses = () => {
     return cartItems.filter(item => !item.is_bundle_item);
   };
 
-  // Navigation to enrollment page with proper params
   const handleProceedToEnrollment = () => {
     const bundleItems = getBundleItems();
     const individualCourses = getIndividualCourses();
@@ -561,12 +674,10 @@ export default function CoursesPage() {
     let url = '/cartEnrollment';
     const params = new URLSearchParams();
     
-    // Add bundle ID if present
     if (bundleItems.length > 0 && bundleItems[0].bundle_id) {
       params.append('bundleId', bundleItems[0].bundle_id);
     }
     
-    // Add individual course IDs if present
     if (individualCourses.length > 0) {
       const courseIds = individualCourses.map(item => item.course_id).join(',');
       params.append('courseIds', courseIds);
@@ -580,11 +691,9 @@ export default function CoursesPage() {
     router.push(url);
   };
 
-  // Combine all items (bundles + courses) into one array for unified grid display
   const getAllItems = () => {
     const items: any[] = [];
     
-    // Add bundles with type flag
     filteredBundles.forEach(bundle => {
       const discountedPriceNum = bundle.discounted_price;
       const originalPriceNum = bundle.original_price;
@@ -611,7 +720,6 @@ export default function CoursesPage() {
       });
     });
     
-    // Add courses with type flag
     filteredCourses.forEach(course => {
       items.push({
         type: 'course',
@@ -632,7 +740,6 @@ export default function CoursesPage() {
       });
     });
     
-    // Sort: Show bundles first, then courses
     return items.sort((a, b) => {
       if (a.type === 'bundle' && b.type !== 'bundle') return -1;
       if (a.type !== 'bundle' && b.type === 'bundle') return 1;
@@ -643,17 +750,35 @@ export default function CoursesPage() {
   const allItems = getAllItems();
   const totalResults = allItems.length;
 
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center"><div className="relative"><div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div><div className="absolute top-0 left-0 w-16 h-16 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: BRAND_COLORS.deepRed, borderTopColor: 'transparent' }}></div></div><p className="mt-4 text-gray-600">Loading courses and bundles...</p></div>
-    </div>
-  );
+  // Show loading state only on first load
+  if (loading && !initialLoadComplete) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: BRAND_COLORS.deepRed, borderTopColor: 'transparent' }}></div>
+          </div>
+          <p className="mt-4 text-gray-600">Loading courses and bundles...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-4"><HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" /><h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Content</h3><p className="text-gray-500 mb-4">{error}</p><button onClick={retryFetch} className="px-6 py-2 bg-[#B11217] text-white rounded-lg cursor-pointer">Try Again</button></div>
-    </div>
-  );
+  if (error && !initialLoadComplete) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <HiBookOpen className="w-16 h-16 mx-auto text-red-500 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Error Loading Content</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <button onClick={retryFetch} className="px-6 py-2 bg-[#B11217] text-white rounded-lg cursor-pointer">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -682,7 +807,7 @@ export default function CoursesPage() {
         </motion.button>
       </div>
 
-      {/* Cart Sidebar - Updated to show bundle as single item */}
+      {/* Cart Sidebar */}
       <CartSidebar
         isOpen={showCartSidebar}
         onClose={() => setShowCartSidebar(false)}

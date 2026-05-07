@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
   // ✅ Favicon config using your logo
   icons: {
-    icon: "/newlogo.jpg",
-    shortcut: "/newlogo.jpg",
-    apple: "/newlogo.jpg",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 };
 
