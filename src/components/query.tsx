@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
@@ -13,7 +13,7 @@ import Image from "next/image";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Brand Colors (matching About section)
+// Brand Colors
 const BRAND_COLORS = {
   darkNavy: '#0B1C3D',
   darkRoyalBlue: '#1E3A8A',
@@ -24,17 +24,49 @@ const BRAND_COLORS = {
   darkGrey: '#1F2933'
 };
 
+// Types
+interface ContactData {
+  id: string;
+  hero_heading: string;
+  hero_description: string;
+  hero_button_text: string;
+  hero_background_image: string;
+  map_embed_url: string;
+  cards: Array<{
+    id: string;
+    card_type: string;
+    title: string;
+    value: string;
+    icon_name: string;
+  }>;
+  info: Array<{
+    id: string;
+    info_type: string;
+    title: string;
+    value: string;
+    url: string | null;
+  }>;
+}
+
+// Shimmer Component
+const Shimmer = () => {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
+  );
+};
+
 export default function ContactForm() {
+  const [contactData, setContactData] = useState<ContactData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
     message: "",
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Refs for animations
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -45,218 +77,178 @@ export default function ContactForm() {
   const contactItemsRef = useRef<HTMLDivElement[]>([]);
   const formGroupsRef = useRef<HTMLDivElement[]>([]);
   const buttonRef = useRef<HTMLDivElement>(null);
-  
-  // Add to refs arrays
+
   const addToContactItems = (el: HTMLDivElement | null) => {
     if (el && !contactItemsRef.current.includes(el)) {
       contactItemsRef.current.push(el);
     }
   };
-  
+
   const addToFormGroups = (el: HTMLDivElement | null) => {
     if (el && !formGroupsRef.current.includes(el)) {
       formGroupsRef.current.push(el);
     }
   };
 
+  // Fetch contact data from API
   useEffect(() => {
-    // Create a timeline for smoother, coordinated animations
-    const ctx = gsap.context(() => {
-      // Initial setup - ensure elements are hidden but not with display:none
-      gsap.set([headingRef.current, descriptionRef.current, leftColumnRef.current, rightColumnRef.current], { 
-        opacity: 0,
-        y: 30,
-        willChange: "transform, opacity"
-      });
-      
-      gsap.set(contactItemsRef.current, { 
-        opacity: 0,
-        x: -20,
-        willChange: "transform, opacity"
-      });
-      
-      gsap.set(formGroupsRef.current, { 
-        opacity: 0,
-        y: 20,
-        willChange: "transform, opacity"
-      });
-      
-      gsap.set(buttonRef.current, { 
-        opacity: 0,
-        scale: 0.9,
-        willChange: "transform, opacity"
-      });
+    const fetchContactData = async () => {
+      console.log('🔄 Fetching contact data...');
+      try {
+        const response = await fetch('/api/management/contact');
+        const data = await response.json();
+        console.log('Contact API response:', data);
+        
+        if (data.success && data.data) {
+          setContactData(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching contact data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchContactData();
+  }, []);
 
-      // Main master timeline for coordinated entrance
+  // GSAP Animations
+  useEffect(() => {
+    if (isLoading) return;
+
+    const ctx = gsap.context(() => {
+      gsap.set([headingRef.current, descriptionRef.current, leftColumnRef.current, rightColumnRef.current], { 
+        opacity: 0, y: 30
+      });
+      
+      gsap.set(contactItemsRef.current, { opacity: 0, x: -20 });
+      gsap.set(formGroupsRef.current, { opacity: 0, y: 20 });
+      gsap.set(buttonRef.current, { opacity: 0, scale: 0.9 });
+
       const masterTl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           start: "top 85%",
           end: "bottom 20%",
           toggleActions: "play none none reverse",
-          invalidateOnRefresh: true, // Better performance on resize
         }
       });
 
-      // Section fade in
-      masterTl.to(sectionRef.current, {
-        opacity: 1,
-        duration: 0.6,
-        ease: "power2.out"
-      }, 0);
+      masterTl.to(sectionRef.current, { opacity: 1, duration: 0.6, ease: "power2.out" }, 0);
+      masterTl.to(headingRef.current, { x: 0, y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.1);
+      masterTl.to(descriptionRef.current, { x: 0, y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.15);
+      masterTl.to(leftColumnRef.current, { x: 0, y: 0, opacity: 1, duration: 0.9, ease: "power2.out" }, 0.2);
+      masterTl.to(rightColumnRef.current, { x: 0, y: 0, opacity: 1, duration: 0.9, ease: "power2.out" }, 0.25);
 
-      // Heading animation - smooth from left
-      masterTl.to(headingRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: "power3.out"
-      }, 0.1);
-
-      // Description animation - smooth from right
-      masterTl.to(descriptionRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.8,
-        ease: "power3.out"
-      }, 0.15);
-
-      // Left column animation
-      masterTl.to(leftColumnRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.9,
-        ease: "power2.out"
-      }, 0.2);
-
-      // Right column animation
-      masterTl.to(rightColumnRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.9,
-        ease: "power2.out"
-      }, 0.25);
-
-      // Contact items staggered animation - smoother with reduced motion
       if (contactItemsRef.current.length) {
-        masterTl.to(contactItemsRef.current, {
-          x: 0,
-          opacity: 1,
-          duration: 0.5,
-          stagger: 0.08,
-          ease: "power2.out"
-        }, 0.3);
+        masterTl.to(contactItemsRef.current, { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, ease: "power2.out" }, 0.3);
       }
 
-      // Form groups staggered animation
       if (formGroupsRef.current.length) {
-        masterTl.to(formGroupsRef.current, {
-          y: 0,
-          opacity: 1,
-          duration: 0.5,
-          stagger: 0.07,
-          ease: "power2.out"
-        }, 0.4);
+        masterTl.to(formGroupsRef.current, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07, ease: "power2.out" }, 0.4);
       }
 
-      // Button animation
-      masterTl.to(buttonRef.current, {
-        scale: 1,
-        opacity: 1,
-        duration: 0.5,
-        ease: "back.out(1.2)"
-      }, 0.6);
+      masterTl.to(buttonRef.current, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.2)" }, 0.6);
 
     }, sectionRef);
 
     return () => {
-      // Clean up all ScrollTrigger instances and animations
       ScrollTrigger.getAll().forEach(st => st.kill());
       ctx.revert();
     };
-  }, []);
+  }, [isLoading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: "",
-      }));
+      setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email address is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (!formData.subject.trim()) {
-      newErrors.subject = "Subject is required";
-    }
-
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.email.trim()) newErrors.email = "Email address is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "Please enter a valid email address";
+    if (!formData.subject.trim()) newErrors.subject = "Subject is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (validateForm()) {
-      setIsLoading(true);
-      
+      setIsSubmitting(true);
       try {
-        // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
         console.log("Form submitted:", formData);
         setIsSubmitted(true);
-        setFormData({
-          name: "",
-          email: "",
-          subject: "",
-          message: "",
-        });
-        
-        // Reset success message after 5 seconds
-        setTimeout(() => {
-          setIsSubmitted(false);
-        }, 5000);
+        setFormData({ name: "", email: "", subject: "", message: "" });
+        setTimeout(() => setIsSubmitted(false), 5000);
       } catch (error) {
         console.error("Submission error:", error);
       } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
       }
     }
   };
 
+  // Helper to render info value with line breaks
+  const renderInfoValue = (value: string) => {
+    return value.split('\n').map((line, i) => (
+      <p key={i} className="text-gray-700 text-sm">{line}</p>
+    ));
+  };
+
+  // Get icon based on info type
+  const getIcon = (infoType: string) => {
+    switch (infoType) {
+      case 'phone':
+        return <HiPhone className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />;
+      case 'email':
+        return <HiMail className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />;
+      case 'whatsapp':
+        return <HiChat className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />;
+      case 'hours':
+        return <HiClock className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />;
+      default:
+        return <HiPhone className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />;
+    }
+  };
+
+  // Loading state with Shimmer
+  if (isLoading) {
+    return (
+      <section className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[600px]">
+        <Shimmer />
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <div className="h-10 w-48 bg-gray-200 rounded-lg mx-auto animate-pulse mb-4" />
+            <div className="h-6 w-96 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+          </div>
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+            <div className="lg:w-2/5">
+              <div className="bg-white/95 rounded-2xl p-6 md:p-8 h-96 animate-pulse" />
+            </div>
+            <div className="lg:w-3/5">
+              <div className="bg-white/95 rounded-2xl p-6 md:p-8 h-96 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section 
       ref={sectionRef}
-      className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden opacity-0" // Start hidden
+      className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden opacity-0"
       style={{ willChange: "transform, opacity" }}
     >
-      {/* Background Image with Overlay - optimized */}
+      {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"
+          src={contactData?.hero_background_image || "https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"}
           alt="Background"
           fill
           className="object-cover"
@@ -275,14 +267,14 @@ export default function ContactForm() {
             className="text-3xl md:text-4xl font-bold mb-4 text-white drop-shadow-lg"
             style={{ transform: "translateX(-30px)" }}
           >
-            Get in Touch
+            {contactData?.hero_heading || "Get in Touch"}
           </h2>
           <p 
             ref={descriptionRef}
             className="text-base md:text-lg max-w-2xl mx-auto text-white/90 drop-shadow"
             style={{ transform: "translateX(30px)" }}
           >
-            Have questions about our training programs? Contact our team for more information.
+            {contactData?.hero_description || "Have questions about our training programs? Contact our team for more information."}
           </p>
         </div>
 
@@ -299,79 +291,43 @@ export default function ContactForm() {
                 Contact Information
               </h3>
 
-              {/* Contact Details */}
+              {/* Contact Details from API */}
               <div className="space-y-6">
-                {/* Phone Numbers */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
-                >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiPhone className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
+                {contactData?.info.map((item, idx) => (
+                  <div 
+                    key={item.id}
+                    ref={addToContactItems}
+                    className="flex items-start gap-4"
+                    style={{ transform: "translateX(-20px)" }}
+                  >
+                    <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
+                      {getIcon(item.info_type)}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>
+                        {item.title}
+                      </h4>
+                      {item.url ? (
+                        <p className="text-gray-700 text-sm">
+                          <span style={{ color: BRAND_COLORS.deepRed }}>•</span>{' '}
+                          <a 
+                            href={item.url} 
+                            target={item.info_type === 'hours' ? '_self' : '_blank'}
+                            rel="noopener noreferrer" 
+                            className="hover:underline hover:text-[#B11217] transition-colors"
+                          >
+                            {item.info_type === 'hours' ? renderInfoValue(item.value) : item.value}
+                          </a>
+                        </p>
+                      ) : (
+                        <div className="text-gray-700 text-sm">
+                          <span style={{ color: BRAND_COLORS.deepRed }}>•</span>{' '}
+                          {item.info_type === 'hours' ? renderInfoValue(item.value) : item.value}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Phone Numbers</h4>
-                    <ul className="text-gray-700 text-sm space-y-1.5">
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> General: <a href="tel:03224700200" className="hover:underline hover:text-[#B11217] transition-colors">03224700200</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Lahore: <a href="tel:03104700200" className="hover:underline hover:text-[#B11217] transition-colors">03104700200</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Sheikhupura: <a href="tel:03054700202" className="hover:underline hover:text-[#B11217] transition-colors">03054700202</a></li>
-                      <li><span style={{ color: BRAND_COLORS.deepRed }}>•</span> Rawalpindi: <a href="tel:03204700607" className="hover:underline hover:text-[#B11217] transition-colors">03204700607</a></li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
-                >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiMail className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Email</h4>
-                    <p className="text-gray-700 text-sm">
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> <a href="mailto:info@mansolhab.com" className="hover:underline hover:text-[#B11217] transition-colors">info@mansolhab.com</a>
-                    </p>
-                  </div>
-                </div>
-
-                {/* WhatsApp */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
-                >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiChat className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>WhatsApp</h4>
-                    <p className="text-gray-700 text-sm">
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> <a href="https://wa.me/923224700200" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-[#B11217] transition-colors">03224700200</a>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Office Hours */}
-                <div 
-                  ref={addToContactItems}
-                  className="flex items-start gap-4"
-                  style={{ transform: "translateX(-20px)" }}
-                >
-                  <div className="p-3 rounded-xl shrink-0" style={{ backgroundColor: `${BRAND_COLORS.deepRed}15` }}>
-                    <HiClock className="w-5 h-5" style={{ color: BRAND_COLORS.deepRed }} />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base mb-2" style={{ color: BRAND_COLORS.darkNavy }}>Office Hours</h4>
-                    <p className="text-gray-700 text-sm">
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> Monday to Saturday<br />
-                      <span style={{ color: BRAND_COLORS.deepRed }}>•</span> 9:00 AM - 5:00 PM
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* Note */}
@@ -411,14 +367,12 @@ export default function ContactForm() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
-
                 {/* Name & Email */}
                 <div 
                   ref={addToFormGroups}
                   className="grid grid-cols-1 md:grid-cols-2 gap-5"
                   style={{ transform: "translateY(20px)" }}
                 >
-                  {/* Name */}
                   <div className="space-y-1.5">
                     <label htmlFor="name" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
                       Your Name *
@@ -439,7 +393,6 @@ export default function ContactForm() {
                     {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
                   </div>
 
-                  {/* Email */}
                   <div className="space-y-1.5">
                     <label htmlFor="email" className="block text-sm font-medium" style={{ color: BRAND_COLORS.darkNavy }}>
                       Email Address *
@@ -514,11 +467,11 @@ export default function ContactForm() {
                 >
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full px-8 py-3 font-semibold text-sm rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed hover:bg-[#9D0E14] focus:ring-[#B112174D] inline-flex items-center justify-center"
+                    disabled={isSubmitting}
+                    className="w-full px-8 py-3 font-semibold text-sm rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center cursor-pointer"
                     style={{ backgroundColor: '#B11217', color: '#FFFFFF' }}
                   >
-                    {isLoading ? (
+                    {isSubmitting ? (
                       <div className="flex items-center justify-center gap-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Sending...</span>

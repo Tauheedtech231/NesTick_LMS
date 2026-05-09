@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
 
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
 @custom-variant dark (&:is(.dark *));
 body {
   @apply bg-white text-black dark:bg-gray-900 dark:text-white;

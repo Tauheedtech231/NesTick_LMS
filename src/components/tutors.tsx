@@ -12,158 +12,143 @@ if (typeof window !== 'undefined') {
 }
 
 interface Trainer {
-  id: number;
+  id: string;
   name: string;
   role: string;
   expertise: string;
   experience: string;
-  image: string;
+  image_url: string;
   certifications: string[];
-  studentsTrained: string;
-  trainingStyle: string;
+  students_trained: string;  // Changed from studentsTrained
+  training_style: string;     // Changed from trainingStyle
+  display_order: number;
+  is_active: boolean | number;
 }
 
-const trainers: Trainer[] = [
-  {
-    id: 1,
-    name: 'Raza Hassan Zaheer',
-    role: 'Mechanical Trade Trainer',
-    expertise: 'Specialized in industrial mechanical systems, machine operations, and maintenance protocols with 12+ years of hands-on experience',
-    experience: '12+ years',
-    image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
-    certifications: ['Certified Mechanical Engineer', 'ISO 9001 Lead Auditor', 'Industrial Safety Specialist', 'Machine Operations Expert'],
-    studentsTrained: '850+',
-    trainingStyle: 'Practical hands-on with real industrial equipment'
-  },
-  {
-    id: 2,
-    name: 'Muhammad Waseem',
-    role: 'Welding Trade Trainer',
-    expertise: 'Expert in MIG, TIG, and Arc welding techniques with focus on industrial applications and structural welding',
-    experience: '8+ years',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1376&auto=format&fit=crop&w=400&h=400',
-    certifications: ['AWS Certified Welding Inspector', 'Pressure Vessel Welding Specialist', 'Structural Welding Expert', 'Advanced Welding Instructor'],
-    studentsTrained: '620+',
-    trainingStyle: 'Precision-focused with quality control emphasis'
-  },
-  {
-    id: 3,
-    name: 'Muhammad Nouman Zain',
-    role: 'HSE Trainer',
-    expertise: 'Comprehensive health, safety, and environmental training with OSHA compliance focus and risk management',
-    experience: '10+ years',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
-    certifications: ['NEBOSH Certified', 'OSHA 30-Hour Trainer', 'Environmental Management Specialist', 'Risk Assessment Expert'],
-    studentsTrained: '1100+',
-    trainingStyle: 'Regulatory compliance with practical scenarios'
-  },
-  {
-    id: 4,
-    name: 'Ali Raza',
-    role: 'Pipe Fitting Expert',
-    expertise: 'Industrial pipe fitting, installation specialist with expertise in high-pressure systems',
-    experience: '9+ years',
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1374&auto=format&fit=crop&w=400&h=400',
-    certifications: ['Certified Pipe Fitter', 'ASME B31.3 Specialist', 'Industrial Piping Expert', 'Blueprint Reading Specialist'],
-    studentsTrained: '730+',
-    trainingStyle: 'Detailed technical with blueprint interpretation'
-  },
-];
+interface FacultySettings {
+  badge_text: string;
+  heading_prefix: string;
+  heading_highlight: string;
+  description: string;
+}
+
+// Shimmer Component
+const Shimmer = () => {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
+  );
+};
 
 export default function TrainersSlider() {
-  const [isMounted, setIsMounted] = useState(false);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [settings, setSettings] = useState<FacultySettings>({
+    badge_text: 'Expert Faculty',
+    heading_prefix: 'Meet Our',
+    heading_highlight: 'Trainers',
+    description: 'Click on any trainer to view their professional details and expertise'
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  const sliderRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const subHeadingRef = useRef<HTMLParagraphElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
-  const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Set mounted state
+  // Fetch data from API
   useEffect(() => {
-    setIsMounted(true);
+    const fetchData = async () => {
+      try {
+        // Fetch trainers
+        const trainersResponse = await fetch('/api/management/trainers');
+        const trainersData = await trainersResponse.json();
+        console.log('Trainers data:', trainersData); // Debug log
+        if (trainersData.success) {
+          setTrainers(trainersData.data);
+        }
+
+        // Fetch settings
+        const settingsResponse = await fetch('/api/management/trainers/settings');
+        const settingsData = await settingsResponse.json();
+        if (settingsData.success && settingsData.data) {
+          setSettings(settingsData.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   // GSAP Animations
   useEffect(() => {
-    if (!isMounted) return;
-
-    const ctx = gsap.context(() => {
-      // Clear existing animations
-      gsap.set([headingRef.current, subHeadingRef.current, badgeRef.current], { 
-        clearProps: "all" 
-      });
-
-      // Badge animation - fade in
-      if (badgeRef.current) {
-        gsap.fromTo(badgeRef.current,
-          {
-            opacity: 0,
-            y: 20
-          },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: badgeRef.current,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
+    if (isLoading) return;
+    
+    const timer = setTimeout(() => {
+      const ctx = gsap.context(() => {
+        if (badgeRef.current) {
+          gsap.fromTo(badgeRef.current,
+            { opacity: 0, y: 20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: badgeRef.current,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              }
             }
-          }
-        );
-      }
+          );
+        }
 
-      // Main heading animation - from left
-      if (headingRef.current) {
-        gsap.fromTo(headingRef.current,
-          {
-            x: -80,
-            opacity: 0
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: headingRef.current,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
+        if (headingRef.current) {
+          gsap.fromTo(headingRef.current,
+            { x: -80, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.8,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: headingRef.current,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              }
             }
-          }
-        );
-      }
+          );
+        }
 
-      // Subheading animation - from left with delay
-      if (subHeadingRef.current) {
-        gsap.fromTo(subHeadingRef.current,
-          {
-            x: -60,
-            opacity: 0
-          },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.8,
-            delay: 0.2,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: subHeadingRef.current,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
+        if (subHeadingRef.current) {
+          gsap.fromTo(subHeadingRef.current,
+            { x: -60, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.8,
+              delay: 0.2,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: subHeadingRef.current,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              }
             }
-          }
-        );
-      }
-    }, sectionRef);
+          );
+        }
+      }, sectionRef);
 
-    return () => ctx.revert();
-  }, [isMounted]);
+      return () => ctx.revert();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const handleTrainerClick = (trainer: Trainer) => {
     setSelectedTrainer(trainer);
@@ -184,22 +169,21 @@ export default function TrainersSlider() {
 
   const handlePrevPopup = () => {
     if (!selectedTrainer) return;
-    const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
-    const prevIndex = currentIndex === 0 ? trainers.length - 1 : currentIndex - 1;
+    const currentIdx = trainers.findIndex(t => t.id === selectedTrainer.id);
+    const prevIndex = currentIdx === 0 ? trainers.length - 1 : currentIdx - 1;
     setSelectedTrainer(trainers[prevIndex]);
   };
 
   const handleNextPopup = () => {
     if (!selectedTrainer) return;
-    const currentIndex = trainers.findIndex(t => t.id === selectedTrainer.id);
-    const nextIndex = currentIndex === trainers.length - 1 ? 0 : currentIndex + 1;
+    const currentIdx = trainers.findIndex(t => t.id === selectedTrainer.id);
+    const nextIndex = currentIdx === trainers.length - 1 ? 0 : currentIdx + 1;
     setSelectedTrainer(trainers[nextIndex]);
   };
 
   const getVisibleTrainers = () => {
-    if (typeof window === 'undefined') {
-      // Default for SSR
-      return trainers.slice(0, 3);
+    if (typeof window === 'undefined' || trainers.length === 0) {
+      return [];
     }
     
     const visibleCount = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1;
@@ -216,7 +200,7 @@ export default function TrainersSlider() {
   const [visibleTrainers, setVisibleTrainers] = useState<Trainer[]>([]);
 
   useEffect(() => {
-    if (!isMounted) return;
+    if (isLoading || trainers.length === 0) return;
     
     setVisibleTrainers(getVisibleTrainers());
 
@@ -226,17 +210,22 @@ export default function TrainersSlider() {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [currentIndex, isMounted]);
+  }, [currentIndex, isLoading, trainers]);
 
-  // Loading skeleton
-  if (!isMounted) {
+  // Get active trainers (is_active = true)
+ // Get active trainers - FIXED (accepts both 1 and true)
+const activeTrainers = trainers.filter(t => t.is_active === 1 || t.is_active === true);
+
+  // Loading skeleton with Shimmer
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-12">
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4 relative overflow-hidden">
+        <Shimmer />
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="mb-12 text-center">
             <div className="inline-block px-4 py-2 rounded-full mb-4 bg-gray-200 animate-pulse w-32 h-8"></div>
-            <div className="h-12 bg-gray-200 animate-pulse w-96 mb-4 rounded"></div>
-            <div className="h-6 bg-gray-200 animate-pulse w-64 rounded"></div>
+            <div className="h-12 bg-gray-200 animate-pulse w-96 mb-4 rounded mx-auto"></div>
+            <div className="h-6 bg-gray-200 animate-pulse w-64 rounded mx-auto"></div>
           </div>
           
           <div className="flex justify-center gap-6 py-8">
@@ -255,43 +244,59 @@ export default function TrainersSlider() {
     );
   }
 
+  if (activeTrainers.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="text-6xl mb-4">👨‍🏫</div>
+          <h2 className="text-2xl font-semibold text-gray-700">No Trainers Available</h2>
+          <p className="text-gray-500 mt-2">Check back later for our expert faculty members.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={sectionRef} className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-16 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Left-aligned Header Section */}
-       <div className="mb-12 text-center">
-  <div ref={badgeRef} className="inline-block px-4 py-2 rounded-full mb-4" style={{ backgroundColor: '#1E3A8A' }}>
-    <span className="text-sm font-semibold text-white">
-      Expert Faculty
-    </span>
-  </div>
-  
-  <h1 ref={headingRef} className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
-    Meet Our <span className="text-[#1E3A8A]">Trainers</span>
-  </h1>
-  
-  <p ref={subHeadingRef} className="text-base text-gray-600 max-w-2xl mx-auto">
-    Click on any trainer to view their professional details and expertise
-  </p>
-</div>
+        {/* Header Section */}
+        <div className="mb-12 text-center">
+          <div ref={badgeRef} className="inline-block px-4 py-2 rounded-full mb-4" style={{ backgroundColor: '#1E3A8A' }}>
+            <span className="text-sm font-semibold text-white">
+              {settings.badge_text}
+            </span>
+          </div>
+          
+          <h1 ref={headingRef} className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+            {settings.heading_prefix} <span className="text-[#1E3A8A]">{settings.heading_highlight}</span>
+          </h1>
+          
+          <p ref={subHeadingRef} className="text-base text-gray-600 max-w-2xl mx-auto">
+            {settings.description}
+          </p>
+        </div>
 
         <div className="relative py-8">
           {/* Navigation Buttons */}
-          <button
-            onClick={handlePrevTrainer}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 lg:-left-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
-            aria-label="Previous trainers"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
-          </button>
+          {activeTrainers.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevTrainer}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 lg:-left-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200 cursor-pointer"
+                aria-label="Previous trainers"
+              >
+                <ChevronLeft className="w-6 h-6 text-gray-700" />
+              </button>
 
-          <button
-            onClick={handleNextTrainer}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:-right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200"
-            aria-label="Next trainers"
-          >
-            <ChevronRight className="w-6 h-6 text-gray-700" />
-          </button>
+              <button
+                onClick={handleNextTrainer}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:-right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-all hover:scale-110 border border-gray-200 cursor-pointer"
+                aria-label="Next trainers"
+              >
+                <ChevronRight className="w-6 h-6 text-gray-700" />
+              </button>
+            </>
+          )}
 
           {/* Trainers Grid */}
           <div className="flex justify-center gap-6 md:gap-8 py-8 px-12">
@@ -306,7 +311,7 @@ export default function TrainersSlider() {
                   <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto mb-4">
                     <div className="relative w-full h-full rounded-2xl overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform duration-500">
                       <Image
-                        src={trainer.image}
+                        src={trainer.image_url}
                         alt={trainer.name}
                         fill
                         className="object-cover"
@@ -344,20 +349,22 @@ export default function TrainersSlider() {
           </div>
 
           {/* Pagination Dots */}
-          <div className="flex justify-center gap-2 mt-6">
-            {trainers.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`h-2 rounded-full transition-all ${
-                  index === currentIndex
-                    ? 'w-8 bg-[#1E3A8A]'
-                    : 'w-2 bg-gray-300 hover:bg-gray-400'
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
+          {activeTrainers.length > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {activeTrainers.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`h-2 rounded-full transition-all cursor-pointer ${
+                    index === currentIndex
+                      ? 'w-8 bg-[#1E3A8A]'
+                      : 'w-2 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Popup Modal */}
@@ -373,7 +380,7 @@ export default function TrainersSlider() {
               <div className="relative h-48 md:h-56 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D]">
                 <button
                   onClick={closePopup}
-                  className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20"
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20 cursor-pointer"
                   aria-label="Close popup"
                 >
                   <X className="w-5 h-5" />
@@ -384,7 +391,7 @@ export default function TrainersSlider() {
                   <div className="relative w-32 h-32 md:w-40 md:h-40">
                     <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-white shadow-2xl">
                       <Image
-                        src={selectedTrainer.image}
+                        src={selectedTrainer.image_url}
                         alt={selectedTrainer.name}
                         fill
                         className="object-cover"
@@ -412,7 +419,7 @@ export default function TrainersSlider() {
                     <div className="w-1 h-1 bg-gray-300 rounded-full" />
                     <div className="flex items-center gap-1">
                       <Briefcase className="w-4 h-4" />
-                      <span>{selectedTrainer.studentsTrained} trained</span>
+                      <span>{selectedTrainer.students_trained} trained</span>
                     </div>
                   </div>
                 </div>
@@ -432,7 +439,7 @@ export default function TrainersSlider() {
                     <Briefcase className="w-4 h-4 text-[#1E3A8A]" />
                     <h4 className="font-semibold text-gray-900">Training Style</h4>
                   </div>
-                  <p className="text-gray-600">{selectedTrainer.trainingStyle}</p>
+                  <p className="text-gray-600">{selectedTrainer.training_style}</p>
                 </div>
 
                 <div className="mb-6">
@@ -441,7 +448,7 @@ export default function TrainersSlider() {
                     <h3 className="font-semibold text-gray-900">Certifications</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {selectedTrainer.certifications.map((cert, index) => (
+                    {selectedTrainer.certifications && selectedTrainer.certifications.map((cert, index) => (
                       <div 
                         key={index}
                         className="flex items-start gap-2 p-3 rounded-lg border border-gray-200 bg-white"
@@ -456,17 +463,17 @@ export default function TrainersSlider() {
                 <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-200">
                   <button
                     onClick={handlePrevPopup}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors cursor-pointer"
                   >
                     ← Previous Trainer
                   </button>
                   
                   <div className="flex gap-2">
-                    {trainers.map((trainer) => (
+                    {activeTrainers.map((trainer) => (
                       <button
                         key={trainer.id}
                         onClick={() => setSelectedTrainer(trainer)}
-                        className={`h-2 rounded-full transition-all ${
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
                           selectedTrainer.id === trainer.id
                             ? 'w-8 bg-[#1E3A8A]'
                             : 'w-2 bg-gray-300 hover:bg-gray-400'
@@ -478,7 +485,7 @@ export default function TrainersSlider() {
                   
                   <button
                     onClick={handleNextPopup}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-[#1E3A8A] transition-colors cursor-pointer"
                   >
                     Next Trainer →
                   </button>

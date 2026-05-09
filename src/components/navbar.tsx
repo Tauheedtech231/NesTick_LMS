@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -30,7 +30,7 @@ const BRAND_COLORS = {
   darkGrey: '#1F2933'
 };
 
-// Z-index constants for better maintainability
+// Z-index constants
 const Z_INDEX = {
   BASE: 1,
   NAVBAR: 100,
@@ -120,6 +120,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileLoginDropdownOpen, setMobileLoginDropdownOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>('/newlogo.jpg'); // Default logo
   
   const loginDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -128,6 +129,22 @@ export default function Navbar() {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Fetch logo from footer API
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch('/api/management/footer');
+        const data = await response.json();
+        if (data.success && data.data && data.data.logo_url) {
+          setLogoUrl(data.data.logo_url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   // Check if user is logged in
   useEffect(() => {
@@ -338,9 +355,8 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Global styles to ensure cart appears above navbar */}
+      {/* Global styles */}
       <style jsx global>{`
-        /* Ensure any cart component has higher z-index */
         .cart-component,
         [class*="cart"],
         [class*="Cart"],
@@ -350,20 +366,17 @@ export default function Navbar() {
           position: relative;
         }
         
-        /* Fix for any absolutely positioned cart elements */
         .cart-dropdown,
         .cart-popup,
         .cart-modal {
           z-index: ${Z_INDEX.CART} !important;
         }
         
-        /* Ensure cart appears above all navbar elements */
         .fixed.cart,
         .absolute.cart {
           z-index: ${Z_INDEX.CART} !important;
         }
         
-        /* Override for any inline styles */
         [style*="z-index"]:where(.cart, [class*="cart"]) {
           z-index: ${Z_INDEX.CART} !important;
         }
@@ -383,7 +396,7 @@ export default function Navbar() {
               <Link href="/" className="flex items-center">
                 <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-[60px] md:w-[60px] flex items-center justify-center">
                   <img
-                    src="/newlogo.jpg"
+                    src={logoUrl}
                     alt="Mansol Logo"
                     className="h-full w-auto object-contain"
                   />
@@ -396,7 +409,7 @@ export default function Navbar() {
               {/* Mobile Menu Button - Left Side */}
               <button
                 onClick={toggleMobileMenu}
-                className="p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95 flex-shrink-0"
+                className="p-2 rounded-lg transition-all duration-300 hover:bg-white/10 active:scale-95 flex-shrink-0 cursor-pointer"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -411,7 +424,7 @@ export default function Navbar() {
                 <Link href="/" className="flex items-center">
                   <div className="h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center">
                     <img
-                      src="/newlogo.jpg"
+                      src={logoUrl}
                       alt="Mansol Logo"
                       className="h-full w-auto object-contain"
                     />
@@ -469,7 +482,7 @@ export default function Navbar() {
                   <button
                     ref={userButtonRef}
                     onClick={handleLoginClick}
-                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 hover:bg-white/5 hover:shadow-sm active:scale-95"
+                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 hover:bg-white/5 hover:shadow-sm active:scale-95 cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
                       style={{ backgroundColor: BRAND_COLORS.darkRoyalBlue }}>
@@ -549,7 +562,7 @@ export default function Navbar() {
                       <div className="p-3 border-t" style={{ borderColor: BRAND_COLORS.softGrey }}>
                         <button
                           onClick={handleLogout}
-                          className="flex items-center justify-center space-x-2 w-full px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg active:scale-95"
+                          className="flex items-center justify-center space-x-2 w-full px-4 py-2 rounded-lg transition-all duration-200 hover:shadow-lg active:scale-95 cursor-pointer"
                           style={{
                             backgroundColor: BRAND_COLORS.deepRed,
                             color: BRAND_COLORS.white
@@ -569,7 +582,7 @@ export default function Navbar() {
                   <button
                     ref={loginButtonRef}
                     onClick={handleLoginClick}
-                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-lg active:scale-95"
+                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-lg active:scale-95 cursor-pointer"
                     style={{
                       backgroundColor: BRAND_COLORS.deepRed,
                       color: BRAND_COLORS.white
@@ -597,7 +610,7 @@ export default function Navbar() {
                           <button
                             key={idx}
                             onClick={() => handleLoginTypeSelect(item.href)}
-                            className="flex flex-col w-full px-3 py-2 rounded-md text-left transition-all duration-150 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98]"
+                            className="flex flex-col w-full px-3 py-2 rounded-md text-left transition-all duration-150 hover:bg-white/5 hover:shadow-sm hover:pl-4 active:scale-[0.98] cursor-pointer"
                           >
                             <span className="font-medium text-white text-sm transition-all duration-150 hover:tracking-wide">
                               {item.title}
@@ -638,7 +651,7 @@ export default function Navbar() {
           <Link href="/" onClick={() => setMobileMenuOpen(false)}>
             <div className="h-12 w-12 flex items-center justify-center">
               <img
-                src="/newlogo.jpg"
+                src={logoUrl}
                 alt="Mansol Logo"
                 className="h-full w-auto object-contain"
               />
@@ -646,7 +659,7 @@ export default function Navbar() {
           </Link>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="p-2 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-95"
+            className="p-2 rounded-full transition-all duration-300 hover:bg-white/10 active:scale-95 cursor-pointer"
             aria-label="Close menu"
           >
             <HiX className="w-6 h-6 text-white" />
@@ -672,10 +685,10 @@ export default function Navbar() {
             ))}
 
             {/* Mobile Pay Fees Button */}
-            <div className="pt-4 hover:cursor-pointer">
+            <div className="pt-4">
               <button
                 onClick={handlePayFees}
-                className="flex items-center hover:cursor-pointer justify-center space-x-2 w-full px-3 py-3 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95"
+                className="flex items-center cursor-pointer justify-center space-x-2 w-full px-3 py-3 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95"
                 style={{
                   backgroundColor: BRAND_COLORS.deepRed,
                   color: BRAND_COLORS.white
@@ -742,7 +755,7 @@ export default function Navbar() {
                   {/* Logout Button */}
                   <button
                     onClick={handleLogout}
-                    className="w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 flex items-center justify-center space-x-2"
+                    className="w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
                     style={{
                       backgroundColor: BRAND_COLORS.deepRed,
                       color: BRAND_COLORS.white
@@ -756,7 +769,7 @@ export default function Navbar() {
                 <>
                   <button
                     onClick={toggleMobileLoginDropdown}
-                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 mb-2"
+                    className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 hover:shadow-lg active:scale-95 mb-2 cursor-pointer"
                     style={{
                       backgroundColor: BRAND_COLORS.deepRed,
                       color: BRAND_COLORS.white
@@ -781,7 +794,7 @@ export default function Navbar() {
                         <button
                           key={idx}
                           onClick={() => handleLoginTypeSelect(item.href)}
-                          className="w-full px-3 py-2 text-left rounded-lg transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98]"
+                          className="w-full px-3 py-2 text-left rounded-lg transition-all duration-300 hover:bg-white/5 hover:shadow-sm active:scale-[0.98] cursor-pointer"
                         >
                           <div className="font-medium text-white text-sm transition-all duration-300">
                             {item.title}

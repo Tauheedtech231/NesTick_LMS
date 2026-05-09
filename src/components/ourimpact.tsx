@@ -9,6 +9,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Types
+interface WhyChooseItem {
+  id: string;
+  title: string;
+  description: string;
+  display_order: number;
+}
+
+interface AboutData {
+  id: string;
+  heading: string;
+  description: string;
+  mission_title: string;
+  mission_description: string;
+  vision_title: string;
+  vision_description: string;
+  cta_text: string;
+  cta_link: string;
+  background_image: string | null;
+  why_choose_items: WhyChooseItem[];
+}
+
+// Shimmer Component
+const Shimmer = () => {
+  return (
+    <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
+  );
+};
+
 export default function AboutSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -17,36 +46,38 @@ export default function AboutSection() {
   const visionRef = useRef<HTMLDivElement>(null);
   const whyChooseContentRef = useRef<HTMLDivElement>(null);
   
-  // State for dropdown in Why Choose section
+  const [aboutData, setAboutData] = useState<AboutData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchAboutData = async () => {
+      try {
+        const response = await fetch('/api/management/about');
+        const data = await response.json();
+        if (data.success && data.data) {
+          setAboutData(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching about data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAboutData();
+  }, []);
 
   const toggleDropdown = (index: number) => {
     setOpenDropdown(openDropdown === index ? null : index);
   };
 
-  // Why Choose items with detailed descriptions
-  const whyChooseItems = [
-    {
-      title: "Industry-aligned curriculum with practical exposure",
-      description: "Our curriculum is developed in collaboration with industry experts to ensure you learn exactly what employers need. Every course includes hands-on projects, real-world case studies, and practical workshops that simulate actual workplace scenarios. You'll graduate with a portfolio of work that demonstrates your skills to potential employers."
-    },
-    {
-      title: "Certified and experienced instructors",
-      description: "Learn from professionals who have years of industry experience. Our instructors are certified experts in their fields who bring real-world knowledge to the classroom. They don't just teach theory - they share practical insights, industry secrets, and mentor you throughout your learning journey."
-    },
-    {
-      title: "Focus on safety standards and professional ethics",
-      description: "Safety is at the core of everything we teach. Our programs emphasize international safety standards, professional ethics, and industry best practices. You'll learn how to maintain safe work environments, follow proper protocols, and make ethical decisions in your professional career."
-    },
-    {
-      title: "Career-oriented training and recognized certifications",
-      description: "Our certifications are recognized by leading employers in the industry. We provide career counseling, resume building workshops, and interview preparation to help you land your dream job. Many of our graduates have gone on to work with top companies in their fields."
-    }
-  ];
-
+  // GSAP Animations (only when data is loaded)
   useEffect(() => {
+    if (isLoading || !aboutData) return;
+
     const ctx = gsap.context(() => {
-      // Clear any existing animations
       const elementsToClear = [
         headingRef.current, 
         descriptionRef.current, 
@@ -59,13 +90,9 @@ export default function AboutSection() {
         gsap.set(elementsToClear, { clearProps: "all" });
       }
 
-      // Section entrance
       if (sectionRef.current) {
         gsap.fromTo(sectionRef.current,
-          { 
-            opacity: 0,
-            y: 30
-          },
+          { opacity: 0, y: 30 },
           {
             opacity: 1,
             y: 0,
@@ -81,13 +108,9 @@ export default function AboutSection() {
         );
       }
 
-      // Heading animation - from BOTTOM
       if (headingRef.current) {
         gsap.fromTo(headingRef.current,
-          {
-            y: 40,
-            opacity: 0
-          },
+          { y: 40, opacity: 0 },
           {
             y: 0,
             opacity: 1,
@@ -102,13 +125,9 @@ export default function AboutSection() {
         );
       }
 
-      // Description animation - from BOTTOM with slight delay
       if (descriptionRef.current) {
         gsap.fromTo(descriptionRef.current,
-          {
-            y: 30,
-            opacity: 0
-          },
+          { y: 30, opacity: 0 },
           {
             y: 0,
             opacity: 1,
@@ -124,13 +143,9 @@ export default function AboutSection() {
         );
       }
 
-      // Mission animation - from left with optimized timing
       if (missionRef.current) {
         gsap.fromTo(missionRef.current,
-          {
-            x: -30,
-            opacity: 0
-          },
+          { x: -30, opacity: 0 },
           {
             x: 0,
             opacity: 1,
@@ -145,13 +160,9 @@ export default function AboutSection() {
         );
       }
 
-      // Vision animation - from right with optimized timing
       if (visionRef.current) {
         gsap.fromTo(visionRef.current,
-          {
-            x: 30,
-            opacity: 0
-          },
+          { x: 30, opacity: 0 },
           {
             x: 0,
             opacity: 1,
@@ -169,7 +180,59 @@ export default function AboutSection() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [isLoading, aboutData]);
+
+  // Loading state with Shimmer
+  if (isLoading) {
+    return (
+      <section className="relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[600px]">
+        <div className="absolute inset-0 z-0">
+          <Shimmer />
+        </div>
+        <div className="max-w-7xl mx-auto relative z-10">
+          {/* Heading Shimmer */}
+          <div className="text-center mb-12">
+            <div className="h-10 w-64 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+            <div className="h-4 w-48 bg-gray-200 rounded-lg mx-auto mt-2 animate-pulse" />
+            <div className="mt-10 space-y-2">
+              <div className="h-20 w-full max-w-4xl mx-auto bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-20 w-5/6 max-w-4xl mx-auto bg-gray-200 rounded-lg animate-pulse" />
+            </div>
+          </div>
+
+          {/* Mission & Vision Shimmer */}
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 mb-16">
+            <div className="bg-white/90 rounded-2xl p-8 h-64 animate-pulse" />
+            <div className="bg-white/90 rounded-2xl p-8 h-64 animate-pulse" />
+          </div>
+
+          {/* Why Choose Shimmer */}
+          <div className="mb-16">
+            <div className="text-center mb-8">
+              <div className="h-8 w-64 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+              <div className="h-4 w-48 bg-gray-200 rounded-lg mx-auto mt-2 animate-pulse" />
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="border border-gray-200 rounded-xl p-5 bg-white/80 h-20 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No data state
+  if (!aboutData) {
+    return (
+      <section className="relative py-16 md:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="text-center">
+          <p className="text-gray-500">No about section data available</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section 
@@ -180,7 +243,7 @@ export default function AboutSection() {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"
+          src={aboutData.background_image || "https://images.pexels.com/photos/33925031/pexels-photo-33925031.jpeg"}
           alt="Background"
           fill
           className="object-cover"
@@ -192,14 +255,14 @@ export default function AboutSection() {
       </div>
       
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header with unique underline - Animated from BOTTOM */}
+        {/* Header with unique underline */}
         <div className="text-center mb-12">
           <div className="inline-block relative">
             <h2
               ref={headingRef}
               className="text-3xl sm:text-4xl md:text-4xl font-bold text-[#1E3A8A] mb-6 relative z-10"
             >
-              Empowering Young Minds with Technical Skills
+              {aboutData.heading}
             </h2>
             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#B11217] to-transparent rounded-full" />
             <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full" />
@@ -207,9 +270,7 @@ export default function AboutSection() {
 
           <div ref={descriptionRef} className="max-w-4xl mx-auto mt-10">
             <p className="text-lg sm:text-xl text-gray-700 leading-relaxed px-4">
-              TechSafe Education delivers practical, industry-focused technical education.
-              We emphasize hands-on learning and real-world skills in Safety, Civil Engineering,
-              and Cybersecurity to prepare students for professional success.
+              {aboutData.description}
             </p>
           </div>
         </div>
@@ -222,12 +283,11 @@ export default function AboutSection() {
             className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border-l-4 border-[#B11217] hover:shadow-2xl transition-all duration-300"
           >
             <h3 className="text-2xl md:text-3xl font-bold text-[#1E3A8A] mb-4 relative inline-block">
-              Our Mission
+              {aboutData.mission_title}
               <span className="absolute -bottom-1 left-0 w-16 h-1 bg-red-700 rounded-full" />
             </h3>
             <p className="text-gray-700 text-lg leading-relaxed">
-              To equip young learners with industry-relevant technical skills through hands-on training, 
-              fostering innovation, safety, and professional ethics that prepare them for real-world challenges.
+              {aboutData.mission_description}
             </p>
           </div>
 
@@ -237,17 +297,16 @@ export default function AboutSection() {
             className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border-r-4 border-[#1E3A8A] hover:shadow-2xl transition-all duration-300"
           >
             <h3 className="text-2xl md:text-3xl font-bold text-[#1E3A8A] mb-4 relative inline-block">
-              Our Vision
+              {aboutData.vision_title}
               <span className="absolute -bottom-1 left-0 w-16 h-1 bg-red-700 rounded-full" />
             </h3>
             <p className="text-gray-700 text-lg leading-relaxed">
-              To become a globally recognized hub for technical education, creating a community of 
-              skilled professionals who prioritize safety, integrity, and continuous innovation.
+              {aboutData.vision_description}
             </p>
           </div>
         </div>
 
-        {/* Why Choose Section - with Clickable Dropdowns */}
+        {/* Why Choose Section */}
         <div className="mb-16">
           <div ref={whyChooseContentRef} className="max-w-4xl mx-auto">
             {/* Main heading */}
@@ -263,9 +322,9 @@ export default function AboutSection() {
 
             {/* Benefits list with clickable dropdowns */}
             <div className="space-y-3 mt-8">
-              {whyChooseItems.map((item, index) => (
+              {aboutData.why_choose_items.map((item, index) => (
                 <div
-                  key={index}
+                  key={item.id}
                   className="border border-gray-200 rounded-xl overflow-hidden bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-all duration-300"
                 >
                   {/* Clickable Header */}
@@ -289,7 +348,7 @@ export default function AboutSection() {
                     </motion.div>
                   </button>
 
-                  {/* Dropdown Content with smooth animation */}
+                  {/* Dropdown Content */}
                   <AnimatePresence>
                     {openDropdown === index && (
                       <motion.div
@@ -316,10 +375,10 @@ export default function AboutSection() {
             {/* CTA Button */}
             <div className="mt-10 text-center">
               <button
-                className="px-8 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D] text-white font-semibold rounded-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                onClick={() => window.location.href = '/courses'}
+                className="px-8 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#0B1C3D] text-white font-semibold rounded-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onClick={() => window.location.href = aboutData.cta_link}
               >
-                Explore Our Courses
+                {aboutData.cta_text}
               </button>
             </div>
           </div>

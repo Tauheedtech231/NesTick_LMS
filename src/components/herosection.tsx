@@ -5,67 +5,67 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
-// Define slide type for better TypeScript support
+// Define slide type
+interface HeroImage {
+  id?: string;
+  image_url: string;
+  image_type: 'desktop' | 'mobile';
+  display_order: number;
+}
+
 interface Slide {
-  desktopImage?: string;
-  mobileImage?: string;
+  id: string;
   title: string;
   subtitle: string;
   description: string;
-  cta: string;
-  ctaLink: string;
+  cta_text: string;
+  cta_link: string;
+  slide_order: number;
+  is_active: boolean;
+  desktop_images: HeroImage[];
+  mobile_images: HeroImage[];
 }
 
-const slides: Slide[] = [
-  {
-    desktopImage: "https://images.pexels.com/photos/5125783/pexels-photo-5125783.jpeg",
-    mobileImage: "https://images.pexels.com/photos/6059068/pexels-photo-6059068.jpeg",
-    title: "Workplace Safety & Compliance Training",
-    subtitle: "Skills Aligned with International Standards",
-    description:
-      "Industry-focused safety education designed to prepare professionals for real construction and industrial environments.",
-    cta: "Explore Courses",
-    ctaLink: "/courses?category=safety"
-  },
-  {
-    desktopImage: "https://images.pexels.com/photos/4956920/pexels-photo-4956920.jpeg",
-    mobileImage: "https://images.pexels.com/photos/6474476/pexels-photo-6474476.jpeg",
-    title: "Industrial Construction Skill Development",
-    subtitle: "Practical Training for Technical Careers",
-    description:
-      "Hands-on technical training covering essential construction, installation, and industrial work practices.",
-    cta: "Construction Programs",
-    ctaLink: "/courses?category=construction"
-  },
-  {
-    desktopImage: "https://images.pexels.com/photos/8960987/pexels-photo-8960987.jpeg",
-    mobileImage: "https://images.pexels.com/photos/9242801/pexels-photo-9242801.jpeg",
-    title: "Advanced Technical Trade Training",
-    subtitle: "Learn Practical Skills That Matter",
-    description:
-      "Professionally structured training programs focused on technical trades, safety practices, and on-site readiness.",
-    cta: "Start Today",
-    ctaLink: "/courses"
-  },
-  {
-    desktopImage: "https://images.pexels.com/photos/5298215/pexels-photo-5298215.jpeg",
-    mobileImage:"https://images.pexels.com/photos/4956912/pexels-photo-4956912.jpeg",
-    title: "Industry-Ready Technical Education",
-    subtitle: "Built for Construction & Industrial Fields",
-    description:
-      "Skill-based education designed to support long-term careers in construction, safety, and technical industries.",
-    cta: "Join Now",
-    ctaLink: "/register"
-  },
-];
+// Shimmer Component
+const Shimmer = () => {
+  return (
+    <div className="relative w-full h-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 animate-pulse">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+    </div>
+  );
+};
 
 export default function HeroSection() {
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Fetch slides from API
+  useEffect(() => {
+    const fetchSlides = async () => {
+      try {
+        const response = await fetch('/api/management/hero-slides');
+        const data = await response.json();
+        if (data.success && data.data.length > 0) {
+          setSlides(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching slides:', error);
+      } finally {
+        // Add minimum loading time for better UX
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1000);
+      }
+    };
+
+    fetchSlides();
+  }, []);
 
   // Check screen size for responsive images
   useEffect(() => {
@@ -79,7 +79,10 @@ export default function HeroSection() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Auto-play logic
   useEffect(() => {
+    if (slides.length === 0) return;
+    
     if (isAutoPlaying && !isHovered) {
       autoPlayRef.current = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -91,59 +94,96 @@ export default function HeroSection() {
         clearInterval(autoPlayRef.current);
       }
     };
-  }, [isAutoPlaying, isHovered]);
+  }, [isAutoPlaying, isHovered, slides.length]);
 
   const pauseAutoPlay = () => setIsAutoPlaying(false);
   const resumeAutoPlay = () => setIsAutoPlaying(true);
 
-  // Get the appropriate image source based on screen size
   const getImageSource = (slide: Slide): string => {
-    if (isMobile) {
-      return slide.mobileImage || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
+    const images = isMobile ? slide.mobile_images : slide.desktop_images;
+    if (images && images.length > 0) {
+      return images[0].image_url;
     }
-    return slide.desktopImage || slide.mobileImage || "https://images.pexels.com/photos/8961031/pexels-photo-8961031.jpeg";
+    return isMobile 
+      ? "https://images.pexels.com/photos/6059068/pexels-photo-6059068.jpeg"
+      : "https://images.pexels.com/photos/5125783/pexels-photo-5125783.jpeg";
   };
 
-  // Smooth crossfade animation for images
+  // Shimmer loading state
+  if (isLoading) {
+    return (
+      <section className="relative w-full h-[70vh] sm:h-[80vh]  overflow-hidden bg-gray-900">
+        {/* Shimmer Background */}
+        <div className="absolute inset-0">
+          <Shimmer />
+        </div>
+        
+        {/* Shimmer Content Overlay */}
+        <div className="relative z-10 w-full h-full flex items-center justify-center text-center px-4">
+          <div className="max-w-4xl w-full space-y-4">
+            {/* Subtitle Shimmer */}
+            <div className="h-4 w-48 bg-gray-700 rounded-full mx-auto animate-pulse" />
+            
+            {/* Title Shimmer */}
+            <div className="space-y-3">
+              <div className="h-10 w-3/4 bg-gray-700 rounded-lg mx-auto animate-pulse" />
+              <div className="h-10 w-2/3 bg-gray-700 rounded-lg mx-auto animate-pulse" />
+            </div>
+            
+            {/* Description Shimmer */}
+            <div className="space-y-2 max-w-2xl mx-auto">
+              <div className="h-4 w-full bg-gray-700 rounded-lg animate-pulse" />
+              <div className="h-4 w-5/6 bg-gray-700 rounded-lg mx-auto animate-pulse" />
+              <div className="h-4 w-4/6 bg-gray-700 rounded-lg mx-auto animate-pulse" />
+            </div>
+            
+            {/* Buttons Shimmer */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 items-center justify-center pt-4">
+              <div className="w-full max-w-[180px] h-12 bg-gray-700 rounded-lg animate-pulse" />
+              <div className="w-full max-w-[180px] h-12 bg-gray-700/50 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No slides state
+  if (slides.length === 0) {
+    return (
+      <div className="relative w-full h-[70vh] sm:h-[80vh]  flex items-center justify-center bg-gray-900">
+        <div className="text-center text-white">
+          <p className="text-lg">No slides available</p>
+          <p className="text-sm text-gray-400 mt-2">Please add slides from admin panel</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Animation variants
   const imageVariants: Variants = {
-    enter: {
-      opacity: 0,
-      scale: 1.05,
-    },
+    enter: { opacity: 0, scale: 1.05 },
     center: {
       opacity: 1,
       scale: 1,
-      transition: {
-        duration: 1.2,
-        ease: "easeInOut",
-      },
+      transition: { duration: 1.2, ease: "easeInOut" },
     },
     exit: {
       opacity: 0,
       scale: 1.05,
-      transition: {
-        duration: 1,
-        ease: "easeInOut",
-      },
+      transition: { duration: 1, ease: "easeInOut" },
     },
   };
 
-  // Smooth text animation with staggered children
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
     },
     exit: {
       opacity: 0,
-      transition: {
-        staggerChildren: 0.05,
-        staggerDirection: -1,
-      },
+      transition: { staggerChildren: 0.05, staggerDirection: -1 },
     },
   };
 
@@ -152,18 +192,12 @@ export default function HeroSection() {
     visible: {
       y: 0,
       opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: [0.4, 0, 0.2, 1],
-      },
+      transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] },
     },
     exit: {
       y: -20,
       opacity: 0,
-      transition: {
-        duration: 0.4,
-        ease: [0.4, 0, 0.2, 1],
-      },
+      transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
     },
   };
 
@@ -172,24 +206,19 @@ export default function HeroSection() {
     visible: {
       y: 0,
       opacity: 1,
-      transition: {
-        duration: 0.5,
-        ease: [0.4, 0, 0.2, 1],
-      },
+      transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
     },
     exit: {
       y: -15,
       opacity: 0,
-      transition: {
-        duration: 0.3,
-      },
+      transition: { duration: 0.3 },
     },
   };
 
   return (
     <section 
       ref={sectionRef}
-      className="relative w-full  h-[70vh] sm:h-[80vh] lg:h-screen overflow-hidden"
+      className="relative w-full h-[70vh] sm:h-[80vh] lg:h-screen overflow-hidden"
       onMouseEnter={() => {
         pauseAutoPlay();
         setIsHovered(true);
@@ -199,7 +228,6 @@ export default function HeroSection() {
         setIsHovered(false);
       }}
     >
-      {/* Background Images with Smooth Crossfade */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentSlide}
@@ -220,7 +248,6 @@ export default function HeroSection() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Center Content with Smooth Text Animation */}
       <div className="relative z-10 w-full h-full flex items-center justify-center text-center px-4">
         <AnimatePresence mode="wait">
           <motion.div
@@ -231,7 +258,6 @@ export default function HeroSection() {
             exit="exit"
             className="max-w-4xl text-white"
           >
-            {/* Subtitle */}
             <motion.p 
               variants={subtitleVariants}
               className="text-xs sm:text-sm text-[#B11217] uppercase mb-3 tracking-wider"
@@ -239,57 +265,42 @@ export default function HeroSection() {
               {slides[currentSlide].subtitle}
             </motion.p>
 
-            {/* Heading */}
             <motion.h1 
               variants={textVariants}
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight"
             >
               {slides[currentSlide].title}
             </motion.h1>
 
-            {/* Description */}
             <motion.p 
               variants={textVariants}
               className="mt-4 text-sm sm:text-base md:text-lg text-gray-200 max-w-2xl mx-auto"
             >
               {slides[currentSlide].description}
             </motion.p>
+
+            <motion.div 
+              variants={textVariants}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-5 items-center justify-center mt-[3rem]"
+            >
+              <Link
+                href={slides[currentSlide].cta_link}
+                className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                {slides[currentSlide].cta_text}
+              </Link>
+
+              <Link
+                href="/about"
+                className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-all duration-300 text-sm md:text-base hover:scale-105"
+              >
+                Learn More
+              </Link>
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Buttons with Smooth Entrance */}
-     <AnimatePresence mode="wait">
-  <motion.div 
-    key={`buttons-${currentSlide}`}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: 20 }}
-    transition={{ duration: 0.5, delay: 0.3 }}
-    className="absolute bottom-8 sm:bottom-12 w-full flex justify-center items-center z-10 px-4"
-  >
-    <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 items-center">
-      
-      <Link
-        href={slides[currentSlide].ctaLink}
-        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-[#B11217] text-white font-semibold rounded-lg hover:bg-[#8e0e13] transition-all duration-300 text-sm md:text-base shadow-lg hover:shadow-xl transform hover:scale-105  "
-      >
-        {slides[currentSlide].cta}
-      </Link>
-      
-
-      <Link
-        href="/about"
-        className="w-full max-w-[180px] sm:w-auto text-center px-5 py-3 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-lg border border-white/30 transition-all duration-300 text-sm md:text-base hover:scale-105"
-      >
-        Learn More
-      </Link>
-
-    </div>
-  </motion.div>
-</AnimatePresence>
-
-      {/* Scroll Indicator with Smooth Animation */}
       <motion.div
         className="absolute bottom-6 right-6 z-20 hidden lg:block"
         animate={{ y: [0, 8, 0] }}

@@ -14,7 +14,8 @@ import {
   HiCreditCard, 
   HiUserCircle,
   HiTemplate,
-  HiGift
+  HiGift,
+  HiCog
 } from 'react-icons/hi';
 
 /* eslint-disable */
@@ -31,8 +32,8 @@ const navItems = [
   { href: '/lms/Admin_Portal/bundles', label: 'Bundles', icon: HiGift },
   { href: '/lms/Admin_Portal/form-fields', label: 'Form Fields', icon: HiTemplate },
   { href: '/lms/Admin_Portal/profile', label: 'Profile', icon: HiUserCircle },
+  { href: '/Management_Portal', label: 'Management Portal', icon: HiCog, external: false },
 ];
-
 const AdminNavbar = ({ toggleSidebar, isOpen }: AdminNavbarProps) => {
   const router = useRouter();
   const pathname = usePathname();
