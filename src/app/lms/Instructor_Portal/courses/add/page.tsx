@@ -44,8 +44,8 @@ const BRAND_COLORS = {
 }
 
 // Cloudinary configuration
-const CLOUDINARY_CLOUD_NAME ='dfp9qc0gu'
-const CLOUDINARY_UPLOAD_PRESET = 'lms_upload'
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME!;
+const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET!;
 
 // Types
 interface Course {
