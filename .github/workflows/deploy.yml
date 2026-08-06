@@ -74,8 +74,8 @@ jobs:
               -u "${{ secrets.GHCR_USERNAME }}" \
               --password-stdin
 
-            echo "📥 Pulling latest image..."
-            docker pull $IMAGE_NAME
+            echo "📥 Pulling latest Docker image..."
+            docker pull ghcr.io/neezamiya-insti/nestick_lms:latest
 
             docker logout ghcr.io
 
@@ -103,7 +103,7 @@ jobs:
               -e CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
               -e CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
               -e CLOUDINARY_UPLOAD_PRESET="${{ secrets.CLOUDINARY_UPLOAD_PRESET }}" \
-              $IMAGE_NAME
+              ghcr.io/neezamiya-insti/nestick_lms:latest
 
             echo "⏳ Waiting for application..."
             sleep 20
