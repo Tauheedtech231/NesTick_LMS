@@ -58,115 +58,110 @@ jobs:
           docker push $IMAGE_NAME
 
 
-
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.0
 
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: root
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
 
-        script: |
+          script: |
 
-          set -e
+            set -e
 
-          echo "✅ Connected to VPS"
-
-          echo "🔐 Logging into GHCR..."
-
-          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
-            -u "${{ secrets.GHCR_USERNAME }}" \
-            --password-stdin
+            echo "✅ Connected to VPS"
 
 
-          echo "📥 Pulling latest Docker image..."
+            echo "🔐 Logging into GHCR..."
 
-          docker pull ghcr.io/neezamiya-insti/nestick_lms:latest
-
-
-          echo "🛑 Stopping old container..."
-
-          docker stop LMS_neezamiya || true
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u "${{ secrets.GHCR_USERNAME }}" \
+              --password-stdin
 
 
-          echo "🗑 Removing old container..."
+            echo "📥 Pulling latest Docker image..."
 
-          docker rm LMS_neezamiya || true
-
-
-
-          echo "🚀 Starting new container..."
-
-          docker run -d \
-            --name LMS_neezamiya \
-            --restart unless-stopped \
-            -p 3002:3000 \
-            -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
-            -e DB_HOST="${{ secrets.DB_HOST }}" \
-            -e DB_PORT="${{ secrets.DB_PORT }}" \
-            -e DB_USER="${{ secrets.DB_USER }}" \
-            -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-            -e DB_NAME="${{ secrets.DB_NAME }}" \
-            -e EMAIL_USER="${{ secrets.EMAIL_USER }}" \
-            -e EMAIL_PASS="${{ secrets.EMAIL_PASS }}" \
-            -e CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
-            -e CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
-            -e CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
-            -e CLOUDINARY_UPLOAD_PRESET="${{ secrets.CLOUDINARY_UPLOAD_PRESET }}" \
-            ghcr.io/neezamiya-insti/nestick_lms:latest
+            docker pull ghcr.io/neezamiya-insti/nestick_lms:latest
 
 
+            echo "🛑 Stopping old container..."
 
-          echo "⏳ Waiting for application startup..."
-
-          sleep 30
-
+            docker stop LMS_neezamiya || true
 
 
-          echo "❤️ Checking Docker Health Status..."
+            echo "🗑 Removing old container..."
 
-          HEALTH=$(docker inspect --format='{{.State.Health.Status}}' LMS_neezamiya)
-
-
-          echo "Docker Health: $HEALTH"
+            docker rm LMS_neezamiya || true
 
 
-          if [ "$HEALTH" != "healthy" ]; then
+            echo "🚀 Starting new container..."
 
-            echo "❌ Docker Health Check Failed"
-
-            docker logs LMS_neezamiya
-
-            exit 1
-
-          fi
-
-
-
-          echo "🌐 Checking Health API..."
-
-
-          if curl -fs http://localhost:3002/api/health > /dev/null; then
-
-            echo "✅ LMS Health API Passed"
-
-          else
-
-            echo "❌ LMS Health API Failed"
-
-            docker logs LMS_neezamiya
-
-            exit 1
-
-          fi
+            docker run -d \
+              --name LMS_neezamiya \
+              --restart unless-stopped \
+              -p 3003:3000 \
+              -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
+              -e DB_HOST="${{ secrets.DB_HOST }}" \
+              -e DB_PORT="${{ secrets.DB_PORT }}" \
+              -e DB_USER="${{ secrets.DB_USER }}" \
+              -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+              -e DB_NAME="${{ secrets.DB_NAME }}" \
+              -e EMAIL_USER="${{ secrets.EMAIL_USER }}" \
+              -e EMAIL_PASS="${{ secrets.EMAIL_PASS }}" \
+              -e CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+              -e CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
+              -e CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
+              -e CLOUDINARY_UPLOAD_PRESET="${{ secrets.CLOUDINARY_UPLOAD_PRESET }}" \
+              ghcr.io/neezamiya-insti/nestick_lms:latest
 
 
+            echo "⏳ Waiting for application startup..."
 
-          echo "📦 Running Containers..."
-
-          docker ps
-
+            sleep 30
 
 
-          echo "🎉 LMS Deployment Completed Successfully"
+            echo "❤️ Checking Docker Health Status..."
+
+            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' LMS_neezamiya || echo "starting")
+
+
+            echo "Docker Health: $HEALTH"
+
+
+            if [ "$HEALTH" != "healthy" ]; then
+
+              echo "❌ Docker Health Check Failed"
+
+              docker logs LMS_neezamiya
+
+              exit 1
+
+            fi
+
+
+            echo "🌐 Checking Health API..."
+
+
+            if curl -fs http://localhost:3003/api/health > /dev/null; then
+
+              echo "✅ LMS Health API Passed"
+
+            else
+
+              echo "❌ LMS Health API Failed"
+
+              docker logs LMS_neezamiya
+
+              exit 1
+
+            fi
+
+
+            echo "📦 Running Containers..."
+
+            docker ps
+
+
+            echo "🎉 LMS Deployment Completed Successfully"
