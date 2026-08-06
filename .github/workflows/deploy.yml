@@ -101,7 +101,7 @@ jobs:
           docker run -d \
             --name LMS_neezamiya \
             --restart unless-stopped \
-            -p 3003:3000 \
+            -p 3002:3000 \
             -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
             -e DB_HOST="${{ secrets.DB_HOST }}" \
             -e DB_PORT="${{ secrets.DB_PORT }}" \
@@ -147,7 +147,7 @@ jobs:
           echo "🌐 Checking Health API..."
 
 
-          if curl -fs http://localhost:3003/api/health > /dev/null; then
+          if curl -fs http://localhost:3002/api/health > /dev/null; then
 
             echo "✅ LMS Health API Passed"
 
